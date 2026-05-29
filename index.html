@@ -893,7 +893,7 @@ header {
 <!-- Edit Category Modal -->
 <div class="modal-overlay" id="editCatModal">
   <div class="modal">
-    <h3>Edit Category</h3>
+    <h3>Edit Tags</h3>
     <div class="form-row">
       <label>Category</label>
       <input type="text" id="editCatInput" placeholder="e.g. Fiction" autocomplete="off" list="catSuggestions"/>
@@ -1180,64 +1180,115 @@ async function syncFromDrive() {
   if (t) doSync(t); else gdAuth(doSync);
 }
 
-async function scanAndBuildIndex(token, folderId) {
-  showLoading('Scanning EPUB files…');
-  const q = encodeURIComponent(`'${folderId}' in parents and (mimeType='application/epub+zip' or name contains '.epub') and trashed=false`);
-  const r = await gdCall(token, `https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name,size,modifiedTime)&pageSize=1000`);
-  if (!r) { hideLoading(); showToast('Drive scan failed'); return; }
-  const j = await r.json();
-  const epubs = (j.files || []).filter(f => f.name.toLowerCase().endsWith('.epub'));
+async function scanAndBuildIndex(token, rootFolderId) {
 
-  if (!epubs.length) {
-    hideLoading();
-    library = [];
-    saveCache();
-    renderAll();
-    showToast('No EPUB files found in that folder');
-    return;
-  }
+  showLoading('Scanning library…');
 
   library = [];
-  let done = 0;
-  for (const epub of epubs) {
-    showLoading(`Reading metadata… (${done + 1}/${epubs.length})`);
+
+  await scanFolderRecursive(
+    token,
+    rootFolderId,
+    ''
+  );
+
+  showLoading('Saving index…');
+
+  await saveIndexToDrive(
+    token,
+    rootFolderId,
+    library
+  );
+
+  saveCache();
+
+  hideLoading();
+
+  renderAll();
+
+  showToast(
+    `Library indexed — ${library.length} books`
+  );
+}
+scanAndBuildIndex()
+  async function scanFolderRecursive(
     try {
-      const dr = await gdCall(token, `https://www.googleapis.com/drive/v3/files/${epub.id}?alt=media`);
+
+      showLoading(`Reading: ${epub.name}`);
+
+      const dr = await gdCall(
+        token,
+        `https://www.googleapis.com/drive/v3/files/${epub.id}?alt=media`
+      );
+
       if (!dr) continue;
+
       const blob = await dr.blob();
-      const file = new File([blob], epub.name, { type: 'application/epub+zip' });
+
+      const file = new File(
+        [blob],
+        epub.name,
+        { type: 'application/epub+zip' }
+      );
+
       const meta = await parseEpubMeta(file);
-      library.push({
-        id:          epub.id,
-        filename:    epub.name,
-        title:       meta.title,
-        author:      meta.author,
-        description: meta.description,
-        category:    meta.category,
-        language:    meta.language,
-        coverDataUrl: meta.coverDataUrl,
-        modifiedTime: epub.modifiedTime
-      });
-    } catch(e) {
-      library.push({
-        id: epub.id, filename: epub.name,
-        title: epub.name.replace(/\.epub$/i,''),
-        author: 'Unknown', description: '', category: 'Uncategorised',
-        language: '', coverDataUrl: null, modifiedTime: epub.modifiedTime
-      });
+
+library.push({
+ id: result.id,
+ filename: file.name,
+ title: meta.title,
+ author: meta.author,
+ description: meta.description,
+ category: meta.category,
+ language: meta.language,
+ publisher: meta.publisher,
+ folderPath: 'Root',
+ folderId: folderId,
+ coverDataUrl: meta.coverDataUrl,
+ modifiedTime: new Date().toISOString()
+});
+
+    } catch (err) {
+
+      console.error(err);
+
     }
-    done++;
   }
 
-  // Save index back to Drive
-  showLoading('Saving index…');
-  await saveIndexToDrive(token, folderId, library);
-  saveCache();
-  hideLoading();
-  renderAll();
-  showToast(`Index built — ${library.length} book${library.length !== 1 ? 's' : ''}`);
-}
+  //
+  // SUBFOLDERS
+  //
 
+  const folderQuery = encodeURIComponent(`
+    '${folderId}' in parents
+    and trashed=false
+    and mimeType='application/vnd.google-apps.folder'
+  `);
+
+  const folderResp = await gdCall(
+    token,
+    `https://www.googleapis.com/drive/v3/files?q=${folderQuery}&fields=files(id,name)&pageSize=1000`
+  );
+
+  if (!folderResp) return;
+
+  const folderJson = await folderResp.json();
+
+  const folders = folderJson.files || [];
+
+  for (const folder of folders) {
+
+    const nextPath = currentPath
+      ? `${currentPath}/${folder.name}`
+      : folder.name;
+
+    await scanFolderRecursive(
+      token,
+      folder.id,
+      nextPath
+    );
+  }
+}
 // ══════════════════════════════════════════════════
 // REBUILD INDEX (force re-scan)
 // ══════════════════════════════════════════════════
@@ -1533,25 +1584,35 @@ function handleSearch(val) {
 
 function filteredLibrary() {
   if (!searchQ) return library;
-  return library.filter(b =>
-    b.title?.toLowerCase().includes(searchQ) ||
-    b.author?.toLowerCase().includes(searchQ) ||
-    b.category?.toLowerCase().includes(searchQ)
-  );
+return library.filter(b =>
+ b.title?.toLowerCase().includes(searchQ) ||
+ b.author?.toLowerCase().includes(searchQ) ||
+ b.category?.toLowerCase().includes(searchQ) ||
+ b.folderPath?.toLowerCase().includes(searchQ)
+);
 }
 
 // ══════════════════════════════════════════════════
 // RENDER
 // ══════════════════════════════════════════════════
 function categorised() {
+
   const books = filteredLibrary();
+
   const map = {};
-  for (const b of books) {
-    const cat = b.category || 'Uncategorised';
-    if (!map[cat]) map[cat] = [];
-    map[cat].push(b);
+
+  for (const book of books) {
+
+    const folder = book.folderPath || 'Root';
+
+    if (!map[folder]) {
+      map[folder] = [];
+    }
+
+    map[folder].push(book);
   }
-  return Object.entries(map).sort((a, b) => a[0].localeCompare(b[0]));
+
+  return map;
 }
 
 function renderAll() {
