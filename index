@@ -1,0 +1,1777 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>eLibrary</title>
+<meta name="theme-color" content="#0f1a2e"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-title" content="eLibrary"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://accounts.google.com/gsi/client" async></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Lato:wght@300;400;700&display=swap');
+
+:root {
+  --navy: #0f1a2e;
+  --navy2: #1a2840;
+  --cream: #faf7f2;
+  --warm-white: #fffefb;
+  --gold: #c8952a;
+  --gold2: #e8b84b;
+  --teal: #2a7c8a;
+  --teal-light: #e1f2f5;
+  --rust: #b84c1a;
+  --light-blue: #d8e8f0;
+  --border: #c8d8e4;
+  --muted: #7a8a9a;
+  --panel: #f0f5f8;
+  --danger: #a02828;
+  --header-h: 64px;
+  --mob-nav-h: 60px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; }
+
+body {
+  font-family: 'Lato', sans-serif;
+  background: var(--cream);
+  color: var(--navy);
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+/* ── HEADER ── */
+header {
+  background: var(--navy);
+  color: var(--cream);
+  padding: 0 1.5rem;
+  height: var(--header-h);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 3px solid var(--gold);
+  flex-shrink: 0;
+  gap: 0.8rem;
+}
+.brand-title {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.4rem;
+  color: #d8e8f0;
+  white-space: nowrap;
+}
+.brand-sub {
+  font-size: 0.65rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--gold);
+  margin-top: 2px;
+}
+.header-actions { display: flex; gap: 0.5rem; flex-shrink: 0; }
+.hbtn {
+  border: none;
+  padding: 0.45rem 0.9rem;
+  font-family: 'Lato', sans-serif;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+  border-radius: 2px;
+  transition: background 0.2s;
+  white-space: nowrap;
+}
+.hbtn-upload { background: var(--teal); color: #fff; }
+.hbtn-upload:hover { background: #1e5f6a; }
+.hbtn-sync { background: var(--gold); color: #fff; }
+.hbtn-sync:hover { background: #a87820; }
+.hbtn-ghost { background: transparent; color: #d8e8f0; border: 1px solid #334; }
+.hbtn-ghost:hover { background: #1a2840; }
+
+/* ── APP BODY ── */
+.app { display: flex; flex: 1; overflow: hidden; }
+
+/* ══ DESKTOP SIDEBAR ══ */
+.sidebar {
+  width: 260px;
+  min-width: 220px;
+  background: var(--panel);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.sidebar-hdr {
+  padding: 0.9rem 1.2rem 0.6rem;
+  font-size: 0.65rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--muted);
+  border-bottom: 1px solid var(--border);
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.sidebar-hdr-count {
+  background: var(--navy);
+  color: var(--gold);
+  font-size: 0.6rem;
+  padding: 1px 6px;
+  border-radius: 10px;
+  font-weight: 700;
+}
+.category-list { flex: 1; overflow-y: auto; padding: 0.4rem 0; }
+
+.search-bar {
+  padding: 0.6rem 0.8rem;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.search-bar input {
+  width: 100%;
+  padding: 0.45rem 0.75rem;
+  font-family: 'Lato', sans-serif;
+  font-size: 0.85rem;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  background: var(--warm-white);
+  color: var(--navy);
+  outline: none;
+}
+.search-bar input:focus { border-color: var(--teal); }
+
+.category-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.5rem 1rem 0.5rem 0.9rem;
+  font-family: 'Playfair Display', serif;
+  font-size: 0.88rem;
+  color: var(--navy2);
+  cursor: pointer;
+  user-select: none;
+  border-left: 3px solid transparent;
+  transition: background 0.15s;
+}
+.category-heading:hover { background: var(--light-blue); }
+.category-heading .ch-arrow { font-size: 0.6rem; color: var(--muted); transition: transform 0.2s; }
+.category-heading.open .ch-arrow { transform: rotate(90deg); }
+.cat-count {
+  font-size: 0.65rem;
+  background: var(--teal-light);
+  color: var(--teal);
+  padding: 1px 6px;
+  border-radius: 8px;
+  font-weight: 700;
+  font-family: 'Lato', sans-serif;
+  margin-right: 4px;
+}
+.book-list { display: none; }
+.book-list.open { display: block; }
+.book-item {
+  padding: 0.32rem 1rem 0.32rem 1.7rem;
+  font-size: 0.8rem;
+  cursor: pointer;
+  border-left: 3px solid transparent;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: background 0.12s;
+  line-height: 1.3;
+}
+.book-item:hover { background: rgba(42,124,138,0.1); }
+.book-item.active { background: rgba(42,124,138,0.14); border-left-color: var(--teal); font-weight: 700; color: var(--teal); }
+.book-item-author {
+  font-size: 0.7rem;
+  color: var(--muted);
+  display: block;
+  font-weight: 400;
+}
+.sidebar-footer {
+  border-top: 1px solid var(--border);
+  padding: 0.7rem;
+  display: flex;
+  gap: 0.4rem;
+}
+.sidebar-footer button {
+  flex: 1;
+  padding: 0.5rem 0.3rem;
+  font-size: 0.7rem;
+  font-family: 'Lato', sans-serif;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  border-radius: 2px;
+  cursor: pointer;
+  transition: all 0.15s;
+  border: 1px solid var(--border);
+}
+.btn-upload-side { background: var(--teal); color: #fff; border-color: var(--teal); }
+.btn-upload-side:hover { background: #1e5f6a; }
+.btn-refresh-side { background: transparent; color: var(--navy2); }
+.btn-refresh-side:hover { background: var(--light-blue); }
+
+/* ══ MAIN PANEL ══ */
+.main {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Welcome */
+.welcome {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  text-align: center;
+  color: var(--muted);
+}
+.welcome-icon { font-size: 3.5rem; margin-bottom: 1rem; opacity: 0.3; }
+.welcome h2 { font-family: 'Playfair Display', serif; font-size: 1.4rem; color: var(--navy2); margin-bottom: 0.5rem; }
+.welcome p { font-size: 0.88rem; max-width: 340px; line-height: 1.6; }
+.welcome-actions { display: flex; gap: 0.8rem; margin-top: 1.5rem; flex-wrap: wrap; justify-content: center; }
+
+/* Book detail view */
+.book-view { padding: 2rem 2.5rem; max-width: 760px; display: none; }
+.book-view.active { display: block; }
+
+.book-view-inner {
+  display: flex;
+  gap: 2rem;
+  align-items: flex-start;
+}
+.book-cover-wrap {
+  flex-shrink: 0;
+  width: 140px;
+}
+.book-cover-img {
+  width: 140px;
+  height: 200px;
+  object-fit: cover;
+  border-radius: 3px;
+  border: 1px solid var(--border);
+  display: block;
+}
+.book-cover-placeholder {
+  width: 140px;
+  height: 200px;
+  background: var(--navy2);
+  border-radius: 3px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: var(--gold);
+  font-size: 2.5rem;
+  border: 1px solid var(--border);
+}
+.book-cover-placeholder .cover-spine {
+  width: 8px;
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  background: var(--gold);
+  border-radius: 3px 0 0 3px;
+}
+.book-meta { flex: 1; min-width: 0; }
+.book-category-tag {
+  font-size: 0.65rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--teal);
+  font-weight: 700;
+  margin-bottom: 0.4rem;
+}
+.book-view h1 {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.8rem;
+  line-height: 1.2;
+  margin-bottom: 0.3rem;
+}
+.book-author {
+  font-size: 1rem;
+  color: var(--muted);
+  margin-bottom: 0.8rem;
+  font-style: italic;
+}
+.book-desc {
+  font-size: 0.88rem;
+  line-height: 1.7;
+  color: #3a4a5a;
+  margin-bottom: 1rem;
+  max-width: 480px;
+}
+.book-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-bottom: 1rem;
+}
+.book-badge {
+  font-size: 0.7rem;
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+.badge-cat { background: var(--teal-light); color: var(--teal); }
+.badge-lang { background: #ece8f8; color: #5a48b0; }
+
+.divider { border: none; border-top: 1px solid var(--border); margin: 1.2rem 0; }
+
+.view-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.2rem; }
+.btn-action {
+  padding: 0.42rem 1rem;
+  font-size: 0.72rem;
+  font-family: 'Lato', sans-serif;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  border-radius: 2px;
+  cursor: pointer;
+  border: 1px solid;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.btn-edit-cat { background: transparent; color: var(--navy2); border-color: var(--border); }
+.btn-edit-cat:hover { background: var(--light-blue); }
+.btn-download { background: var(--teal); color: #fff; border-color: var(--teal); }
+.btn-download:hover { background: #1e5f6a; }
+.btn-export-drive { background: var(--gold); color: #fff; border-color: var(--gold); }
+.btn-export-drive:hover { background: #a87820; }
+.btn-delete { background: transparent; color: var(--danger); border-color: #e0b0b0; }
+.btn-delete:hover { background: #fbeaea; }
+
+/* Loading state */
+.loading-overlay {
+  display: none;
+  position: fixed; inset: 0;
+  background: rgba(15,26,46,0.6);
+  z-index: 200;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 1rem;
+}
+.loading-overlay.open { display: flex; }
+.loading-spinner {
+  width: 44px; height: 44px;
+  border: 3px solid rgba(200,149,42,0.3);
+  border-top-color: var(--gold);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.loading-msg { color: var(--cream); font-size: 0.9rem; font-weight: 700; letter-spacing: 0.08em; }
+
+/* Upload drop zone */
+.drop-zone {
+  border: 2px dashed var(--border);
+  border-radius: 6px;
+  padding: 2rem;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin: 1.5rem 0;
+  background: var(--warm-white);
+}
+.drop-zone.drag-over { border-color: var(--teal); background: var(--teal-light); }
+.drop-zone p { font-size: 0.88rem; color: var(--muted); margin-top: 0.5rem; }
+.drop-zone .dz-icon { font-size: 2rem; color: var(--teal); }
+
+/* ══ MOBILE ══ */
+.mob-nav {
+  display: none;
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  height: var(--mob-nav-h);
+  background: var(--navy);
+  border-top: 2px solid var(--gold);
+  z-index: 50;
+}
+.mob-nav-inner { display: flex; height: 100%; }
+.mob-tab {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 0.6rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  font-weight: 700;
+  border: none;
+  background: none;
+  transition: color 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+.mob-tab .tab-icon { font-size: 1.3rem; line-height: 1; }
+.mob-tab.active { color: var(--gold); }
+
+.mob-panel { display: none; flex-direction: column; height: 100%; overflow: hidden; }
+.mob-panel.active { display: flex; }
+
+.mob-list-scroll { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+.mob-search { padding: 0.7rem 1rem; border-bottom: 1px solid var(--border); }
+.mob-search input {
+  width: 100%;
+  padding: 0.5rem 0.8rem;
+  font-size: 1rem;
+  font-family: 'Lato', sans-serif;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  background: var(--warm-white);
+  color: var(--navy);
+  outline: none;
+}
+
+.mob-category-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.8rem 1.2rem;
+  font-family: 'Playfair Display', serif;
+  font-size: 1rem;
+  color: var(--navy2);
+  background: var(--panel);
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  position: sticky; top: 0; z-index: 2;
+}
+.mob-category-heading .ch-arrow { transition: transform 0.2s; color: var(--muted); font-size: 0.7rem; }
+.mob-category-heading.open .ch-arrow { transform: rotate(90deg); }
+.mob-book-list { display: none; }
+.mob-book-list.open { display: block; }
+.mob-book-row {
+  padding: 0.75rem 1.4rem 0.75rem 1.6rem;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  background: var(--warm-white);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.1s;
+}
+.mob-book-row:active { background: var(--light-blue); }
+.mob-book-row-title { font-size: 0.92rem; font-weight: 700; }
+.mob-book-row-author { font-size: 0.78rem; color: var(--muted); }
+.mob-book-row .arrow { color: var(--muted); font-size: 0.8rem; flex-shrink: 0; }
+
+.mob-view-scroll { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 1.2rem 1.2rem 1.5rem; }
+.mob-back {
+  display: flex; align-items: center; gap: 0.4rem;
+  font-size: 0.78rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--teal); cursor: pointer; margin-bottom: 1rem;
+  -webkit-tap-highlight-color: transparent;
+}
+.mob-book-cover-placeholder {
+  width: 100px; height: 140px;
+  background: var(--navy2); border-radius: 3px;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--gold); font-size: 2rem; margin-bottom: 1rem;
+  border: 1px solid var(--border); flex-shrink: 0;
+}
+.mob-book-cover-img {
+  width: 100px; height: 140px;
+  object-fit: cover; border-radius: 3px;
+  border: 1px solid var(--border); margin-bottom: 1rem; flex-shrink: 0;
+}
+.mob-view-inner { display: flex; gap: 1rem; align-items: flex-start; margin-bottom: 1rem; }
+.mob-view-text { flex: 1; min-width: 0; }
+.mob-view-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1rem; }
+
+/* Settings panel */
+.settings-scroll { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 1.5rem 1.2rem; }
+.settings-scroll h2 { font-family: 'Playfair Display', serif; font-size: 1.4rem; color: var(--navy2); margin-bottom: 1.5rem; }
+.settings-group { margin-bottom: 2rem; }
+.settings-group-label {
+  font-size: 0.65rem; letter-spacing: 0.18em; text-transform: uppercase;
+  color: var(--muted); font-weight: 700; margin-bottom: 0.8rem;
+  padding-bottom: 0.4rem; border-bottom: 1px solid var(--border);
+}
+.settings-btn {
+  width: 100%; padding: 1rem 1.2rem;
+  font-family: 'Lato', sans-serif; font-size: 0.92rem; font-weight: 700;
+  text-align: left; border: 1px solid var(--border); border-radius: 4px;
+  cursor: pointer; margin-bottom: 0.7rem;
+  display: flex; align-items: center; gap: 0.8rem;
+  transition: background 0.15s; -webkit-tap-highlight-color: transparent;
+}
+.settings-btn .s-icon { font-size: 1.3rem; }
+.settings-btn.upload { background: var(--teal); color: #fff; border-color: var(--teal); }
+.settings-btn.sync-btn { background: var(--gold); color: #fff; border-color: var(--gold); }
+.settings-btn.neutral { background: var(--warm-white); color: var(--navy2); }
+.settings-note { font-size: 0.8rem; color: var(--muted); line-height: 1.6; margin-top: 0.3rem; }
+
+/* Desk settings popover */
+.desk-settings {
+  display: none;
+  position: fixed;
+  top: calc(var(--header-h) + 8px);
+  right: 1rem;
+  background: var(--warm-white);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 1.2rem 1.4rem;
+  width: 320px;
+  z-index: 80;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+}
+.desk-settings.open { display: block; }
+.desk-settings h3 {
+  font-family: 'Playfair Display', serif; font-size: 1rem;
+  color: var(--navy2); margin-bottom: 0.9rem;
+  padding-bottom: 0.4rem; border-bottom: 1px solid var(--border);
+}
+.desk-settings .ds-label {
+  display: block; font-size: 0.65rem; letter-spacing: 0.18em;
+  text-transform: uppercase; color: var(--muted); font-weight: 700; margin-bottom: 0.35rem;
+}
+.desk-settings .ds-note { font-size: 0.72rem; color: var(--muted); margin-top: 0.3rem; line-height: 1.5; }
+.desk-settings .path-row { display: flex; gap: 0.5rem; align-items: center; }
+.desk-settings .path-row input {
+  flex: 1; padding: 0.5rem 0.7rem; font-size: 0.88rem;
+  font-family: 'Lato', sans-serif; border: 1px solid var(--border);
+  border-radius: 3px; background: var(--cream); color: var(--navy); outline: none;
+}
+.desk-settings .path-row input:focus { border-color: var(--teal); }
+.desk-settings .path-row button {
+  padding: 0.5rem 0.8rem; background: var(--navy2); color: #fff;
+  border: none; border-radius: 3px; font-family: 'Lato', sans-serif;
+  font-size: 0.75rem; font-weight: 700; cursor: pointer; white-space: nowrap;
+}
+.desk-settings .path-row button:hover { background: var(--navy); }
+.desk-settings .ds-divider { border: none; border-top: 1px solid var(--border); margin: 0.9rem 0; }
+.desk-settings .ds-row { display: flex; gap: 0.5rem; margin-top: 0.5rem; }
+.desk-settings .ds-row button {
+  flex: 1; padding: 0.45rem; font-size: 0.72rem;
+  font-family: 'Lato', sans-serif; font-weight: 700; border-radius: 3px;
+  cursor: pointer; border: 1px solid var(--border); background: var(--cream); color: var(--navy2);
+}
+.desk-settings .ds-row button:hover { background: var(--light-blue); }
+
+/* ── MODAL ── */
+.modal-overlay {
+  display: none; position: fixed; inset: 0;
+  background: rgba(15,26,46,0.6); z-index: 100;
+  align-items: center; justify-content: center; padding: 1rem;
+}
+.modal-overlay.open { display: flex; }
+.modal {
+  background: var(--warm-white); border: 1px solid var(--border);
+  border-radius: 6px; padding: 1.8rem; width: 100%; max-width: 400px;
+}
+.modal h3 { font-family: 'Playfair Display', serif; font-size: 1.2rem; margin-bottom: 1rem; color: var(--navy2); }
+.modal .form-row { margin-bottom: 0.8rem; }
+.modal .form-row label {
+  display: block; font-size: 0.65rem; letter-spacing: 0.18em;
+  text-transform: uppercase; color: var(--muted); font-weight: 700; margin-bottom: 0.35rem;
+}
+.modal .form-row input, .modal .form-row select {
+  width: 100%; padding: 0.6rem 0.85rem;
+  font-family: 'Lato', sans-serif; font-size: 1rem;
+  color: var(--navy); background: var(--cream);
+  border: 1px solid var(--border); border-radius: 3px; outline: none;
+  -webkit-appearance: none; appearance: none;
+}
+.modal .form-row input:focus, .modal .form-row select:focus { border-color: var(--teal); }
+.modal-actions { display: flex; gap: 0.6rem; margin-top: 1.2rem; justify-content: flex-end; }
+.btn-save {
+  background: var(--teal); color: #fff; border: none;
+  padding: 0.65rem 1.4rem; font-family: 'Lato', sans-serif;
+  font-size: 0.82rem; font-weight: 700; letter-spacing: 0.08em;
+  text-transform: uppercase; border-radius: 2px; cursor: pointer; transition: background 0.15s;
+}
+.btn-save:hover { background: #1e5f6a; }
+.btn-cancel {
+  background: transparent; color: var(--muted); border: 1px solid var(--border);
+  padding: 0.65rem 1.2rem; font-family: 'Lato', sans-serif;
+  font-size: 0.82rem; font-weight: 700; letter-spacing: 0.08em;
+  text-transform: uppercase; border-radius: 2px; cursor: pointer; transition: all 0.15s;
+}
+.btn-cancel:hover { background: var(--light-blue); }
+
+/* Upload progress */
+.upload-progress {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0.7rem 1rem;
+  margin: 0.5rem 0;
+  font-size: 0.82rem;
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+}
+.upload-progress .up-icon { font-size: 1.1rem; }
+.upload-progress .up-name { flex: 1; font-weight: 700; color: var(--navy2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.upload-progress .up-status { font-size: 0.75rem; color: var(--muted); flex-shrink: 0; }
+.upload-progress.done { border-color: var(--teal); background: var(--teal-light); }
+.upload-progress.error { border-color: #e0b0b0; background: #fbeaea; }
+.progress-bar-wrap { height: 3px; background: var(--border); border-radius: 2px; margin-top: 0.3rem; }
+.progress-bar { height: 3px; background: var(--teal); border-radius: 2px; transition: width 0.3s; }
+
+/* Toast */
+.toast {
+  position: fixed;
+  bottom: calc(var(--mob-nav-h) + 1rem);
+  left: 50%; transform: translateX(-50%) translateY(6px);
+  background: var(--navy); color: #d8e8f0;
+  padding: 0.7rem 1.3rem; border-radius: 3px;
+  font-size: 0.85rem; font-weight: 700; letter-spacing: 0.05em;
+  opacity: 0; transition: opacity 0.3s, transform 0.3s;
+  pointer-events: none; z-index: 200; white-space: nowrap;
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* ── RESPONSIVE ── */
+@media (max-width: 640px) {
+  .sidebar { display: none; }
+  .desktop-main { display: none; }
+  .mob-nav { display: block; }
+  .mob-panels { display: flex; flex-direction: column; flex: 1; overflow: hidden; padding-bottom: var(--mob-nav-h); }
+  .toast { bottom: calc(var(--mob-nav-h) + 0.8rem); }
+  .header-actions button { display: none; }
+  header { padding: 0 1rem; }
+}
+@media (min-width: 641px) {
+  .mob-panels { display: none; }
+  .desktop-main { display: flex; flex: 1; overflow: hidden; }
+  .toast { bottom: 1.5rem; left: auto; right: 2rem; transform: translateY(6px); }
+  .toast.show { transform: translateY(0); }
+}
+
+/* Upload modal extras */
+.upload-list { max-height: 240px; overflow-y: auto; margin: 0.8rem 0; }
+.upload-modal-wide { max-width: 520px !important; }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header>
+  <div style="display:flex;align-items:center;gap:.8rem">
+    <svg width="38" height="38" viewBox="0 0 38 38" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect x="2" y="2" width="34" height="34" rx="7" fill="#0f1a2e"/>
+      <rect x="3.5" y="3.5" width="31" height="31" rx="6" stroke="#c8952a" stroke-width="1.2" fill="none"/>
+      <rect x="6" y="5" width="17" height="28" rx="2" fill="#faf7f2" stroke="#c8952a" stroke-width=".7"/>
+      <rect x="6" y="5" width="5" height="28" rx="2" fill="#1a2840"/>
+      <rect x="6" y="5" width="5" height="28" rx="2" fill="#c8952a" opacity=".7"/>
+      <rect x="14" y="9" width="7" height="1.2" rx=".6" fill="#7a8a9a"/>
+      <rect x="14" y="12" width="6" height="1.2" rx=".6" fill="#7a8a9a"/>
+      <rect x="14" y="15" width="7" height="1.2" rx=".6" fill="#7a8a9a"/>
+      <rect x="25" y="8" width="9" height="22" rx="2" fill="#1a2840" stroke="#c8952a" stroke-width=".7"/>
+      <rect x="25" y="8" width="3" height="22" rx="1.5" fill="#c8952a" opacity=".8"/>
+      <rect x="29.5" y="12" width="3" height="1" rx=".5" fill="#7a8a9a"/>
+      <rect x="29.5" y="15" width="3" height="1" rx=".5" fill="#7a8a9a"/>
+      <rect x="29.5" y="18" width="3" height="1" rx=".5" fill="#7a8a9a"/>
+    </svg>
+    <div>
+      <div class="brand-title">eLibrary</div>
+      <div class="brand-sub">Your EPUB collection</div>
+    </div>
+  </div>
+  <div class="header-actions">
+    <button class="hbtn hbtn-upload" onclick="showUploadModal()">📤 Upload EPUB</button>
+    <button class="hbtn hbtn-sync" onclick="syncFromDrive()">☁ Sync Drive</button>
+    <button class="hbtn hbtn-ghost" onclick="toggleDeskSettings()">⚙</button>
+  </div>
+</header>
+
+<div class="app">
+
+  <!-- ══ DESKTOP ══ -->
+  <div class="desktop-main">
+    <aside class="sidebar">
+      <div class="sidebar-hdr">
+        <span>Library</span>
+        <span class="sidebar-hdr-count" id="deskTotalCount">0</span>
+      </div>
+      <div class="search-bar">
+        <input type="text" id="deskSearch" placeholder="Search books…" oninput="handleSearch(this.value)"/>
+      </div>
+      <div class="category-list" id="deskCategoryList"></div>
+      <div class="sidebar-footer">
+        <button class="btn-upload-side" onclick="showUploadModal()">+ Upload</button>
+        <button class="btn-refresh-side" onclick="syncFromDrive()">↻ Sync</button>
+      </div>
+    </aside>
+
+    <main class="main" id="deskMain">
+      <div class="welcome" id="deskWelcome">
+        <div class="welcome-icon">📚</div>
+        <h2>Your EPUB Library</h2>
+        <p>Connect to Google Drive to load your collection, or upload EPUB files directly.</p>
+        <div class="welcome-actions">
+          <button class="hbtn hbtn-sync" onclick="syncFromDrive()">☁ Connect to Drive</button>
+          <button class="hbtn hbtn-upload" onclick="showUploadModal()">📤 Upload EPUB</button>
+        </div>
+      </div>
+      <div class="book-view" id="deskBookView">
+        <div class="book-view-inner">
+          <div class="book-cover-wrap">
+            <img class="book-cover-img" id="deskCoverImg" src="" alt="Cover" style="display:none"/>
+            <div class="book-cover-placeholder" id="deskCoverPlaceholder">📖</div>
+          </div>
+          <div class="book-meta">
+            <div class="book-category-tag" id="deskViewCat"></div>
+            <h1 id="deskViewTitle"></h1>
+            <div class="book-author" id="deskViewAuthor"></div>
+            <div class="book-badges" id="deskViewBadges"></div>
+            <p class="book-desc" id="deskViewDesc"></p>
+            <div class="view-actions">
+              <button class="btn-action btn-edit-cat" onclick="showEditCategory()">✎ Category</button>
+              <button class="btn-action btn-download" onclick="downloadCurrentBook()">⬇ Download</button>
+              <button class="btn-action btn-export-drive" onclick="exportCurrentToDrive()">☁ Export to Drive</button>
+              <button class="btn-action btn-delete" onclick="deleteCurrentBook()">✕ Delete</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- ══ MOBILE ══ -->
+  <div class="mob-panels">
+
+    <!-- Panel 1: Book List -->
+    <div class="mob-panel active" id="mobPanelList">
+      <div class="mob-search">
+        <input type="text" placeholder="Search books…" oninput="handleSearch(this.value)"/>
+      </div>
+      <div class="mob-list-scroll" id="mobCategoryList"></div>
+    </div>
+
+    <!-- Panel 2: Book View -->
+    <div class="mob-panel" id="mobPanelView">
+      <div class="mob-view-scroll">
+        <div class="mob-back" onclick="mob_backToList()">← Library</div>
+        <div class="mob-view-inner">
+          <div>
+            <img class="mob-book-cover-img" id="mobCoverImg" src="" style="display:none"/>
+            <div class="mob-book-cover-placeholder" id="mobCoverPlaceholder">📖</div>
+          </div>
+          <div class="mob-view-text">
+            <div class="book-category-tag" id="mobViewCat"></div>
+            <h1 style="font-family:'Playfair Display',serif;font-size:1.3rem;line-height:1.2;margin-bottom:.2rem" id="mobViewTitle"></h1>
+            <div class="book-author" style="font-size:.85rem" id="mobViewAuthor"></div>
+          </div>
+        </div>
+        <div class="mob-view-actions">
+          <button class="btn-action btn-edit-cat" onclick="showEditCategory()">✎ Category</button>
+          <button class="btn-action btn-download" onclick="downloadCurrentBook()">⬇ Download</button>
+          <button class="btn-action btn-export-drive" onclick="exportCurrentToDrive()">☁ Export</button>
+          <button class="btn-action btn-delete" onclick="deleteCurrentBook()">✕ Delete</button>
+        </div>
+        <hr class="divider"/>
+        <p class="book-desc" id="mobViewDesc"></p>
+      </div>
+    </div>
+
+    <!-- Panel 3: Settings -->
+    <div class="mob-panel" id="mobPanelSettings">
+      <div class="settings-scroll">
+        <h2>Settings</h2>
+        <div class="settings-group">
+          <div class="settings-group-label">Library Drive Folder</div>
+          <div style="display:flex;gap:.5rem;align-items:center;margin-bottom:.5rem">
+            <input class="library-folder-input" type="text" placeholder="e.g. Books"
+              style="flex:1;padding:.6rem .8rem;font-size:1rem;font-family:Lato,sans-serif;border:1px solid var(--border);border-radius:3px;background:var(--warm-white);color:var(--navy)"
+              onchange="setLibraryFolder(this.value)"/>
+            <button onclick="setLibraryFolder(this.previousElementSibling.value)"
+              style="padding:.6rem .9rem;background:var(--navy2);color:#fff;border:none;border-radius:3px;font-family:Lato,sans-serif;font-size:.8rem;font-weight:700;cursor:pointer">Set</button>
+          </div>
+          <p class="settings-note">Google Drive folder where your EPUB files are stored. Created if it doesn't exist.</p>
+        </div>
+        <div class="settings-group">
+          <div class="settings-group-label">Export Drive Folder</div>
+          <div style="display:flex;gap:.5rem;align-items:center;margin-bottom:.5rem">
+            <input class="export-folder-input" type="text" placeholder="e.g. Books/Exports"
+              style="flex:1;padding:.6rem .8rem;font-size:1rem;font-family:Lato,sans-serif;border:1px solid var(--border);border-radius:3px;background:var(--warm-white);color:var(--navy)"
+              onchange="setExportFolder(this.value)"/>
+            <button onclick="setExportFolder(this.previousElementSibling.value)"
+              style="padding:.6rem .9rem;background:var(--navy2);color:#fff;border:none;border-radius:3px;font-family:Lato,sans-serif;font-size:.8rem;font-weight:700;cursor:pointer">Set</button>
+          </div>
+          <p class="settings-note">A different Drive folder to copy books to when using the Export button.</p>
+        </div>
+        <div class="settings-group">
+          <div class="settings-group-label">Actions</div>
+          <button class="settings-btn sync-btn" onclick="syncFromDrive()">
+            <span class="s-icon">☁</span>
+            <div><div>Sync from Drive</div><div class="settings-note" style="color:rgba(255,255,255,.75)">Reload the library index from Google Drive</div></div>
+          </button>
+          <button class="settings-btn upload" onclick="showUploadModal()">
+            <span class="s-icon">📤</span>
+            <div><div>Upload EPUB Files</div><div class="settings-note" style="color:rgba(255,255,255,.75)">Add new books to your Drive library</div></div>
+          </button>
+          <button class="settings-btn neutral" onclick="rebuildIndex()">
+            <span class="s-icon">↻</span>
+            <div><div>Rebuild Index</div><div class="settings-note">Re-read all EPUB metadata and update the cache</div></div>
+          </button>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /mob-panels -->
+</div><!-- /app -->
+
+<!-- Desktop settings popover -->
+<div class="desk-settings" id="deskSettings">
+  <h3>⚙ Settings</h3>
+  <span class="ds-label">Library Drive Folder</span>
+  <div class="path-row">
+    <input class="library-folder-input" type="text" placeholder="e.g. Books"
+      onkeydown="if(event.key==='Enter') setLibraryFolder(this.value)"/>
+    <button onclick="setLibraryFolder(this.previousElementSibling.value)">Set</button>
+  </div>
+  <p class="ds-note">Folder containing your EPUB files. Set this before syncing.</p>
+  <hr class="ds-divider"/>
+  <span class="ds-label">Export Drive Folder</span>
+  <div class="path-row">
+    <input class="export-folder-input" type="text" placeholder="e.g. Books/Exports"
+      onkeydown="if(event.key==='Enter') setExportFolder(this.value)"/>
+    <button onclick="setExportFolder(this.previousElementSibling.value)">Set</button>
+  </div>
+  <p class="ds-note">Target folder when exporting a book to Drive.</p>
+  <hr class="ds-divider"/>
+  <div class="ds-row">
+    <button onclick="rebuildIndex()">↻ Rebuild Index</button>
+    <button onclick="clearCache()" style="color:var(--danger)">✕ Clear Cache</button>
+  </div>
+</div>
+
+<!-- Mobile bottom nav -->
+<nav class="mob-nav">
+  <div class="mob-nav-inner">
+    <button class="mob-tab active" id="tabLibrary" onclick="mob_switchTab('library')">
+      <span class="tab-icon">📚</span><span>Library</span>
+    </button>
+    <button class="mob-tab" id="tabUpload" onclick="showUploadModal()">
+      <span class="tab-icon">📤</span><span>Upload</span>
+    </button>
+    <button class="mob-tab" id="tabSettings" onclick="mob_switchTab('settings')">
+      <span class="tab-icon">⚙️</span><span>Settings</span>
+    </button>
+  </div>
+</nav>
+
+<!-- Upload Modal -->
+<div class="modal-overlay" id="uploadModal">
+  <div class="modal upload-modal-wide">
+    <h3>Upload EPUB Files</h3>
+    <div class="drop-zone" id="dropZone"
+      onclick="document.getElementById('epubFileInput').click()"
+      ondragover="event.preventDefault();this.classList.add('drag-over')"
+      ondragleave="this.classList.remove('drag-over')"
+      ondrop="handleDrop(event)">
+      <div class="dz-icon">📤</div>
+      <p><strong>Click to browse</strong> or drag &amp; drop EPUB files here</p>
+      <p style="font-size:.78rem;margin-top:.3rem">Supports multiple files at once</p>
+    </div>
+    <div class="upload-list" id="uploadList"></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeUploadModal()">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Category Modal -->
+<div class="modal-overlay" id="editCatModal">
+  <div class="modal">
+    <h3>Edit Category</h3>
+    <div class="form-row">
+      <label>Category</label>
+      <input type="text" id="editCatInput" placeholder="e.g. Fiction" autocomplete="off" list="catSuggestions"/>
+      <datalist id="catSuggestions"></datalist>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeEditCat()">Cancel</button>
+      <button class="btn-save" onclick="saveCategory()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Loading overlay -->
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="loading-spinner"></div>
+  <div class="loading-msg" id="loadingMsg">Loading…</div>
+</div>
+
+<div class="toast" id="toast"></div>
+<input type="file" id="epubFileInput" accept=".epub" multiple style="display:none" onchange="handleFileInputChange(event)"/>
+
+<script>
+// ══════════════════════════════════════════════════
+// CONFIG & CONSTANTS
+// ══════════════════════════════════════════════════
+const LS_CACHE_KEY     = 'elib_index_v1';
+const LS_LIB_FOLDER    = 'elib_lib_folder';
+const LS_EXPORT_FOLDER = 'elib_export_folder';
+const LS_GD_TOKEN      = 'elib_gd_token';
+const LS_OPEN_CATS     = 'elib_open_cats';
+const INDEX_FILENAME   = '_elib_index.json';
+
+const GD_CLIENT_ID = '970185316494-1et3pq5g5bqk7ckt59079ra008lgfvq0.apps.googleusercontent.com';
+const GD_SCOPE     = 'https://www.googleapis.com/auth/drive';
+
+// ══════════════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════════════
+let library   = loadCache();   // array of book objects
+let searchQ   = '';
+let currentId = null;          // currently viewed book (Drive file id)
+let openCats  = new Set(JSON.parse(localStorage.getItem(LS_OPEN_CATS) || '[]'));
+
+function loadCache() {
+  try { const s = localStorage.getItem(LS_CACHE_KEY); if (s) return JSON.parse(s); } catch(e) {}
+  return [];
+}
+function saveCache() {
+  try { localStorage.setItem(LS_CACHE_KEY, JSON.stringify(library)); } catch(e) {}
+  persistOpenCats();
+}
+function persistOpenCats() {
+  localStorage.setItem(LS_OPEN_CATS, JSON.stringify([...openCats]));
+}
+
+// ── FOLDER SETTINGS ──
+function getLibraryFolder() { return localStorage.getItem(LS_LIB_FOLDER) || ''; }
+function setLibraryFolder(v) {
+  const f = v.trim();
+  if (!f) { showToast('Please enter a folder name'); return; }
+  localStorage.setItem(LS_LIB_FOLDER, f);
+  document.querySelectorAll('.library-folder-input').forEach(el => el.value = f);
+  showToast(`Library folder set to "${f}"`);
+}
+function getExportFolder() { return localStorage.getItem(LS_EXPORT_FOLDER) || ''; }
+function setExportFolder(v) {
+  const f = v.trim();
+  if (!f) { showToast('Please enter a folder name'); return; }
+  localStorage.setItem(LS_EXPORT_FOLDER, f);
+  document.querySelectorAll('.export-folder-input').forEach(el => el.value = f);
+  showToast(`Export folder set to "${f}"`);
+}
+
+// ══════════════════════════════════════════════════
+// GOOGLE DRIVE AUTH
+// ══════════════════════════════════════════════════
+let gTokenClient = null;
+function gdToken() { return localStorage.getItem(LS_GD_TOKEN); }
+
+function gdAuth(callback) {
+  if (!window.google) { showToast('Google API not loaded — try again shortly'); return; }
+  gTokenClient = google.accounts.oauth2.initTokenClient({
+    client_id: GD_CLIENT_ID,
+    scope: GD_SCOPE,
+    callback: (resp) => {
+      if (resp.error) { showToast('Google sign-in failed'); return; }
+      localStorage.setItem(LS_GD_TOKEN, resp.access_token);
+      callback(resp.access_token);
+    }
+  });
+  gTokenClient.requestAccessToken();
+}
+
+async function gdCall(token, url, opts = {}) {
+  const resp = await fetch(url, {
+    ...opts,
+    headers: { 'Authorization': `Bearer ${token}`, ...(opts.headers || {}) }
+  });
+  if (resp.status === 401) { localStorage.removeItem(LS_GD_TOKEN); return null; }
+  return resp;
+}
+
+async function gdFindFolder(token, name) {
+  if (!name) return 'NO_FOLDER';
+  const q = encodeURIComponent(`name='${name}' and mimeType='application/vnd.google-apps.folder' and trashed=false`);
+  const r = await gdCall(token, `https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name)`);
+  if (!r) return 'AUTH_EXPIRED';
+  const j = await r.json();
+  if (j.files?.length) return j.files[0].id;
+  // create it
+  const cr = await gdCall(token, 'https://www.googleapis.com/drive/v3/files', {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ name, mimeType: 'application/vnd.google-apps.folder' })
+  });
+  if (!cr) return 'AUTH_EXPIRED';
+  const c = await cr.json();
+  showToast(`Created folder "${name}" in Drive`);
+  return c.id;
+}
+
+// ══════════════════════════════════════════════════
+// INDEX (cache) — stored as _elib_index.json in the Drive folder
+// ══════════════════════════════════════════════════
+async function loadIndexFromDrive(token, folderId) {
+  const q = encodeURIComponent(`name='${INDEX_FILENAME}' and '${folderId}' in parents and trashed=false`);
+  const r = await gdCall(token, `https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id)`);
+  if (!r) return null;
+  const j = await r.json();
+  if (!j.files?.length) return null;
+  const fileId = j.files[0].id;
+  const dr = await gdCall(token, `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`);
+  if (!dr) return null;
+  try { return await dr.json(); } catch(e) { return null; }
+}
+
+async function saveIndexToDrive(token, folderId, indexData) {
+  const json = JSON.stringify(indexData, null, 2);
+  // Check if index file already exists
+  const q = encodeURIComponent(`name='${INDEX_FILENAME}' and '${folderId}' in parents and trashed=false`);
+  const r = await gdCall(token, `https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id)`);
+  if (!r) return false;
+  const j = await r.json();
+  if (j.files?.length) {
+    const fid = j.files[0].id;
+    await gdCall(token, `https://www.googleapis.com/upload/drive/v3/files/${fid}?uploadType=media`, {
+      method: 'PATCH', headers: {'Content-Type':'application/json'}, body: json
+    });
+  } else {
+    const boundary = 'idx_boundary';
+    const meta = JSON.stringify({ name: INDEX_FILENAME, mimeType: 'application/json', parents: [folderId] });
+    const body = `--${boundary}\r\nContent-Type: application/json\r\n\r\n${meta}\r\n--${boundary}\r\nContent-Type: application/json\r\n\r\n${json}\r\n--${boundary}--`;
+    await gdCall(token, 'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
+      method: 'POST', headers: {'Content-Type':`multipart/related; boundary=${boundary}`}, body
+    });
+  }
+  return true;
+}
+
+// ══════════════════════════════════════════════════
+// EPUB METADATA PARSING
+// ══════════════════════════════════════════════════
+async function parseEpubMeta(file) {
+  try {
+    const zip = await JSZip.loadAsync(file);
+    // Find OPF file via container.xml
+    const container = await zip.file('META-INF/container.xml')?.async('string');
+    if (!container) return fallbackMeta(file);
+    const opfPath = container.match(/full-path="([^"]+\.opf)"/i)?.[1];
+    if (!opfPath) return fallbackMeta(file);
+    const opfXml = await zip.file(opfPath)?.async('string');
+    if (!opfXml) return fallbackMeta(file);
+
+    const get = (tag) => {
+      const m = opfXml.match(new RegExp(`<dc:${tag}[^>]*>([^<]+)<\/dc:${tag}>`, 'i'));
+      return m ? m[1].trim() : '';
+    };
+    const getAll = (tag) => {
+      const re = new RegExp(`<dc:${tag}[^>]*>([^<]+)<\/dc:${tag}>`, 'gi');
+      const results = []; let m;
+      while ((m = re.exec(opfXml)) !== null) results.push(m[1].trim());
+      return results;
+    };
+
+    // Try to extract cover image
+    let coverDataUrl = null;
+    try {
+      // Find cover image id from metadata
+      const coverId = opfXml.match(/name="cover"\s+content="([^"]+)"/i)?.[1]
+                   || opfXml.match(/id="cover-image"[^>]*href="([^"]+)"/i)?.[1];
+
+      if (coverId) {
+        // Find actual href from manifest
+        const manifestItem = opfXml.match(new RegExp(`id="${coverId}"[^>]+href="([^"]+)"`, 'i'))
+                          || opfXml.match(new RegExp(`href="([^"]+)"[^>]+id="${coverId}"`, 'i'));
+        const coverHref = manifestItem?.[1];
+        if (coverHref) {
+          const opfDir = opfPath.includes('/') ? opfPath.replace(/\/[^/]+$/, '/') : '';
+          const coverPath = opfDir + coverHref;
+          const coverFile = zip.file(coverPath) || zip.file(coverHref);
+          if (coverFile) {
+            const blob = await coverFile.async('blob');
+            coverDataUrl = await blobToDataUrl(blob);
+          }
+        }
+      }
+      // If no cover by id, try common paths
+      if (!coverDataUrl) {
+        const candidates = ['cover.jpg','cover.jpeg','cover.png','images/cover.jpg','images/cover.jpeg','OEBPS/cover.jpg','OEBPS/images/cover.jpg'];
+        for (const p of candidates) {
+          const f = zip.file(p);
+          if (f) { const blob = await f.async('blob'); coverDataUrl = await blobToDataUrl(blob); break; }
+        }
+      }
+    } catch(e) { /* cover extraction failed silently */ }
+
+    const subjects = getAll('subject');
+    const category = subjects[0] || 'Uncategorised';
+
+    return {
+      title:       get('title') || file.name.replace(/\.epub$/i, ''),
+      author:      getAll('creator').join(', ') || 'Unknown Author',
+      description: get('description') || '',
+      category:    category,
+      language:    get('language') || '',
+      publisher:   get('publisher') || '',
+      coverDataUrl
+    };
+  } catch(e) {
+    return fallbackMeta(file);
+  }
+}
+
+function fallbackMeta(file) {
+  return {
+    title: file.name.replace(/\.epub$/i, ''),
+    author: 'Unknown Author',
+    description: '',
+    category: 'Uncategorised',
+    language: '',
+    publisher: '',
+    coverDataUrl: null
+  };
+}
+
+function blobToDataUrl(blob) {
+  return new Promise((res, rej) => {
+    const r = new FileReader();
+    r.onload = () => res(r.result);
+    r.onerror = rej;
+    r.readAsDataURL(blob);
+  });
+}
+
+// ══════════════════════════════════════════════════
+// SYNC FROM DRIVE
+// ══════════════════════════════════════════════════
+async function syncFromDrive() {
+  const folder = getLibraryFolder();
+  if (!folder) { showToast('Set a Library folder in ⚙ Settings first'); return; }
+
+  const doSync = async (token) => {
+    showLoading('Connecting to Drive…');
+    const folderId = await gdFindFolder(token, folder);
+    if (folderId === 'AUTH_EXPIRED') { hideLoading(); gdAuth(doSync); return; }
+    if (folderId === 'NO_FOLDER') { hideLoading(); showToast('Please set a library folder in Settings'); return; }
+
+    // Try loading cached index first
+    showLoading('Loading index…');
+    const cached = await loadIndexFromDrive(token, folderId);
+    if (cached && Array.isArray(cached)) {
+      library = cached;
+      saveCache();
+      hideLoading();
+      renderAll();
+      showToast(`Library loaded — ${library.length} book${library.length !== 1 ? 's' : ''}`);
+      return;
+    }
+
+    // No index — scan EPUBs (first time)
+    await scanAndBuildIndex(token, folderId);
+  };
+
+  const t = gdToken();
+  if (t) doSync(t); else gdAuth(doSync);
+}
+
+async function scanAndBuildIndex(token, folderId) {
+  showLoading('Scanning EPUB files…');
+  const q = encodeURIComponent(`'${folderId}' in parents and (mimeType='application/epub+zip' or name contains '.epub') and trashed=false`);
+  const r = await gdCall(token, `https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name,size,modifiedTime)&pageSize=1000`);
+  if (!r) { hideLoading(); showToast('Drive scan failed'); return; }
+  const j = await r.json();
+  const epubs = (j.files || []).filter(f => f.name.toLowerCase().endsWith('.epub'));
+
+  if (!epubs.length) {
+    hideLoading();
+    library = [];
+    saveCache();
+    renderAll();
+    showToast('No EPUB files found in that folder');
+    return;
+  }
+
+  library = [];
+  let done = 0;
+  for (const epub of epubs) {
+    showLoading(`Reading metadata… (${done + 1}/${epubs.length})`);
+    try {
+      const dr = await gdCall(token, `https://www.googleapis.com/drive/v3/files/${epub.id}?alt=media`);
+      if (!dr) continue;
+      const blob = await dr.blob();
+      const file = new File([blob], epub.name, { type: 'application/epub+zip' });
+      const meta = await parseEpubMeta(file);
+      library.push({
+        id:          epub.id,
+        filename:    epub.name,
+        title:       meta.title,
+        author:      meta.author,
+        description: meta.description,
+        category:    meta.category,
+        language:    meta.language,
+        coverDataUrl: meta.coverDataUrl,
+        modifiedTime: epub.modifiedTime
+      });
+    } catch(e) {
+      library.push({
+        id: epub.id, filename: epub.name,
+        title: epub.name.replace(/\.epub$/i,''),
+        author: 'Unknown', description: '', category: 'Uncategorised',
+        language: '', coverDataUrl: null, modifiedTime: epub.modifiedTime
+      });
+    }
+    done++;
+  }
+
+  // Save index back to Drive
+  showLoading('Saving index…');
+  await saveIndexToDrive(token, folderId, library);
+  saveCache();
+  hideLoading();
+  renderAll();
+  showToast(`Index built — ${library.length} book${library.length !== 1 ? 's' : ''}`);
+}
+
+// ══════════════════════════════════════════════════
+// REBUILD INDEX (force re-scan)
+// ══════════════════════════════════════════════════
+async function rebuildIndex() {
+  const folder = getLibraryFolder();
+  if (!folder) { showToast('Set a Library folder in Settings first'); return; }
+  if (!confirm('Re-read metadata from all EPUB files? This may take a while for large libraries.')) return;
+
+  const doRebuild = async (token) => {
+    const folderId = await gdFindFolder(token, folder);
+    if (folderId === 'AUTH_EXPIRED') { gdAuth(doRebuild); return; }
+    if (folderId === 'NO_FOLDER') { showToast('Folder not found'); return; }
+    await scanAndBuildIndex(token, folderId);
+  };
+  const t = gdToken();
+  if (t) doRebuild(t); else gdAuth(doRebuild);
+}
+
+// ══════════════════════════════════════════════════
+// UPLOAD EPUB
+// ══════════════════════════════════════════════════
+function showUploadModal() {
+  document.getElementById('uploadList').innerHTML = '';
+  document.getElementById('uploadModal').classList.add('open');
+  document.getElementById('dropZone').classList.remove('drag-over');
+}
+function closeUploadModal() {
+  document.getElementById('uploadModal').classList.remove('open');
+}
+
+function handleDrop(e) {
+  e.preventDefault();
+  document.getElementById('dropZone').classList.remove('drag-over');
+  const files = [...e.dataTransfer.files].filter(f => f.name.toLowerCase().endsWith('.epub'));
+  if (!files.length) { showToast('Please drop EPUB files only'); return; }
+  processUploadFiles(files);
+}
+function handleFileInputChange(e) {
+  const files = [...e.target.files];
+  e.target.value = '';
+  processUploadFiles(files);
+}
+
+async function processUploadFiles(files) {
+  const folder = getLibraryFolder();
+  if (!folder) { showToast('Set a Library folder in Settings first'); closeUploadModal(); return; }
+
+  const doUpload = async (token) => {
+    const folderId = await gdFindFolder(token, folder);
+    if (folderId === 'AUTH_EXPIRED') { gdAuth(doUpload); return; }
+    if (folderId === 'NO_FOLDER') { showToast('Please set a library folder in Settings'); return; }
+
+    for (const file of files) {
+      await uploadOneEpub(token, folderId, file);
+    }
+    // Update Drive index
+    showLoading('Saving index…');
+    await saveIndexToDrive(token, folderId, library);
+    saveCache();
+    hideLoading();
+    renderAll();
+  };
+
+  const t = gdToken();
+  if (t) doUpload(t); else gdAuth(doUpload);
+}
+
+async function uploadOneEpub(token, folderId, file) {
+  const rowId = 'up_' + Date.now() + Math.random();
+  const list = document.getElementById('uploadList');
+  list.innerHTML += `<div class="upload-progress" id="${rowId}">
+    <span class="up-icon">📗</span>
+    <div style="flex:1">
+      <div class="up-name">${esc(file.name)}</div>
+      <div class="progress-bar-wrap"><div class="progress-bar" id="${rowId}_bar" style="width:10%"></div></div>
+    </div>
+    <span class="up-status" id="${rowId}_st">Reading…</span>
+  </div>`;
+
+  try {
+    setUpProgress(rowId, 20, 'Parsing…');
+    const meta = await parseEpubMeta(file);
+    setUpProgress(rowId, 50, 'Uploading…');
+
+    // Upload EPUB to Drive
+    const boundary = 'epub_upload';
+    const metadata = JSON.stringify({ name: file.name, mimeType: 'application/epub+zip', parents: [folderId] });
+    const arr = await file.arrayBuffer();
+    const enc = new TextEncoder();
+    const head = enc.encode(`--${boundary}\r\nContent-Type: application/json\r\n\r\n${metadata}\r\n--${boundary}\r\nContent-Type: application/epub+zip\r\n\r\n`);
+    const foot = enc.encode(`\r\n--${boundary}--`);
+    const body = new Uint8Array(head.length + arr.byteLength + foot.length);
+    body.set(head, 0);
+    body.set(new Uint8Array(arr), head.length);
+    body.set(foot, head.length + arr.byteLength);
+
+    const r = await gdCall(token, 'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
+      method: 'POST',
+      headers: {'Content-Type': `multipart/related; boundary=${boundary}`},
+      body
+    });
+    if (!r || !r.ok) throw new Error('Upload failed');
+    const result = await r.json();
+    setUpProgress(rowId, 100, '✓ Done');
+    document.getElementById(rowId)?.classList.add('done');
+
+    // Add to library
+    library.push({
+      id: result.id,
+      filename: file.name,
+      title: meta.title,
+      author: meta.author,
+      description: meta.description,
+      category: meta.category,
+      language: meta.language,
+      coverDataUrl: meta.coverDataUrl,
+      modifiedTime: new Date().toISOString()
+    });
+  } catch(e) {
+    setUpProgress(rowId, 100, '✗ Failed');
+    document.getElementById(rowId)?.classList.add('error');
+    console.error('Upload error:', e);
+  }
+}
+
+function setUpProgress(rowId, pct, status) {
+  const bar = document.getElementById(rowId + '_bar');
+  const st  = document.getElementById(rowId + '_st');
+  if (bar) bar.style.width = pct + '%';
+  if (st)  st.textContent = status;
+}
+
+// ══════════════════════════════════════════════════
+// DOWNLOAD / EXPORT
+// ══════════════════════════════════════════════════
+async function downloadCurrentBook() {
+  if (!currentId) return;
+  const book = library.find(b => b.id === currentId);
+  if (!book) return;
+
+  const doDownload = async (token) => {
+    showLoading('Downloading…');
+    const r = await gdCall(token, `https://www.googleapis.com/drive/v3/files/${book.id}?alt=media`);
+    if (!r) { hideLoading(); gdAuth(doDownload); return; }
+    const blob = await r.blob();
+    hideLoading();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = book.filename; a.click();
+    URL.revokeObjectURL(url);
+    showToast(`Downloaded: ${book.filename}`);
+  };
+  const t = gdToken();
+  if (t) doDownload(t); else gdAuth(doDownload);
+}
+
+async function exportCurrentToDrive() {
+  if (!currentId) return;
+  const exportFolder = getExportFolder();
+  if (!exportFolder) { showToast('Set an Export folder in ⚙ Settings first'); return; }
+  const book = library.find(b => b.id === currentId);
+  if (!book) return;
+
+  const doExport = async (token) => {
+    showLoading('Finding export folder…');
+    const folderId = await gdFindFolder(token, exportFolder);
+    if (folderId === 'AUTH_EXPIRED') { hideLoading(); gdAuth(doExport); return; }
+    if (folderId === 'NO_FOLDER') { hideLoading(); showToast('Please set an export folder in Settings'); return; }
+
+    showLoading('Copying file…');
+    // Use Drive copy endpoint
+    const r = await gdCall(token, `https://www.googleapis.com/drive/v3/files/${book.id}/copy`, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ name: book.filename, parents: [folderId] })
+    });
+    hideLoading();
+    if (!r || !r.ok) { showToast('Export failed'); return; }
+    showToast(`Exported to "${exportFolder}/${book.filename}" ✓`);
+  };
+  const t = gdToken();
+  if (t) doExport(t); else gdAuth(doExport);
+}
+
+// ══════════════════════════════════════════════════
+// DELETE
+// ══════════════════════════════════════════════════
+async function deleteCurrentBook() {
+  if (!currentId) return;
+  const book = library.find(b => b.id === currentId);
+  if (!book) return;
+  if (!confirm(`Delete "${book.title}" from Drive? This cannot be undone.`)) return;
+
+  const doDelete = async (token) => {
+    showLoading('Deleting…');
+    const r = await gdCall(token, `https://www.googleapis.com/drive/v3/files/${book.id}`, { method: 'DELETE' });
+    if (!r && r !== null) { hideLoading(); gdAuth(doDelete); return; }
+    library = library.filter(b => b.id !== currentId);
+    // Update Drive index
+    const folder = getLibraryFolder();
+    if (folder) {
+      const folderId = await gdFindFolder(token, folder);
+      if (folderId && folderId !== 'AUTH_EXPIRED' && folderId !== 'NO_FOLDER') {
+        await saveIndexToDrive(token, folderId, library);
+      }
+    }
+    saveCache();
+    currentId = null;
+    hideLoading();
+    renderAll();
+    showDeskWelcome();
+    mob_backToList();
+    showToast(`"${book.title}" deleted`);
+  };
+  const t = gdToken();
+  if (t) doDelete(t); else gdAuth(doDelete);
+}
+
+// ══════════════════════════════════════════════════
+// EDIT CATEGORY
+// ══════════════════════════════════════════════════
+function showEditCategory() {
+  if (!currentId) return;
+  const book = library.find(b => b.id === currentId);
+  if (!book) return;
+  document.getElementById('editCatInput').value = book.category || '';
+  // Populate datalist with existing categories
+  const cats = [...new Set(library.map(b => b.category).filter(Boolean))].sort();
+  document.getElementById('catSuggestions').innerHTML = cats.map(c => `<option value="${esc(c)}">`).join('');
+  document.getElementById('editCatModal').classList.add('open');
+  setTimeout(() => document.getElementById('editCatInput').focus(), 80);
+}
+function closeEditCat() {
+  document.getElementById('editCatModal').classList.remove('open');
+}
+async function saveCategory() {
+  const val = document.getElementById('editCatInput').value.trim();
+  if (!val) { document.getElementById('editCatInput').focus(); return; }
+  closeEditCat();
+  const book = library.find(b => b.id === currentId);
+  if (!book) return;
+  const oldCat = book.category;
+  book.category = val;
+  saveCache();
+
+  // Update Drive index
+  const folder = getLibraryFolder();
+  if (folder) {
+    const doSave = async (token) => {
+      const folderId = await gdFindFolder(token, folder);
+      if (folderId && folderId !== 'AUTH_EXPIRED' && folderId !== 'NO_FOLDER') {
+        await saveIndexToDrive(token, folderId, library);
+      }
+    };
+    const t = gdToken();
+    if (t) doSave(t).catch(()=>{});
+  }
+
+  // Remove old category from openCats if now empty
+  if (!library.some(b => b.category === oldCat)) openCats.delete(oldCat);
+  openCats.add(val);
+  persistOpenCats();
+
+  renderAll();
+  showBookById(currentId);
+  showToast('Category updated ✓');
+}
+document.getElementById('editCatInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') saveCategory();
+  if (e.key === 'Escape') closeEditCat();
+});
+
+// ══════════════════════════════════════════════════
+// CLEAR CACHE
+// ══════════════════════════════════════════════════
+function clearCache() {
+  if (!confirm('Clear local cache? You will need to Sync from Drive again.')) return;
+  localStorage.removeItem(LS_CACHE_KEY);
+  library = [];
+  currentId = null;
+  renderAll();
+  showDeskWelcome();
+  showToast('Cache cleared');
+}
+
+// ══════════════════════════════════════════════════
+// SEARCH
+// ══════════════════════════════════════════════════
+function handleSearch(val) {
+  searchQ = val.toLowerCase().trim();
+  renderAll();
+}
+
+function filteredLibrary() {
+  if (!searchQ) return library;
+  return library.filter(b =>
+    b.title?.toLowerCase().includes(searchQ) ||
+    b.author?.toLowerCase().includes(searchQ) ||
+    b.category?.toLowerCase().includes(searchQ)
+  );
+}
+
+// ══════════════════════════════════════════════════
+// RENDER
+// ══════════════════════════════════════════════════
+function categorised() {
+  const books = filteredLibrary();
+  const map = {};
+  for (const b of books) {
+    const cat = b.category || 'Uncategorised';
+    if (!map[cat]) map[cat] = [];
+    map[cat].push(b);
+  }
+  return Object.entries(map).sort((a, b) => a[0].localeCompare(b[0]));
+}
+
+function renderAll() {
+  renderDesktop();
+  renderMobile();
+  updateCount();
+}
+
+function updateCount() {
+  const books = filteredLibrary();
+  document.getElementById('deskTotalCount').textContent = books.length;
+}
+
+function renderDesktop() {
+  const cats = categorised();
+  const list = document.getElementById('deskCategoryList');
+  if (!cats.length) {
+    list.innerHTML = `<div style="padding:1.5rem 1rem;font-size:.82rem;color:var(--muted);text-align:center">${library.length ? 'No matches' : 'No books yet'}</div>`;
+    return;
+  }
+  list.innerHTML = cats.map(([cat, books]) => {
+    const isOpen = openCats.has(cat);
+    return `<div>
+      <div class="category-heading ${isOpen?'open':''}" onclick="toggleCat(${JSON.stringify(cat)})">
+        <span>${esc(cat)}</span>
+        <div style="display:flex;align-items:center;gap:4px">
+          <span class="cat-count">${books.length}</span>
+          <span class="ch-arrow">▶</span>
+        </div>
+      </div>
+      <div class="book-list ${isOpen?'open':''}">
+        ${books.map(b => `<div class="book-item ${b.id===currentId?'active':''}" onclick="showBookById('${b.id}')">
+          ${esc(b.title)}<span class="book-item-author">${esc(b.author)}</span>
+        </div>`).join('')}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderMobile() {
+  const cats = categorised();
+  const list = document.getElementById('mobCategoryList');
+  if (!cats.length) {
+    list.innerHTML = `<div style="padding:2rem 1rem;font-size:.88rem;color:var(--muted);text-align:center">${library.length ? 'No matches' : 'No books yet — sync or upload EPUBs'}</div>`;
+    return;
+  }
+  list.innerHTML = cats.map(([cat, books]) => {
+    const isOpen = openCats.has(cat);
+    return `<div>
+      <div class="mob-category-heading ${isOpen?'open':''}" onclick="toggleCat(${JSON.stringify(cat)})">
+        <span>${esc(cat)}</span>
+        <div style="display:flex;align-items:center;gap:6px">
+          <span class="cat-count">${books.length}</span>
+          <span class="ch-arrow">▶</span>
+        </div>
+      </div>
+      <div class="mob-book-list ${isOpen?'open':''}">
+        ${books.map(b => `<div class="mob-book-row" onclick="mob_showBook('${b.id}')">
+          <div><div class="mob-book-row-title">${esc(b.title)}</div><div class="mob-book-row-author">${esc(b.author)}</div></div>
+          <span class="arrow">›</span>
+        </div>`).join('')}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function toggleCat(cat) {
+  openCats.has(cat) ? openCats.delete(cat) : openCats.add(cat);
+  persistOpenCats();
+  renderAll();
+}
+
+function showBookById(id) {
+  const book = library.find(b => b.id === id);
+  if (!book) return;
+  currentId = id;
+
+  // Desktop
+  renderDesktop();
+  const view = document.getElementById('deskBookView');
+  document.getElementById('deskWelcome').style.display = 'none';
+  view.classList.add('active');
+  document.getElementById('deskViewCat').textContent = book.category || '';
+  document.getElementById('deskViewTitle').textContent = book.title || '';
+  document.getElementById('deskViewAuthor').textContent = book.author || '';
+  document.getElementById('deskViewDesc').textContent = book.description || '';
+
+  // Badges
+  let badges = '';
+  if (book.category) badges += `<span class="book-badge badge-cat">${esc(book.category)}</span>`;
+  if (book.language) badges += `<span class="book-badge badge-lang">${esc(book.language.toUpperCase())}</span>`;
+  document.getElementById('deskViewBadges').innerHTML = badges;
+
+  // Cover
+  const img = document.getElementById('deskCoverImg');
+  const ph  = document.getElementById('deskCoverPlaceholder');
+  if (book.coverDataUrl) {
+    img.src = book.coverDataUrl; img.style.display = 'block'; ph.style.display = 'none';
+  } else {
+    img.style.display = 'none'; ph.style.display = 'flex';
+  }
+}
+
+function showDeskWelcome() {
+  document.getElementById('deskWelcome').style.display = '';
+  document.getElementById('deskBookView').classList.remove('active');
+}
+
+// ══════════════════════════════════════════════════
+// MOBILE
+// ══════════════════════════════════════════════════
+function mob_showBook(id) {
+  const book = library.find(b => b.id === id);
+  if (!book) return;
+  currentId = id;
+
+  document.getElementById('mobViewCat').textContent = book.category || '';
+  document.getElementById('mobViewTitle').textContent = book.title || '';
+  document.getElementById('mobViewAuthor').textContent = book.author || '';
+  document.getElementById('mobViewDesc').textContent = book.description || '';
+
+  const img = document.getElementById('mobCoverImg');
+  const ph  = document.getElementById('mobCoverPlaceholder');
+  if (book.coverDataUrl) {
+    img.src = book.coverDataUrl; img.style.display = 'block'; ph.style.display = 'none';
+  } else {
+    img.style.display = 'none'; ph.style.display = 'flex';
+  }
+
+  mob_showPanel('mobPanelView');
+  document.querySelector('#mobPanelView .mob-view-scroll').scrollTop = 0;
+}
+
+function mob_backToList() {
+  mob_showPanel('mobPanelList');
+  document.querySelectorAll('.mob-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('tabLibrary').classList.add('active');
+}
+
+function mob_showPanel(id) {
+  document.querySelectorAll('.mob-panel').forEach(p => p.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+function mob_switchTab(tab) {
+  document.querySelectorAll('.mob-tab').forEach(t => t.classList.remove('active'));
+  if (tab === 'library') {
+    document.getElementById('tabLibrary').classList.add('active');
+    mob_showPanel('mobPanelList');
+  } else {
+    document.getElementById('tabSettings').classList.add('active');
+    mob_showPanel('mobPanelSettings');
+  }
+}
+
+// ══════════════════════════════════════════════════
+// LOADING OVERLAY
+// ══════════════════════════════════════════════════
+function showLoading(msg) {
+  document.getElementById('loadingMsg').textContent = msg || 'Loading…';
+  document.getElementById('loadingOverlay').classList.add('open');
+}
+function hideLoading() {
+  document.getElementById('loadingOverlay').classList.remove('open');
+}
+
+// ══════════════════════════════════════════════════
+// TOAST
+// ══════════════════════════════════════════════════
+let toastTimer;
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+// ══════════════════════════════════════════════════
+// DESK SETTINGS POPOVER
+// ══════════════════════════════════════════════════
+function toggleDeskSettings() {
+  document.getElementById('deskSettings').classList.toggle('open');
+}
+document.addEventListener('click', e => {
+  const s = document.getElementById('deskSettings');
+  if (s.classList.contains('open') &&
+      !s.contains(e.target) &&
+      !e.target.closest('[onclick="toggleDeskSettings()"]')) {
+    s.classList.remove('open');
+  }
+});
+
+// ══════════════════════════════════════════════════
+// UTIL
+// ══════════════════════════════════════════════════
+function esc(s) {
+  return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ══════════════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════════════
+document.querySelectorAll('.library-folder-input').forEach(el => el.value = getLibraryFolder());
+document.querySelectorAll('.export-folder-input').forEach(el => el.value = getExportFolder());
+
+// Auto-open first category if any
+if (library.length && !openCats.size) {
+  const firstCat = library[0]?.category;
+  if (firstCat) openCats.add(firstCat);
+}
+
+renderAll();
+
+// Show welcome or last-viewed book
+if (library.length) {
+  showDeskWelcome();
+} else {
+  showDeskWelcome();
+}
+</script>
+</body>
+</html>
