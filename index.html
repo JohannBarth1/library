@@ -342,7 +342,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.5rem;height:var(--h
   <div class="auth-card">
     <div class="auth-logo">📚</div>
     <div class="auth-title">eLibrary</div>
-    <div class="auth-sub">Digital Book Collection</div>
+    <div class="auth-sub">Your EPUB Collection</div>
     <p class="auth-desc">Sign in to access your personal library, sync books, and share with the community.</p>
     <button class="btn-google-signin" id="btnGoogleSignIn">
       <svg width="20" height="20" viewBox="0 0 48 48">
@@ -651,7 +651,7 @@ import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signO
 import { getFirestore, collection, addDoc, getDocs, getDoc, doc,
          query, where, orderBy, updateDoc, deleteDoc, serverTimestamp }
   from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
-import { getStorage, ref as storageRef, uploadBytes, getDownloadURL }
+import { getStorage, ref as storageRef, uploadBytes, getDownloadURL, getBytes }
   from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js';
 
 // ─── PWA ────────────────────────────────────────────────────────────────────
@@ -801,7 +801,11 @@ async function loadUserRatings() {
     const snap = await getDocs(q);
     userRatings = {};
     snap.docs.forEach(d => { userRatings[d.data().bookId] = d.data().rating; });
-  } catch (e) { console.error('Ratings load error:', e); }
+  } catch (e) {
+    // Ratings are optional — a missing Firestore rule shouldn't break the app
+    userRatings = {};
+    if (e.code !== 'permission-denied') console.error('Ratings load error:', e);
+  }
 }
 
 // ─── RATINGS ────────────────────────────────────────────────────────────────
@@ -947,6 +951,7 @@ async function uploadOneEpub(file) {
       publisher:     meta.publisher,
       coverDataUrl:  meta.coverDataUrl || null,
       epubUrl:       epubUrl,
+      storagePath:   snap.ref.fullPath,   // store path for SDK access (avoids CORS)
       visibility:    'private',
       createdAt:     serverTimestamp(),
       updatedAt:     serverTimestamp(),
@@ -975,9 +980,10 @@ async function downloadCurrentBook() {
   if (!book?.epubUrl) { showToast('No download URL available'); return; }
   showLoading('Preparing download…');
   try {
-    // epubUrl is a Firebase Storage URL — fetch as blob
-    const response = await fetch(book.epubUrl);
-    const blob     = await response.blob();
+    // Use Storage SDK to avoid CORS issues with direct fetch
+    const fileRef  = storageRef(storage, `books/${book.ownerId}/${book.filename}`);
+    const bytes    = await getBytes(fileRef);
+    const blob     = new Blob([bytes], { type: 'application/epub+zip' });
     const url      = URL.createObjectURL(blob);
     const a        = document.createElement('a');
     a.href = url; a.download = book.filename || book.title + '.epub';
@@ -1034,6 +1040,7 @@ async function confirmShare() {
       category:     book.category,
       language:     book.language,
       coverDataUrl: book.coverDataUrl || null,
+      storagePath:  book.storagePath  || null,   // needed for SDK-based reading
       sharedAt:     serverTimestamp(),
       ratingSum:    0,
       ratingCount:  0
@@ -1127,20 +1134,32 @@ async function readCurrentBook() {
   if (!currentId) return;
   const book = [...library, ...communityLib].find(b => b.id === currentId);
   if (!book) return;
-  let epubUrl = book.epubUrl;
-  // If community book without direct URL, try to get it from source
-  if (!epubUrl && book.sourceId) {
-    showLoading('Fetching book…');
+
+  // Resolve the storage path. Community books share the owner's file.
+  let storagePath = book.storagePath;
+  if (!storagePath && book.epubUrl) {
+    // Extract path from the download URL  e.g. /v0/b/.../o/books%2Fuid%2Ffile.epub
+    const match = book.epubUrl.match(/\/o\/(.+?)\?/);
+    if (match) storagePath = decodeURIComponent(match[1]);
+  }
+  if (!storagePath && book.sourceId) {
+    showLoading('Fetching book info…');
     const srcSnap = await getDoc(doc(db, 'books', book.sourceId));
-    epubUrl = srcSnap.data()?.epubUrl;
+    const srcData = srcSnap.data();
+    if (srcData?.epubUrl) {
+      const match = srcData.epubUrl.match(/\/o\/(.+?)\?/);
+      if (match) storagePath = decodeURIComponent(match[1]);
+    }
     hideLoading();
   }
-  if (!epubUrl) { showToast('EPUB not available'); return; }
+  if (!storagePath) { showToast('EPUB not available'); return; }
+
   showLoading('Opening book…');
   try {
-    const response  = await fetch(epubUrl);
-    const arrayBuf  = await response.arrayBuffer();
-    readerZip     = await JSZip.loadAsync(arrayBuf);
+    // Use Storage SDK — avoids CORS issues with direct fetch from GitHub Pages
+    const fileRef  = storageRef(storage, storagePath);
+    const bytes    = await getBytes(fileRef);
+    readerZip     = await JSZip.loadAsync(bytes);
     readerSpine   = []; readerChapter = 0;
     const container = await readerZip.file('META-INF/container.xml')?.async('string');
     const opfPath   = container?.match(/full-path="([^"]+\.opf)"/i)?.[1];
