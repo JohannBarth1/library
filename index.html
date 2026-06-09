@@ -749,6 +749,15 @@ function triggerInstall() {
   }
 }
 
+  
+  function signInWithGoogle() {
+  return signInWithPopup(auth, googleProvider);
+}
+
+function signOutUser() {
+  return signOut(auth);
+}
+
 // ═══════════════════════════════════
 // FIREBASE CORE
 // ═══════════════════════════════════
@@ -971,14 +980,3 @@ async function submitRating(bookId, rating) {
   }
 }
 
-  function signInWithGoogle() {
-  return signInWithPopup(auth, googleProvider);
-}
-
-function signOutUser() {
-  return signOut(auth);
-}
-
-// ONLY AFTER BOTH EXIST
-window.signInWithGoogle = signInWithGoogle;
-window.signOutUser = signOutUser;
