@@ -971,21 +971,14 @@ async function submitRating(bookId, rating) {
   }
 }
 
-  
-const API = {
-  signInWithGoogle,
-  signOutUser,
-  showUploadModal,
-  closeUploadModal,
-  handleDrop,
-  handleFileInputChange,
-  submitRating,
-  showBookById,
-  readCurrentBook,
-  downloadCurrentBook,
-  shareCurrentBook,
-  deleteCurrentBook
-};
+  function signInWithGoogle() {
+  return signInWithPopup(auth, googleProvider);
+}
 
-// expose only what HTML needs
-Object.assign(window, API);
+function signOutUser() {
+  return signOut(auth);
+}
+
+// ONLY AFTER BOTH EXIST
+window.signInWithGoogle = signInWithGoogle;
+window.signOutUser = signOutUser;
