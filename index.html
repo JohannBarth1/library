@@ -1040,7 +1040,7 @@ async function confirmShare() {
       category:     book.category,
       language:     book.language,
       coverDataUrl: book.coverDataUrl || null,
-      storagePath:  book.storagePath  || null,   // needed for SDK-based reading
+      storagePath:  book.storagePath,
       sharedAt:     serverTimestamp(),
       ratingSum:    0,
       ratingCount:  0
@@ -1052,7 +1052,7 @@ async function confirmShare() {
     book.visibility = 'community';
     hideLoading(); renderAll(); showBookById(currentId);
     showToast(`"${book.title}" shared to Community ✓`);
-  } catch (e) { hideLoading(); showToast('Share failed: ' + e.message); }
+  } catch (e) { hideLoading(); showToast('Share failed: ' + e.message); console.error(e); }
 }
 
 // ─── EDIT CATEGORY ────────────────────────────────────────────────────────────
