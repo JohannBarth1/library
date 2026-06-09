@@ -1246,10 +1246,17 @@ async function readerGoToChapter(idx) {
 window.readerGoToChapter_global = idx => readerGoToChapter(idx);
 
 async function inlineImagesInHtml(html, base, chapterHref) {
-  const imgRe = /src="([^"]+\.(jpe?g|png|gif|webp|svg))"/gi;
-  const found = []; let m;
   const chapterDir = chapterHref && chapterHref.includes('/')
     ? chapterHref.replace(/\/[^/]+$/, '/') : '';
+
+  // First, neutralise ALL src attributes so the browser doesn't try to fetch them
+  html = html.replace(/(<img[^>]+)src="([^"]+)"/gi, (match, pre, src) => {
+    return `${pre}data-src="${src}"`;
+  });
+
+  // Now find all data-src values and replace with inline data URLs
+  const imgRe = /data-src="([^"]+)"/gi;
+  const found = []; let m;
   while ((m = imgRe.exec(html)) !== null) {
     const src = m[1];
     if (src.startsWith('data:') || src.startsWith('http')) continue;
@@ -1260,7 +1267,8 @@ async function inlineImagesInHtml(html, base, chapterHref) {
       src
     ];
     found.push({ orig: src, candidates });
-  }                                         // <-- while loop closes here
+  }
+
   for (const p of found) {
     try {
       let blob = null;
@@ -1271,12 +1279,19 @@ async function inlineImagesInHtml(html, base, chapterHref) {
       if (blob) {
         const dataUrl = await blobToDataUrl(blob);
         html = html.replace(
-          new RegExp(`src="${p.orig.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}"`, 'g'),
+          new RegExp(`data-src="${p.orig.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}"`, 'g'),
           `src="${dataUrl}"`
+        );
+      } else {
+        // Image not found in zip — just remove the data-src so no broken request
+        html = html.replace(
+          new RegExp(`data-src="${p.orig.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}"`, 'g'),
+          `src=""`
         );
       }
     } catch (e) { /* skip */ }
   }
+
   return html;
 }
 
