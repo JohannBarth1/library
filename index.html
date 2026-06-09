@@ -749,1042 +749,226 @@ function triggerInstall() {
   }
 }
 
-// ═══════════════════════════════════════════
-// FIREBASE CONFIG
-// ═══════════════════════════════════════════
+// ═══════════════════════════════════
+// FIREBASE CORE
+// ═══════════════════════════════════
 
-import { initializeApp } from "firebase/app";
-import { getAnalytics } from "firebase/analytics";
-
-import {
-  getAuth,
-  GoogleAuthProvider,
-  signInWithPopup,
-  onAuthStateChanged,
-  signOut
-} from "firebase/auth";
-
-import {
-  getFirestore,
-  collection,
-  addDoc,
-  getDocs,
-  getDoc,
-  doc,
-  query,
-  where,
-  orderBy,
-  limit,
-  updateDoc,
-  deleteDoc,
-  serverTimestamp
-} from "firebase/firestore";
-
-import {
-  getStorage,
-  ref,
-  uploadBytes,
-  getDownloadURL
-} from "firebase/storage";
-
-// ─────────────────────────────
-// Firebase config
-// ─────────────────────────────
-const firebaseConfig = {
-  apiKey: "AIzaSyA1hCS7-C_W0VS7_JVcPIPdJ4aluDuL_-Q",
-  authDomain: "elibrary-c0074.firebaseapp.com",
-  projectId: "elibrary-c0074",
-  storageBucket: "elibrary-c0074.firebasestorage.app",
-  messagingSenderId: "310807052995",
-  appId: "1:310807052995:web:a06dbe84f3924731749876",
-  measurementId: "G-96CSWGER1G"
-};
-
-// ─────────────────────────────
-// Init app
-// ─────────────────────────────
 const app = initializeApp(firebaseConfig);
-const analytics = getAnalytics(app);
-
-// ─────────────────────────────
-// Services
-// ─────────────────────────────
 const auth = getAuth(app);
 const db = getFirestore(app);
 const storage = getStorage(app);
 
-// ─────────────────────────────
-// Auth helpers
-// ─────────────────────────────
+getAnalytics(app);
+
 const googleProvider = new GoogleAuthProvider();
 
-function signInWithGoogle() {
-  return signInWithPopup(auth, googleProvider);
-}
+  // ═══════════════════════════════════
+// APP STATE
+// ═══════════════════════════════════
 
-function signOutUser() {
-  return signOut(auth);
-}
-
-// ─────────────────────────────
-// Export everything you actually use
-// ─────────────────────────────
-export {
-  app,
-  auth,
-  db,
-  storage,
-
-  // auth
-  googleProvider,
-  signInWithGoogle,
-  signOutUser,
-  onAuthStateChanged,
-
-  // firestore
-  collection,
-  addDoc,
-  getDocs,
-  getDoc,
-  doc,
-  query,
-  where,
-  orderBy,
-  limit,
-  updateDoc,
-  deleteDoc,
-  serverTimestamp,
-
-  // storage
-  ref,
-  uploadBytes,
-  getDownloadURL
+const store = {
+  user: null,
+  library: [],
+  community: [],
+  ratings: {},
+  currentId: null,
+  sidebarMode: 'mine',
+  search: '',
+  communitySearch: '',
+  openCats: new Set(JSON.parse(localStorage.getItem('elib_open_cats') || '[]')),
 };
 
-// ═══════════════════════════════════════════
-// STATE
-// ═══════════════════════════════════════════
-let currentUser = null;
-let library = [];
-let communityLib = [];
-let searchQ = '';
-let commSearchQ = '';
-let currentId = null;
-let sidebarMode = 'mine';
-let openCats = new Set(JSON.parse(localStorage.getItem('elib_open_cats') || '[]'));
-let userRatings = {}; // bookId -> rating given by this user
+  const AuthService = {
+  signIn: () => signInWithPopup(auth, googleProvider),
+  signOut: () => signOut(auth),
 
-// Reader state
-let readerZip = null;
-let readerSpine = [];
-let readerChapter = 0;
-let readerOpfBase = '';
-let readerFontSize = parseInt(localStorage.getItem('elib_reader_font') || '17');
-let readerTheme = localStorage.getItem('elib_reader_theme') || 'day';
+  onChange: (cb) =>
+    onAuthStateChanged(auth, cb),
+};
 
-// ═══════════════════════════════════════════
-// AUTH
-// ═══════════════════════════════════════════
-onAuthStateChanged(auth, user => {
-  if (user) {
-    currentUser = user;
-    document.getElementById('authScreen').classList.add('hidden');
-    updateUserUI(user);
-    loadLibrary();
-    loadCommunity();
-    loadUserRatings();
-  } else {
-    currentUser = null;
-    document.getElementById('authScreen').classList.remove('hidden');
+  const LibraryService = {
+  async load(userId) {
+    const q = query(
+      collection(db, "books"),
+      where("ownerId", "==", userId),
+      orderBy("createdAt", "desc")
+    );
+
+    const snap = await getDocs(q);
+    return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  },
+
+  async updateCategory(id, category) {
+    return updateDoc(doc(db, "books", id), {
+      category,
+      updatedAt: serverTimestamp()
+    });
+  },
+
+  async delete(id) {
+    await deleteDoc(doc(db, "books", id));
+
+    const q = query(
+      collection(db, "community"),
+      where("sourceId", "==", id)
+    );
+
+    const snap = await getDocs(q);
+    await Promise.all(
+      snap.docs.map(d => deleteDoc(doc(db, "community", d.id)))
+    );
   }
-});
+};
 
-function signInWithGoogle() {
-  return signInWithPopup(auth, googleProvider)
-    .catch(e => showToast('Sign-in failed: ' + e.message));
-}
-
-function signOutUser() {
-  if (!confirm('Sign out?')) return;
-  return signOut(auth);
-}
-function updateUserUI(user) {
-  const initials = (user.displayName || user.email || '?').split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
-  document.getElementById('userAvatarInitials').textContent = initials;
-  document.getElementById('userNameDisplay').textContent = (user.displayName||'').split(' ')[0];
-  document.getElementById('userDropdownEmail').textContent = user.email;
-  if (user.photoURL) {
-    const img = document.getElementById('userAvatarImg');
-    img.src = user.photoURL; img.style.display='block';
-    document.getElementById('userAvatarInitials').style.display='none';
-  }
-  document.getElementById('mobUserName').textContent = user.displayName || user.email;
-  document.getElementById('mobUserEmail').textContent = user.email;
-  document.getElementById('mobUserAvatar').textContent = initials;
-}
-function toggleUserMenu(e) {
-  e.stopPropagation();
-  document.getElementById('userDropdown').classList.toggle('open');
-}
-document.addEventListener('click', () => {
-  document.getElementById('userDropdown')?.classList.remove('open');
-});
-
-  async function loadCommunity() {
-  try {
+  const CommunityService = {
+  async load() {
     const q = query(
       collection(db, "community"),
       orderBy("sharedAt", "desc")
     );
 
     const snap = await getDocs(q);
-    communityLib = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  },
 
-    if (sidebarMode === 'community') renderAll();
-
-  } catch (e) {
-    console.error('Community load error:', e);
-  }
-}
-
-// ═══════════════════════════════════════════
-// FIRESTORE — LIBRARY
-// ═══════════════════════════════════════════
-async function loadLibrary() {
-  if (!currentUser) return;
-  showLoading('Loading library…');
-
-  try {
-    const q = query(
-      collection(db, "books"),
-      where("ownerId", "==", currentUser.uid),
-      orderBy("createdAt", "desc")
-    );
-
-    const snap = await getDocs(q);
-    library = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-
-    hideLoading();
-    renderAll();
-    if (!library.length) showDeskWelcome();
-
-  } catch (e) {
-    hideLoading();
-    console.error(e);
-    showToast('Error loading library');
-  }
-}
-
-// ═══════════════════════════════════════════
-// RATINGS
-// ═══════════════════════════════════════════
-async function loadUserRatings() {
-  if (!currentUser) return;
-  try {
-    const snap = await db.collection('ratings').where('userId','==',currentUser.uid).get();
-    userRatings = {};
-    snap.docs.forEach(d => { userRatings[d.data().bookId] = d.data().rating; });
-  } catch(e) { console.error('Ratings load error:',e); }
-}
-
-async function submitRating(bookId, rating) {
-  if (!currentUser) { showToast('Sign in to rate'); return; }
-  try {
-    const ratingId = `${currentUser.uid}_${bookId}`;
-    const prev = userRatings[bookId] || 0;
-    userRatings[bookId] = rating;
-
-    // Get current aggregate
-    const bookRef = doc(db, "community", bookId);
-const bookDoc = await getDoc(bookRef);
-    if (!bookDoc.exists) return;
-    const data = bookDoc.data();
-    const totalRatings = (data.ratingCount || 0);
-    const totalScore = (data.ratingSum || 0);
-
-    let newCount = totalRatings;
-    let newSum = totalScore;
-    if (prev > 0) {
-      // update existing
-      newSum = totalScore - prev + rating;
-    } else {
-      // new rating
-      newCount = totalRatings + 1;
-      newSum = totalScore + rating;
-    }
-
-    await bookRef.update({ ratingSum: newSum, ratingCount: newCount });
-    await updateDoc(bookRef, {
-  ratingSum: newSum,
-  ratingCount: newCount
-});
-
-    // Update local communityLib
-    const book = communityLib.find(b => b.id === bookId);
-    if (book) { book.ratingSum = newSum; book.ratingCount = newCount; }
-
-    renderStars(bookId);
-    showToast('Rating saved ✓');
-  } catch(e) { showToast('Rating failed'); console.error(e); }
-}
-
-function getAvgRating(book) {
-  if (!book.ratingCount || book.ratingCount === 0) return 0;
-  return (book.ratingSum || 0) / book.ratingCount;
-}
-
-function renderStarWidget(containerId, countId, bookId, editable) {
-  const container = document.getElementById(containerId);
-  const countEl = document.getElementById(countId);
-  if (!container) return;
-  const book = communityLib.find(b => b.id === bookId);
-  if (!book) { container.parentElement.style.display='none'; return; }
-  container.parentElement.style.display='flex';
-  const avg = getAvgRating(book);
-  const myRating = userRatings[bookId] || 0;
-  const display = editable && myRating > 0 ? myRating : avg;
-  container.innerHTML = [1,2,3,4,5].map(n => `
-    <span class="star ${n <= Math.round(display) ? 'filled' : ''}"
-      ${editable ? `onmouseover="hoverStar(this,${n})" onmouseout="unhoverStar('${containerId}','${bookId}')" onclick="submitRating('${bookId}',${n})"` : ''}
-    >★</span>`).join('');
-  if (countEl) {
-    const cnt = book.ratingCount || 0;
-    countEl.textContent = cnt ? `${avg.toFixed(1)} (${cnt} rating${cnt!==1?'s':''})` : 'No ratings yet — be first!';
-  }
-}
-
-function hoverStar(el, n) {
-  const stars = el.parentElement.children;
-  for (let i=0;i<stars.length;i++) stars[i].classList.toggle('hover', i < n);
-}
-function unhoverStar(containerId, bookId) {
-  const container = document.getElementById(containerId);
-  if (!container) return;
-  const book = communityLib.find(b=>b.id===bookId);
-  const avg = book ? getAvgRating(book) : 0;
-  const myRating = userRatings[bookId] || 0;
-  const display = myRating > 0 ? myRating : avg;
-  [...container.children].forEach((s,i) => {
-    s.classList.remove('hover');
-    s.classList.toggle('filled', i < Math.round(display));
-  });
-}
-
-function renderStars(bookId) {
-  if (currentId === bookId) {
-    renderStarWidget('deskStars','deskRatingCount',bookId,true);
-    renderStarWidget('mobStars','mobRatingCount',bookId,true);
-  }
-}
-
-// ═══════════════════════════════════════════
-// UPLOAD
-// ═══════════════════════════════════════════
-function showUploadModal() {
-  if (!currentUser) { showToast('Please sign in first'); return; }
-  document.getElementById('uploadList').innerHTML = '';
-  document.getElementById('uploadModal').classList.add('open');
-  document.getElementById('dropZone').classList.remove('drag-over');
-}
-function closeUploadModal() { document.getElementById('uploadModal').classList.remove('open'); }
-function handleDrop(e) {
-  e.preventDefault();
-  document.getElementById('dropZone').classList.remove('drag-over');
-  const files = [...e.dataTransfer.files].filter(f=>f.name.toLowerCase().endsWith('.epub'));
-  if (!files.length) { showToast('Please drop EPUB files only'); return; }
-  processUploadFiles(files);
-}
-function handleFileInputChange(e) {
-  const files = [...e.target.files]; e.target.value = ''; processUploadFiles(files);
-}
-async function processUploadFiles(files) {
-  for (const file of files) await uploadOneEpub(file);
-  await loadLibrary();
-}
-
-  
-async function uploadOneEpub(file) {
-  const rowId = 'up_' + Date.now() + Math.random().toString(36).slice(2);
-  const list = document.getElementById('uploadList');
-
-  list.insertAdjacentHTML('beforeend', `
-    <div class="upload-progress" id="${rowId}">
-      <span class="up-icon">📗</span>
-      <div style="flex:1">
-        <div class="up-name">${esc(file.name)}</div>
-        <div class="progress-bar-wrap">
-          <div class="progress-bar" id="${rowId}_bar" style="width:10%"></div>
-        </div>
-      </div>
-      <span class="up-status" id="${rowId}_st">Reading…</span>
-    </div>
-  `);
-
-  try {
-    setUpProgress(rowId, 20, 'Parsing…');
-
-    const meta = await parseEpubMeta(file);
-
-    setUpProgress(rowId, 40, 'Uploading file…');
-
-    // 1. Create storage path (IMPORTANT: keep user isolation)
-    const storageRef = ref(
-      storage,
-      `books/${currentUser.uid}/${Date.now()}_${file.name}`
-    );
-
-    // 2. Upload file (NO Base64 conversion)
-    const snapshot = await uploadBytes(storageRef, file);
-
-    setUpProgress(rowId, 70, 'Generating link…');
-
-    // 3. Get downloadable URL
-    const epubUrl = await getDownloadURL(snapshot.ref);
-
-    setUpProgress(rowId, 85, 'Saving metadata…');
-
-    // 4. Save ONLY metadata in Firestore
-    await addDoc(collection(db, 'books'), {
-      ownerId: currentUser.uid,
-      ownerName: currentUser.displayName || currentUser.email,
-
-      filename: file.name,
-      title: meta.title,
-      author: meta.author,
-      description: meta.description,
-
-      category: meta.category || localStorage.getItem('elib_default_cat') || 'Uncategorised',
-      language: meta.language,
-      publisher: meta.publisher,
-
-      coverDataUrl: meta.coverDataUrl || null,
-
-      epubUrl: epubUrl, // ✅ THIS replaces base64
-
-      visibility: 'private',
-
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
-
-      fileSizeBytes: file.size
-    });
-
-    setUpProgress(rowId, 100, '✓ Done');
-    document.getElementById(rowId)?.classList.add('done');
-
-  } catch (e) {
-    console.error(e);
-    setUpProgress(rowId, 100, '✗ Failed');
-    document.getElementById(rowId)?.classList.add('error');
-    showToast('Upload failed: ' + e.message);
-  }
-}
-function setUpProgress(rowId,pct,status) {
-  const bar=document.getElementById(rowId+'_bar'), st=document.getElementById(rowId+'_st');
-  if(bar) bar.style.width=pct+'%'; if(st) st.textContent=status;
-}
-
-// ═══════════════════════════════════════════
-// DELETE
-// ═══════════════════════════════════════════
-async function deleteCurrentBook() {
-  if (!currentId) return;
-
-  const book = library.find(b => b.id === currentId);
-  if (!book || !confirm(`Delete "${book.title}" permanently?`)) return;
-
-  showLoading('Deleting…');
-
-  try {
-    await deleteDoc(doc(db, "books", currentId));
-
-    const q = query(
-      collection(db, "community"),
-      where("sourceId", "==", currentId)
-    );
-
-    const snap = await getDocs(q);
-    for (const d of snap.docs) {
-      await deleteDoc(doc(db, "community", d.id));
-    }
-
-    library = library.filter(b => b.id !== currentId);
-    currentId = null;
-
-    hideLoading();
-    renderAll();
-    showDeskWelcome();
-    mob_backToList();
-    showToast('Book deleted');
-
-  } catch (e) {
-    hideLoading();
-    showToast('Delete failed: ' + e.message);
-  }
-}
-
-// ═══════════════════════════════════════════
-// DOWNLOAD
-// ═══════════════════════════════════════════
-async function downloadCurrentBook() {
-  if (!currentId) return;
-  const book = library.find(b=>b.id===currentId);
-  if (!book?.epubUrl) { showToast('No EPUB data stored'); return; }
-  showLoading('Preparing download…');
-  try {
-    const binary=atob(book.epubUrl), bytes=new Uint8Array(binary.length);
-    for(let i=0;i<binary.length;i++) bytes[i]=binary.charCodeAt(i);
-    const blob=new Blob([bytes],{type:'application/epub+zip'});
-    const url=URL.createObjectURL(blob);
-    const a=document.createElement('a'); a.href=url; a.download=book.filename||book.title+'.epub';
-    a.click(); URL.revokeObjectURL(url); hideLoading();
-    showToast('Downloaded: '+book.filename);
-  } catch(e) { hideLoading(); showToast('Download failed'); }
-}
-
-// ═══════════════════════════════════════════
-// SHARE
-// ═══════════════════════════════════════════
-function shareCurrentBook() {
-  if (!currentId) return;
-  const book=library.find(b=>b.id===currentId);
-  if(!book) return;
-  document.getElementById('shareBookTitle').textContent=`"${book.title}"`;
-  document.getElementById('shareModal').classList.add('open');
-}
-function closeShareModal() { document.getElementById('shareModal').classList.remove('open'); }
-
-  async function confirmShare() {
-  closeShareModal();
-  if (!currentId) return;
-
-  const book = library.find(b => b.id === currentId);
-  if (!book) return;
-
-  showLoading('Sharing…');
-
-  try {
+  async share(book, user) {
     await addDoc(collection(db, "community"), {
-      sourceId: currentId,
-      ownerId: currentUser.uid,
-      ownerName: currentUser.displayName || currentUser.email,
-
-      filename: book.filename,
+      sourceId: book.id,
+      ownerId: user.uid,
+      ownerName: user.displayName || user.email,
       title: book.title,
       author: book.author,
       description: book.description,
       category: book.category,
-      language: book.language,
       coverDataUrl: book.coverDataUrl || null,
-
       sharedAt: serverTimestamp(),
       ratingSum: 0,
       ratingCount: 0
     });
 
-    await updateDoc(doc(db, "books", currentId), {
-      visibility: 'community',
+    await updateDoc(doc(db, "books", book.id), {
+      visibility: "community",
       updatedAt: serverTimestamp()
     });
-
-    book.visibility = 'community';
-
-    hideLoading();
-    renderAll();
-    showBookById(currentId);
-
-    showToast(`"${book.title}" shared to Community ✓`);
-
-  } catch (e) {
-    hideLoading();
-    showToast('Share failed: ' + e.message);
   }
-}
+};
 
-// ═══════════════════════════════════════════
-// EDIT CATEGORY
-// ═══════════════════════════════════════════
-function showEditCategory() {
-  if (!currentId) return;
-  const book=library.find(b=>b.id===currentId); if(!book) return;
-  document.getElementById('editCatInput').value=book.category||'';
-  const cats=[...new Set(library.map(b=>b.category).filter(Boolean))].sort();
-  document.getElementById('catSuggestions').innerHTML=cats.map(c=>`<option value="${esc(c)}">`).join('');
-  document.getElementById('editCatModal').classList.add('open');
-  setTimeout(()=>document.getElementById('editCatInput').focus(),80);
-}
-function closeEditCat() { document.getElementById('editCatModal').classList.remove('open'); }
-async function saveCategory() {
-  const val=document.getElementById('editCatInput').value.trim();
-  if(!val){document.getElementById('editCatInput').focus();return;}
-  closeEditCat();
-  const book=library.find(b=>b.id===currentId); if(!book) return;
-  const oldCat=book.category; book.category=val;
-  await db.collection('books').doc(currentId).update({category:val,updatedAt:firebase.firestore.FieldValue.serverTimestamp()});
-  if(!library.some(b=>b.category===oldCat)) openCats.delete(oldCat);
-  openCats.add(val); persistOpenCats(); renderAll(); showBookById(currentId);
-  showToast('Category updated ✓');
-}
-document.getElementById('editCatInput').addEventListener('keydown',e=>{
-  if(e.key==='Enter') saveCategory(); if(e.key==='Escape') closeEditCat();
-});
+  const RatingsService = {
+  async load(userId) {
+    const q = query(
+      collection(db, "ratings"),
+      where("userId", "==", userId)
+    );
 
-// ═══════════════════════════════════════════
-// EPUB READER
-// ═══════════════════════════════════════════
-function applyReaderTheme(theme) {
-  const overlay = document.getElementById('readerOverlay');
-  overlay.classList.remove('theme-day','theme-sepia','theme-night');
-  overlay.classList.add('theme-'+theme);
-  document.querySelectorAll('.rs-theme-btn').forEach(b=>b.classList.toggle('active',b.classList.contains(theme)));
-}
-function setReaderTheme(theme) {
-  readerTheme = theme;
-  localStorage.setItem('elib_reader_theme', theme);
-  applyReaderTheme(theme);
-}
-function setReaderFont(size) {
-  readerFontSize = size;
-  localStorage.setItem('elib_reader_font', size);
-  document.getElementById('readerContent').style.fontSize = size+'px';
-  document.querySelectorAll('.rs-font-btn').forEach((b,i)=>{
-    b.classList.toggle('active', [14,17,20,24][i]===size);
-  });
-}
-function toggleReaderSettings() {
-  document.getElementById('readerSettingsBar').classList.toggle('open');
-}
+    const snap = await getDocs(q);
 
-async function readCurrentBook() {
-  if(!currentId) return;
-  const book=[...library,...communityLib].find(b=>b.id===currentId);
-  if(!book) return;
-  let epubUrl=book.epubUrl;
-  if(!epubUrl&&book.sourceId){
-    showLoading('Fetching book…');
-    const srcDoc=await db.collection('books').doc(book.sourceId).get();
-    epubUrl=srcDoc.data()?.epubUrl;
-    hideLoading();
-  }
-  if(!epubUrl){showToast('EPUB data not available');return;}
-  showLoading('Opening book…');
-  try {
-    const binary=atob(epubUrl), bytes=new Uint8Array(binary.length);
-    for(let i=0;i<binary.length;i++) bytes[i]=binary.charCodeAt(i);
-    readerZip=await JSZip.loadAsync(bytes.buffer);
-    readerSpine=[]; readerChapter=0;
-    const container=await readerZip.file('META-INF/container.xml')?.async('string');
-    const opfPath=container?.match(/full-path="([^"]+\.opf)"/i)?.[1];
-    if(!opfPath) throw new Error('No OPF found');
-    const opfXml=await readerZip.file(opfPath)?.async('string');
-    readerOpfBase=opfPath.includes('/')?opfPath.replace(/\/[^/]+$/,'/'):'';
-    const manifestMap={};
-    const mRe=/<item\s+([^>]+)>/gi; let m;
-    while((m=mRe.exec(opfXml))!==null){
-      const attrs=m[1];
-      const id=attrs.match(/\bid="([^"]+)"/)?.[1];
-      const href=attrs.match(/\bhref="([^"]+)"/)?.[1];
-      const mt=attrs.match(/\bmedia-type="([^"]+)"/)?.[1];
-      if(id&&href) manifestMap[id]={href,mediaType:mt};
-    }
-    const labelMap={};
-    const ncxId=opfXml.match(/\btoc\b[^>]*?id="([^"]+)"/i)?.[1]||Object.keys(manifestMap).find(k=>manifestMap[k].mediaType==='application/x-dtbncx+xml');
-    if(ncxId&&manifestMap[ncxId]){
-      const ncxXml=await readerZip.file(readerOpfBase+manifestMap[ncxId].href)?.async('string');
-      if(ncxXml){
-        const npRe=/<navPoint[^>]*>[\s\S]*?<navLabel[^>]*>[\s\S]*?<text>([^<]*)<\/text>[\s\S]*?<content\s+src="([^"]+)"/gi;
-        let np;
-        while((np=npRe.exec(ncxXml))!==null) labelMap[np[2].split('#')[0]]=np[1].trim();
-      }
-    }
-    const spineRe=/<itemref\s+idref="([^"]+)"/gi; let sp;
-    while((sp=spineRe.exec(opfXml))!==null){
-      const item=manifestMap[sp[1]];
-      if(item) readerSpine.push({id:sp[1],href:item.href,label:labelMap[item.href]||item.href.split('/').pop().replace(/\.x?html?$/i,'')});
-    }
-    if(!readerSpine.length) throw new Error('Empty spine');
-    document.getElementById('readerTitle').textContent=book.title||'Reading…';
-    document.getElementById('readerChapterItems').innerHTML=readerSpine.map((ch,i)=>
-      `<div class="chapter-item" id="chItem_${i}" onclick="readerGoToChapter(${i})">${esc(ch.label)}</div>`
-    ).join('');
-    hideLoading();
-    applyReaderTheme(readerTheme);
-    setReaderFont(readerFontSize);
-    document.getElementById('readerSettingsBar').classList.remove('open');
-    document.getElementById('readerOverlay').classList.add('open');
-    readerGoToChapter(0);
-  } catch(e) {
-    hideLoading(); showToast('Could not open EPUB: '+e.message); console.error(e);
-  }
-}
-
-async function readerGoToChapter(idx) {
-  if(idx<0||idx>=readerSpine.length) return;
-  readerChapter=idx;
-  document.querySelectorAll('.chapter-item').forEach((el,i)=>el.classList.toggle('active',i===idx));
-  const ch=readerSpine[idx];
-  document.getElementById('readerPageInfo').textContent=`Ch ${idx+1} / ${readerSpine.length}`;
-  document.getElementById('readerProgressBar').style.width=((idx/Math.max(readerSpine.length-1,1))*100)+'%';
-  const content=document.getElementById('readerContent');
-  content.innerHTML='<p style="text-align:center;padding-top:3rem;opacity:.5">Loading chapter…</p>';
-  content.scrollTop=0;
-  // Close chapter drawer on mobile
-  if(window.innerWidth<=640) document.getElementById('readerChapterList').classList.remove('open');
-  try {
-    let html=await readerZip.file(readerOpfBase+ch.href)?.async('string');
-    if(!html){content.innerHTML='<p>Chapter not found.</p>';return;}
-    html=await inlineImagesInHtml(html,readerOpfBase);
-    const bodyMatch=html.match(/<body[^>]*>([\s\S]*)<\/body>/i);
-    let bodyHtml=bodyMatch?bodyMatch[1]:html;
-    bodyHtml=bodyHtml.replace(/<script[\s\S]*?<\/script>/gi,'');
-    // Inline any linked CSS for better rendering
-    bodyHtml=bodyHtml.replace(/href="([^"#]+)(#[^"]+)?"/g,(_,href,anchor)=>{
-      const spineIdx=readerSpine.findIndex(s=>s.href===href||s.href.endsWith('/'+href));
-      if(spineIdx>=0) return `href="javascript:void(0)" onclick="readerGoToChapter(${spineIdx})"`;
-      return `href="javascript:void(0)"`;
+    const map = {};
+    snap.forEach(d => {
+      const r = d.data();
+      map[r.bookId] = r.rating;
     });
-    content.innerHTML=bodyHtml;
-  } catch(e) {
-    content.innerHTML=`<p style="color:var(--danger)">Error loading chapter: ${e.message}</p>`;
+
+    return map;
+  },
+
+  async submit(bookId, rating, user) {
+    const refDoc = doc(db, "community", bookId);
+    const snap = await getDoc(refDoc);
+    if (!snap.exists()) return;
+
+    const data = snap.data();
+    const prev = store.ratings[bookId] || 0;
+
+    let count = data.ratingCount || 0;
+    let sum = data.ratingSum || 0;
+
+    if (prev) sum = sum - prev + rating;
+    else { count++; sum += rating; }
+
+    store.ratings[bookId] = rating;
+
+    await updateDoc(refDoc, { ratingSum: sum, ratingCount: count });
+
+    return { sum, count };
   }
-}
+};
 
-async function inlineImagesInHtml(html,base){
-  const imgRe=/src="([^"]+\.(jpe?g|png|gif|webp|svg))"/gi;
-  const promises=[]; let m;
-  while((m=imgRe.exec(html))!==null){
-    const src=m[1];
-    if(!src.startsWith('data:')&&!src.startsWith('http')) promises.push({orig:src,path:base+src});
+  const State = {
+  setUser(user) {
+    store.user = user;
+  },
+
+  setLibrary(data) {
+    store.library = data;
+  },
+
+  setCommunity(data) {
+    store.community = data;
+  },
+
+  setRatings(data) {
+    store.ratings = data;
   }
-  for(const p of promises){
-    try{
-      const blob=await readerZip.file(p.path)?.async('blob');
-      if(blob){
-        const dataUrl=await blobToDataUrl(blob);
-        html=html.replace(new RegExp(`src="${p.orig.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')}"`, 'g'),`src="${dataUrl}"`);
-      }
-    } catch(e){/* skip */}
-  }
-  return html;
-}
-function readerNextChapter(){readerGoToChapter(readerChapter+1);}
-function readerPrevChapter(){readerGoToChapter(readerChapter-1);}
-function toggleChapterList(){document.getElementById('readerChapterList').classList.toggle('open');}
-function closeReader(){
-  document.getElementById('readerOverlay').classList.remove('open');
-  document.getElementById('readerChapterList').classList.remove('open');
-  document.getElementById('readerSettingsBar').classList.remove('open');
-  readerZip=null; readerSpine=[];
-}
+};
 
-// Keyboard navigation in reader
-document.addEventListener('keydown', e => {
-  if (!document.getElementById('readerOverlay').classList.contains('open')) return;
-  if (e.key === 'ArrowRight' || e.key === 'ArrowDown') readerNextChapter();
-  if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') readerPrevChapter();
-  if (e.key === 'Escape') closeReader();
-});
+  AuthService.onChange(async (user) => {
+  State.setUser(user);
 
-// ═══════════════════════════════════════════
-// SEARCH & FILTER
-// ═══════════════════════════════════════════
-function handleSearch(val){searchQ=val.toLowerCase().trim();renderAll();}
-function handleCommSearch(val){commSearchQ=val.toLowerCase().trim();renderCommunity();}
-function filteredLibrary(){
-  const src=sidebarMode==='mine'?library:communityLib;
-  const q=sidebarMode==='community'?commSearchQ:searchQ;
-  if(!q) return src;
-  return src.filter(b=>b.title?.toLowerCase().includes(q)||b.author?.toLowerCase().includes(q)||b.category?.toLowerCase().includes(q));
-}
-function categorised(){
-  const books=filteredLibrary();
-  const map={};
-  for(const book of books){const key=book.category||'Uncategorised';if(!map[key])map[key]=[];map[key].push(book);}
-  return Object.entries(map).sort(([a],[b])=>a.localeCompare(b));
-}
-
-// ═══════════════════════════════════════════
-// RENDER
-// ═══════════════════════════════════════════
-function renderAll(){
-  if(sidebarMode==='mine'){renderDesktop();renderMobile();}
-  else{renderCommunity();}
-  updateCount();
-}
-function updateCount(){document.getElementById('deskTotalCount').textContent=filteredLibrary().length;}
-
-function renderDesktop(){
-  const cats=categorised();
-  const list=document.getElementById('deskCategoryList');
-  if(!cats.length){
-    list.innerHTML=`<div style="padding:1.5rem 1rem;font-size:.82rem;color:var(--muted);text-align:center">${library.length?'No matches':'No books yet — upload an EPUB to start'}</div>`;
+  if (!user) {
+    document.getElementById('authScreen').classList.remove('hidden');
     return;
   }
-  list.innerHTML=cats.map(([cat,books])=>{
-    const isOpen=openCats.has(cat);
-    return `<div>
-      <div class="category-heading ${isOpen?'open':''}" onclick="toggleCat('${encodeURIComponent(cat)}')">
-        <span>${esc(cat)}</span>
-        <div style="display:flex;align-items:center;gap:4px">
-          <span class="cat-count">${books.length}</span>
-          <span class="ch-arrow">▶</span>
-        </div>
-      </div>
-      <div class="book-list ${isOpen?'open':''}">
-        ${books.map(b=>`<div class="book-item ${b.id===currentId?'active':''}" onclick="showBookById('${b.id}')">
-          ${esc(b.title)}<span class="book-item-author">${esc(b.author)}</span>
-        </div>`).join('')}
-      </div>
-    </div>`;
-  }).join('');
-}
 
-function renderMobile(){
-  const cats=categorised();
-  const list=document.getElementById('mobCategoryList');
-  if(!cats.length){
-    list.innerHTML=`<div style="padding:2rem 1rem;font-size:.88rem;color:var(--muted);text-align:center">${library.length?'No matches':'No books yet — upload EPUBs to start'}</div>`;
-    return;
-  }
-  list.innerHTML=cats.map(([cat,books])=>{
-    const isOpen=openCats.has(cat);
-    return `<div>
-      <div class="mob-category-heading ${isOpen?'open':''}" onclick="toggleCat('${encodeURIComponent(cat)}')">
-        <span>${esc(cat)}</span>
-        <div style="display:flex;align-items:center;gap:6px">
-          <span class="cat-count">${books.length}</span>
-          <span class="ch-arrow">▶</span>
-        </div>
-      </div>
-      <div class="mob-book-list ${isOpen?'open':''}">
-        ${books.map(b=>`<div class="mob-book-row" onclick="mob_showBook('${b.id}')">
-          <div><div class="mob-book-row-title">${esc(b.title)}</div><div class="mob-book-row-author">${esc(b.author)}</div></div>
-          <span class="arrow">›</span>
-        </div>`).join('')}
-      </div>
-    </div>`;
-  }).join('');
-}
+  document.getElementById('authScreen').classList.add('hidden');
 
-function getSortedCommunity(books) {
-  const sort = document.getElementById('commSortSelect')?.value || 'recent';
-  const copy = [...books];
-  if (sort === 'rating') {
-    copy.sort((a,b) => getAvgRating(b) - getAvgRating(a));
-  } else if (sort === 'title') {
-    copy.sort((a,b) => (a.title||'').localeCompare(b.title||''));
-  }
-  // 'recent' keeps natural order (already sorted by sharedAt desc from Firestore)
-  return copy;
-}
+  updateUserUI(user);
 
-function renderCommunity(){
-  const rawBooks=filteredLibrary();
-  const books=getSortedCommunity(rawBooks);
-  document.getElementById('deskWelcome').style.display='none';
-  document.getElementById('deskBookView').classList.remove('active');
-  const cv=document.getElementById('deskCommunityView');
-  cv.classList.add('active');
-  const grid=document.getElementById('deskCommunityGrid');
-  if(!books.length){
-    grid.innerHTML=`<div class="empty-state"><div class="es-icon">📖</div><p>No books found.<br>${communityLib.length?'Try a different search.':'Be the first to share one!'}</p></div>`;
-  } else {
-    grid.innerHTML=books.map(b=>{
-      const avg=getAvgRating(b);
-      const starsHtml=[1,2,3,4,5].map(n=>`<span class="cc-star ${n<=Math.round(avg)?'filled':''}">★</span>`).join('');
-      return `<div class="community-card" onclick="showBookById('${b.id}')">
-        ${b.coverDataUrl?`<img class="cc-cover" src="${b.coverDataUrl}" alt=""/>`:`<div class="cc-cover-ph">📖</div>`}
-        <div class="cc-body">
-          <div class="cc-title">${esc(b.title)}</div>
-          <div class="cc-author">${esc(b.author)}</div>
-          <div class="cc-sharedby">by ${esc(b.ownerName||'Anonymous')}</div>
-          <div class="cc-stars">${starsHtml}</div>
-        </div>
-      </div>`;
-    }).join('');
-  }
-  // Mobile community list
-  const mobList=document.getElementById('mobCategoryList');
-  mobList.innerHTML=books.map(b=>`
-    <div class="mob-book-row" onclick="mob_showBook('${b.id}')">
-      <div>
-        <div class="mob-book-row-title">${esc(b.title)}</div>
-        <div class="mob-book-row-author">${esc(b.author)} · ${esc(b.ownerName||'')}</div>
-      </div>
-      <span class="arrow">›</span>
-    </div>`).join('');
-}
+  const [lib, comm, ratings] = await Promise.all([
+    LibraryService.load(user.uid),
+    CommunityService.load(),
+    RatingsService.load(user.uid)
+  ]);
 
-function toggleCat(encoded){
-  const cat=decodeURIComponent(encoded);
-  openCats.has(cat)?openCats.delete(cat):openCats.add(cat);
-  persistOpenCats(); renderAll();
-}
-function persistOpenCats(){localStorage.setItem('elib_open_cats',JSON.stringify([...openCats]));}
+  State.setLibrary(lib);
+  State.setCommunity(comm);
+  State.setRatings(ratings);
 
-// ═══════════════════════════════════════════
-// BOOK DETAIL VIEW
-// ═══════════════════════════════════════════
-function showBookById(id){
-  const book=[...library,...communityLib].find(b=>b.id===id);
-  if(!book) return;
-  currentId=id;
-  const isMine=book.ownerId===currentUser?.uid;
-  const isCommunityBook=communityLib.some(b=>b.id===id);
-  const actions=`
-    ${isMine?`<button class="btn-action btn-edit-cat" onclick="showEditCategory()">✎ Category</button>`:''}
-    <button class="btn-action btn-read" onclick="readCurrentBook()">▶ Read</button>
-    ${isMine?`<button class="btn-action btn-download" onclick="downloadCurrentBook()">⬇ Download</button>`:''}
-    ${isMine&&book.visibility!=='community'?`<button class="btn-action btn-share" onclick="shareCurrentBook()">⇧ Share</button>`:''}
-    ${isMine?`<button class="btn-action btn-delete" onclick="deleteCurrentBook()">✕ Delete</button>`:''}
-  `;
-  let badges='';
-  if(book.category) badges+=`<span class="book-badge badge-cat">${esc(book.category)}</span>`;
-  if(book.language) badges+=`<span class="book-badge badge-lang">${esc(book.language.toUpperCase())}</span>`;
-  if(book.visibility==='community') badges+=`<span class="book-badge badge-shared">Community</span>`;
-
-  renderDesktop();
-  document.getElementById('deskWelcome').style.display='none';
-  document.getElementById('deskCommunityView').classList.remove('active');
-  const view=document.getElementById('deskBookView');
-  view.classList.add('active');
-  document.getElementById('deskViewCat').textContent=book.category||'';
-  document.getElementById('deskViewTitle').textContent=book.title||'';
-  document.getElementById('deskViewAuthor').textContent=book.author||'';
-  document.getElementById('deskViewDesc').textContent=book.description||'';
-  document.getElementById('deskViewBadges').innerHTML=badges;
-  document.getElementById('deskViewActions').innerHTML=actions;
-
-  const img=document.getElementById('deskCoverImg'), ph=document.getElementById('deskCoverPlaceholder');
-  if(book.coverDataUrl){img.src=book.coverDataUrl;img.style.display='block';ph.style.display='none';}
-  else{img.style.display='none';ph.style.display='flex';}
-
-  // Show star rating for community books
-  if(isCommunityBook){
-    renderStarWidget('deskStars','deskRatingCount',id,true);
-  } else {
-    document.getElementById('deskStarRating').style.display='none';
-  }
-}
-
-function showDeskWelcome(){
-  document.getElementById('deskWelcome').style.display='';
-  document.getElementById('deskBookView').classList.remove('active');
-  document.getElementById('deskCommunityView').classList.remove('active');
-}
-function switchSidebarTab(mode){
-  sidebarMode=mode;
-  document.getElementById('tabMyLibDesk').classList.toggle('active',mode==='mine');
-  document.getElementById('tabCommunityDesk').classList.toggle('active',mode==='community');
-  if(mode==='community'){renderCommunity();}
-  else{renderDesktop();showDeskWelcome();}
-}
-
-// ═══════════════════════════════════════════
-// MOBILE
-// ═══════════════════════════════════════════
-function mob_showBook(id){
-  const book=[...library,...communityLib].find(b=>b.id===id);
-  if(!book) return;
-  currentId=id;
-  const isMine=book.ownerId===currentUser?.uid;
-  const isCommunityBook=communityLib.some(b=>b.id===id);
-  document.getElementById('mobViewCat').textContent=book.category||'';
-  document.getElementById('mobViewTitle').textContent=book.title||'';
-  document.getElementById('mobViewAuthor').textContent=book.author||'';
-  document.getElementById('mobViewDesc').textContent=book.description||'';
-  document.getElementById('mobViewActions').innerHTML=`
-    ${isMine?`<button class="btn-action btn-edit-cat" onclick="showEditCategory()">✎ Category</button>`:''}
-    <button class="btn-action btn-read" onclick="readCurrentBook()">▶ Read</button>
-    ${isMine?`<button class="btn-action btn-download" onclick="downloadCurrentBook()">⬇ Download</button>`:''}
-    ${isMine&&book.visibility!=='community'?`<button class="btn-action btn-share" onclick="shareCurrentBook()">⇧ Share</button>`:''}
-    ${isMine?`<button class="btn-action btn-delete" onclick="deleteCurrentBook()">✕ Delete</button>`:''}
-  `;
-  const img=document.getElementById('mobCoverImg'), ph=document.getElementById('mobCoverPlaceholder');
-  if(book.coverDataUrl){img.src=book.coverDataUrl;img.style.display='block';ph.style.display='none';}
-  else{img.style.display='none';ph.style.display='flex';}
-
-  if(isCommunityBook){renderStarWidget('mobStars','mobRatingCount',id,true);}
-  else{document.getElementById('mobStarRating').style.display='none';}
-
-  mob_showPanel('mobPanelView');
-  document.querySelector('#mobPanelView .mob-view-scroll').scrollTop=0;
-}
-function mob_backToList(){mob_showPanel('mobPanelList');document.querySelectorAll('.mob-tab').forEach(t=>t.classList.remove('active'));document.getElementById('mobNavLibrary').classList.add('active');}
-function mob_showPanel(id){document.querySelectorAll('.mob-panel').forEach(p=>p.classList.remove('active'));document.getElementById(id).classList.add('active');}
-function mob_switchTab(tab){
-  document.querySelectorAll('.mob-tab').forEach(t=>t.classList.remove('active'));
-  if(tab==='library'){document.getElementById('mobNavLibrary').classList.add('active');mob_showPanel('mobPanelList');}
-  else{document.getElementById('mobNavSettings').classList.add('active');mob_showPanel('mobPanelSettings');}
-}
-function mob_switchLibTab(mode){
-  sidebarMode=mode;
-  document.getElementById('mobTabMine').classList.toggle('active',mode==='mine');
-  document.getElementById('mobTabCommunity').classList.toggle('active',mode==='community');
   renderAll();
-}
-
-// ═══════════════════════════════════════════
-// EPUB META PARSING
-// ═══════════════════════════════════════════
-async function parseEpubMeta(file){
-  try{
-    const zip=await JSZip.loadAsync(file);
-    const container=await zip.file('META-INF/container.xml')?.async('string');
-    if(!container) return fallbackMeta(file);
-    const opfPath=container.match(/full-path="([^"]+\.opf)"/i)?.[1];
-    if(!opfPath) return fallbackMeta(file);
-    const opfXml=await zip.file(opfPath)?.async('string');
-    if(!opfXml) return fallbackMeta(file);
-    const get=tag=>opfXml.match(new RegExp(`<dc:${tag}[^>]*>([^<]+)<\/dc:${tag}>`,'i'))?.[1]?.trim()||'';
-    const getAll=tag=>{const re=new RegExp(`<dc:${tag}[^>]*>([^<]+)<\/dc:${tag}>`,'gi');const r=[];let m;while((m=re.exec(opfXml))!==null)r.push(m[1].trim());return r;};
-    let coverDataUrl=null;
-    try{
-      const opfDir=opfPath.includes('/')?opfPath.replace(/\/[^/]+$/,'/'):'';
-      const coverId=opfXml.match(/name="cover"\s+content="([^"]+)"/i)?.[1];
-      if(coverId){
-        const mi=opfXml.match(new RegExp(`id="${coverId}"[^>]+href="([^"]+)"`, 'i'))||opfXml.match(new RegExp(`href="([^"]+)"[^>]+id="${coverId}"`, 'i'));
-        const coverHref=mi?.[1];
-        if(coverHref){
-          const coverFile=zip.file(opfDir+coverHref)||zip.file(coverHref);
-          if(coverFile) coverDataUrl=await blobToDataUrl(await coverFile.async('blob'));
-        }
-      }
-      if(!coverDataUrl){
-        for(const p of['cover.jpg','cover.jpeg','cover.png','images/cover.jpg','OEBPS/cover.jpg','OEBPS/images/cover.jpg']){
-          const f=zip.file(p); if(f){coverDataUrl=await blobToDataUrl(await f.async('blob'));break;}
-        }
-      }
-    }catch(e){/* silent */}
-    return{title:get('title')||file.name.replace(/\.epub$/i,''),author:getAll('creator').join(', ')||'Unknown Author',description:get('description')||'',category:getAll('subject')[0]||'Uncategorised',language:get('language')||'',publisher:get('publisher')||'',coverDataUrl};
-  }catch(e){return fallbackMeta(file);}
-}
-function fallbackMeta(file){return{title:file.name.replace(/\.epub$/i,''),author:'Unknown Author',description:'',category:'Uncategorised',language:'',publisher:'',coverDataUrl:null};}
-function blobToDataUrl(blob){return new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=rej;r.readAsDataURL(blob);});}
-
-// ═══════════════════════════════════════════
-// MISC UI
-// ═══════════════════════════════════════════
-function toggleDeskSettings(){const s=document.getElementById('deskSettings');s.style.display=s.style.display==='none'?'block':'none';}
-document.addEventListener('click',e=>{
-  const s=document.getElementById('deskSettings');
-  if(s.style.display!=='none'&&!s.contains(e.target)&&!e.target.closest('[onclick="toggleDeskSettings()"]')) s.style.display='none';
 });
-function clearCache(){
-  if(!confirm('Clear local cache?')) return;
-  localStorage.removeItem('elib_open_cats');
-  library=[];communityLib=[];currentId=null;renderAll();showDeskWelcome();showToast('Cache cleared');
-}
-function showLoading(msg){document.getElementById('loadingMsg').textContent=msg||'Loading…';document.getElementById('loadingOverlay').classList.add('open');}
-function hideLoading(){document.getElementById('loadingOverlay').classList.remove('open');}
-let toastTimer;
-function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.remove('show'),2800);}
-function esc(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 
-// INIT
-document.getElementById('defaultCatInput').value=localStorage.getItem('elib_default_cat')||'';
-if(library.length&&!openCats.size){const firstCat=library[0]?.category;if(firstCat)openCats.add(firstCat);}
-renderAll();
-</script>
-</body>
-</html>
+  async function loadLibrary() {
+  if (!store.user) return;
+  State.setLibrary(await LibraryService.load(store.user.uid));
+}
+
+  async function loadCommunity() {
+  State.setCommunity(await CommunityService.load());
+}
+
+  async function loadUserRatings() {
+  if (!store.user) return;
+  State.setRatings(await RatingsService.load(store.user.uid));
+}
+
+async function submitRating(bookId, rating) {
+  if (!store.user) return showToast('Sign in required');
+
+  const result = await RatingsService.submit(
+    bookId,
+    rating,
+    store.user
+  );
+
+  if (result) {
+    const book = store.community.find(b => b.id === bookId);
+    if (book) {
+      book.ratingSum = result.sum;
+      book.ratingCount = result.count;
+    }
+
+    renderStars(bookId);
+    showToast('Rating saved ✓');
+  }
+}
+
+  
