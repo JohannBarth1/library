@@ -1739,6 +1739,8 @@ function categorised() {
 // ════════════════════════════════════════════════════════
 // RENDER
 // ════════════════════════════════════════════════════════
+  onclick="toggleCat('${encodeURIComponent(cat)}')"
+  
 function renderAll() {
   if (sidebarMode === 'mine') {
     renderDesktop();
@@ -1839,7 +1841,8 @@ function renderCommunity() {
     </div>`).join('');
 }
 
-function toggleCat(cat) {
+function toggleCat(encoded) {
+  const cat = decodeURIComponent(encoded);
   openCats.has(cat) ? openCats.delete(cat) : openCats.add(cat);
   persistOpenCats();
   renderAll();
