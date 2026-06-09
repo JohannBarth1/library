@@ -972,3 +972,20 @@ async function submitRating(bookId, rating) {
 }
 
   
+const API = {
+  signInWithGoogle,
+  signOutUser,
+  showUploadModal,
+  closeUploadModal,
+  handleDrop,
+  handleFileInputChange,
+  submitRating,
+  showBookById,
+  readCurrentBook,
+  downloadCurrentBook,
+  shareCurrentBook,
+  deleteCurrentBook
+};
+
+// expose only what HTML needs
+Object.assign(window, API);
