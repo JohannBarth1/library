@@ -1226,7 +1226,7 @@ async function readerGoToChapter(idx) {
   try {
     let html = await readerZip.file(readerOpfBase + ch.href)?.async('string');
     if (!html) { content.innerHTML = '<p>Chapter not found.</p>'; return; }
-    html = await inlineImagesInHtml(html, readerOpfBase);
+    html = await inlineImagesInHtml(html, readerOpfBase, ch.href);
     const bodyMatch = html.match(/<body[^>]*>([\s\S]*)<\/body>/i);
     let bodyHtml = bodyMatch ? bodyMatch[1] : html;
     bodyHtml = bodyHtml.replace(/<script[\s\S]*?<\/script>/gi, '');
@@ -1245,19 +1245,35 @@ async function readerGoToChapter(idx) {
 // Expose for inline onclick in reader content
 window.readerGoToChapter_global = idx => readerGoToChapter(idx);
 
-async function inlineImagesInHtml(html, base) {
+async function inlineImagesInHtml(html, base, chapterHref) {
   const imgRe = /src="([^"]+\.(jpe?g|png|gif|webp|svg))"/gi;
   const found = []; let m;
+  const chapterDir = chapterHref && chapterHref.includes('/')
+    ? chapterHref.replace(/\/[^/]+$/, '/') : '';
   while ((m = imgRe.exec(html)) !== null) {
     const src = m[1];
-    if (!src.startsWith('data:') && !src.startsWith('http')) found.push({ orig: src, path: base + src });
-  }
+    if (src.startsWith('data:') || src.startsWith('http')) continue;
+    const candidates = [
+      base + chapterDir + src,
+      base + src,
+      chapterDir + src,
+      src
+    ];
+    found.push({ orig: src, candidates });
+  }                                         // <-- while loop closes here
   for (const p of found) {
     try {
-      const blob = await readerZip.file(p.path)?.async('blob');
+      let blob = null;
+      for (const path of p.candidates) {
+        const f = readerZip.file(path);
+        if (f) { blob = await f.async('blob'); break; }
+      }
       if (blob) {
         const dataUrl = await blobToDataUrl(blob);
-        html = html.replace(new RegExp(`src="${p.orig.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}"`, 'g'), `src="${dataUrl}"`);
+        html = html.replace(
+          new RegExp(`src="${p.orig.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}"`, 'g'),
+          `src="${dataUrl}"`
+        );
       }
     } catch (e) { /* skip */ }
   }
