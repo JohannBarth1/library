@@ -753,11 +753,43 @@ function triggerInstall() {
 // FIREBASE CONFIG
 // ═══════════════════════════════════════════
 
-  import { getFirestore, addDoc, collection, serverTimestamp } from "firebase/firestore";
-import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { initializeApp } from "firebase/app";
+import { getAnalytics } from "firebase/analytics";
 
-const db = getFirestore(app);
-const storage = getStorage(app);
+import {
+  getAuth,
+  GoogleAuthProvider,
+  signInWithPopup,
+  onAuthStateChanged,
+  signOut
+} from "firebase/auth";
+
+import {
+  getFirestore,
+  collection,
+  addDoc,
+  getDocs,
+  getDoc,
+  doc,
+  query,
+  where,
+  orderBy,
+  limit,
+  updateDoc,
+  deleteDoc,
+  serverTimestamp
+} from "firebase/firestore";
+
+import {
+  getStorage,
+  ref,
+  uploadBytes,
+  getDownloadURL
+} from "firebase/storage";
+
+// ─────────────────────────────
+// Firebase config
+// ─────────────────────────────
 const firebaseConfig = {
   apiKey: "AIzaSyA1hCS7-C_W0VS7_JVcPIPdJ4aluDuL_-Q",
   authDomain: "elibrary-c0074.firebaseapp.com",
@@ -767,9 +799,67 @@ const firebaseConfig = {
   appId: "1:310807052995:web:a06dbe84f3924731749876",
   measurementId: "G-96CSWGER1G"
 };
-firebase.initializeApp(firebaseConfig);
-const auth = firebase.auth();
-const db = firebase.firestore();
+
+// ─────────────────────────────
+// Init app
+// ─────────────────────────────
+const app = initializeApp(firebaseConfig);
+const analytics = getAnalytics(app);
+
+// ─────────────────────────────
+// Services
+// ─────────────────────────────
+const auth = getAuth(app);
+const db = getFirestore(app);
+const storage = getStorage(app);
+
+// ─────────────────────────────
+// Auth helpers
+// ─────────────────────────────
+const googleProvider = new GoogleAuthProvider();
+
+function signInWithGoogle() {
+  return signInWithPopup(auth, googleProvider);
+}
+
+function signOutUser() {
+  return signOut(auth);
+}
+
+// ─────────────────────────────
+// Export everything you actually use
+// ─────────────────────────────
+export {
+  app,
+  auth,
+  db,
+  storage,
+
+  // auth
+  googleProvider,
+  signInWithGoogle,
+  signOutUser,
+  onAuthStateChanged,
+
+  // firestore
+  collection,
+  addDoc,
+  getDocs,
+  getDoc,
+  doc,
+  query,
+  where,
+  orderBy,
+  limit,
+  updateDoc,
+  deleteDoc,
+  serverTimestamp,
+
+  // storage
+  ref,
+  uploadBytes,
+  getDownloadURL
+};
 
 // ═══════════════════════════════════════════
 // STATE
@@ -795,7 +885,7 @@ let readerTheme = localStorage.getItem('elib_reader_theme') || 'day';
 // ═══════════════════════════════════════════
 // AUTH
 // ═══════════════════════════════════════════
-auth.onAuthStateChanged(user => {
+onAuthStateChanged(auth, user => {
   if (user) {
     currentUser = user;
     document.getElementById('authScreen').classList.add('hidden');
@@ -808,13 +898,15 @@ auth.onAuthStateChanged(user => {
     document.getElementById('authScreen').classList.remove('hidden');
   }
 });
+
 function signInWithGoogle() {
-  const provider = new firebase.auth.GoogleAuthProvider();
-  auth.signInWithPopup(provider).catch(e => showToast('Sign-in failed: ' + e.message));
+  return signInWithPopup(auth, googleProvider)
+    .catch(e => showToast('Sign-in failed: ' + e.message));
 }
-function signOut() {
+
+function signOutUser() {
   if (!confirm('Sign out?')) return;
-  auth.signOut();
+  return signOut(auth);
 }
 function updateUserUI(user) {
   const initials = (user.displayName || user.email || '?').split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
@@ -838,28 +930,49 @@ document.addEventListener('click', () => {
   document.getElementById('userDropdown')?.classList.remove('open');
 });
 
+  async function loadCommunity() {
+  try {
+    const q = query(
+      collection(db, "community"),
+      orderBy("sharedAt", "desc")
+    );
+
+    const snap = await getDocs(q);
+    communityLib = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+    if (sidebarMode === 'community') renderAll();
+
+  } catch (e) {
+    console.error('Community load error:', e);
+  }
+}
+
 // ═══════════════════════════════════════════
 // FIRESTORE — LIBRARY
 // ═══════════════════════════════════════════
 async function loadLibrary() {
   if (!currentUser) return;
   showLoading('Loading library…');
+
   try {
-    const snap = await db.collection('books').where('ownerId','==',currentUser.uid).orderBy('createdAt','desc').get();
-    library = snap.docs.map(d => ({id:d.id,...d.data()}));
+    const q = query(
+      collection(db, "books"),
+      where("ownerId", "==", currentUser.uid),
+      orderBy("createdAt", "desc")
+    );
+
+    const snap = await getDocs(q);
+    library = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+
     hideLoading();
     renderAll();
     if (!library.length) showDeskWelcome();
-  } catch(e) {
-    hideLoading(); console.error(e); showToast('Error loading library');
+
+  } catch (e) {
+    hideLoading();
+    console.error(e);
+    showToast('Error loading library');
   }
-}
-async function loadCommunity() {
-  try {
-    const snap = await db.collection('community').orderBy('sharedAt','desc').limit(100).get();
-    communityLib = snap.docs.map(d => ({id:d.id,...d.data()}));
-    if (sidebarMode==='community') renderAll();
-  } catch(e) { console.error('Community load error:',e); }
 }
 
 // ═══════════════════════════════════════════
@@ -882,8 +995,8 @@ async function submitRating(bookId, rating) {
     userRatings[bookId] = rating;
 
     // Get current aggregate
-    const bookRef = db.collection('community').doc(bookId);
-    const bookDoc = await bookRef.get();
+    const bookRef = doc(db, "community", bookId);
+const bookDoc = await getDoc(bookRef);
     if (!bookDoc.exists) return;
     const data = bookDoc.data();
     const totalRatings = (data.ratingCount || 0);
@@ -901,10 +1014,10 @@ async function submitRating(bookId, rating) {
     }
 
     await bookRef.update({ ratingSum: newSum, ratingCount: newCount });
-    await db.collection('ratings').doc(ratingId).set({
-      userId: currentUser.uid, bookId, rating,
-      ratedAt: firebase.firestore.FieldValue.serverTimestamp()
-    });
+    await updateDoc(bookRef, {
+  ratingSum: newSum,
+  ratingCount: newCount
+});
 
     // Update local communityLib
     const book = communityLib.find(b => b.id === bookId);
@@ -1076,17 +1189,38 @@ function setUpProgress(rowId,pct,status) {
 // ═══════════════════════════════════════════
 async function deleteCurrentBook() {
   if (!currentId) return;
-  const book = library.find(b=>b.id===currentId);
+
+  const book = library.find(b => b.id === currentId);
   if (!book || !confirm(`Delete "${book.title}" permanently?`)) return;
+
   showLoading('Deleting…');
+
   try {
-    await db.collection('books').doc(currentId).delete();
-    const commSnap = await db.collection('community').where('sourceId','==',currentId).get();
-    for (const d of commSnap.docs) await d.ref.delete();
-    library = library.filter(b=>b.id!==currentId);
-    currentId = null; hideLoading(); renderAll(); showDeskWelcome(); mob_backToList();
+    await deleteDoc(doc(db, "books", currentId));
+
+    const q = query(
+      collection(db, "community"),
+      where("sourceId", "==", currentId)
+    );
+
+    const snap = await getDocs(q);
+    for (const d of snap.docs) {
+      await deleteDoc(doc(db, "community", d.id));
+    }
+
+    library = library.filter(b => b.id !== currentId);
+    currentId = null;
+
+    hideLoading();
+    renderAll();
+    showDeskWelcome();
+    mob_backToList();
     showToast('Book deleted');
-  } catch(e) { hideLoading(); showToast('Delete failed: '+e.message); }
+
+  } catch (e) {
+    hideLoading();
+    showToast('Delete failed: ' + e.message);
+  }
 }
 
 // ═══════════════════════════════════════════
@@ -1119,24 +1253,52 @@ function shareCurrentBook() {
   document.getElementById('shareModal').classList.add('open');
 }
 function closeShareModal() { document.getElementById('shareModal').classList.remove('open'); }
-async function confirmShare() {
-  closeShareModal(); if(!currentId) return;
-  const book=library.find(b=>b.id===currentId); if(!book) return;
+
+  async function confirmShare() {
+  closeShareModal();
+  if (!currentId) return;
+
+  const book = library.find(b => b.id === currentId);
+  if (!book) return;
+
   showLoading('Sharing…');
+
   try {
-    await db.collection('community').add({
-      sourceId: currentId, ownerId: currentUser.uid,
-      ownerName: currentUser.displayName||currentUser.email,
-      filename: book.filename, title: book.title, author: book.author,
-      description: book.description, category: book.category,
-      language: book.language, coverDataUrl: book.coverDataUrl||null,
-      sharedAt: firebase.firestore.FieldValue.serverTimestamp(),
-      ratingSum: 0, ratingCount: 0
+    await addDoc(collection(db, "community"), {
+      sourceId: currentId,
+      ownerId: currentUser.uid,
+      ownerName: currentUser.displayName || currentUser.email,
+
+      filename: book.filename,
+      title: book.title,
+      author: book.author,
+      description: book.description,
+      category: book.category,
+      language: book.language,
+      coverDataUrl: book.coverDataUrl || null,
+
+      sharedAt: serverTimestamp(),
+      ratingSum: 0,
+      ratingCount: 0
     });
-    await db.collection('books').doc(currentId).update({visibility:'community'});
-    book.visibility='community'; hideLoading(); renderAll(); showBookById(currentId);
+
+    await updateDoc(doc(db, "books", currentId), {
+      visibility: 'community',
+      updatedAt: serverTimestamp()
+    });
+
+    book.visibility = 'community';
+
+    hideLoading();
+    renderAll();
+    showBookById(currentId);
+
     showToast(`"${book.title}" shared to Community ✓`);
-  } catch(e) { hideLoading(); showToast('Share failed: '+e.message); }
+
+  } catch (e) {
+    hideLoading();
+    showToast('Share failed: ' + e.message);
+  }
 }
 
 // ═══════════════════════════════════════════
