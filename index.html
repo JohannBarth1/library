@@ -338,6 +338,24 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .settings-btn.danger-s{background:var(--warm-white);color:var(--danger);border-color:#e0b0b0;}
 .settings-note{font-size:.8rem;color:var(--muted);line-height:1.6;margin-top:.3rem;}
 
+/* ── CHAPTER MANAGER ── */
+.chapter-mgr-list{max-height:420px;overflow-y:auto;margin:.5rem 0;border:1px solid var(--border);border-radius:4px;}
+.chapter-mgr-row{display:flex;align-items:center;gap:.6rem;padding:.55rem .75rem;border-bottom:1px solid var(--border);background:var(--warm-white);transition:background .1s;}
+.chapter-mgr-row:last-child{border-bottom:none;}
+.chapter-mgr-row.deleted{opacity:.35;background:#fbeaea;}
+.chapter-mgr-drag{cursor:grab;color:var(--muted);font-size:1rem;flex-shrink:0;user-select:none;padding:0 .2rem;}
+.chapter-mgr-drag:active{cursor:grabbing;}
+.chapter-mgr-num{font-size:.65rem;color:var(--muted);font-weight:700;width:22px;flex-shrink:0;text-align:right;}
+.chapter-mgr-input{flex:1;border:1px solid transparent;border-radius:3px;padding:.3rem .5rem;font-family:'Lato',sans-serif;font-size:.82rem;color:var(--navy2);background:transparent;outline:none;min-width:0;}
+.chapter-mgr-input:focus{border-color:var(--teal);background:var(--cream);}
+.chapter-mgr-row.deleted .chapter-mgr-input{text-decoration:line-through;pointer-events:none;}
+.chapter-mgr-del{background:none;border:none;cursor:pointer;font-size:.95rem;color:var(--muted);padding:.2rem .3rem;border-radius:3px;flex-shrink:0;line-height:1;transition:all .15s;}
+.chapter-mgr-del:hover{color:var(--danger);background:#fbeaea;}
+.chapter-mgr-restore{background:none;border:1px solid var(--border);cursor:pointer;font-size:.68rem;font-family:'Lato',sans-serif;font-weight:700;color:var(--teal);padding:.2rem .5rem;border-radius:3px;flex-shrink:0;transition:all .15s;}
+.chapter-mgr-restore:hover{background:var(--teal-light);}
+.chapter-mgr-info{font-size:.72rem;color:var(--muted);padding:.5rem .75rem;border-top:1px solid var(--border);background:var(--panel);border-radius:0 0 4px 4px;}
+.chapter-mgr-save-note{font-size:.75rem;color:var(--muted);line-height:1.5;margin-bottom:.8rem;}
+
 /* ── MULTI-SELECT ── */
 .select-mode-toggle{padding:.38rem .8rem;font-family:'Lato',sans-serif;font-size:.7rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;border-radius:2px;cursor:pointer;border:1px solid var(--border);background:var(--warm-white);color:var(--navy2);transition:all .15s;}
 .select-mode-toggle:hover{background:var(--light-blue);}
@@ -843,6 +861,23 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
     <div class="modal-actions">
       <button class="btn-cancel" id="btnCancelBulkEdit">Cancel</button>
       <button class="btn-save" id="btnSaveBulkEdit">Update Books</button>
+    </div>
+  </div>
+</div>
+
+<!-- Chapter Manager Modal -->
+<div class="modal-overlay" id="chapterMgrModal">
+  <div class="modal" style="max-width:560px">
+    <h3>📑 Chapter Manager</h3>
+    <p class="chapter-mgr-save-note">
+      Drag to reorder · Click a name to rename · ✕ to mark for deletion.<br>
+      Deletions remove the chapter from the spine and file listing. Changes are saved back to your EPUB file.
+    </p>
+    <div class="chapter-mgr-list" id="chapterMgrList"></div>
+    <p class="chapter-mgr-info" id="chapterMgrInfo"></p>
+    <div class="modal-actions" style="margin-top:1rem">
+      <button class="btn-cancel" id="btnCancelChapterMgr">Cancel</button>
+      <button class="btn-save" id="btnSaveChapterMgr">💾 Save &amp; Re-upload EPUB</button>
     </div>
   </div>
 </div>
@@ -1461,6 +1496,7 @@ function buildActions(book,isMine){
   if(isMine) btns.push(`<button class="btn-action btn-share-private" data-action="shareprivate">🔒 Share Privately</button>`);
   if(isMine) btns.push(`<button class="btn-action btn-link" data-action="link">🔗 Get Link</button>`);
   if(isMine) btns.push(`<button class="btn-action btn-edit-cat" data-action="editmeta">✎ Edit Details</button>`);
+  if(isMine) btns.push(`<button class="btn-action btn-edit-cat" data-action="chapters">📑 Chapters</button>`);
   if(isMine) btns.push(`<button class="btn-action ${book.recommended?'btn-unpublish':'btn-share'}" data-action="recommend">${book.recommended?'★ Recommended':'☆ Recommend'}</button>`);
   if(isMine) btns.push(`<button class="btn-action btn-edit-cat" data-action="tags">🏷 Tags</button>`);
   if(isMine) btns.push(`<button class="btn-action btn-delete" data-action="delete">✕ Delete</button>`);
@@ -1476,6 +1512,7 @@ function handleAction(e){
   if(a==='shareprivate') showPrivateShare();
   if(a==='link')         showDirectLink();
   if(a==='editmeta')     showEditMeta();
+  if(a==='chapters')     openChapterManager();
   if(a==='recommend')    toggleRecommended();
   if(a==='tags')         showTagsModal();
   if(a==='checkout')     signOutBook();
@@ -2269,6 +2306,283 @@ document.getElementById('bulkBtnUnrec').addEventListener('click', async()=>{
 
 // Cancel
 document.getElementById('bulkBtnCancel').addEventListener('click', toggleSelectMode);
+
+// ── CHAPTER MANAGER ──────────────────────────────────────────────────────────
+let chapterMgrSpine   = [];   // [{id, href, label, deleted, originalLabel}]
+let chapterMgrZip     = null;
+let chapterMgrOpfBase = '';
+let chapterMgrOpfPath = '';
+let chapterMgrBookId  = null;
+let chapterMgrDragIdx = null;
+
+document.getElementById('btnCancelChapterMgr').addEventListener('click', ()=>{
+  document.getElementById('chapterMgrModal').classList.remove('open');
+  chapterMgrZip = null; chapterMgrSpine = [];
+});
+
+async function openChapterManager(){
+  if(!currentId) return;
+  const book = [...library,...communityLib].find(b=>b.id===currentId);
+  if(!book) return;
+  let sp = book.storagePath;
+  if(!sp && book.epubUrl){ const m=book.epubUrl.match(/\/o\/(.+?)\?/); if(m) sp=decodeURIComponent(m[1]); }
+  if(!sp){ showToast('No EPUB file found'); return; }
+
+  showLoading('Loading EPUB…');
+  try{
+    const bytes = await getBytes(storageRef(storage, sp));
+    chapterMgrZip = await JSZip.loadAsync(bytes);
+    chapterMgrBookId = currentId;
+
+    // Parse OPF
+    const container = await chapterMgrZip.file('META-INF/container.xml')?.async('string');
+    chapterMgrOpfPath = container?.match(/full-path="([^"]+\.opf)"/i)?.[1];
+    if(!chapterMgrOpfPath) throw new Error('No OPF found');
+    const opfXml = await chapterMgrZip.file(chapterMgrOpfPath)?.async('string');
+    chapterMgrOpfBase = chapterMgrOpfPath.includes('/') ? chapterMgrOpfPath.replace(/\/[^/]+$/,'/') : '';
+
+    // Build manifest map
+    const manifestMap = {};
+    const mRe = /<item\s+([^>]+)>/gi; let m;
+    while((m=mRe.exec(opfXml))!==null){
+      const a=m[1];
+      const id=a.match(/\bid="([^"]+)"/)?.[1];
+      const href=a.match(/\bhref="([^"]+)"/)?.[1];
+      const mt=a.match(/\bmedia-type="([^"]+)"/)?.[1];
+      if(id&&href) manifestMap[id]={href,mediaType:mt};
+    }
+
+    // Build NCX label map
+    const labelMap = {};
+    const ncxId = Object.keys(manifestMap).find(k=>manifestMap[k].mediaType==='application/x-dtbncx+xml');
+    if(ncxId && manifestMap[ncxId]){
+      const ncxXml = await chapterMgrZip.file(chapterMgrOpfBase+manifestMap[ncxId].href)?.async('string');
+      if(ncxXml){
+        const npRe = /<navPoint[^>]*>[\s\S]*?<navLabel[^>]*>[\s\S]*?<text>([^<]*)<\/text>[\s\S]*?<content\s+src="([^"]+)"/gi; let np;
+        while((np=npRe.exec(ncxXml))!==null) labelMap[np[2].split('#')[0]] = np[1].trim();
+      }
+    }
+
+    // Build spine
+    chapterMgrSpine = [];
+    const spineRe = /<itemref\s+([^>]+)>/gi; let sp2;
+    while((sp2=spineRe.exec(opfXml))!==null){
+      const attrs = sp2[1];
+      const idref = attrs.match(/\bidref="([^"]+)"/)?.[1];
+      if(!idref) continue;
+      const item = manifestMap[idref];
+      if(!item) continue;
+      const fallbackLabel = item.href.split('/').pop().replace(/\.x?html?$/i,'').replace(/[-_]/g,' ');
+      const label = labelMap[item.href] || fallbackLabel;
+      chapterMgrSpine.push({ id:idref, href:item.href, label, originalLabel:label, deleted:false });
+    }
+
+    if(!chapterMgrSpine.length) throw new Error('No chapters found in spine');
+    hideLoading();
+    renderChapterMgrList();
+    document.getElementById('chapterMgrModal').classList.add('open');
+  }catch(e){
+    hideLoading();
+    showToast('Could not load EPUB: '+e.message);
+    console.error(e);
+  }
+}
+
+function renderChapterMgrList(){
+  const list = document.getElementById('chapterMgrList');
+  const active = chapterMgrSpine.filter(c=>!c.deleted);
+  const deleted = chapterMgrSpine.filter(c=>c.deleted);
+
+  list.innerHTML = chapterMgrSpine.map((ch,i)=>`
+    <div class="chapter-mgr-row ${ch.deleted?'deleted':''}" data-idx="${i}" draggable="${!ch.deleted}">
+      <span class="chapter-mgr-drag" title="Drag to reorder">⠿</span>
+      <span class="chapter-mgr-num">${ch.deleted?'–':active.indexOf(ch)+1}</span>
+      <input class="chapter-mgr-input" type="text" value="${esc(ch.label)}" 
+             data-idx="${i}" ${ch.deleted?'disabled':''} 
+             title="Click to rename"/>
+      ${ch.deleted
+        ? `<button class="chapter-mgr-restore" data-restore="${i}">Restore</button>`
+        : `<button class="chapter-mgr-del" data-delete="${i}" title="Mark for deletion">✕</button>`
+      }
+    </div>
+  `).join('');
+
+  // Info line
+  document.getElementById('chapterMgrInfo').textContent =
+    `${active.length} chapter${active.length!==1?'s':''} · ${deleted.length} marked for deletion`;
+
+  // Rename inputs
+  list.querySelectorAll('.chapter-mgr-input').forEach(inp=>{
+    inp.addEventListener('change', e=>{
+      const idx = parseInt(e.target.dataset.idx);
+      chapterMgrSpine[idx].label = e.target.value;
+    });
+    inp.addEventListener('input', e=>{
+      const idx = parseInt(e.target.dataset.idx);
+      chapterMgrSpine[idx].label = e.target.value;
+    });
+  });
+
+  // Delete buttons
+  list.querySelectorAll('[data-delete]').forEach(btn=>{
+    btn.addEventListener('click', e=>{
+      const idx = parseInt(e.target.dataset.delete);
+      if(chapterMgrSpine.filter(c=>!c.deleted).length <= 1){
+        showToast("Can't delete the last chapter"); return;
+      }
+      chapterMgrSpine[idx].deleted = true;
+      renderChapterMgrList();
+    });
+  });
+
+  // Restore buttons
+  list.querySelectorAll('[data-restore]').forEach(btn=>{
+    btn.addEventListener('click', e=>{
+      const idx = parseInt(e.target.restore ?? e.target.dataset.restore);
+      chapterMgrSpine[idx].deleted = false;
+      renderChapterMgrList();
+    });
+  });
+
+  // Drag to reorder
+  let dragSrc = null;
+  list.querySelectorAll('.chapter-mgr-row[draggable="true"]').forEach(row=>{
+    row.addEventListener('dragstart', e=>{
+      dragSrc = parseInt(row.dataset.idx);
+      row.style.opacity = '.4';
+    });
+    row.addEventListener('dragend', e=>{ row.style.opacity=''; });
+    row.addEventListener('dragover', e=>{ e.preventDefault(); row.style.background='var(--teal-light)'; });
+    row.addEventListener('dragleave', e=>{ row.style.background=''; });
+    row.addEventListener('drop', e=>{
+      e.preventDefault(); row.style.background='';
+      const dropIdx = parseInt(row.dataset.idx);
+      if(dragSrc===null || dragSrc===dropIdx) return;
+      // Reorder: only among non-deleted items conceptually,
+      // but we move in the full array
+      const item = chapterMgrSpine.splice(dragSrc,1)[0];
+      chapterMgrSpine.splice(dropIdx,0,item);
+      dragSrc = null;
+      renderChapterMgrList();
+    });
+  });
+}
+
+document.getElementById('btnSaveChapterMgr').addEventListener('click', saveChapterManager);
+
+async function saveChapterManager(){
+  if(!chapterMgrZip || !chapterMgrOpfPath || !chapterMgrBookId) return;
+
+  const active   = chapterMgrSpine.filter(c=>!c.deleted);
+  const toDelete = chapterMgrSpine.filter(c=>c.deleted);
+
+  if(!active.length){ showToast("Can't delete all chapters"); return; }
+
+  const renamedCount = active.filter(c=>c.label!==c.originalLabel).length;
+  const summary = [
+    toDelete.length ? `${toDelete.length} chapter${toDelete.length!==1?'s':''} deleted` : '',
+    renamedCount    ? `${renamedCount} renamed` : '',
+    active.length !== chapterMgrSpine.length - toDelete.length ? 'reordered' : ''
+  ].filter(Boolean).join(', ');
+
+  if(!confirm(`Save changes to EPUB?\n${summary || 'No changes detected'}\n\nThis will re-upload the file.`)) return;
+
+  document.getElementById('chapterMgrModal').classList.remove('open');
+  showLoading('Rebuilding EPUB…');
+
+  try{
+    const opfXml = await chapterMgrZip.file(chapterMgrOpfPath).async('string');
+
+    // 1. Remove deleted files from the ZIP
+    for(const ch of toDelete){
+      const fullPath = chapterMgrOpfBase + ch.href;
+      chapterMgrZip.remove(fullPath);
+    }
+
+    // 2. Rebuild OPF manifest — remove deleted items
+    const deletedHrefs = new Set(toDelete.map(c=>c.href));
+    let newOpf = opfXml;
+
+    // Remove manifest items for deleted chapters
+    newOpf = newOpf.replace(/<item\s+[^>]+\/>/gi, match=>{
+      const href = match.match(/\bhref="([^"]+)"/)?.[1];
+      return href && deletedHrefs.has(href) ? '' : match;
+    });
+    // Also handle <item ...></item> form
+    newOpf = newOpf.replace(/<item\s+[^>]+><\/item>/gi, match=>{
+      const href = match.match(/\bhref="([^"]+)"/)?.[1];
+      return href && deletedHrefs.has(href) ? '' : match;
+    });
+
+    // 3. Rebuild spine in new order (active chapters only)
+    const newSpineItems = active.map(ch=>`<itemref idref="${ch.id}"/>`).join('\n    ');
+    newOpf = newOpf.replace(/<spine[^>]*>[\s\S]*?<\/spine>/i,
+      match => match.replace(/<itemref[\s\S]*?(?=<\/spine>)/, newSpineItems+'\n  ')
+    );
+
+    // 4. Update NCX if present — rebuild navMap and navPoints
+    const ncxId = (() => {
+      const m = newOpf.match(/media-type="application\/x-dtbncx\+xml"[^>]+id="([^"]+)"/i)
+             || newOpf.match(/id="([^"]+)"[^>]+media-type="application\/x-dtbncx\+xml"/i);
+      return m?.[1];
+    })();
+    const ncxHrefMatch = ncxId && newOpf.match(new RegExp(`id="${ncxId}"[^>]+href="([^"]+)"`, 'i'));
+    const ncxHref = ncxHrefMatch?.[1];
+
+    if(ncxHref){
+      const ncxPath = chapterMgrOpfBase + ncxHref;
+      const ncxXml  = await chapterMgrZip.file(ncxPath)?.async('string');
+      if(ncxXml){
+        // Rebuild navPoints for active chapters in new order
+        let playOrder = 1;
+        const newNavPoints = active.map(ch=>{
+          return `<navPoint id="navPoint-${ch.id}" playOrder="${playOrder++}">
+      <navLabel><text>${esc(ch.label)}</text></navLabel>
+      <content src="${ch.href}"/>
+    </navPoint>`;
+        }).join('\n    ');
+
+        const newNcx = ncxXml.replace(
+          /<navMap[^>]*>[\s\S]*?<\/navMap>/i,
+          `<navMap>\n    ${newNavPoints}\n  </navMap>`
+        );
+        chapterMgrZip.file(ncxPath, newNcx);
+      }
+    }
+
+    // 5. Write updated OPF back
+    chapterMgrZip.file(chapterMgrOpfPath, newOpf);
+
+    // 6. Re-generate ZIP blob
+    showLoading('Compressing…');
+    const newBlob = await chapterMgrZip.generateAsync({
+      type:'blob',
+      mimeType:'application/epub+zip',
+      compression:'DEFLATE',
+      compressionOptions:{ level:6 }
+    });
+
+    // 7. Upload back to same Storage path
+    const book = library.find(b=>b.id===chapterMgrBookId);
+    const path = book?.storagePath;
+    if(!path) throw new Error('No storage path found');
+    showLoading('Uploading…');
+    await uploadBytes(storageRef(storage, path), newBlob);
+
+    // 8. Update Firestore record (just updatedAt — file is same path)
+    await updateDoc(doc(db,'books',chapterMgrBookId),{ updatedAt:serverTimestamp() });
+
+    hideLoading();
+    chapterMgrZip = null;
+    chapterMgrSpine = [];
+    showToast(`EPUB saved — ${summary||'no changes'} ✓`);
+
+  }catch(e){
+    hideLoading();
+    showToast('Save failed: '+e.message);
+    console.error(e);
+  }
+}
   
 renderAll();
 </script>
