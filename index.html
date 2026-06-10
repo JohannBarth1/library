@@ -15,7 +15,7 @@
   --navy:#0f1a2e; --navy2:#1a2840; --cream:#faf7f2; --warm-white:#fffefb;
   --gold:#c8952a; --gold2:#e8b84b; --teal:#2a7c8a; --teal-light:#e1f2f5;
   --light-blue:#d8e8f0; --border:#c8d8e4; --muted:#7a8a9a;
-  --panel:#f0f5f8; --danger:#a02828;
+  --panel:#f0f5f8; --danger:#a02828; --green:#2a7a4a; --green-light:#e8f5ee;
   --header-h:60px; --mob-nav-h:60px; --filter-w:220px;
 }
 *{box-sizing:border-box;margin:0;padding:0;}
@@ -53,13 +53,15 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .user-dropdown button:hover{background:var(--teal-light);}
 .user-dropdown .signout-btn{color:var(--danger);}
 .app{display:flex;flex:1;overflow:hidden;}
+
+/* ── FILTER SIDEBAR ── */
 .filter-sidebar{width:var(--filter-w);min-width:var(--filter-w);background:var(--panel);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;flex-shrink:0;}
 .filter-sidebar-top{padding:.9rem 1rem .7rem;border-bottom:1px solid var(--border);}
 .filter-sidebar-top h3{font-family:'Playfair Display',serif;font-size:1rem;color:var(--navy2);margin-bottom:.7rem;}
 .filter-search{width:100%;padding:.45rem .7rem;font-family:'Lato',sans-serif;font-size:.83rem;border:1px solid var(--border);border-radius:3px;background:var(--warm-white);color:var(--navy);outline:none;}
 .filter-search:focus{border-color:var(--teal);}
-.shelf-tabs{display:flex;border-bottom:1px solid var(--border);flex-shrink:0;}
-.shelf-tab{flex:1;padding:.55rem .3rem;font-family:'Lato',sans-serif;font-size:.68rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);background:none;border:none;border-bottom:2px solid transparent;cursor:pointer;transition:color .15s;}
+.shelf-tabs{display:flex;border-bottom:1px solid var(--border);flex-shrink:0;flex-wrap:wrap;}
+.shelf-tab{flex:1;padding:.55rem .2rem;font-family:'Lato',sans-serif;font-size:.62rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);background:none;border:none;border-bottom:2px solid transparent;cursor:pointer;transition:color .15s;white-space:nowrap;}
 .shelf-tab.active{color:var(--teal);border-bottom-color:var(--teal);}
 .shelf-tab:hover:not(.active){color:var(--navy2);}
 .filter-cats{flex:1;overflow-y:auto;padding:.5rem 0;}
@@ -77,6 +79,8 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .btn-upload-f:hover{background:#1e5f6a;}
 .btn-refresh-f{background:transparent;color:var(--navy2);}
 .btn-refresh-f:hover{background:var(--light-blue);}
+
+/* ── BULK BAR ── */
 .bulk-bar{display:none;background:var(--navy2);color:var(--cream);padding:.5rem 1.5rem;align-items:center;gap:.8rem;flex-shrink:0;border-bottom:1px solid var(--border);}
 .bulk-bar.open{display:flex;}
 .bulk-bar-count{font-size:.82rem;font-weight:700;flex:1;}
@@ -92,12 +96,16 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .select-mode-toggle{padding:.38rem .7rem;font-family:'Lato',sans-serif;font-size:.7rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;border-radius:2px;cursor:pointer;border:1px solid rgba(255,255,255,.25);background:transparent;color:#d8e8f0;transition:all .15s;}
 .select-mode-toggle:hover{background:rgba(255,255,255,.08);}
 .select-mode-toggle.active{background:var(--teal);border-color:var(--teal);color:#fff;}
+
+/* ── MAIN AREA ── */
 .main-area{flex:1;overflow-y:auto;display:flex;flex-direction:column;-webkit-overflow-scrolling:touch;}
 .grid-header{padding:.8rem 1.5rem .6rem;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);flex-shrink:0;gap:.6rem;}
 .grid-header-left{display:flex;align-items:center;gap:.7rem;}
 .grid-header h2{font-family:'Playfair Display',serif;font-size:1.1rem;color:var(--navy2);}
 .grid-count{font-size:.7rem;color:var(--muted);font-weight:700;}
 .book-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:1.2rem;padding:1.2rem 1.5rem;}
+
+/* ── BOOK CARDS ── */
 .book-card{cursor:pointer;border-radius:4px;overflow:hidden;transition:transform .15s,box-shadow .15s;position:relative;}
 .book-card:hover{transform:translateY(-3px);box-shadow:0 6px 20px rgba(0,0,0,0.12);}
 .book-card.selected{outline:3px solid var(--teal);outline-offset:1px;}
@@ -114,9 +122,12 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .bcs{font-size:.65rem;color:#ccc;}
 .bcs.filled{color:var(--gold);}
 .book-card .community-badge{position:absolute;top:.4rem;right:.4rem;background:var(--gold);color:var(--navy);font-size:.55rem;font-weight:700;padding:2px 5px;border-radius:2px;letter-spacing:.04em;text-transform:uppercase;}
+.book-card .checkout-badge{position:absolute;top:.4rem;left:.4rem;background:var(--green);color:#fff;font-size:.55rem;font-weight:700;padding:2px 5px;border-radius:2px;letter-spacing:.04em;text-transform:uppercase;}
 .book-card .select-check{position:absolute;top:.4rem;left:.4rem;width:20px;height:20px;border-radius:50%;background:rgba(15,26,46,.7);border:2px solid rgba(255,255,255,.5);display:none;align-items:center;justify-content:center;font-size:.75rem;color:#fff;transition:all .15s;}
 .select-mode .book-card .select-check{display:flex;}
 .book-card.selected .select-check{background:var(--teal);border-color:var(--teal);}
+
+/* ── BOOK DRAWER ── */
 .book-drawer{position:fixed;top:var(--header-h);right:0;bottom:0;width:380px;background:var(--warm-white);border-left:1px solid var(--border);box-shadow:-4px 0 20px rgba(0,0,0,0.1);z-index:30;display:flex;flex-direction:column;transform:translateX(100%);transition:transform .25s ease;}
 .book-drawer.open{transform:translateX(0);}
 .drawer-close{position:absolute;top:.7rem;right:.8rem;background:none;border:none;font-size:1.1rem;cursor:pointer;color:var(--muted);padding:.3rem;line-height:1;}
@@ -133,13 +144,22 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .dbadge-lang{background:#ece8f8;color:#5a48b0;}
 .dbadge-shared{background:#fff4e0;color:#a87820;}
 .dbadge-private-share{background:#f0fff4;color:#276749;}
+.dbadge-checkout{background:var(--green-light);color:var(--green);}
 .drawer-stars{display:flex;align-items:center;gap:.4rem;margin:.5rem 0;}
 .drawer-desc{font-size:.85rem;line-height:1.7;color:#3a4a5a;margin-bottom:1rem;}
 .drawer-sharedby{font-size:.75rem;color:var(--teal);margin-bottom:.5rem;font-weight:700;}
+.drawer-checkout-info{background:var(--green-light);border:1px solid rgba(42,122,74,.2);border-radius:4px;padding:.65rem .85rem;margin-bottom:.8rem;font-size:.8rem;color:var(--green);}
+.drawer-checkout-info strong{font-weight:700;}
 .drawer-actions{padding:1rem 1.5rem;border-top:1px solid var(--border);display:flex;flex-wrap:wrap;gap:.45rem;flex-shrink:0;}
 .btn-action{padding:.42rem 1rem;font-size:.7rem;font-family:'Lato',sans-serif;font-weight:700;letter-spacing:.06em;text-transform:uppercase;border-radius:2px;cursor:pointer;border:1px solid;transition:all .15s;white-space:nowrap;}
 .btn-read{background:var(--navy2);color:#fff;border-color:var(--navy2);}
 .btn-read:hover{background:var(--navy);}
+.btn-checkout{background:var(--green);color:#fff;border-color:var(--green);}
+.btn-checkout:hover{background:#1e5f3a;}
+.btn-return{background:transparent;color:var(--green);border-color:var(--green);}
+.btn-return:hover{background:var(--green-light);}
+.btn-history{background:transparent;color:var(--muted);border-color:var(--border);}
+.btn-history:hover{background:var(--light-blue);}
 .btn-download{background:var(--teal);color:#fff;border-color:var(--teal);}
 .btn-download:hover{background:#1e5f6a;}
 .btn-share{background:var(--gold);color:#fff;border-color:var(--gold);}
@@ -148,18 +168,87 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .btn-share-private:hover{background:#f0fff4;}
 .btn-unpublish{background:transparent;color:#b84c1a;border-color:#e0b0a0;}
 .btn-unpublish:hover{background:#fff8f5;}
-.btn-edit-cat{background:transparent;color:var(--navy2);border-color:var(--border);}
-.btn-edit-cat:hover{background:var(--light-blue);}
+.btn-edit-meta{background:transparent;color:var(--navy2);border-color:var(--border);}
+.btn-edit-meta:hover{background:var(--light-blue);}
 .btn-link{background:transparent;color:var(--teal);border-color:var(--border);}
 .btn-link:hover{background:var(--teal-light);}
+.btn-recommend{background:transparent;color:#a87820;border-color:#e8c86a;}
+.btn-recommend:hover{background:#fffbee;}
+.btn-recommend.active-rec{background:#fff4cc;color:#a87820;}
 .btn-delete{background:transparent;color:var(--danger);border-color:#e0b0b0;}
 .btn-delete:hover{background:#fbeaea;}
-.star-rating{display:flex;align-items:center;gap:.3rem;}
+
+/* ── STAR RATING ── */
+.star-rating{display:flex;align-items:center;gap:.4rem;}
 .stars{display:flex;gap:2px;cursor:pointer;}
 .star{font-size:1.1rem;color:#ccc;transition:color .1s;user-select:none;}
 .star.filled{color:var(--gold);}
 .star:hover,.star.hover{color:var(--gold2);}
 .rating-count{font-size:.75rem;color:var(--muted);}
+
+/* ── HOME PANEL ── */
+.home-panel{flex:1;overflow-y:auto;padding:1.5rem;}
+.home-section{margin-bottom:2rem;}
+.home-section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;padding-bottom:.5rem;border-bottom:1px solid var(--border);}
+.home-section-title{font-family:'Playfair Display',serif;font-size:1.1rem;color:var(--navy2);}
+.home-section-sub{font-size:.75rem;color:var(--muted);}
+.home-shelf{display:flex;gap:1rem;overflow-x:auto;padding-bottom:.5rem;-webkit-overflow-scrolling:touch;scrollbar-width:thin;}
+.home-shelf::-webkit-scrollbar{height:4px;}
+.home-shelf::-webkit-scrollbar-track{background:var(--border);}
+.home-shelf::-webkit-scrollbar-thumb{background:var(--teal);}
+.home-book-mini{cursor:pointer;flex-shrink:0;width:100px;transition:transform .15s;}
+.home-book-mini:hover{transform:translateY(-2px);}
+.home-book-mini-cover{width:100px;height:145px;object-fit:cover;border-radius:3px;border:1px solid var(--border);}
+.home-book-mini-cover-ph{width:100px;height:145px;background:linear-gradient(145deg,var(--navy2),#2a3d5a);border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:2rem;}
+.home-book-mini-title{font-size:.7rem;font-family:'Playfair Display',serif;line-height:1.2;margin-top:.35rem;color:var(--navy2);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+.home-book-mini-author{font-size:.62rem;color:var(--muted);margin-top:.1rem;}
+.home-book-mini-due{font-size:.6rem;color:var(--green);font-weight:700;margin-top:.1rem;}
+.home-empty{font-size:.85rem;color:var(--muted);font-style:italic;padding:.5rem 0;}
+.home-welcome{background:linear-gradient(135deg,var(--navy2),#1e3a5a);border-radius:8px;padding:1.5rem;color:var(--cream);margin-bottom:1.5rem;display:flex;align-items:center;gap:1.2rem;}
+.home-welcome-icon{font-size:2.5rem;flex-shrink:0;}
+.home-welcome-text h2{font-family:'Playfair Display',serif;font-size:1.2rem;color:var(--cream);margin-bottom:.3rem;}
+.home-welcome-text p{font-size:.83rem;color:rgba(200,220,230,.8);line-height:1.5;}
+
+/* ── COMMUNITY BOARD ── */
+.community-panel{flex:1;overflow-y:auto;display:flex;flex-direction:column;}
+.comm-toolbar{padding:.8rem 1.5rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:.8rem;flex-shrink:0;background:var(--warm-white);}
+.comm-toolbar h2{font-family:'Playfair Display',serif;font-size:1.1rem;color:var(--navy2);}
+.comm-filter-tabs{display:flex;gap:.3rem;}
+.comm-tab{padding:.3rem .75rem;font-size:.7rem;font-family:'Lato',sans-serif;font-weight:700;letter-spacing:.05em;text-transform:uppercase;border-radius:20px;cursor:pointer;border:1px solid var(--border);background:var(--warm-white);color:var(--muted);transition:all .15s;}
+.comm-tab.active{background:var(--teal);color:#fff;border-color:var(--teal);}
+.comm-posts{flex:1;overflow-y:auto;padding:1rem 1.5rem;display:flex;flex-direction:column;gap:.8rem;}
+.comm-post{background:var(--warm-white);border:1px solid var(--border);border-radius:6px;padding:1rem 1.2rem;transition:box-shadow .15s;}
+.comm-post:hover{box-shadow:0 2px 10px rgba(0,0,0,0.07);}
+.comm-post-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:.5rem;gap:.5rem;}
+.comm-post-type{font-size:.58rem;letter-spacing:.18em;text-transform:uppercase;font-weight:700;padding:2px 7px;border-radius:8px;}
+.type-announcement{background:#fff4e0;color:#a87820;}
+.type-request{background:var(--teal-light);color:var(--teal);}
+.type-newbook{background:var(--green-light);color:var(--green);}
+.comm-post-time{font-size:.7rem;color:var(--muted);white-space:nowrap;}
+.comm-post-title{font-family:'Playfair Display',serif;font-size:1rem;color:var(--navy2);margin-bottom:.35rem;line-height:1.3;}
+.comm-post-body{font-size:.83rem;color:#3a4a5a;line-height:1.6;}
+.comm-post-author{font-size:.72rem;color:var(--muted);margin-top:.5rem;}
+.comm-post-actions{display:flex;align-items:center;gap:.6rem;margin-top:.7rem;padding-top:.6rem;border-top:1px solid var(--border);}
+.comm-vote-btn{display:flex;align-items:center;gap:.3rem;padding:.28rem .7rem;font-size:.72rem;font-family:'Lato',sans-serif;font-weight:700;border:1px solid var(--border);border-radius:20px;cursor:pointer;background:var(--warm-white);color:var(--navy2);transition:all .15s;}
+.comm-vote-btn:hover{background:var(--teal-light);border-color:var(--teal);color:var(--teal);}
+.comm-vote-btn.voted{background:var(--teal-light);border-color:var(--teal);color:var(--teal);}
+.comm-new-post-btn{padding:.4rem .9rem;font-family:'Lato',sans-serif;font-size:.72rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;border-radius:2px;cursor:pointer;border:1px solid var(--teal);background:var(--teal);color:#fff;transition:all .15s;}
+.comm-new-post-btn:hover{background:#1e5f6a;}
+.admin-post-btn{padding:.4rem .9rem;font-family:'Lato',sans-serif;font-size:.72rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;border-radius:2px;cursor:pointer;border:1px solid var(--gold);background:transparent;color:var(--gold);transition:all .15s;}
+.admin-post-btn:hover{background:#fff8e6;}
+
+/* ── CHECKOUT HISTORY MODAL CONTENT ── */
+.history-list{max-height:320px;overflow-y:auto;}
+.history-item{padding:.6rem .5rem;border-bottom:1px solid var(--border);font-size:.83rem;display:flex;gap:.7rem;align-items:flex-start;}
+.history-item:last-child{border-bottom:none;}
+.history-icon{font-size:1.1rem;flex-shrink:0;margin-top:.1rem;}
+.history-item-name{font-weight:700;color:var(--navy2);}
+.history-item-sub{font-size:.72rem;color:var(--muted);}
+.history-item-date{font-size:.7rem;color:var(--muted);margin-left:auto;white-space:nowrap;}
+.overdue-tag{font-size:.6rem;background:#ffe8e8;color:var(--danger);padding:1px 6px;border-radius:8px;font-weight:700;margin-left:.4rem;}
+.active-tag{font-size:.6rem;background:var(--green-light);color:var(--green);padding:1px 6px;border-radius:8px;font-weight:700;margin-left:.4rem;}
+
+/* ── READER ── */
 .reader-overlay{display:none;position:fixed;inset:0;z-index:150;flex-direction:column;}
 .reader-overlay.open{display:flex;}
 .reader-overlay.theme-day{background:#fff;color:#1a1a1a;}
@@ -228,6 +317,8 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .reader-overlay.theme-night .reader-bottom-nav{background:#12122a;}
 .reader-bottom-nav .reader-btn{padding:.45rem 1.2rem;font-size:.78rem;}
 .reader-page-info{font-size:.78rem;opacity:.65;white-space:nowrap;text-align:center;flex:1;}
+
+/* ── LOADING / TOAST ── */
 .loading-overlay{display:none;position:fixed;inset:0;background:rgba(15,26,46,.6);z-index:200;align-items:center;justify-content:center;flex-direction:column;gap:1rem;}
 .loading-overlay.open{display:flex;}
 .loading-spinner{width:44px;height:44px;border:3px solid rgba(200,149,42,.3);border-top-color:var(--gold);border-radius:50%;animation:spin .8s linear infinite;}
@@ -237,21 +328,24 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .drop-zone.drag-over{border-color:var(--teal);background:var(--teal-light);}
 .drop-zone p{font-size:.88rem;color:var(--muted);margin-top:.5rem;}
 .drop-zone .dz-icon{font-size:2rem;color:var(--teal);}
+
+/* ── MODALS ── */
 .modal-overlay{display:none;position:fixed;inset:0;background:rgba(15,26,46,.6);z-index:100;align-items:center;justify-content:center;padding:1rem;}
 .modal-overlay.open{display:flex;}
-.modal{background:var(--warm-white);border:1px solid var(--border);border-radius:6px;padding:1.8rem;width:100%;max-width:420px;}
+.modal{background:var(--warm-white);border:1px solid var(--border);border-radius:6px;padding:1.8rem;width:100%;max-width:420px;max-height:90vh;overflow-y:auto;}
 .modal h3{font-family:'Playfair Display',serif;font-size:1.2rem;margin-bottom:1rem;color:var(--navy2);}
 .modal .form-row{margin-bottom:.8rem;}
 .modal .form-row label{display:block;font-size:.65rem;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:.35rem;}
-.modal .form-row input,.modal .form-row select{width:100%;padding:.6rem .85rem;font-family:'Lato',sans-serif;font-size:1rem;color:var(--navy);background:var(--cream);border:1px solid var(--border);border-radius:3px;outline:none;-webkit-appearance:none;appearance:none;}
-.modal .form-row input:focus,.modal .form-row select:focus{border-color:var(--teal);}
+.modal .form-row input,.modal .form-row select,.modal .form-row textarea{width:100%;padding:.6rem .85rem;font-family:'Lato',sans-serif;font-size:.93rem;color:var(--navy);background:var(--cream);border:1px solid var(--border);border-radius:3px;outline:none;-webkit-appearance:none;appearance:none;}
+.modal .form-row textarea{resize:vertical;min-height:80px;line-height:1.5;}
+.modal .form-row input:focus,.modal .form-row select:focus,.modal .form-row textarea:focus{border-color:var(--teal);}
 .modal-actions{display:flex;gap:.6rem;margin-top:1.2rem;justify-content:flex-end;}
 .btn-save{background:var(--teal);color:#fff;border:none;padding:.65rem 1.4rem;font-family:'Lato',sans-serif;font-size:.82rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;border-radius:2px;cursor:pointer;}
 .btn-save:hover{background:#1e5f6a;}
 .btn-cancel{background:transparent;color:var(--muted);border:1px solid var(--border);padding:.65rem 1.2rem;font-family:'Lato',sans-serif;font-size:.82rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;border-radius:2px;cursor:pointer;}
 .btn-cancel:hover{background:var(--light-blue);}
 .link-box{background:var(--panel);border:1px solid var(--border);border-radius:3px;padding:.6rem .8rem;font-size:.8rem;font-family:monospace;color:var(--navy2);word-break:break-all;margin:.8rem 0;line-height:1.5;}
-.upload-list{max-height:240px;overflow-y:auto;margin:.8rem 0;}
+.upload-list{max-height:240px;overflow-y:auto;}
 .upload-modal-wide{max-width:520px!important;}
 .upload-progress{background:var(--panel);border:1px solid var(--border);border-radius:4px;padding:.7rem 1rem;margin:.5rem 0;font-size:.82rem;display:flex;align-items:center;gap:.7rem;}
 .upload-progress .up-icon{font-size:1.1rem;}
@@ -263,10 +357,12 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .progress-bar{height:3px;background:var(--teal);border-radius:2px;transition:width .3s;}
 .toast{position:fixed;bottom:1.5rem;right:2rem;background:var(--navy);color:#d8e8f0;padding:.7rem 1.3rem;border-radius:3px;font-size:.85rem;font-weight:700;letter-spacing:.05em;opacity:0;transition:opacity .3s,transform .3s;transform:translateY(6px);pointer-events:none;z-index:220;white-space:nowrap;}
 .toast.show{opacity:1;transform:translateY(0);}
+
+/* ── MOBILE ── */
 .mob-nav{display:none;position:fixed;bottom:0;left:0;right:0;height:var(--mob-nav-h);background:var(--navy);border-top:2px solid var(--gold);z-index:50;}
 .mob-nav-inner{display:flex;height:100%;}
-.mob-tab{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;cursor:pointer;color:var(--muted);font-size:.57rem;letter-spacing:.06em;text-transform:uppercase;font-weight:700;border:none;background:none;transition:color .15s;-webkit-tap-highlight-color:transparent;}
-.mob-tab .tab-icon{font-size:1.2rem;line-height:1;}
+.mob-tab{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;cursor:pointer;color:var(--muted);font-size:.52rem;letter-spacing:.05em;text-transform:uppercase;font-weight:700;border:none;background:none;transition:color .15s;-webkit-tap-highlight-color:transparent;}
+.mob-tab .tab-icon{font-size:1.1rem;line-height:1;}
 .mob-tab.active{color:var(--gold);}
 .mob-panels{display:none;flex-direction:column;flex:1;overflow:hidden;padding-bottom:var(--mob-nav-h);}
 .mob-panel{display:none;flex-direction:column;height:100%;overflow:hidden;}
@@ -295,6 +391,11 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .mob-detail-author{font-size:.82rem;color:var(--muted);font-style:italic;margin-bottom:.5rem;}
 .mob-detail-actions{display:flex;flex-wrap:wrap;gap:.45rem;margin-bottom:1rem;}
 .mob-detail-desc{font-size:.85rem;line-height:1.7;color:#3a4a5a;}
+.mob-detail-checkout-info{background:var(--green-light);border:1px solid rgba(42,122,74,.2);border-radius:4px;padding:.6rem .8rem;margin-bottom:.8rem;font-size:.8rem;color:var(--green);}
+.mob-home-scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:1rem;}
+.mob-comm-panel{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;}
+.mob-comm-toolbar{padding:.6rem .9rem;border-bottom:1px solid var(--border);background:var(--warm-white);display:flex;align-items:center;justify-content:space-between;gap:.5rem;flex-shrink:0;}
+.mob-comm-posts{padding:.7rem .9rem;display:flex;flex-direction:column;gap:.7rem;}
 .mob-settings-scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:1.5rem 1.2rem;}
 .mob-settings-scroll h2{font-family:'Playfair Display',serif;font-size:1.4rem;color:var(--navy2);margin-bottom:1.5rem;}
 .settings-group{margin-bottom:2rem;}
@@ -306,6 +407,8 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .settings-btn.danger-s{background:var(--warm-white);color:var(--danger);border-color:#e0b0b0;}
 .settings-note{font-size:.8rem;color:var(--muted);line-height:1.6;margin-top:.3rem;}
 #deskSettings{display:none;position:fixed;top:calc(var(--header-h) + 8px);right:1rem;background:var(--warm-white);border:1px solid var(--border);border-radius:6px;padding:1.2rem 1.4rem;width:280px;z-index:80;box-shadow:0 4px 20px rgba(0,0,0,0.15);}
+
+/* ── RESPONSIVE ── */
 @media(max-width:640px){
   .filter-sidebar{display:none;} .desktop-main{display:none;} .book-drawer{display:none;}
   .mob-nav{display:block;} .mob-panels{display:flex;}
@@ -331,7 +434,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
       <svg width="20" height="20" viewBox="0 0 48 48"><path fill="#FFC107" d="M43.6 20.1H42V20H24v8h11.3C33.7 32.7 29.3 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.1 7.9 3l5.7-5.7C34.1 6.5 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.6-.4-3.9z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.5 16 19 12 24 12c3.1 0 5.8 1.1 7.9 3l5.7-5.7C34.1 6.5 29.3 4 24 4c-7.7 0-14.3 4.4-17.7 10.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.4 35.5 26.8 36 24 36c-5.2 0-9.7-3.3-11.3-8H6.1C9.5 36.9 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.1H42V20H24v8h11.3c-.8 2.1-2.1 3.9-3.8 5.2l6.2 5.2C40.8 36.1 44 30.5 44 24c0-1.3-.1-2.6-.4-3.9z"/></svg>
       Sign in with Google
     </button>
-    <p class="auth-note">Your library is private by default. Share individual books to the community any time.</p>
+    <p class="auth-note">Your library is private by default. Share individual books to the Public Library any time.</p>
   </div>
 </div>
 
@@ -379,11 +482,13 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
         <input class="filter-search" type="text" id="deskSearch" placeholder="Search title, author…"/>
       </div>
       <div class="shelf-tabs">
+        <button class="shelf-tab" id="tabHomeDesk">🏠 Home</button>
         <button class="shelf-tab active" id="tabMineDesk">My Library</button>
+        <button class="shelf-tab" id="tabPubDesk">Public Library</button>
         <button class="shelf-tab" id="tabCommDesk">Community</button>
       </div>
       <div class="filter-cats" id="deskFilterCats"></div>
-      <div class="filter-sort">
+      <div class="filter-sort" id="deskSortWrap">
         <label>Sort by</label>
         <select id="deskSortSelect">
           <option value="recent">Most Recent</option>
@@ -399,59 +504,90 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
     </aside>
 
     <main class="main-area" id="deskMain">
-      <div class="grid-header">
-        <div class="grid-header-left">
-          <h2 id="deskGridTitle">My Library</h2>
-          <span class="grid-count" id="deskGridCount"></span>
+      <!-- Home Panel -->
+      <div id="deskHomePanel" class="home-panel" style="display:none"></div>
+
+      <!-- Community Board Panel -->
+      <div id="deskCommPanel" class="community-panel" style="display:none">
+        <div class="comm-toolbar">
+          <h2>Community Board</h2>
+          <div style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap;">
+            <div class="comm-filter-tabs">
+              <button class="comm-tab active" data-filter="all">All</button>
+              <button class="comm-tab" data-filter="announcement">Announcements</button>
+              <button class="comm-tab" data-filter="request">Requests</button>
+              <button class="comm-tab" data-filter="newbook">New Books</button>
+            </div>
+            <button class="comm-new-post-btn" id="btnNewRequest">+ Request Book</button>
+            <button class="admin-post-btn" id="btnAdminPost">📢 Announce</button>
+          </div>
         </div>
-        <button class="select-mode-toggle" id="btnSelectMode">☑ Select</button>
+        <div class="comm-posts" id="deskCommPosts"></div>
       </div>
-      <div class="bulk-bar" id="bulkBar">
-        <span class="bulk-bar-count" id="bulkBarCount">0 selected</span>
-        <button class="bulk-btn bulk-btn-cat" id="bulkBtnCat">✎ Category</button>
-        <button class="bulk-btn bulk-btn-publish" id="bulkBtnPublish" style="display:none">⇧ Publish</button>
-        <button class="bulk-btn bulk-btn-unpublish" id="bulkBtnUnpublish" style="display:none">↓ Unpublish</button>
-        <button class="bulk-btn bulk-btn-cancel" id="bulkBtnCancel">✕ Cancel</button>
+
+      <!-- Library Grid Panel -->
+      <div id="deskGridPanel">
+        <div class="grid-header">
+          <div class="grid-header-left">
+            <h2 id="deskGridTitle">My Library</h2>
+            <span class="grid-count" id="deskGridCount"></span>
+          </div>
+          <button class="select-mode-toggle" id="btnSelectMode">☑ Select</button>
+        </div>
+        <div class="bulk-bar" id="bulkBar">
+          <span class="bulk-bar-count" id="bulkBarCount">0 selected</span>
+          <button class="bulk-btn bulk-btn-cat" id="bulkBtnCat">✎ Category</button>
+          <button class="bulk-btn bulk-btn-publish" id="bulkBtnPublish" style="display:none">⇧ Publish</button>
+          <button class="bulk-btn bulk-btn-unpublish" id="bulkBtnUnpublish" style="display:none">↓ Unpublish</button>
+          <button class="bulk-btn bulk-btn-cancel" id="bulkBtnCancel">✕ Cancel</button>
+        </div>
+        <div class="book-grid" id="deskBookGrid"></div>
       </div>
-      <div class="book-grid" id="deskBookGrid"></div>
     </main>
   </div>
 
   <!-- MOBILE PANELS -->
   <div class="mob-panels">
-    <div class="mob-panel active" id="mobPanelMine">
+    <!-- Home -->
+    <div class="mob-panel active" id="mobPanelHome">
+      <div class="mob-home-scroll" id="mobHomeScroll"></div>
+    </div>
+
+    <!-- My Library -->
+    <div class="mob-panel" id="mobPanelMine">
       <div class="mob-lib-top">
         <div class="mob-search-bar"><input type="text" id="mobSearchMine" placeholder="Search my books…"/></div>
         <div class="mob-filter-scroll" id="mobChipsMine"></div>
-        <div class="mob-sort-row">
-          <label>Sort</label>
-          <select id="mobSortMine">
-            <option value="recent">Most Recent</option>
-            <option value="title">Title A–Z</option>
-            <option value="author">Author A–Z</option>
-          </select>
-        </div>
+        <div class="mob-sort-row"><label>Sort</label><select id="mobSortMine"><option value="recent">Most Recent</option><option value="title">Title A–Z</option><option value="author">Author A–Z</option></select></div>
       </div>
       <div class="mob-grid-scroll"><div class="mob-book-grid" id="mobGridMine"></div></div>
     </div>
 
-    <div class="mob-panel" id="mobPanelComm">
+    <!-- Public Library -->
+    <div class="mob-panel" id="mobPanelPub">
       <div class="mob-lib-top">
-        <div class="mob-search-bar"><input type="text" id="mobSearchComm" placeholder="Search community…"/></div>
+        <div class="mob-search-bar"><input type="text" id="mobSearchComm" placeholder="Search public library…"/></div>
         <div class="mob-filter-scroll" id="mobChipsComm"></div>
-        <div class="mob-sort-row">
-          <label>Sort</label>
-          <select id="mobSortComm">
-            <option value="recent">Most Recent</option>
-            <option value="title">Title A–Z</option>
-            <option value="author">Author A–Z</option>
-            <option value="rating">Top Rated</option>
-          </select>
-        </div>
+        <div class="mob-sort-row"><label>Sort</label><select id="mobSortComm"><option value="recent">Most Recent</option><option value="title">Title A–Z</option><option value="author">Author A–Z</option><option value="rating">Top Rated</option></select></div>
       </div>
       <div class="mob-grid-scroll"><div class="mob-book-grid" id="mobGridComm"></div></div>
     </div>
 
+    <!-- Community Board -->
+    <div class="mob-panel" id="mobPanelComm">
+      <div class="mob-comm-toolbar">
+        <span style="font-family:'Playfair Display',serif;font-size:.95rem;font-weight:700;color:var(--navy2)">Community</span>
+        <div style="display:flex;gap:.4rem;">
+          <button class="comm-new-post-btn" id="btnMobNewRequest" style="font-size:.65rem;padding:.3rem .6rem">+ Request</button>
+          <button class="admin-post-btn" id="btnMobAdminPost" style="font-size:.65rem;padding:.3rem .6rem">📢</button>
+        </div>
+      </div>
+      <div style="overflow-y:auto;-webkit-overflow-scrolling:touch;flex:1;">
+        <div class="mob-comm-posts" id="mobCommPosts"></div>
+      </div>
+    </div>
+
+    <!-- Book Detail -->
     <div class="mob-panel" id="mobPanelDetail">
       <div class="mob-detail-header">
         <button class="mob-back-btn" id="btnMobBack">← Back</button>
@@ -472,12 +608,14 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
             </div>
           </div>
         </div>
+        <div class="mob-detail-checkout-info" id="mobCheckoutInfo" style="display:none"></div>
         <div class="mob-detail-actions" id="mobDetailActions"></div>
         <hr style="border:none;border-top:1px solid var(--border);margin:.5rem 0 1rem"/>
         <p class="mob-detail-desc" id="mobDetailDesc"></p>
       </div>
     </div>
 
+    <!-- Settings -->
     <div class="mob-panel" id="mobPanelSettings">
       <div class="mob-settings-scroll">
         <h2>Settings</h2>
@@ -492,7 +630,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
         <div class="settings-group">
           <div class="settings-group-label">Library</div>
           <button class="settings-btn upload-s" id="btnMobUpload"><span class="s-icon">📤</span><div><div>Upload EPUB Files</div><div class="settings-note" style="color:rgba(255,255,255,.75)">Add new books to your library</div></div></button>
-          <button class="settings-btn neutral" id="btnMobRefresh"><span class="s-icon">↻</span><div><div>Refresh Library</div><div class="settings-note">Reload books from Firestore</div></div></button>
+          <button class="settings-btn neutral" id="btnMobRefresh"><span class="s-icon">↻</span><div><div>Refresh Library</div><div class="settings-note">Reload books from server</div></div></button>
         </div>
         <div class="settings-group">
           <div class="settings-group-label">Install App</div>
@@ -504,7 +642,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
   </div>
 </div>
 
-<!-- Book drawer (desktop) -->
+<!-- Book Drawer (desktop) -->
 <div class="book-drawer" id="bookDrawer">
   <button class="drawer-close" id="drawerClose">✕</button>
   <div class="drawer-scroll">
@@ -519,12 +657,13 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
       <span class="rating-count" id="deskRatingCount"></span>
     </div>
     <div class="drawer-sharedby" id="drawerSharedBy" style="display:none"></div>
+    <div class="drawer-checkout-info" id="drawerCheckoutInfo" style="display:none"></div>
     <p class="drawer-desc" id="drawerDesc"></p>
   </div>
   <div class="drawer-actions" id="drawerActions"></div>
 </div>
 
-<!-- Desktop settings popover -->
+<!-- Desktop Settings -->
 <div id="deskSettings">
   <h3 style="font-family:'Playfair Display',serif;font-size:1rem;color:var(--navy2);margin-bottom:.9rem;padding-bottom:.4rem;border-bottom:1px solid var(--border)">⚙ Settings</h3>
   <div style="font-size:.65rem;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:.4rem">Default category for uploads</div>
@@ -534,12 +673,13 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
   <button id="btnClearCache" style="width:100%;padding:.45rem;font-size:.72rem;font-family:'Lato',sans-serif;font-weight:700;border-radius:3px;cursor:pointer;border:1px solid #e0b0b0;color:var(--danger);background:var(--cream)">✕ Clear Cache</button>
 </div>
 
-<!-- Mobile bottom nav -->
+<!-- Mobile Nav -->
 <nav class="mob-nav">
   <div class="mob-nav-inner">
-    <button class="mob-tab active" id="mobNavMine"><span class="tab-icon">📚</span><span>My Books</span></button>
-    <button class="mob-tab" id="mobNavComm"><span class="tab-icon">🌐</span><span>Community</span></button>
-    <button class="mob-tab" id="mobNavUpload"><span class="tab-icon">📤</span><span>Upload</span></button>
+    <button class="mob-tab active" id="mobNavHome"><span class="tab-icon">🏠</span><span>Home</span></button>
+    <button class="mob-tab" id="mobNavMine"><span class="tab-icon">📚</span><span>My Books</span></button>
+    <button class="mob-tab" id="mobNavPub"><span class="tab-icon">🌐</span><span>Public</span></button>
+    <button class="mob-tab" id="mobNavComm"><span class="tab-icon">💬</span><span>Community</span></button>
     <button class="mob-tab" id="mobNavSettings"><span class="tab-icon">⚙️</span><span>Settings</span></button>
   </div>
 </nav>
@@ -558,7 +698,23 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
   </div>
 </div>
 
-<!-- Edit Category Modal -->
+<!-- Edit Metadata Modal -->
+<div class="modal-overlay" id="editMetaModal">
+  <div class="modal" style="max-width:480px">
+    <h3>Edit Book Details</h3>
+    <div class="form-row"><label>Title</label><input type="text" id="metaTitle"/></div>
+    <div class="form-row"><label>Author</label><input type="text" id="metaAuthor"/></div>
+    <div class="form-row"><label>Category</label><input type="text" id="metaCategory" list="metaCatSuggestions"/><datalist id="metaCatSuggestions"></datalist></div>
+    <div class="form-row"><label>Language</label><input type="text" id="metaLanguage" placeholder="e.g. en"/></div>
+    <div class="form-row"><label>Description <span style="font-size:.65rem;color:var(--muted);text-transform:none;letter-spacing:0">(HTML will be stripped)</span></label><textarea id="metaDesc" rows="4"></textarea></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" id="btnCancelMeta">Cancel</button>
+      <button class="btn-save" id="btnSaveMeta">Save Changes</button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Category Modal (bulk) -->
 <div class="modal-overlay" id="editCatModal">
   <div class="modal">
     <h3 id="editCatModalTitle">Edit Category</h3>
@@ -574,14 +730,14 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
   </div>
 </div>
 
-<!-- Share to Community Modal -->
+<!-- Share to Public Library Modal -->
 <div class="modal-overlay" id="shareModal">
   <div class="modal">
-    <h3>Share to Community</h3>
-    <p style="font-size:.85rem;color:var(--muted);line-height:1.6;margin-bottom:1rem">This will make <strong id="shareBookTitle"></strong> visible to all signed-in users.</p>
+    <h3>Share to Public Library</h3>
+    <p style="font-size:.85rem;color:var(--muted);line-height:1.6;margin-bottom:1rem">This will make <strong id="shareBookTitle"></strong> visible to all signed-in users in the Public Library.</p>
     <div class="modal-actions">
       <button class="btn-cancel" id="btnCancelShare">Cancel</button>
-      <button class="btn-save" id="btnConfirmShare">Share</button>
+      <button class="btn-save" id="btnConfirmShare">Publish</button>
     </div>
   </div>
 </div>
@@ -593,9 +749,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
     <p style="font-size:.85rem;color:var(--muted);line-height:1.6;margin-bottom:.8rem">Choose a user to share <strong id="privateShareTitle"></strong> with. They'll be able to read it when signed in.</p>
     <div class="form-row">
       <label>Share with</label>
-      <select id="privateShareUserSelect">
-        <option value="">Loading users…</option>
-      </select>
+      <select id="privateShareUserSelect"><option value="">Loading users…</option></select>
     </div>
     <div id="privateShareLinkWrap" style="display:none">
       <div style="font-size:.65rem;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:.3rem">Share this link</div>
@@ -618,6 +772,31 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
     <div class="modal-actions">
       <button class="btn-cancel" id="btnCloseLinkModal">Close</button>
       <button class="btn-save" id="btnCopyDirectLink">Copy Link</button>
+    </div>
+  </div>
+</div>
+
+<!-- Checkout History Modal -->
+<div class="modal-overlay" id="historyModal">
+  <div class="modal">
+    <h3 id="historyModalTitle">Checkout History</h3>
+    <div class="history-list" id="historyList"></div>
+    <div class="modal-actions"><button class="btn-cancel" id="btnCloseHistory">Close</button></div>
+  </div>
+</div>
+
+<!-- Community Post Modal -->
+<div class="modal-overlay" id="commPostModal">
+  <div class="modal">
+    <h3 id="commPostModalTitle">Request a Book</h3>
+    <div class="form-row"><label>Title / Subject</label><input type="text" id="commPostTitle" placeholder="e.g. Sapiens by Yuval Noah Harari"/></div>
+    <div class="form-row"><label>Details (optional)</label><textarea id="commPostBody" rows="3" placeholder="Any extra info about what you're looking for…"></textarea></div>
+    <div id="commAdminFields" style="display:none">
+      <div class="form-row"><label>Admin Password</label><input type="password" id="commAdminPass" placeholder="Enter admin password"/></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" id="btnCancelCommPost">Cancel</button>
+      <button class="btn-save" id="btnSubmitCommPost">Submit</button>
     </div>
   </div>
 </div>
@@ -669,7 +848,6 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
   <div class="loading-spinner"></div>
   <div class="loading-msg" id="loadingMsg">Loading…</div>
 </div>
-
 <div class="toast" id="toast"></div>
 <input type="file" id="epubFileInput" accept=".epub" multiple style="display:none"/>
 
@@ -678,7 +856,7 @@ import { initializeApp }         from 'https://www.gstatic.com/firebasejs/10.12.
 import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut }
   from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
 import { getFirestore, collection, addDoc, getDocs, getDoc, doc,
-         query, where, orderBy, updateDoc, deleteDoc, serverTimestamp }
+         query, where, orderBy, updateDoc, deleteDoc, serverTimestamp, setDoc, limit }
   from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 import { getStorage, ref as storageRef, uploadBytes, getDownloadURL, getBytes }
   from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js';
@@ -689,7 +867,7 @@ import { getStorage, ref as storageRef, uploadBytes, getDownloadURL, getBytes }
     icons:[{src:"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'%3E%3Crect width='192' height='192' rx='32' fill='%230f1a2e'/%3E%3Ctext y='130' x='30' font-size='120' fill='%23c8952a'%3E📚%3C/text%3E%3C/svg%3E",sizes:'192x192',type:'image/svg+xml'}]};
   document.getElementById('manifestLink').href=URL.createObjectURL(new Blob([JSON.stringify(manifest)],{type:'application/json'}));
   if('serviceWorker' in navigator){
-    const sw=`const C='elib-v2';self.addEventListener('install',e=>{self.skipWaiting();});self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(k=>Promise.all(k.filter(x=>x!==C).map(x=>caches.delete(x)))));self.clients.claim();});self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWith(caches.match(e.request).then(c=>c||fetch(e.request)));});`;
+    const sw=`const C='elib-v3';self.addEventListener('install',e=>{self.skipWaiting();});self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(k=>Promise.all(k.filter(x=>x!==C).map(x=>caches.delete(x)))));self.clients.claim();});self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWith(caches.match(e.request).then(c=>c||fetch(e.request)));});`;
     navigator.serviceWorker.register(URL.createObjectURL(new Blob([sw],{type:'application/javascript'}))).catch(()=>{});
   }
 })();
@@ -700,25 +878,25 @@ window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredIns
 const fbApp=initializeApp({apiKey:'AIzaSyA1hCS7-C_W0VS7_JVcPIPdJ4aluDuL_-Q',authDomain:'elibrary-c0074.firebaseapp.com',projectId:'elibrary-c0074',storageBucket:'elibrary-c0074.firebasestorage.app',messagingSenderId:'310807052995',appId:'1:310807052995:web:a06dbe84f3924731749876'});
 const auth=getAuth(fbApp), db=getFirestore(fbApp), storage=getStorage(fbApp), gprovider=new GoogleAuthProvider();
 
+// ── ADMIN ─────────────────────────────────────────────────────────────────────
+const ADMIN_HASH='5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8'; // "password" - change this!
+async function sha256(str){ const buf=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(str)); return [...new Uint8Array(buf)].map(b=>b.toString(16).padStart(2,'0')).join(''); }
+async function checkAdmin(pass){ return (await sha256(pass))===ADMIN_HASH; }
+
 // ── CACHE HELPERS ─────────────────────────────────────────────────────────────
-const CACHE_TTL = 5 * 60 * 1000;
-function cacheSet(key, data){ try{ localStorage.setItem(key, JSON.stringify({ts:Date.now(), data})); }catch(e){} }
-function cacheGet(key, maxAge=CACHE_TTL){
-  try{
-    const raw=localStorage.getItem(key); if(!raw) return null;
-    const {ts,data}=JSON.parse(raw);
-    if(Date.now()-ts > maxAge) return null;
-    return data;
-  }catch(e){ return null; }
-}
+const CACHE_TTL=5*60*1000;
+function cacheSet(key,data){ try{ localStorage.setItem(key,JSON.stringify({ts:Date.now(),data})); }catch(e){} }
+function cacheGet(key,maxAge=CACHE_TTL){ try{ const raw=localStorage.getItem(key); if(!raw) return null; const {ts,data}=JSON.parse(raw); if(Date.now()-ts>maxAge) return null; return data; }catch(e){ return null; } }
 function cacheClear(key){ try{ localStorage.removeItem(key); }catch(e){} }
 
 // ── STATE ─────────────────────────────────────────────────────────────────────
 let currentUser=null, library=[], communityLib=[], allUsers=[], userRatings={};
+let checkouts=[], myCheckouts=[], commPosts=[];
 let currentId=null, shelfMode='mine', activeCatMine='All', activeCatComm='All';
 let searchMine='', searchComm='';
 let selectMode=false, selectedIds=new Set();
-let mobPrevPanel='mobPanelMine';
+let mobPrevPanel='mobPanelHome';
+let commFilter='all', pendingCommPostType='request';
 
 // Reader
 let readerZip=null, readerSpine=[], readerChapter=0, readerOpfBase='';
@@ -726,16 +904,26 @@ let readerFontSize=parseInt(localStorage.getItem('elib_reader_font')||'17');
 let readerTheme=localStorage.getItem('elib_reader_theme')||'day';
 
 // ── AUTH ──────────────────────────────────────────────────────────────────────
-onAuthStateChanged(auth, async user=>{
+onAuthStateChanged(auth,async user=>{
   currentUser=user;
   if(user){
     document.getElementById('authScreen').classList.add('hidden');
     updateUserUI(user);
-    try{ await updateDoc(doc(db,'users',user.uid),{displayName:user.displayName||'',email:user.email,uid:user.uid,lastSeen:serverTimestamp()}); }
-    catch(e){ try{ await addDoc(collection(db,'users'),{displayName:user.displayName||'',email:user.email,uid:user.uid,createdAt:serverTimestamp()}); }catch(e2){} }
+    // Fix: use setDoc with merge so user doc is always keyed by UID
+    try{
+      await setDoc(doc(db,'users',user.uid),{
+        displayName:user.displayName||'',
+        email:user.email,
+        uid:user.uid,
+        photoURL:user.photoURL||'',
+        lastSeen:serverTimestamp()
+      },{merge:true});
+    }catch(e){ console.warn('User doc write failed:',e); }
     await loadLibrary(false);
     await loadCommunity(false);
     await loadUserRatings();
+    await loadCheckouts(false);
+    await loadCommPosts(false);
     checkUrlHash();
   } else {
     document.getElementById('authScreen').classList.remove('hidden');
@@ -760,26 +948,20 @@ document.addEventListener('click',()=>document.getElementById('userDropdown').cl
 
 // ── URL HASH ──────────────────────────────────────────────────────────────────
 function checkUrlHash(){
-  const hash=window.location.hash;
-  const m=hash.match(/[#&]book=([a-zA-Z0-9]+)/);
-  if(m){ const id=m[1]; setTimeout(()=>openBookById(id), 300); }
+  const m=window.location.hash.match(/[#&]book=([a-zA-Z0-9]+)/);
+  if(m){ setTimeout(()=>openBookById(m[1]),300); }
 }
 function getDirectLink(bookId){ return `${location.origin}${location.pathname}#book=${bookId}`; }
-function openBookById(id){
-  const inLib=library.find(b=>b.id===id);
-  const inComm=communityLib.find(b=>b.id===id);
+async function openBookById(id){
+  const inLib=library.find(b=>b.id===id), inComm=communityLib.find(b=>b.id===id);
   if(inLib||inComm){ showBookById(id); return; }
-  loadPrivateShareBook(id);
-}
-async function loadPrivateShareBook(id){
   try{
     const snap=await getDoc(doc(db,'books',id));
-    if(!snap.exists()) { showToast('Book not found'); return; }
+    if(!snap.exists()){ showToast('Book not found'); return; }
     const data={id:snap.id,...snap.data()};
-    if(data.allowedUsers && data.allowedUsers.includes(currentUser?.uid)){
-      library=[...library.filter(b=>b.id!==id), data];
-      showBookById(id);
-    } else { showToast('You don\'t have access to this book'); }
+    if(data.allowedUsers&&data.allowedUsers.includes(currentUser?.uid)){
+      library=[...library.filter(b=>b.id!==id),data]; showBookById(id);
+    } else { showToast("You don't have access to this book"); }
   }catch(e){ showToast('Could not load book'); }
 }
 
@@ -787,7 +969,7 @@ async function loadPrivateShareBook(id){
 async function loadLibrary(forceRefresh=true){
   if(!currentUser) return;
   if(!forceRefresh){
-    const cached=cacheGet('elib_library_'+currentUser.uid, 10*60*1000);
+    const cached=cacheGet('elib_library_'+currentUser.uid,10*60*1000);
     if(cached){ library=cached; renderAll(); }
   }
   showLoading('Loading library…');
@@ -795,41 +977,247 @@ async function loadLibrary(forceRefresh=true){
     const q=query(collection(db,'books'),where('ownerId','==',currentUser.uid),orderBy('createdAt','desc'));
     const snap=await getDocs(q);
     library=snap.docs.map(d=>({id:d.id,...d.data()}));
-    cacheSet('elib_library_'+currentUser.uid, library);
+    cacheSet('elib_library_'+currentUser.uid,library);
     hideLoading(); renderAll();
   }catch(e){ hideLoading(); console.error(e); showToast('Error loading library'); }
 }
 async function loadCommunity(forceRefresh=true){
   if(!forceRefresh){
-    const cached=cacheGet('elib_community', 10*60*1000);
+    const cached=cacheGet('elib_community',10*60*1000);
     if(cached){ communityLib=cached; renderAll(); return; }
   }
   try{
     const q=query(collection(db,'community'),orderBy('sharedAt','desc'));
     const snap=await getDocs(q);
     communityLib=snap.docs.map(d=>({id:d.id,...d.data()}));
-    cacheSet('elib_community', communityLib);
+    cacheSet('elib_community',communityLib);
     renderAll();
-  }catch(e){ console.error('Community load error:',e); }
+  }catch(e){ console.error('Community load:',e); }
 }
 async function loadUserRatings(){
   try{
-    const cached=cacheGet('elib_ratings_'+currentUser.uid, 30*60*1000);
+    const cached=cacheGet('elib_ratings_'+currentUser.uid,30*60*1000);
     if(cached){ userRatings=cached; return; }
     const q=query(collection(db,'ratings'),where('userId','==',currentUser.uid));
     const snap=await getDocs(q);
-    userRatings={};
-    snap.docs.forEach(d=>{ userRatings[d.data().bookId]=d.data().rating; });
-    cacheSet('elib_ratings_'+currentUser.uid, userRatings);
+    userRatings={}; snap.docs.forEach(d=>{ userRatings[d.data().bookId]=d.data().rating; });
+    cacheSet('elib_ratings_'+currentUser.uid,userRatings);
   }catch(e){ userRatings={}; }
+}
+async function loadCheckouts(forceRefresh=true){
+  if(!currentUser) return;
+  if(!forceRefresh){
+    const cached=cacheGet('elib_checkouts',5*60*1000);
+    if(cached){ checkouts=cached; myCheckouts=checkouts.filter(c=>c.userId===currentUser.uid&&!c.returnedAt); renderAll(); return; }
+  }
+  try{
+    const q=query(collection(db,'checkouts'),orderBy('checkedOutAt','desc'));
+    const snap=await getDocs(q);
+    checkouts=snap.docs.map(d=>({id:d.id,...d.data()}));
+    myCheckouts=checkouts.filter(c=>c.userId===currentUser.uid&&!c.returnedAt);
+    cacheSet('elib_checkouts',checkouts);
+    renderAll();
+  }catch(e){ console.error('Checkouts load:',e); }
+}
+async function loadCommPosts(forceRefresh=true){
+  if(!forceRefresh){
+    const cached=cacheGet('elib_comm_posts',3*60*1000);
+    if(cached){ commPosts=cached; renderCommPosts(); return; }
+  }
+  try{
+    const q=query(collection(db,'community_posts'),orderBy('createdAt','desc'));
+    const snap=await getDocs(q);
+    commPosts=snap.docs.map(d=>({id:d.id,...d.data()}));
+    cacheSet('elib_comm_posts',commPosts);
+    renderCommPosts();
+  }catch(e){ console.error('Comm posts load:',e); }
 }
 async function loadAllUsers(){
   if(allUsers.length) return allUsers;
   try{
     const snap=await getDocs(collection(db,'users'));
-    allUsers=snap.docs.map(d=>({id:d.id,...d.data()})).filter(u=>u.uid!==currentUser?.uid);
+    allUsers=snap.docs.map(d=>({id:d.id,...d.data()})).filter(u=>u.uid&&u.uid!==currentUser?.uid);
     return allUsers;
-  }catch(e){ console.error(e); return []; }
+  }catch(e){ console.error('Load users:',e); return []; }
+}
+
+// ── CHECKOUT SYSTEM ───────────────────────────────────────────────────────────
+function getActiveCheckout(bookId){
+  return checkouts.find(c=>c.bookId===bookId&&!c.returnedAt)||null;
+}
+function isCheckedOutByMe(bookId){
+  return myCheckouts.some(c=>c.bookId===bookId);
+}
+function formatDueDate(ts){
+  if(!ts) return '';
+  const d=ts.toDate?ts.toDate():new Date(ts);
+  const now=new Date(), diff=d-now, days=Math.ceil(diff/86400000);
+  if(days<0) return `Overdue by ${-days} day${-days!==1?'s':''}`;
+  if(days===0) return 'Due today';
+  return `Due in ${days} day${days!==1?'s':''}`;
+}
+function isOverdue(ts){
+  if(!ts) return false;
+  const d=ts.toDate?ts.toDate():new Date(ts);
+  return d<new Date();
+}
+async function checkoutBook(bookId){
+  if(!currentUser){ showToast('Please sign in'); return; }
+  const active=getActiveCheckout(bookId);
+  if(active){ showToast(`Already signed out by ${active.userName}`); return; }
+  if(isCheckedOutByMe(bookId)){ showToast('You already have this signed out'); return; }
+  const book=[...library,...communityLib].find(b=>b.id===bookId); if(!book) return;
+  if(!confirm(`Sign out "${book.title}" for 2 weeks?`)) return;
+  showLoading('Signing out…');
+  try{
+    const due=new Date(); due.setDate(due.getDate()+14);
+    await addDoc(collection(db,'checkouts'),{
+      bookId,bookTitle:book.title,bookCover:book.coverDataUrl||null,
+      userId:currentUser.uid,userName:currentUser.displayName||currentUser.email,
+      checkedOutAt:serverTimestamp(),dueDate:due.toISOString(),returnedAt:null
+    });
+    cacheClear('elib_checkouts');
+    await loadCheckouts(true);
+    hideLoading(); renderAll(); showBookById(bookId); showToast(`"${book.title}" signed out — due in 2 weeks ✓`);
+  }catch(e){ hideLoading(); showToast('Sign-out failed: '+e.message); }
+}
+async function returnBook(bookId){
+  const co=checkouts.find(c=>c.bookId===bookId&&c.userId===currentUser?.uid&&!c.returnedAt);
+  if(!co){ showToast('No active sign-out found'); return; }
+  if(!confirm('Return this book?')) return;
+  showLoading('Returning…');
+  try{
+    await updateDoc(doc(db,'checkouts',co.id),{returnedAt:serverTimestamp()});
+    cacheClear('elib_checkouts');
+    await loadCheckouts(true);
+    hideLoading(); renderAll(); showBookById(bookId); showToast('Book returned ✓');
+  }catch(e){ hideLoading(); showToast('Return failed: '+e.message); }
+}
+async function showCheckoutHistory(bookId){
+  const book=[...library,...communityLib].find(b=>b.id===bookId);
+  document.getElementById('historyModalTitle').textContent=`Checkout History — ${book?.title||''}`;
+  const hist=checkouts.filter(c=>c.bookId===bookId).sort((a,b)=>{
+    const ta=a.checkedOutAt?.toDate?a.checkedOutAt.toDate():new Date(a.checkedOutAt||0);
+    const tb=b.checkedOutAt?.toDate?b.checkedOutAt.toDate():new Date(b.checkedOutAt||0);
+    return tb-ta;
+  });
+  if(!hist.length){
+    document.getElementById('historyList').innerHTML='<p style="padding:.8rem;font-size:.85rem;color:var(--muted)">No checkout history yet.</p>';
+  } else {
+    document.getElementById('historyList').innerHTML=hist.map(c=>{
+      const out=c.checkedOutAt?.toDate?c.checkedOutAt.toDate():new Date(c.checkedOutAt||0);
+      const returned=c.returnedAt&&(c.returnedAt.toDate?c.returnedAt.toDate():new Date(c.returnedAt));
+      const active=!c.returnedAt;
+      const over=active&&isOverdue({toDate:()=>new Date(c.dueDate)});
+      return `<div class="history-item">
+        <div class="history-icon">${returned?'✅':'📖'}</div>
+        <div style="flex:1">
+          <div class="history-item-name">${esc(c.userName)} ${active?`<span class="${over?'overdue-tag':'active-tag'}">${over?'Overdue':'Active'}</span>`:''}</div>
+          <div class="history-item-sub">Signed out ${formatDate(out)}${returned?` · Returned ${formatDate(returned)}`:` · Due ${formatDate(new Date(c.dueDate))}`}</div>
+        </div>
+      </div>`;
+    }).join('');
+  }
+  document.getElementById('historyModal').classList.add('open');
+}
+function formatDate(d){ return d.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}); }
+
+// ── COMMUNITY POSTS ───────────────────────────────────────────────────────────
+function renderCommPosts(){
+  const filtered=commFilter==='all'?commPosts:commPosts.filter(p=>p.type===commFilter);
+  const html=filtered.length?filtered.map(p=>renderPostCard(p)).join('')
+    :'<p style="padding:2rem;text-align:center;color:var(--muted);font-style:italic">No posts yet. Be the first!</p>';
+  document.getElementById('deskCommPosts').innerHTML=html;
+  document.getElementById('mobCommPosts').innerHTML=filtered.length?filtered.map(p=>renderPostCard(p)).join('')
+    :'<p style="padding:2rem;text-align:center;color:var(--muted);font-style:italic">No posts yet.</p>';
+}
+function renderPostCard(p){
+  const ago=timeAgo(p.createdAt?.toDate?p.createdAt.toDate():new Date());
+  const myVote=(p.votes||[]).includes(currentUser?.uid);
+  const voteCount=(p.votes||[]).length;
+  const typeLabel={announcement:'📢 Announcement',request:'📬 Book Request',newbook:'📗 New Book'}[p.type]||p.type;
+  const typeClass={announcement:'type-announcement',request:'type-request',newbook:'type-newbook'}[p.type]||'';
+  return `<div class="comm-post" data-postid="${p.id}">
+    <div class="comm-post-header">
+      <span class="comm-post-type ${typeClass}">${typeLabel}</span>
+      <span class="comm-post-time">${ago}</span>
+    </div>
+    <div class="comm-post-title">${esc(p.title)}</div>
+    ${p.body?`<div class="comm-post-body">${esc(p.body)}</div>`:''}
+    <div class="comm-post-author">— ${esc(p.authorName||'Anonymous')}</div>
+    ${p.type==='request'?`<div class="comm-post-actions">
+      <button class="comm-vote-btn ${myVote?'voted':''}" data-postid="${p.id}" data-action="vote">👍 ${voteCount}</button>
+    </div>`:''}
+  </div>`;
+}
+function timeAgo(d){
+  const diff=(Date.now()-d)/1000;
+  if(diff<60) return 'just now';
+  if(diff<3600) return `${Math.floor(diff/60)}m ago`;
+  if(diff<86400) return `${Math.floor(diff/3600)}h ago`;
+  return `${Math.floor(diff/86400)}d ago`;
+}
+document.getElementById('deskCommPosts').addEventListener('click',handleCommAction);
+document.getElementById('mobCommPosts').addEventListener('click',handleCommAction);
+async function handleCommAction(e){
+  const btn=e.target.closest('[data-action]'); if(!btn) return;
+  if(btn.dataset.action==='vote'){
+    const postId=btn.dataset.postid;
+    const post=commPosts.find(p=>p.id===postId); if(!post) return;
+    const uid=currentUser?.uid; if(!uid) return;
+    let votes=[...(post.votes||[])];
+    if(votes.includes(uid)) votes=votes.filter(v=>v!==uid);
+    else votes.push(uid);
+    try{
+      await updateDoc(doc(db,'community_posts',postId),{votes});
+      post.votes=votes; cacheClear('elib_comm_posts'); renderCommPosts();
+    }catch(e){ showToast('Vote failed'); }
+  }
+}
+document.querySelectorAll('.comm-tab').forEach(t=>t.addEventListener('click',()=>{
+  document.querySelectorAll('.comm-tab').forEach(x=>x.classList.remove('active'));
+  t.classList.add('active'); commFilter=t.dataset.filter; renderCommPosts();
+}));
+
+// New post / request
+function openCommPostModal(type){
+  pendingCommPostType=type;
+  const isAdmin=type==='announcement';
+  document.getElementById('commPostModalTitle').textContent=isAdmin?'Admin Announcement':'Request a Book';
+  document.getElementById('commPostTitle').value='';
+  document.getElementById('commPostBody').value='';
+  document.getElementById('commAdminFields').style.display=isAdmin?'block':'none';
+  if(isAdmin) document.getElementById('commAdminPass').value='';
+  document.getElementById('commPostModal').classList.add('open');
+  setTimeout(()=>document.getElementById('commPostTitle').focus(),80);
+}
+document.getElementById('btnNewRequest').addEventListener('click',()=>openCommPostModal('request'));
+document.getElementById('btnMobNewRequest').addEventListener('click',()=>openCommPostModal('request'));
+document.getElementById('btnAdminPost').addEventListener('click',()=>openCommPostModal('announcement'));
+document.getElementById('btnMobAdminPost').addEventListener('click',()=>openCommPostModal('announcement'));
+document.getElementById('btnCancelCommPost').addEventListener('click',()=>document.getElementById('commPostModal').classList.remove('open'));
+document.getElementById('btnSubmitCommPost').addEventListener('click',submitCommPost);
+async function submitCommPost(){
+  const title=document.getElementById('commPostTitle').value.trim();
+  if(!title){ showToast('Please enter a title'); return; }
+  const body=document.getElementById('commPostBody').value.trim();
+  if(pendingCommPostType==='announcement'){
+    const pass=document.getElementById('commAdminPass').value;
+    const ok=await checkAdmin(pass);
+    if(!ok){ showToast('Wrong admin password'); return; }
+  }
+  document.getElementById('commPostModal').classList.remove('open');
+  showLoading('Posting…');
+  try{
+    await addDoc(collection(db,'community_posts'),{
+      type:pendingCommPostType, title, body,
+      authorId:currentUser.uid, authorName:currentUser.displayName||currentUser.email,
+      votes:[], createdAt:serverTimestamp()
+    });
+    cacheClear('elib_comm_posts');
+    await loadCommPosts(true);
+    hideLoading(); showToast('Posted ✓');
+  }catch(e){ hideLoading(); showToast('Post failed: '+e.message); }
 }
 
 // ── RATINGS ───────────────────────────────────────────────────────────────────
@@ -843,7 +1231,7 @@ async function submitRating(bookId,rating){
     if(prev>0){ newSum=newSum-prev+rating; } else { newCount+=1; newSum+=rating; }
     userRatings[bookId]=rating;
     await updateDoc(bookRef,{ratingSum:newSum,ratingCount:newCount});
-    cacheSet('elib_ratings_'+currentUser.uid, userRatings);
+    cacheSet('elib_ratings_'+currentUser.uid,userRatings);
     const book=communityLib.find(b=>b.id===bookId);
     if(book){ book.ratingSum=newSum; book.ratingCount=newCount; }
     renderStars('deskStars','deskRatingCount',bookId,true);
@@ -863,7 +1251,7 @@ function renderStars(cid,countId,bookId,editable){
   if(countEl){ const cnt=book.ratingCount||0; countEl.textContent=cnt?`${avg.toFixed(1)} (${cnt} rating${cnt!==1?'s':''})`:'No ratings yet'; }
 }
 document.addEventListener('mouseover',e=>{ const s=e.target.closest('.star[data-editable]'); if(!s) return; const n=parseInt(s.dataset.n); [...s.parentElement.children].forEach((x,i)=>x.classList.toggle('hover',i<n)); });
-document.addEventListener('mouseout',e=>{ const s=e.target.closest('.star[data-editable]'); if(!s) return; const book=communityLib.find(b=>b.id===s.dataset.bookid); const avg=book?getAvgRating(book):0, myR=userRatings[s.dataset.bookid]||0, display=myR>0?myR:avg; const c=document.getElementById(s.dataset.cid); if(!c) return; [...c.children].forEach((x,i)=>{ x.classList.remove('hover'); x.classList.toggle('filled',i<Math.round(display)); }); });
+document.addEventListener('mouseout',e=>{ const s=e.target.closest('.star[data-editable]'); if(!s) return; const book=communityLib.find(b=>b.id===s.dataset.bookid); const avg=book?getAvgRating(book):0,myR=userRatings[s.dataset.bookid]||0,display=myR>0?myR:avg; const c=document.getElementById(s.dataset.cid); if(!c) return; [...c.children].forEach((x,i)=>{ x.classList.remove('hover'); x.classList.toggle('filled',i<Math.round(display)); }); });
 document.addEventListener('click',e=>{ const s=e.target.closest('.star[data-editable]'); if(!s) return; submitRating(s.dataset.bookid,parseInt(s.dataset.n)); });
 
 // ── UPLOAD ────────────────────────────────────────────────────────────────────
@@ -874,16 +1262,27 @@ document.getElementById('dropZone').addEventListener('dragleave',e=>e.currentTar
 document.getElementById('dropZone').addEventListener('drop',e=>{ e.preventDefault(); e.currentTarget.classList.remove('drag-over'); const files=[...e.dataTransfer.files].filter(f=>f.name.toLowerCase().endsWith('.epub')); if(!files.length){ showToast('EPUB files only'); return; } processUploadFiles(files); });
 document.getElementById('epubFileInput').addEventListener('change',e=>{ const files=[...e.target.files]; e.target.value=''; processUploadFiles(files); });
 document.getElementById('btnCloseUpload').addEventListener('click',()=>document.getElementById('uploadModal').classList.remove('open'));
-async function processUploadFiles(files){ for(const f of files) await uploadOneEpub(f); cacheClear('elib_library_'+currentUser?.uid); await loadLibrary(true); }
+async function processUploadFiles(files){
+  for(const f of files) await uploadOneEpub(f);
+  cacheClear('elib_library_'+currentUser?.uid); await loadLibrary(true);
+}
 async function uploadOneEpub(file){
   const rowId='up_'+Date.now()+Math.random().toString(36).slice(2);
   document.getElementById('uploadList').insertAdjacentHTML('beforeend',`<div class="upload-progress" id="${rowId}"><span class="up-icon">📗</span><div style="flex:1"><div class="up-name">${esc(file.name)}</div><div class="progress-bar-wrap"><div class="progress-bar" id="${rowId}_bar" style="width:10%"></div></div></div><span class="up-status" id="${rowId}_st">Reading…</span></div>`);
   try{
     setUpP(rowId,20,'Parsing…'); const meta=await parseEpubMeta(file);
-    setUpP(rowId,40,'Uploading…'); const sRef=storageRef(storage,`books/${currentUser.uid}/${Date.now()}_${file.name}`);
+    setUpP(rowId,40,'Uploading…');
+    const sRef=storageRef(storage,`books/${currentUser.uid}/${Date.now()}_${file.name}`);
     const snap=await uploadBytes(sRef,file); setUpP(rowId,70,'Saving…');
     const epubUrl=await getDownloadURL(snap.ref);
-    await addDoc(collection(db,'books'),{ownerId:currentUser.uid,ownerName:currentUser.displayName||currentUser.email,filename:file.name,title:meta.title,author:meta.author,description:meta.description,category:meta.category||localStorage.getItem('elib_default_cat')||'Uncategorised',language:meta.language,publisher:meta.publisher,coverDataUrl:meta.coverDataUrl||null,epubUrl,storagePath:snap.ref.fullPath,visibility:'private',allowedUsers:[],createdAt:serverTimestamp(),updatedAt:serverTimestamp(),fileSizeBytes:file.size});
+    await addDoc(collection(db,'books'),{
+      ownerId:currentUser.uid,ownerName:currentUser.displayName||currentUser.email,
+      filename:file.name,title:meta.title,author:meta.author,
+      description:meta.description,category:meta.category||localStorage.getItem('elib_default_cat')||'Uncategorised',
+      language:meta.language,publisher:meta.publisher,coverDataUrl:meta.coverDataUrl||null,
+      epubUrl,storagePath:snap.ref.fullPath,visibility:'private',allowedUsers:[],
+      recommended:false,createdAt:serverTimestamp(),updatedAt:serverTimestamp(),fileSizeBytes:file.size
+    });
     setUpP(rowId,100,'✓ Done'); document.getElementById(rowId)?.classList.add('done');
   }catch(e){ console.error(e); setUpP(rowId,100,'✗ Failed'); document.getElementById(rowId)?.classList.add('error'); showToast('Upload failed: '+e.message); }
 }
@@ -897,7 +1296,7 @@ async function downloadCurrentBook(){
   showLoading('Preparing download…');
   try{
     const bytes=await getBytes(storageRef(storage,book.storagePath));
-    const blob=new Blob([bytes],{type:'application/epub+zip'}), url=URL.createObjectURL(blob);
+    const blob=new Blob([bytes],{type:'application/epub+zip'}),url=URL.createObjectURL(blob);
     const a=document.createElement('a'); a.href=url; a.download=book.filename||book.title+'.epub';
     document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
     hideLoading(); showToast('Downloaded ✓');
@@ -933,13 +1332,28 @@ async function confirmShare(){
   document.getElementById('shareModal').classList.remove('open');
   if(!currentId) return;
   const book=library.find(b=>b.id===currentId); if(!book) return;
-  showLoading('Sharing…');
+  showLoading('Publishing…');
   try{
-    await addDoc(collection(db,'community'),{sourceId:currentId,ownerId:currentUser.uid,ownerName:currentUser.displayName||currentUser.email,filename:book.filename,title:book.title,author:book.author,description:book.description,category:book.category,language:book.language,coverDataUrl:book.coverDataUrl||null,storagePath:book.storagePath,sharedAt:serverTimestamp(),ratingSum:0,ratingCount:0});
+    await addDoc(collection(db,'community'),{
+      sourceId:currentId,ownerId:currentUser.uid,ownerName:currentUser.displayName||currentUser.email,
+      filename:book.filename,title:book.title,author:book.author,description:book.description,
+      category:book.category,language:book.language,coverDataUrl:book.coverDataUrl||null,
+      storagePath:book.storagePath,sharedAt:serverTimestamp(),ratingSum:0,ratingCount:0
+    });
     await updateDoc(doc(db,'books',currentId),{visibility:'community',updatedAt:serverTimestamp()});
     book.visibility='community';
-    cacheClear('elib_library_'+currentUser?.uid); cacheClear('elib_community');
-    hideLoading(); renderAll(); showBookById(currentId); showToast(`"${book.title}" shared ✓`);
+    // Auto-post to community board
+    try{
+      await addDoc(collection(db,'community_posts'),{
+        type:'newbook',title:`New book added: "${book.title}"`,
+        body:`${book.author?'by '+book.author+' — ':''}Now available in the Public Library.`,
+        authorId:currentUser.uid,authorName:currentUser.displayName||currentUser.email,
+        bookId:currentId,votes:[],createdAt:serverTimestamp()
+      });
+    }catch(e){}
+    cacheClear('elib_library_'+currentUser?.uid); cacheClear('elib_community'); cacheClear('elib_comm_posts');
+    hideLoading(); await loadCommunity(true); await loadCommPosts(true);
+    renderAll(); showBookById(currentId); showToast(`"${book.title}" published ✓`);
   }catch(e){ hideLoading(); showToast('Share failed: '+e.message); }
 }
 
@@ -947,7 +1361,7 @@ async function confirmShare(){
 async function unpublishCurrentBook(){
   if(!currentId) return;
   const book=library.find(b=>b.id===currentId);
-  if(!book||!confirm(`Remove "${book.title}" from the community?`)) return;
+  if(!book||!confirm(`Remove "${book.title}" from the Public Library?`)) return;
   showLoading('Unpublishing…');
   try{
     const q=query(collection(db,'community'),where('sourceId','==',currentId));
@@ -960,6 +1374,19 @@ async function unpublishCurrentBook(){
   }catch(e){ hideLoading(); showToast('Unpublish failed: '+e.message); }
 }
 
+// ── RECOMMEND TOGGLE ──────────────────────────────────────────────────────────
+async function toggleRecommend(bookId){
+  const book=library.find(b=>b.id===bookId); if(!book) return;
+  const newVal=!book.recommended;
+  try{
+    await updateDoc(doc(db,'books',bookId),{recommended:newVal,updatedAt:serverTimestamp()});
+    book.recommended=newVal;
+    cacheClear('elib_library_'+currentUser?.uid);
+    renderAll(); showBookById(bookId);
+    showToast(newVal?'Added to recommended ✓':'Removed from recommended');
+  }catch(e){ showToast('Failed: '+e.message); }
+}
+
 // ── PRIVATE SHARE ─────────────────────────────────────────────────────────────
 async function showPrivateShare(){
   if(!currentId) return;
@@ -970,7 +1397,7 @@ async function showPrivateShare(){
   const users=await loadAllUsers();
   const sel=document.getElementById('privateShareUserSelect');
   sel.innerHTML=users.length
-    ?'<option value="">— Select a user —</option>'+users.map(u=>`<option value="${u.uid}">${esc(u.displayName||u.email)}</option>`).join('')
+    ?'<option value="">— Select a user —</option>'+users.map(u=>`<option value="${u.uid}">${esc(u.displayName||u.email||u.uid)}</option>`).join('')
     :'<option value="">No other users found</option>';
 }
 document.getElementById('btnCancelPrivateShare').addEventListener('click',()=>document.getElementById('privateShareModal').classList.remove('open'));
@@ -1000,16 +1427,54 @@ document.getElementById('btnCopyPrivateLink').addEventListener('click',()=>{
 // ── DIRECT LINK ───────────────────────────────────────────────────────────────
 function showDirectLink(){
   if(!currentId) return;
-  const link=getDirectLink(currentId);
-  document.getElementById('directLinkBox').textContent=link;
+  document.getElementById('directLinkBox').textContent=getDirectLink(currentId);
   document.getElementById('linkModal').classList.add('open');
 }
 document.getElementById('btnCloseLinkModal').addEventListener('click',()=>document.getElementById('linkModal').classList.remove('open'));
-document.getElementById('btnCopyDirectLink').addEventListener('click',()=>{
-  navigator.clipboard.writeText(document.getElementById('directLinkBox').textContent).then(()=>showToast('Link copied ✓'));
+document.getElementById('btnCopyDirectLink').addEventListener('click',()=>{ navigator.clipboard.writeText(document.getElementById('directLinkBox').textContent).then(()=>showToast('Link copied ✓')); });
+
+// ── EDIT METADATA ─────────────────────────────────────────────────────────────
+function showEditMeta(){
+  if(!currentId) return;
+  const book=library.find(b=>b.id===currentId); if(!book) return;
+  document.getElementById('metaTitle').value=book.title||'';
+  document.getElementById('metaAuthor').value=book.author||'';
+  document.getElementById('metaCategory').value=book.category||'';
+  document.getElementById('metaLanguage').value=book.language||'';
+  document.getElementById('metaDesc').value=stripHtml(book.description||'');
+  const cats=[...new Set(library.map(b=>b.category).filter(Boolean))].sort();
+  document.getElementById('metaCatSuggestions').innerHTML=cats.map(c=>`<option value="${esc(c)}">`).join('');
+  document.getElementById('editMetaModal').classList.add('open');
+  setTimeout(()=>document.getElementById('metaTitle').focus(),80);
+}
+function stripHtml(html){ const tmp=document.createElement('div'); tmp.innerHTML=html; return tmp.textContent||tmp.innerText||''; }
+document.getElementById('btnCancelMeta').addEventListener('click',()=>document.getElementById('editMetaModal').classList.remove('open'));
+document.getElementById('btnSaveMeta').addEventListener('click',async()=>{
+  const book=library.find(b=>b.id===currentId); if(!book) return;
+  const title=document.getElementById('metaTitle').value.trim();
+  const author=document.getElementById('metaAuthor').value.trim();
+  const category=document.getElementById('metaCategory').value.trim()||'Uncategorised';
+  const language=document.getElementById('metaLanguage').value.trim();
+  const description=stripHtml(document.getElementById('metaDesc').value);
+  if(!title){ showToast('Title is required'); return; }
+  document.getElementById('editMetaModal').classList.remove('open');
+  showLoading('Saving…');
+  try{
+    await updateDoc(doc(db,'books',currentId),{title,author,category,language,description,updatedAt:serverTimestamp()});
+    Object.assign(book,{title,author,category,language,description});
+    // Update community doc too if published
+    if(book.visibility==='community'){
+      const q=query(collection(db,'community'),where('sourceId','==',currentId));
+      const snap=await getDocs(q);
+      for(const d of snap.docs) await updateDoc(doc(db,'community',d.id),{title,author,category,language,description});
+      communityLib.filter(b=>b.sourceId===currentId).forEach(b=>Object.assign(b,{title,author,category,language,description}));
+    }
+    cacheClear('elib_library_'+currentUser?.uid); cacheClear('elib_community');
+    hideLoading(); renderAll(); showBookById(currentId); showToast('Book details updated ✓');
+  }catch(e){ hideLoading(); showToast('Save failed: '+e.message); }
 });
 
-// ── EDIT CATEGORY ─────────────────────────────────────────────────────────────
+// ── EDIT CATEGORY (BULK) ──────────────────────────────────────────────────────
 let bulkEditMode=false;
 function showEditCategory(bulk=false){
   bulkEditMode=bulk;
@@ -1051,28 +1516,12 @@ async function saveCategory(){
 
 // ── SELECT MODE ───────────────────────────────────────────────────────────────
 document.getElementById('btnSelectMode').addEventListener('click',()=>{ if(selectMode) exitSelectMode(); else enterSelectMode(); });
-function enterSelectMode(){
-  selectMode=true; selectedIds.clear();
-  document.getElementById('btnSelectMode').classList.add('active');
-  document.getElementById('btnSelectMode').textContent='✕ Cancel Select';
-  document.getElementById('deskBookGrid').classList.add('select-mode');
-  document.getElementById('bulkBar').classList.add('open');
-  updateBulkBar();
-}
-function exitSelectMode(){
-  selectMode=false; selectedIds.clear();
-  document.getElementById('btnSelectMode').classList.remove('active');
-  document.getElementById('btnSelectMode').textContent='☑ Select';
-  document.getElementById('deskBookGrid').classList.remove('select-mode');
-  document.getElementById('bulkBar').classList.remove('open');
-  document.querySelectorAll('.book-card.selected').forEach(c=>c.classList.remove('selected'));
-}
+function enterSelectMode(){ selectMode=true; selectedIds.clear(); document.getElementById('btnSelectMode').classList.add('active'); document.getElementById('btnSelectMode').textContent='✕ Cancel'; document.getElementById('deskBookGrid').classList.add('select-mode'); document.getElementById('bulkBar').classList.add('open'); updateBulkBar(); }
+function exitSelectMode(){ selectMode=false; selectedIds.clear(); document.getElementById('btnSelectMode').classList.remove('active'); document.getElementById('btnSelectMode').textContent='☑ Select'; document.getElementById('deskBookGrid').classList.remove('select-mode'); document.getElementById('bulkBar').classList.remove('open'); document.querySelectorAll('.book-card.selected').forEach(c=>c.classList.remove('selected')); }
 function updateBulkBar(){
-  const n=selectedIds.size;
-  document.getElementById('bulkBarCount').textContent=`${n} book${n!==1?'s':''} selected`;
-  const hasMine=n>0&&[...selectedIds].some(id=>library.find(b=>b.id===id));
-  const hasPublished=hasMine&&[...selectedIds].some(id=>{ const b=library.find(x=>x.id===id); return b&&b.visibility==='community'; });
-  const hasUnpublished=hasMine&&[...selectedIds].some(id=>{ const b=library.find(x=>x.id===id); return b&&b.visibility!=='community'; });
+  const n=selectedIds.size; document.getElementById('bulkBarCount').textContent=`${n} book${n!==1?'s':''} selected`;
+  const hasPublished=n>0&&[...selectedIds].some(id=>{ const b=library.find(x=>x.id===id); return b&&b.visibility==='community'; });
+  const hasUnpublished=n>0&&[...selectedIds].some(id=>{ const b=library.find(x=>x.id===id); return b&&b.visibility!=='community'; });
   document.getElementById('bulkBtnPublish').style.display=hasUnpublished?'inline-block':'none';
   document.getElementById('bulkBtnUnpublish').style.display=hasPublished?'inline-block':'none';
 }
@@ -1084,7 +1533,7 @@ document.getElementById('bulkBtnCancel').addEventListener('click',exitSelectMode
 async function bulkPublish(){
   const ids=[...selectedIds].filter(id=>{ const b=library.find(x=>x.id===id); return b&&b.visibility!=='community'; });
   if(!ids.length) return;
-  if(!confirm(`Publish ${ids.length} book${ids.length!==1?'s':''} to community?`)) return;
+  if(!confirm(`Publish ${ids.length} book${ids.length!==1?'s':''} to Public Library?`)) return;
   showLoading('Publishing…');
   try{
     for(const id of ids){
@@ -1101,7 +1550,7 @@ async function bulkPublish(){
 async function bulkUnpublish(){
   const ids=[...selectedIds].filter(id=>{ const b=library.find(x=>x.id===id); return b&&b.visibility==='community'; });
   if(!ids.length) return;
-  if(!confirm(`Unpublish ${ids.length} book${ids.length!==1?'s':''} from community?`)) return;
+  if(!confirm(`Unpublish ${ids.length} book${ids.length!==1?'s':''} from Public Library?`)) return;
   showLoading('Unpublishing…');
   try{
     for(const id of ids){
@@ -1112,9 +1561,72 @@ async function bulkUnpublish(){
       communityLib=communityLib.filter(b=>b.sourceId!==id);
     }
     cacheClear('elib_library_'+currentUser?.uid); cacheClear('elib_community');
-    hideLoading(); exitSelectMode(); renderAll();
-    showToast(`${ids.length} book${ids.length!==1?'s':''} unpublished ✓`);
+    hideLoading(); exitSelectMode(); renderAll(); showToast(`${ids.length} book${ids.length!==1?'s':''} unpublished ✓`);
   }catch(e){ hideLoading(); showToast('Unpublish failed: '+e.message); }
+}
+
+// ── HOME PANEL ────────────────────────────────────────────────────────────────
+function renderHomePanels(){
+  const recommended=library.filter(b=>b.recommended);
+  const signedOut=myCheckouts.slice(0,6);
+  const recent=[...library].sort((a,b)=>{
+    const ta=a.updatedAt?.toDate?a.updatedAt.toDate():new Date(0);
+    const tb=b.updatedAt?.toDate?b.updatedAt.toDate():new Date(0);
+    return tb-ta;
+  }).slice(0,6);
+  const name=(currentUser?.displayName||'Reader').split(' ')[0];
+  const html=`
+    <div class="home-welcome">
+      <div class="home-welcome-icon">📚</div>
+      <div class="home-welcome-text">
+        <h2>Welcome back, ${esc(name)}</h2>
+        <p>Your personal library — ${library.length} book${library.length!==1?'s':''} · ${myCheckouts.length} signed out · ${recommended.length} recommended</p>
+      </div>
+    </div>
+    ${signedOut.length?`
+    <div class="home-section">
+      <div class="home-section-header">
+        <span class="home-section-title">📖 Currently Signed Out</span>
+        <span class="home-section-sub">${signedOut.length} book${signedOut.length!==1?'s':''}</span>
+      </div>
+      <div class="home-shelf">${signedOut.map(co=>homeBookCard(co.bookId,co.dueDate)).join('')}</div>
+    </div>`:''}
+    ${recommended.length?`
+    <div class="home-section">
+      <div class="home-section-header">
+        <span class="home-section-title">⭐ Recommended</span>
+        <span class="home-section-sub">Curated picks</span>
+      </div>
+      <div class="home-shelf">${recommended.map(b=>homeBookCard(b.id)).join('')}</div>
+    </div>`:''}
+    <div class="home-section">
+      <div class="home-section-header">
+        <span class="home-section-title">🕐 Recent Additions</span>
+        <span class="home-section-sub">Your library</span>
+      </div>
+      <div class="home-shelf">${recent.length?recent.map(b=>homeBookCard(b.id)).join(''):'<span class="home-empty">Upload some books to get started!</span>'}</div>
+    </div>
+  `;
+  document.getElementById('deskHomePanel').innerHTML=html;
+  document.getElementById('mobHomeScroll').innerHTML=html;
+  document.querySelectorAll('.home-book-mini').forEach(el=>{
+    el.addEventListener('click',()=>{
+      const id=el.dataset.bookid;
+      if(window.innerWidth<=640){ mobPrevPanel='mobPanelHome'; mob_showBook(id); }
+      else showBookById(id);
+    });
+  });
+}
+function homeBookCard(bookId,dueDate){
+  const book=[...library,...communityLib].find(b=>b.id===bookId);
+  if(!book) return '';
+  const due=dueDate?`<div class="home-book-mini-due">${formatDueDate({toDate:()=>new Date(dueDate)})}</div>`:'';
+  return `<div class="home-book-mini" data-bookid="${bookId}">
+    ${book.coverDataUrl?`<img class="home-book-mini-cover" src="${book.coverDataUrl}" alt=""/>`:`<div class="home-book-mini-cover-ph">📖</div>`}
+    <div class="home-book-mini-title">${esc(book.title)}</div>
+    <div class="home-book-mini-author">${esc(book.author)}</div>
+    ${due}
+  </div>`;
 }
 
 // ── DATA HELPERS ──────────────────────────────────────────────────────────────
@@ -1124,9 +1636,9 @@ function filteredBooks(mode){
   const cat=mode==='mine'?activeCatMine:activeCatComm;
   let books=cat==='All'?src:src.filter(b=>(b.category||'Uncategorised')===cat);
   if(q) books=books.filter(b=>b.title?.toLowerCase().includes(q)||b.author?.toLowerCase().includes(q)||b.category?.toLowerCase().includes(q));
-  return sortBooks(books, mode==='mine'?document.getElementById('deskSortSelect')?.value||'recent' : document.getElementById('deskSortSelect')?.value||'recent');
+  return sortBooks(books,mode==='mine'?document.getElementById('deskSortSelect')?.value||'recent':document.getElementById('deskSortSelect')?.value||'recent');
 }
-function sortBooks(books, sort){
+function sortBooks(books,sort){
   const copy=[...books];
   if(sort==='title')  copy.sort((a,b)=>(a.title||'').localeCompare(b.title||''));
   if(sort==='author') copy.sort((a,b)=>(a.author||'').localeCompare(b.author||''));
@@ -1137,17 +1649,22 @@ function getCats(mode){ const map={}; for(const b of(mode==='mine'?library:commu
 
 // ── RENDER ────────────────────────────────────────────────────────────────────
 function renderAll(){
-  const mode=shelfMode;
-  renderFilterCats(mode);
+  renderHomePanels();
+  renderFilterCats(shelfMode);
   renderMobChips('mine'); renderMobChips('community');
-  renderGrid('deskBookGrid', mode);
+  renderGrid('deskBookGrid',shelfMode);
   renderGrid('mobGridMine','mine');
   renderGrid('mobGridComm','community');
-  const books=filteredBooks(mode);
+  const books=filteredBooks(shelfMode);
   document.getElementById('deskGridCount').textContent=`${books.length} book${books.length!==1?'s':''}`;
-  document.getElementById('deskGridTitle').textContent=mode==='mine'?'My Library':'Community';
+  document.getElementById('deskGridTitle').textContent=shelfMode==='mine'?'My Library':'Public Library';
+  // Show/hide sort and filter based on shelf mode
+  const showCats=shelfMode==='mine'||shelfMode==='community';
+  document.getElementById('deskFilterCats').style.display=showCats?'':'none';
+  document.getElementById('deskSortWrap').style.display=showCats?'':'none';
 }
 function renderFilterCats(mode){
+  if(mode==='home'||mode==='commboard') return;
   const cats=getCats(mode), total=(mode==='mine'?library:communityLib).length;
   const activeCat=mode==='mine'?activeCatMine:activeCatComm;
   document.getElementById('deskFilterCats').innerHTML=
@@ -1162,7 +1679,7 @@ function renderMobChips(mode){
     `<div class="mob-chip ${activeCat===cat?'active':''}" data-cat="${encodeURIComponent(cat)}" data-mode="${mode}">${esc(cat)} <span style="opacity:.65">${cnt}</span></div>`
   ).join('');
 }
-function renderGrid(gridId, mode){
+function renderGrid(gridId,mode){
   const grid=document.getElementById(gridId); if(!grid) return;
   const books=filteredBooks(mode);
   if(!books.length){
@@ -1175,12 +1692,14 @@ function renderGrid(gridId, mode){
     const avg=isComm?getAvgRating(b):0;
     const starsHtml=isComm?[1,2,3,4,5].map(n=>`<span class="bcs ${n<=Math.round(avg)?'filled':''}">★</span>`).join(''):'';
     const isSelected=selectedIds.has(b.id);
+    const activeCheckout=getActiveCheckout(b.id);
     const coverHtml=b.coverDataUrl
       ?`<img class="book-card-cover" src="${b.coverDataUrl}" alt="" loading="lazy"/>`
       :`<div class="book-card-cover-ph"><div class="ph-icon">📖</div><div class="ph-title">${esc(b.title)}</div><div class="ph-author">${esc(b.author)}</div></div>`;
     return `<div class="book-card ${isSelected?'selected':''}" data-bookid="${b.id}" data-mode="${mode}">
       ${coverHtml}
       ${mode==='mine'&&b.visibility==='community'?'<span class="community-badge">Public</span>':''}
+      ${activeCheckout?`<span class="checkout-badge">Out</span>`:''}
       <div class="select-check">✓</div>
       <div class="book-card-body">
         <div class="book-card-title">${esc(b.title)}</div>
@@ -1192,6 +1711,7 @@ function renderGrid(gridId, mode){
   }).join('');
 }
 
+// ── GRID CLICK HANDLERS ───────────────────────────────────────────────────────
 document.getElementById('deskBookGrid').addEventListener('click',e=>{
   const card=e.target.closest('.book-card[data-bookid]'); if(!card) return;
   if(selectMode&&card.dataset.mode==='mine'){
@@ -1203,7 +1723,7 @@ document.getElementById('deskBookGrid').addEventListener('click',e=>{
   showBookById(card.dataset.bookid);
 });
 document.getElementById('mobGridMine').addEventListener('click',e=>{ const card=e.target.closest('.book-card[data-bookid]'); if(card){ mobPrevPanel='mobPanelMine'; mob_showBook(card.dataset.bookid); } });
-document.getElementById('mobGridComm').addEventListener('click',e=>{ const card=e.target.closest('.book-card[data-bookid]'); if(card){ mobPrevPanel='mobPanelComm'; mob_showBook(card.dataset.bookid); } });
+document.getElementById('mobGridComm').addEventListener('click',e=>{ const card=e.target.closest('.book-card[data-bookid]'); if(card){ mobPrevPanel='mobPanelPub'; mob_showBook(card.dataset.bookid); } });
 
 document.getElementById('deskFilterCats').addEventListener('click',e=>{
   const item=e.target.closest('.filter-cat-item[data-cat]'); if(!item) return;
@@ -1213,7 +1733,6 @@ document.getElementById('deskFilterCats').addEventListener('click',e=>{
 });
 document.getElementById('mobChipsMine').addEventListener('click',e=>{ const c=e.target.closest('.mob-chip'); if(!c) return; activeCatMine=decodeURIComponent(c.dataset.cat); renderAll(); });
 document.getElementById('mobChipsComm').addEventListener('click',e=>{ const c=e.target.closest('.mob-chip'); if(!c) return; activeCatComm=decodeURIComponent(c.dataset.cat); renderAll(); });
-
 document.getElementById('deskSearch').addEventListener('input',e=>{ if(shelfMode==='mine') searchMine=e.target.value.toLowerCase().trim(); else searchComm=e.target.value.toLowerCase().trim(); renderAll(); });
 document.getElementById('mobSearchMine').addEventListener('input',e=>{ searchMine=e.target.value.toLowerCase().trim(); renderAll(); });
 document.getElementById('mobSearchComm').addEventListener('input',e=>{ searchComm=e.target.value.toLowerCase().trim(); renderAll(); });
@@ -1221,13 +1740,27 @@ document.getElementById('deskSortSelect').addEventListener('change',()=>renderAl
 document.getElementById('mobSortMine').addEventListener('change',()=>renderAll());
 document.getElementById('mobSortComm').addEventListener('change',()=>renderAll());
 
+// Desktop shelf tabs
+document.getElementById('tabHomeDesk').addEventListener('click',()=>switchShelf('home'));
 document.getElementById('tabMineDesk').addEventListener('click',()=>switchShelf('mine'));
-document.getElementById('tabCommDesk').addEventListener('click',()=>switchShelf('community'));
+document.getElementById('tabPubDesk').addEventListener('click',()=>switchShelf('community'));
+document.getElementById('tabCommDesk').addEventListener('click',()=>switchShelf('commboard'));
 function switchShelf(mode){
   shelfMode=mode;
-  document.getElementById('tabMineDesk').classList.toggle('active',mode==='mine');
-  document.getElementById('tabCommDesk').classList.toggle('active',mode==='community');
-  renderAll();
+  ['tabHomeDesk','tabMineDesk','tabPubDesk','tabCommDesk'].forEach(id=>document.getElementById(id).classList.remove('active'));
+  if(mode==='home') document.getElementById('tabHomeDesk').classList.add('active');
+  else if(mode==='mine') document.getElementById('tabMineDesk').classList.add('active');
+  else if(mode==='community') document.getElementById('tabPubDesk').classList.add('active');
+  else if(mode==='commboard') document.getElementById('tabCommDesk').classList.add('active');
+  // Show/hide panels
+  document.getElementById('deskHomePanel').style.display=mode==='home'?'':'none';
+  document.getElementById('deskCommPanel').style.display=mode==='commboard'?'':'none';
+  document.getElementById('deskGridPanel').style.display=(mode==='mine'||mode==='community')?'':'none';
+  // Search & filter visibility
+  document.getElementById('deskSearch').style.display=(mode==='mine'||mode==='community')?'':'none';
+  document.getElementById('deskFilterCats').style.display=(mode==='mine'||mode==='community')?'':'none';
+  document.getElementById('deskSortWrap').style.display=(mode==='mine'||mode==='community')?'':'none';
+  if(mode==='mine'||mode==='community') renderAll();
 }
 
 // ── BOOK DETAIL ───────────────────────────────────────────────────────────────
@@ -1236,23 +1769,33 @@ function showBookById(id){
   currentId=id;
   const isMine=book.ownerId===currentUser?.uid;
   const isComm=communityLib.some(b=>b.id===id);
+  const activeCheckout=getActiveCheckout(id);
   const img=document.getElementById('drawerCoverImg'), ph=document.getElementById('drawerCoverPh');
   if(book.coverDataUrl){ img.src=book.coverDataUrl; img.style.display='block'; ph.style.display='none'; }
   else { img.style.display='none'; ph.style.display='flex'; }
   document.getElementById('drawerCat').textContent=book.category||'';
   document.getElementById('drawerTitle').textContent=book.title||'';
   document.getElementById('drawerAuthor').textContent=book.author||'';
-  document.getElementById('drawerDesc').textContent=book.description||'';
+  document.getElementById('drawerDesc').textContent=stripHtml(book.description||'');
   const sb=document.getElementById('drawerSharedBy');
   if(isComm&&!isMine){ sb.textContent='Shared by '+(book.ownerName||'Anonymous'); sb.style.display='block'; } else sb.style.display='none';
   let badges='';
   if(book.category) badges+=`<span class="dbadge dbadge-cat">${esc(book.category)}</span>`;
   if(book.language) badges+=`<span class="dbadge dbadge-lang">${esc(book.language.toUpperCase())}</span>`;
-  if(book.visibility==='community') badges+=`<span class="dbadge dbadge-shared">Community</span>`;
+  if(book.visibility==='community') badges+=`<span class="dbadge dbadge-shared">Public</span>`;
   if(book.allowedUsers?.length) badges+=`<span class="dbadge dbadge-private-share">Privately shared</span>`;
+  if(book.recommended) badges+=`<span class="dbadge" style="background:#fff4cc;color:#a87820;">⭐ Recommended</span>`;
+  if(activeCheckout) badges+=`<span class="dbadge dbadge-checkout">📖 Signed Out</span>`;
   document.getElementById('drawerBadges').innerHTML=badges;
   if(isComm) renderStars('deskStars','deskRatingCount',id,true);
   else document.getElementById('deskStarRating').style.display='none';
+  // Checkout info
+  const coEl=document.getElementById('drawerCheckoutInfo');
+  if(activeCheckout){
+    const due=new Date(activeCheckout.dueDate), over=due<new Date();
+    coEl.innerHTML=`<strong>${activeCheckout.userId===currentUser?.uid?'You have':''+esc(activeCheckout.userName)+' has'}</strong> this signed out${!over?` · ${formatDueDate({toDate:()=>due})}`:` · <span style="color:var(--danger)">Overdue!</span>`}`;
+    coEl.style.display='block';
+  } else { coEl.style.display='none'; }
   document.getElementById('drawerActions').innerHTML=buildActions(book,isMine);
   document.querySelectorAll('.book-card').forEach(c=>c.classList.toggle('active',c.dataset.bookid===id));
   document.getElementById('bookDrawer').classList.add('open');
@@ -1263,25 +1806,41 @@ document.getElementById('drawerActions').addEventListener('click',handleAction);
 
 function buildActions(book,isMine){
   const btns=[`<button class="btn-action btn-read" data-action="read">▶ Read</button>`];
+  const activeCheckout=getActiveCheckout(book.id);
+  const mine_checkout=isCheckedOutByMe(book.id);
+  // Checkout logic: anyone can check out from public library, or from their own library
+  if(!activeCheckout&&(isComm(book.id)||isMine)){
+    btns.push(`<button class="btn-action btn-checkout" data-action="checkout">📖 Sign Out</button>`);
+  }
+  if(mine_checkout){
+    btns.push(`<button class="btn-action btn-return" data-action="return">↩ Return</button>`);
+  }
+  btns.push(`<button class="btn-action btn-history" data-action="history">📋 History</button>`);
   if(isMine) btns.push(`<button class="btn-action btn-download" data-action="download">⬇ Download</button>`);
   if(isMine&&book.visibility!=='community') btns.push(`<button class="btn-action btn-share" data-action="share">⇧ Publish</button>`);
   if(isMine&&book.visibility==='community') btns.push(`<button class="btn-action btn-unpublish" data-action="unpublish">↓ Unpublish</button>`);
   if(isMine) btns.push(`<button class="btn-action btn-share-private" data-action="shareprivate">🔒 Share Privately</button>`);
   if(isMine) btns.push(`<button class="btn-action btn-link" data-action="link">🔗 Get Link</button>`);
-  if(isMine) btns.push(`<button class="btn-action btn-edit-cat" data-action="editcat">✎ Category</button>`);
+  if(isMine) btns.push(`<button class="btn-action btn-edit-meta" data-action="editmeta">✎ Edit Details</button>`);
+  if(isMine) btns.push(`<button class="btn-action btn-recommend ${book.recommended?'active-rec':''}" data-action="recommend">${book.recommended?'★ Recommended':'☆ Recommend'}</button>`);
   if(isMine) btns.push(`<button class="btn-action btn-delete" data-action="delete">✕ Delete</button>`);
   return btns.join('');
 }
+function isComm(bookId){ return communityLib.some(b=>b.id===bookId); }
 function handleAction(e){
   const btn=e.target.closest('[data-action]'); if(!btn) return;
   const a=btn.dataset.action;
   if(a==='read')         readCurrentBook();
+  if(a==='checkout')     checkoutBook(currentId);
+  if(a==='return')       returnBook(currentId);
+  if(a==='history')      showCheckoutHistory(currentId);
   if(a==='download')     downloadCurrentBook();
   if(a==='share')        shareCurrentBook();
   if(a==='unpublish')    unpublishCurrentBook();
   if(a==='shareprivate') showPrivateShare();
   if(a==='link')         showDirectLink();
-  if(a==='editcat')      showEditCategory(false);
+  if(a==='editmeta')     showEditMeta();
+  if(a==='recommend')    toggleRecommend(currentId);
   if(a==='delete')       deleteCurrentBook();
 }
 
@@ -1289,36 +1848,46 @@ function handleAction(e){
 function mob_showBook(id){
   const book=[...library,...communityLib].find(b=>b.id===id); if(!book) return;
   currentId=id;
-  const isMine=book.ownerId===currentUser?.uid, isComm=communityLib.some(b=>b.id===id);
+  const isMine=book.ownerId===currentUser?.uid, isCommBook=communityLib.some(b=>b.id===id);
+  const activeCheckout=getActiveCheckout(id);
   const img=document.getElementById('mobDetailCoverImg'), ph=document.getElementById('mobDetailCoverPh');
   if(book.coverDataUrl){ img.src=book.coverDataUrl; img.style.display='block'; ph.style.display='none'; }
   else { img.style.display='none'; ph.style.display='flex'; }
   document.getElementById('mobDetailCat').textContent=book.category||'';
   document.getElementById('mobDetailTitle').textContent=book.title||'';
   document.getElementById('mobDetailAuthor').textContent=book.author||'';
-  document.getElementById('mobDetailDesc').textContent=book.description||'';
+  document.getElementById('mobDetailDesc').textContent=stripHtml(book.description||'');
+  const coEl=document.getElementById('mobCheckoutInfo');
+  if(activeCheckout){
+    const due=new Date(activeCheckout.dueDate), over=due<new Date();
+    coEl.innerHTML=`<strong>${activeCheckout.userId===currentUser?.uid?'You have':''+esc(activeCheckout.userName)+' has'}</strong> this signed out${!over?` · ${formatDueDate({toDate:()=>due})}`:` · Overdue!`}`;
+    coEl.style.display='block';
+  } else { coEl.style.display='none'; }
   const actEl=document.getElementById('mobDetailActions');
   actEl.innerHTML=buildActions(book,isMine);
   actEl.onclick=handleAction;
-  if(isComm) renderStars('mobStars','mobRatingCount',id,true);
+  if(isCommBook) renderStars('mobStars','mobRatingCount',id,true);
   else document.getElementById('mobStarRating').style.display='none';
   mob_showPanel('mobPanelDetail');
 }
-document.getElementById('btnMobBack').addEventListener('click',()=>mob_showPanel(mobPrevPanel||'mobPanelMine'));
+document.getElementById('btnMobBack').addEventListener('click',()=>mob_showPanel(mobPrevPanel||'mobPanelHome'));
 function mob_showPanel(id){
   document.querySelectorAll('.mob-panel').forEach(p=>p.classList.remove('active'));
   document.getElementById(id).classList.add('active');
 }
 
+// Mobile tabs
+document.getElementById('mobNavHome').addEventListener('click',()=>mob_switchTab('home'));
 document.getElementById('mobNavMine').addEventListener('click',()=>mob_switchTab('mine'));
-document.getElementById('mobNavComm').addEventListener('click',()=>mob_switchTab('community'));
-document.getElementById('mobNavUpload').addEventListener('click',showUploadModal);
+document.getElementById('mobNavPub').addEventListener('click',()=>mob_switchTab('pub'));
+document.getElementById('mobNavComm').addEventListener('click',()=>mob_switchTab('comm'));
 document.getElementById('mobNavSettings').addEventListener('click',()=>mob_switchTab('settings'));
 function mob_switchTab(tab){
   document.querySelectorAll('.mob-tab').forEach(t=>t.classList.remove('active'));
-  if(tab==='mine'){ document.getElementById('mobNavMine').classList.add('active'); mob_showPanel('mobPanelMine'); }
-  else if(tab==='community'){ document.getElementById('mobNavComm').classList.add('active'); mob_showPanel('mobPanelComm'); }
-  else { document.getElementById('mobNavSettings').classList.add('active'); mob_showPanel('mobPanelSettings'); }
+  const panels={home:'mobPanelHome',mine:'mobPanelMine',pub:'mobPanelPub',comm:'mobPanelComm',settings:'mobPanelSettings'};
+  const tabs={home:'mobNavHome',mine:'mobNavMine',pub:'mobNavPub',comm:'mobNavComm',settings:'mobNavSettings'};
+  if(panels[tab]) mob_showPanel(panels[tab]);
+  if(tabs[tab]) document.getElementById(tabs[tab]).classList.add('active');
 }
 
 // ── EPUB READER ───────────────────────────────────────────────────────────────
@@ -1332,19 +1901,11 @@ document.getElementById('btnReaderPrev').addEventListener('click',()=>readerGoTo
 document.getElementById('btnReaderNext').addEventListener('click',()=>readerGoToChapter(readerChapter+1));
 document.getElementById('btnCloseReader').addEventListener('click',closeReader);
 document.addEventListener('keydown',e=>{ if(!document.getElementById('readerOverlay').classList.contains('open')) return; if(e.key==='ArrowRight'||e.key==='ArrowDown') readerGoToChapter(readerChapter+1); if(e.key==='ArrowLeft'||e.key==='ArrowUp') readerGoToChapter(readerChapter-1); if(e.key==='Escape') closeReader(); });
-
 (function(){
   const wrap=document.getElementById('readerContentWrap');
   let startX=0, startY=0, dragging=false;
   wrap.addEventListener('touchstart',e=>{ startX=e.touches[0].clientX; startY=e.touches[0].clientY; dragging=true; },{passive:true});
-  wrap.addEventListener('touchend',e=>{
-    if(!dragging) return; dragging=false;
-    const dx=e.changedTouches[0].clientX-startX, dy=e.changedTouches[0].clientY-startY;
-    if(Math.abs(dx)>Math.abs(dy)*1.5&&Math.abs(dx)>50){
-      if(dx<0) readerGoToChapter(readerChapter+1);
-      else readerGoToChapter(readerChapter-1);
-    }
-  },{passive:true});
+  wrap.addEventListener('touchend',e=>{ if(!dragging) return; dragging=false; const dx=e.changedTouches[0].clientX-startX, dy=e.changedTouches[0].clientY-startY; if(Math.abs(dx)>Math.abs(dy)*1.5&&Math.abs(dx)>50){ if(dx<0) readerGoToChapter(readerChapter+1); else readerGoToChapter(readerChapter-1); } },{passive:true});
 })();
 
 async function readCurrentBook(){
@@ -1380,7 +1941,6 @@ async function readCurrentBook(){
     readerGoToChapter(0);
   }catch(e){ hideLoading(); showToast('Could not open EPUB: '+e.message); console.error(e); }
 }
-
 async function readerGoToChapter(idx){
   if(idx<0||idx>=readerSpine.length) return;
   readerChapter=idx;
@@ -1389,8 +1949,7 @@ async function readerGoToChapter(idx){
   document.getElementById('readerPageInfo').textContent=`Ch ${idx+1} / ${readerSpine.length}`;
   document.getElementById('readerProgressBar').style.width=((idx/Math.max(readerSpine.length-1,1))*100)+'%';
   const content=document.getElementById('readerContent');
-  content.innerHTML='<p style="text-align:center;padding-top:3rem;opacity:.5">Loading…</p>';
-  content.scrollTop=0;
+  content.innerHTML='<p style="text-align:center;padding-top:3rem;opacity:.5">Loading…</p>'; content.scrollTop=0;
   if(window.innerWidth<=640) document.getElementById('readerChapterList').classList.remove('open');
   try{
     let html=await readerZip.file(readerOpfBase+ch.href)?.async('string');
@@ -1404,7 +1963,6 @@ async function readerGoToChapter(idx){
   }catch(e){ content.innerHTML=`<p style="color:var(--danger)">Error: ${e.message}</p>`; }
 }
 window.readerGoToChapter_global=idx=>readerGoToChapter(idx);
-
 async function inlineImagesInHtml(html,base,chapterHref){
   const chapterDir=chapterHref&&chapterHref.includes('/')?chapterHref.replace(/\/[^/]+$/,'/'):'';
   html=html.replace(/(<img[^>]+)src="([^"]+)"/gi,(match,pre,src)=>`${pre}data-src="${src}"`);
@@ -1433,7 +1991,8 @@ async function parseEpubMeta(file){
       if(!coverDataUrl){ const firstId=opfXml.match(/<itemref\s+idref="([^"]+)"/i)?.[1]; if(firstId){ const fh=opfXml.match(new RegExp(`id="${firstId}"[^>]+href="([^"]+)"`,'i'))?.[1]||opfXml.match(new RegExp(`href="([^"]+)"[^>]+id="${firstId}"`,'i'))?.[1]; if(fh){ const fHtml=await zip.file(opfDir+fh)?.async('string'); if(fHtml){ const sm=fHtml.match(/src="([^"]+\.(jpe?g|png|gif|webp))"/i); if(sm){ const ip=sm[1],cd=fh.includes('/')?fh.replace(/\/[^/]+$/,'/'):''; const f=zip.file(opfDir+cd+ip)||zip.file(opfDir+ip)||zip.file(ip); if(f) coverDataUrl=await blobToDataUrl(await f.async('blob')); } } } } }
       if(!coverDataUrl){ for(const p of ['cover.jpg','cover.jpeg','cover.png','images/cover.jpg','OEBPS/cover.jpg','OEBPS/cover.jpeg','OEBPS/cover.png','OEBPS/images/cover.jpg','OEBPS/images/cover.jpeg','OPS/images/cover.jpg','OPS/cover.jpg']){ const f=zip.file(p); if(f){ coverDataUrl=await blobToDataUrl(await f.async('blob')); break; } } }
     }catch(e){}
-    return{title:get('title')||file.name.replace(/\.epub$/i,''),author:getAll('creator').join(', ')||'Unknown Author',description:get('description')||'',category:getAll('subject')[0]||'Uncategorised',language:get('language')||'',publisher:get('publisher')||'',coverDataUrl};
+    // Strip HTML from description
+    return{title:get('title')||file.name.replace(/\.epub$/i,''),author:getAll('creator').join(', ')||'Unknown Author',description:stripHtml(get('description')||''),category:getAll('subject')[0]||'Uncategorised',language:get('language')||'',publisher:get('publisher')||'',coverDataUrl};
   }catch(e){ return fallbackMeta(file); }
 }
 function fallbackMeta(file){ return{title:file.name.replace(/\.epub$/i,''),author:'Unknown Author',description:'',category:'Uncategorised',language:'',publisher:'',coverDataUrl:null}; }
@@ -1441,14 +2000,23 @@ function blobToDataUrl(blob){ return new Promise((res,rej)=>{ const r=new FileRe
 
 // ── MISC UI ───────────────────────────────────────────────────────────────────
 [document.getElementById('btnHeaderUpload'),document.getElementById('btnSideUpload'),document.getElementById('btnMobUpload')].forEach(b=>b?.addEventListener('click',showUploadModal));
-[document.getElementById('btnSideRefresh'),document.getElementById('btnMobRefresh')].forEach(b=>b?.addEventListener('click',async()=>{ cacheClear('elib_library_'+currentUser?.uid); cacheClear('elib_community'); await loadLibrary(true); await loadCommunity(true); }));
+[document.getElementById('btnSideRefresh'),document.getElementById('btnMobRefresh')].forEach(b=>b?.addEventListener('click',async()=>{
+  cacheClear('elib_library_'+currentUser?.uid); cacheClear('elib_community'); cacheClear('elib_checkouts'); cacheClear('elib_comm_posts');
+  await loadLibrary(true); await loadCommunity(true); await loadCheckouts(true); await loadCommPosts(true);
+}));
 document.getElementById('btnToggleSettings').addEventListener('click',e=>{ e.stopPropagation(); const s=document.getElementById('deskSettings'); s.style.display=s.style.display==='none'?'block':'none'; });
 document.addEventListener('click',e=>{ const s=document.getElementById('deskSettings'); if(s.style.display!=='none'&&!s.contains(e.target)&&e.target.id!=='btnToggleSettings') s.style.display='none'; });
 document.getElementById('defaultCatInput').value=localStorage.getItem('elib_default_cat')||'';
 document.getElementById('defaultCatInput').addEventListener('keydown',e=>{ if(e.key==='Enter'){ localStorage.setItem('elib_default_cat',e.target.value); showToast('Default category saved'); } });
-document.getElementById('btnClearCache').addEventListener('click',()=>{ if(!confirm('Clear local cache?')) return; cacheClear('elib_library_'+currentUser?.uid); cacheClear('elib_community'); library=[]; communityLib=[]; currentId=null; closeDrawer(); renderAll(); showToast('Cache cleared'); });
+document.getElementById('btnClearCache').addEventListener('click',()=>{ if(!confirm('Clear local cache?')) return; ['elib_library_','elib_community','elib_checkouts','elib_comm_posts','elib_ratings_'].forEach(k=>{ Object.keys(localStorage).filter(x=>x.startsWith(k)).forEach(x=>localStorage.removeItem(x)); }); library=[]; communityLib=[]; checkouts=[]; myCheckouts=[]; commPosts=[]; currentId=null; closeDrawer(); renderAll(); showToast('Cache cleared'); });
 document.getElementById('deskInstallBtn').addEventListener('click',()=>{ if(deferredInstall){ deferredInstall.prompt(); deferredInstall.userChoice.then(()=>deferredInstall=null); } });
 document.getElementById('mobInstallBtn').addEventListener('click',()=>{ if(deferredInstall){ deferredInstall.prompt(); deferredInstall.userChoice.then(()=>deferredInstall=null); } });
+document.getElementById('btnCloseHistory').addEventListener('click',()=>document.getElementById('historyModal').classList.remove('open'));
+
+// Close modals on overlay click
+document.querySelectorAll('.modal-overlay').forEach(overlay=>{
+  overlay.addEventListener('click',e=>{ if(e.target===overlay) overlay.classList.remove('open'); });
+});
 
 let toastTimer;
 function showLoading(msg){ document.getElementById('loadingMsg').textContent=msg||'Loading…'; document.getElementById('loadingOverlay').classList.add('open'); }
@@ -1456,6 +2024,8 @@ function hideLoading(){ document.getElementById('loadingOverlay').classList.remo
 function showToast(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.classList.remove('show'),2800); }
 function esc(s){ return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
+// Initial render
+switchShelf('mine');
 renderAll();
 </script>
 </body>
