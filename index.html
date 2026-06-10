@@ -819,7 +819,7 @@ import { initializeApp }              from 'https://www.gstatic.com/firebasejs/1
 import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut }
   from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
 import { getFirestore, collection, addDoc, getDocs, getDoc, doc,
-         query, where, orderBy, updateDoc, deleteDoc, serverTimestamp, setDoc }
+         query, where, orderBy, updateDoc, deleteDoc, serverTimestamp, setDoc, Timestamp  }
   from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 import { getStorage, ref as storageRef, uploadBytes, getDownloadURL, getBytes }
   from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js';
@@ -939,11 +939,15 @@ async function loadLibrary(){
   if(!currentUser) return;
   showLoading('Loading library…');
   try {
-    const q    = query(collection(db,'books'), where('ownerId','==',currentUser.uid), orderBy('createdAt','desc'));
+    const q = query(collection(db,'books'), where('ownerId','==',currentUser.uid), orderBy('createdAt','desc'));
     const snap = await getDocs(q);
-    library    = snap.docs.map(d=>({id:d.id,...d.data()}));
+    library = snap.docs.map(d=>({id:d.id,...d.data()}));
     hideLoading(); renderAll();
-  } catch(e){ hideLoading(); console.error(e); showToast('Error loading library'); }
+  } catch(e){ 
+    hideLoading(); 
+    console.error('LIBRARY LOAD ERROR:', e.code, e.message);
+    showToast('Error loading library'); 
+  }
 }
 async function loadCommunity(){
   try {
@@ -1910,7 +1914,9 @@ async function toggleRecommended(){
 }
 
 // ── CHECKOUT SYSTEM ───────────────────────────────────────────────────────────
+
 async function signOutBook(){
+  import { Timestamp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
   if(!currentId||!currentUser) return;
   const book=[...library,...communityLib].find(b=>b.id===currentId); if(!book) return;
   const due=new Date(); due.setDate(due.getDate()+14);
@@ -1922,7 +1928,7 @@ async function signOutBook(){
       userId:    currentUser.uid,
       userName:  currentUser.displayName||currentUser.email,
       checkedOutAt: serverTimestamp(),
-      dueDate:   due.toISOString(),
+      dueDate:   Timestamp.fromDate(due),
       returnedAt: null
     });
     hideLoading();
@@ -1934,7 +1940,7 @@ async function signOutBook(){
 async function returnBook(checkoutId){
   showLoading('Returning…');
   try{
-    await updateDoc(doc(db,'checkouts',checkoutId),{returnedAt:new Date().toISOString()});
+    await updateDoc(doc(db,'checkouts',checkoutId),{returnedAt:serverTimestamp()});
     hideLoading(); showToast('Book returned ✓');
     showCheckoutHistory(currentId);
   }catch(e){ hideLoading(); showToast('Return failed: '+e.message); }
@@ -1951,16 +1957,17 @@ async function showCheckoutHistory(bookId){
     const rows=snap.docs.map(d=>({id:d.id,...d.data()}));
     if(!rows.length){ document.getElementById('checkoutHistoryList').innerHTML='<div style="color:var(--muted);font-size:.85rem;padding:.5rem 0">No checkouts yet</div>'; return; }
     document.getElementById('checkoutHistoryList').innerHTML=rows.map(r=>{
-      const out=r.checkedOutAt?.toDate?.()??new Date(r.checkedOutAt);
-      const due=new Date(r.dueDate);
-      const isOverdue=!r.returnedAt&&due<new Date();
+      const out = r.checkedOutAt?.toDate?.() ?? new Date();
+      const due = r.dueDate?.toDate?.() ?? new Date(r.dueDate);
+      const returnedAt = r.returnedAt?.toDate?.() ?? (r.returnedAt ? new Date(r.returnedAt) : null);
+      const isOverdue = !returnedAt && due < new Date();
       const isMine=r.userId===currentUser?.uid;
       const returnBtn=(!r.returnedAt&&isMine)?`<button class="btn-action btn-return" style="padding:.25rem .6rem;font-size:.65rem" data-checkoutid="${r.id}">Return</button>`:'';
       return `<div class="checkout-row">
         <div>
           <div class="checkout-row-name">${esc(r.userName)}</div>
           <div class="checkout-row-date">Out: ${out.toLocaleDateString()} · Due: <span class="${isOverdue?'checkout-badge overdue':'checkout-row-date'}">${due.toLocaleDateString()}</span></div>
-          ${r.returnedAt?`<div class="checkout-row-date">Returned: ${new Date(r.returnedAt).toLocaleDateString()}</div>`:''}
+          ${returnedAt ? `<div class="checkout-row-date">Returned: ${returnedAt.toLocaleDateString()}</div>` : ''}
         </div>
         ${returnBtn}
       </div>`;
