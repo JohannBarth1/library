@@ -758,7 +758,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
     </div>
     <div class="modal-actions">
       <button class="btn-cancel" id="btnCancelPrivateShare">Close</button>
-      <button class="btn-save" id="btnConfirmPrivateShare">Share &amp; Get Link</button>
+      <button class="btn-save" id="btnConfirmPrivateShare">Share &amp; Copy Link</button>
     </div>
   </div>
 </div>
@@ -1820,7 +1820,7 @@ function buildActions(book,isMine){
   if(isMine&&book.visibility!=='community') btns.push(`<button class="btn-action btn-share" data-action="share">⇧ Publish</button>`);
   if(isMine&&book.visibility==='community') btns.push(`<button class="btn-action btn-unpublish" data-action="unpublish">↓ Unpublish</button>`);
   if(isMine) btns.push(`<button class="btn-action btn-share-private" data-action="shareprivate">🔒 Share Privately</button>`);
-  if(isMine) btns.push(`<button class="btn-action btn-link" data-action="link">🔗 Get Link</button>`);
+  if(isMine) btns.push(`<button class="btn-action btn-link" data-action="link">🔗 Copy Link</button>`);
   if(isMine) btns.push(`<button class="btn-action btn-edit-meta" data-action="editmeta">✎ Edit Details</button>`);
   if(isMine) btns.push(`<button class="btn-action btn-recommend ${book.recommended?'active-rec':''}" data-action="recommend">${book.recommended?'★ Recommended':'☆ Recommend'}</button>`);
   if(isMine) btns.push(`<button class="btn-action btn-delete" data-action="delete">✕ Delete</button>`);
