@@ -1916,7 +1916,6 @@ async function toggleRecommended(){
 // ── CHECKOUT SYSTEM ───────────────────────────────────────────────────────────
 
 async function signOutBook(){
-  import { Timestamp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
   if(!currentId||!currentUser) return;
   const book=[...library,...communityLib].find(b=>b.id===currentId); if(!book) return;
   const due=new Date(); due.setDate(due.getDate()+14);
