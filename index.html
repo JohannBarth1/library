@@ -338,6 +338,34 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .settings-btn.danger-s{background:var(--warm-white);color:var(--danger);border-color:#e0b0b0;}
 .settings-note{font-size:.8rem;color:var(--muted);line-height:1.6;margin-top:.3rem;}
 
+/* ── MULTI-SELECT ── */
+.select-mode-toggle{padding:.38rem .8rem;font-family:'Lato',sans-serif;font-size:.7rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;border-radius:2px;cursor:pointer;border:1px solid var(--border);background:var(--warm-white);color:var(--navy2);transition:all .15s;}
+.select-mode-toggle:hover{background:var(--light-blue);}
+.select-mode-toggle.active{background:var(--teal);border-color:var(--teal);color:#fff;}
+.bulk-bar{display:none;background:var(--navy2);color:var(--cream);padding:.55rem 1.5rem;align-items:center;gap:.5rem;flex-shrink:0;flex-wrap:wrap;border-bottom:1px solid var(--border);}
+.bulk-bar.open{display:flex;}
+.bulk-bar-count{font-size:.82rem;font-weight:700;margin-right:.3rem;}
+.bulk-btn{padding:.35rem .8rem;font-family:'Lato',sans-serif;font-size:.68rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;border-radius:2px;cursor:pointer;border:1px solid;transition:all .15s;white-space:nowrap;}
+.bulk-btn-edit{background:transparent;color:var(--cream);border-color:rgba(255,255,255,.35);}
+.bulk-btn-edit:hover{background:rgba(255,255,255,.1);}
+.bulk-btn-publish{background:var(--gold);color:var(--navy);border-color:var(--gold);}
+.bulk-btn-publish:hover{opacity:.85;}
+.bulk-btn-unpublish{background:transparent;color:#f4a460;border-color:#f4a460;}
+.bulk-btn-unpublish:hover{background:rgba(244,164,96,.15);}
+.bulk-btn-checkout{background:transparent;color:#86efac;border-color:#86efac;}
+.bulk-btn-checkout:hover{background:rgba(134,239,172,.12);}
+.bulk-btn-rec{background:transparent;color:var(--gold2);border-color:var(--gold2);}
+.bulk-btn-rec:hover{background:rgba(232,184,75,.12);}
+.bulk-btn-unrec{background:transparent;color:var(--muted);border-color:rgba(255,255,255,.2);}
+.bulk-btn-unrec:hover{background:rgba(255,255,255,.06);}
+.bulk-btn-cancel{background:transparent;color:var(--muted);border-color:rgba(255,255,255,.15);}
+.bulk-btn-cancel:hover{background:rgba(255,255,255,.05);}
+/* select checkmark on cards */
+.book-card .select-check{position:absolute;top:.4rem;left:.4rem;width:22px;height:22px;border-radius:50%;background:rgba(15,26,46,.65);border:2px solid rgba(255,255,255,.5);display:none;align-items:center;justify-content:center;font-size:.75rem;color:#fff;transition:all .15s;}
+.select-mode .book-card .select-check{display:flex;}
+.book-card.selected .select-check{background:var(--teal);border-color:var(--teal);}
+.book-card.selected{outline:3px solid var(--teal);outline-offset:1px;}
+
 /* desktop settings popover */
 #deskSettings{display:none;position:fixed;top:calc(var(--header-h) + 8px);right:1rem;background:var(--warm-white);border:1px solid var(--border);border-radius:6px;padding:1.2rem 1.4rem;width:280px;z-index:80;box-shadow:0 4px 20px rgba(0,0,0,0.15);}
   
@@ -472,12 +500,23 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 
     <!-- Main grid -->
     <main class="main-area" id="deskMain">
-      <div class="grid-header">
-        <div class="grid-header-left">
-          <h2 id="deskGridTitle">My Library</h2>
-          <span class="grid-count" id="deskGridCount"></span>
-        </div>
-      </div>
+<div class="grid-header">
+  <div class="grid-header-left">
+    <h2 id="deskGridTitle">My Library</h2>
+    <span class="grid-count" id="deskGridCount"></span>
+  </div>
+  <button class="select-mode-toggle" id="btnSelectMode">☑ Select</button>
+</div>
+<div class="bulk-bar" id="bulkBar">
+  <span class="bulk-bar-count" id="bulkBarCount">0 selected</span>
+  <button class="bulk-btn bulk-btn-edit" id="bulkBtnEdit">✎ Edit</button>
+  <button class="bulk-btn bulk-btn-publish" id="bulkBtnPublish">⇧ Publish</button>
+  <button class="bulk-btn bulk-btn-unpublish" id="bulkBtnUnpublish">↓ Unpublish</button>
+  <button class="bulk-btn bulk-btn-checkout" id="bulkBtnCheckout">📋 Sign Out</button>
+  <button class="bulk-btn bulk-btn-rec" id="bulkBtnRec">★ Recommend</button>
+  <button class="bulk-btn bulk-btn-unrec" id="bulkBtnUnrec">☆ Unrecommend</button>
+  <button class="bulk-btn bulk-btn-cancel" id="bulkBtnCancel">✕ Cancel</button>
+</div>
       <div class="book-grid" id="deskBookGrid"></div>
     </main>
   </div>
@@ -766,6 +805,47 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
     </div>
   </div>
 </div>
+
+  <!-- Bulk Edit Modal -->
+<div class="modal-overlay" id="bulkEditModal">
+  <div class="modal" style="max-width:500px">
+    <h3>Edit <span id="bulkEditCount">0</span> Books</h3>
+    <p style="font-size:.78rem;color:var(--muted);margin-bottom:1rem;line-height:1.5">
+      Leave any field blank to keep existing values. Only filled fields will be updated.
+    </p>
+    <div class="form-row">
+      <label>Category</label>
+      <input type="text" id="bulkCat" placeholder="Leave blank to keep existing" list="bulkCatSuggestions"/>
+      <datalist id="bulkCatSuggestions"></datalist>
+    </div>
+    <div class="form-row">
+      <label>Language</label>
+      <input type="text" id="bulkLang" placeholder="e.g. en — leave blank to keep existing"/>
+    </div>
+    <div class="form-row">
+      <label>Description <span style="font-size:.65rem;color:var(--muted);font-weight:400">(replaces existing on all selected)</span></label>
+      <textarea id="bulkDesc" rows="3" style="width:100%;padding:.6rem .85rem;font-family:'Lato',sans-serif;font-size:.88rem;color:var(--navy);background:var(--cream);border:1px solid var(--border);border-radius:3px;outline:none;resize:vertical;line-height:1.5" placeholder="Leave blank to keep existing"></textarea>
+    </div>
+    <div class="form-row">
+      <label>Tags <span style="font-size:.65rem;color:var(--muted);font-weight:400">(comma-separated, added to existing tags)</span></label>
+      <input type="text" id="bulkTags" placeholder="e.g. Favourite, Classic"/>
+    </div>
+    <div style="display:flex;gap:1.5rem;margin:.8rem 0">
+      <label style="display:flex;align-items:center;gap:.5rem;font-size:.85rem;cursor:pointer">
+        <input type="checkbox" id="bulkSetRecommended" style="width:15px;height:15px"/>
+        Mark as Recommended
+      </label>
+      <label style="display:flex;align-items:center;gap:.5rem;font-size:.85rem;cursor:pointer">
+        <input type="checkbox" id="bulkUnsetRecommended" style="width:15px;height:15px"/>
+        Remove Recommended
+      </label>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" id="btnCancelBulkEdit">Cancel</button>
+      <button class="btn-save" id="btnSaveBulkEdit">Update Books</button>
+    </div>
+  </div>
+</div>
   
 <!-- EPUB Reader -->
 <div class="reader-overlay theme-day" id="readerOverlay">
@@ -877,7 +957,9 @@ let activeCat     = 'All';
 let searchQ       = '';
 let mobPrevPanel  = 'mobPanelLib';
 let allTags = []; // all tags used across user's library
-
+let selectMode = false;
+let selectedIds = new Set();
+  
 // Reader
 let readerZip      = null;
 let readerSpine    = [];
@@ -1209,6 +1291,7 @@ function getCats(){
 function renderAll(){
   renderFilterCats();
   renderMobChips();
+  document.getElementById('deskBookGrid').classList.toggle('select-mode', selectMode);
   renderGrid('deskBookGrid');
   renderGrid('mobBookGrid');
   renderMobPublic();
@@ -1257,9 +1340,11 @@ function renderGrid(gridId){
     const coverHtml=b.coverDataUrl
       ?`<img class="book-card-cover" src="${b.coverDataUrl}" alt="" loading="lazy"/>`
       :`<div class="book-card-cover-ph"><div class="ph-icon">📖</div><div class="ph-title">${esc(b.title)}</div><div class="ph-author">${esc(b.author)}</div></div>`;
-    return `<div class="book-card" data-bookid="${b.id}">
-      ${coverHtml}
-      ${isComm&&b.ownerId!==currentUser?.uid?'<span class="community-badge">Shared</span>':''}
+    const isSelected = selectedIds.has(b.id);
+return `<div class="book-card ${isSelected?'selected':''}" data-bookid="${b.id}">
+  ${coverHtml}
+  <div class="select-check">✓</div>
+  ${isComm&&b.ownerId!==currentUser?.uid?'<span class="community-badge">Shared</span>':''}
       <div class="book-card-body">
         <div class="book-card-title">${esc(b.title)}</div>
         <div class="book-card-author">${esc(b.author)}</div>
@@ -1283,6 +1368,12 @@ document.getElementById('mobFilterChips').addEventListener('click',e=>{
 // grid click (desktop)
 document.getElementById('deskBookGrid').addEventListener('click',e=>{
   const card=e.target.closest('.book-card[data-bookid]'); if(!card) return;
+  if(selectMode){
+    const id=card.dataset.bookid;
+    if(selectedIds.has(id)){ selectedIds.delete(id); card.classList.remove('selected'); }
+    else { selectedIds.add(id); card.classList.add('selected'); }
+    updateBulkBar(); return;
+  }
   showBookById(card.dataset.bookid);
 });
 // grid click (mobile)
@@ -1994,6 +2085,190 @@ async function showCheckoutHistory(bookId){
 }
 
 document.getElementById('btnCloseCheckoutModal').addEventListener('click',()=>document.getElementById('checkoutModal').classList.remove('open'));
+
+// ── MULTI-SELECT ──────────────────────────────────────────────────────────────
+document.getElementById('btnSelectMode').addEventListener('click', toggleSelectMode);
+
+function toggleSelectMode(){
+  selectMode = !selectMode;
+  selectedIds.clear();
+  const btn = document.getElementById('btnSelectMode');
+  btn.classList.toggle('active', selectMode);
+  btn.textContent = selectMode ? '✕ Done' : '☑ Select';
+  document.getElementById('deskBookGrid').classList.toggle('select-mode', selectMode);
+  document.getElementById('bulkBar').classList.toggle('open', selectMode);
+  // clear all selected highlights
+  document.querySelectorAll('.book-card.selected').forEach(c=>c.classList.remove('selected'));
+  updateBulkBar();
+}
+
+function updateBulkBar(){
+  const n = selectedIds.size;
+  document.getElementById('bulkBarCount').textContent = `${n} book${n!==1?'s':''} selected`;
+  // show/hide buttons based on what's selected
+  const myBooks = [...selectedIds].map(id=>library.find(b=>b.id===id)).filter(Boolean);
+  const hasPublished = myBooks.some(b=>b.visibility==='community');
+  const hasUnpublished = myBooks.some(b=>b.visibility!=='community');
+  const hasUnrecommended = myBooks.some(b=>!b.recommended);
+  const hasRecommended = myBooks.some(b=>b.recommended);
+  document.getElementById('bulkBtnPublish').style.display = hasUnpublished&&n>0?'':'none';
+  document.getElementById('bulkBtnUnpublish').style.display = hasPublished&&n>0?'':'none';
+  document.getElementById('bulkBtnRec').style.display = hasUnrecommended&&n>0?'':'none';
+  document.getElementById('bulkBtnUnrec').style.display = hasRecommended&&n>0?'':'none';
+  document.getElementById('bulkBtnCheckout').style.display = n>0?'':'none';
+  document.getElementById('bulkBtnEdit').style.display = n>0?'':'none';
+}
+
+// Bulk edit modal
+document.getElementById('btnCancelBulkEdit').addEventListener('click',()=>document.getElementById('bulkEditModal').classList.remove('open'));
+document.getElementById('bulkBtnEdit').addEventListener('click',()=>{
+  if(!selectedIds.size){ showToast('Select books first'); return; }
+  document.getElementById('bulkEditCount').textContent = selectedIds.size;
+  document.getElementById('bulkCat').value = '';
+  document.getElementById('bulkLang').value = '';
+  document.getElementById('bulkDesc').value = '';
+  document.getElementById('bulkTags').value = '';
+  document.getElementById('bulkSetRecommended').checked = false;
+  document.getElementById('bulkUnsetRecommended').checked = false;
+  const cats = [...new Set(library.map(b=>b.category).filter(Boolean))].sort();
+  document.getElementById('bulkCatSuggestions').innerHTML = cats.map(c=>`<option value="${esc(c)}">`).join('');
+  document.getElementById('bulkEditModal').classList.add('open');
+});
+
+document.getElementById('btnSaveBulkEdit').addEventListener('click', async()=>{
+  const cat  = document.getElementById('bulkCat').value.trim();
+  const lang = document.getElementById('bulkLang').value.trim();
+  const desc = stripHtml(document.getElementById('bulkDesc').value.trim());
+  const tagsRaw = document.getElementById('bulkTags').value.trim();
+  const newTags = tagsRaw ? tagsRaw.split(',').map(t=>t.trim()).filter(Boolean) : [];
+  const setRec   = document.getElementById('bulkSetRecommended').checked;
+  const unsetRec = document.getElementById('bulkUnsetRecommended').checked;
+
+  // Build only the fields that were filled in
+  const updates = { updatedAt: serverTimestamp() };
+  if(cat)  updates.category = cat;
+  if(lang) updates.language = lang;
+  if(desc) updates.description = desc;
+  if(setRec)   updates.recommended = true;
+  if(unsetRec) updates.recommended = false;
+
+  const ids = [...selectedIds];
+  document.getElementById('bulkEditModal').classList.remove('open');
+  showLoading(`Updating ${ids.length} book${ids.length!==1?'s':''}…`);
+  try{
+    for(const id of ids){
+      const book = library.find(b=>b.id===id); if(!book) continue;
+      const bookUpdates = {...updates};
+      // Tags: merge new tags into existing
+      if(newTags.length){
+        bookUpdates.tags = [...new Set([...(book.tags||[]), ...newTags])];
+      }
+      await updateDoc(doc(db,'books',id), bookUpdates);
+      Object.assign(book, bookUpdates);
+    }
+    hideLoading();
+    toggleSelectMode(); // exit select mode
+    renderAll();
+    showToast(`${ids.length} book${ids.length!==1?'s':''} updated ✓`);
+  }catch(e){ hideLoading(); showToast('Update failed: '+e.message); console.error(e); }
+});
+
+// Bulk publish
+document.getElementById('bulkBtnPublish').addEventListener('click', async()=>{
+  const ids = [...selectedIds].filter(id=>{ const b=library.find(x=>x.id===id); return b&&b.visibility!=='community'; });
+  if(!ids.length) return;
+  if(!confirm(`Publish ${ids.length} book${ids.length!==1?'s':''} to Public Library?`)) return;
+  showLoading('Publishing…');
+  try{
+    for(const id of ids){
+      const book=library.find(b=>b.id===id); if(!book) continue;
+      await addDoc(collection(db,'community'),{
+        sourceId:id, ownerId:currentUser.uid, ownerName:currentUser.displayName||currentUser.email,
+        filename:book.filename, title:book.title, author:book.author, description:book.description,
+        category:book.category, language:book.language, coverDataUrl:book.coverDataUrl||null,
+        storagePath:book.storagePath, sharedAt:serverTimestamp(), ratingSum:0, ratingCount:0
+      });
+      await updateDoc(doc(db,'books',id),{visibility:'community',updatedAt:serverTimestamp()});
+      book.visibility='community';
+    }
+    await loadCommunity();
+    hideLoading(); toggleSelectMode(); renderAll();
+    showToast(`${ids.length} book${ids.length!==1?'s':''} published ✓`);
+  }catch(e){ hideLoading(); showToast('Publish failed: '+e.message); }
+});
+
+// Bulk unpublish
+document.getElementById('bulkBtnUnpublish').addEventListener('click', async()=>{
+  const ids = [...selectedIds].filter(id=>{ const b=library.find(x=>x.id===id); return b&&b.visibility==='community'; });
+  if(!ids.length) return;
+  if(!confirm(`Unpublish ${ids.length} book${ids.length!==1?'s':''} from Public Library?`)) return;
+  showLoading('Unpublishing…');
+  try{
+    for(const id of ids){
+      const q=query(collection(db,'community'),where('sourceId','==',id));
+      const snap=await getDocs(q);
+      for(const d of snap.docs) await deleteDoc(doc(db,'community',d.id));
+      await updateDoc(doc(db,'books',id),{visibility:'private',updatedAt:serverTimestamp()});
+      const book=library.find(b=>b.id===id); if(book) book.visibility='private';
+      communityLib=communityLib.filter(b=>b.sourceId!==id);
+    }
+    hideLoading(); toggleSelectMode(); renderAll();
+    showToast(`${ids.length} book${ids.length!==1?'s':''} unpublished ✓`);
+  }catch(e){ hideLoading(); showToast('Unpublish failed: '+e.message); }
+});
+
+// Bulk sign out
+document.getElementById('bulkBtnCheckout').addEventListener('click', async()=>{
+  if(!selectedIds.size) return;
+  if(!confirm(`Sign out ${selectedIds.size} book${selectedIds.size!==1?'s':''}? Each gets a 2-week loan period.`)) return;
+  showLoading('Signing out…');
+  try{
+    const due=new Date(); due.setDate(due.getDate()+14);
+    for(const id of selectedIds){
+      const book=[...library,...communityLib].find(b=>b.id===id); if(!book) continue;
+      await addDoc(collection(db,'checkouts'),{
+        bookId:id, bookTitle:book.title,
+        userId:currentUser.uid, userName:currentUser.displayName||currentUser.email,
+        checkedOutAt:serverTimestamp(), dueDate:Timestamp.fromDate(due), returnedAt:null
+      });
+    }
+    hideLoading(); toggleSelectMode();
+    showToast(`${selectedIds.size} book${selectedIds.size!==1?'s':''} signed out ✓`);
+  }catch(e){ hideLoading(); showToast('Sign-out failed: '+e.message); }
+});
+
+// Bulk recommend
+document.getElementById('bulkBtnRec').addEventListener('click', async()=>{
+  const ids=[...selectedIds].filter(id=>{ const b=library.find(x=>x.id===id); return b&&!b.recommended; });
+  if(!ids.length) return;
+  showLoading('Updating…');
+  try{
+    for(const id of ids){
+      await updateDoc(doc(db,'books',id),{recommended:true,updatedAt:serverTimestamp()});
+      const b=library.find(x=>x.id===id); if(b) b.recommended=true;
+    }
+    hideLoading(); toggleSelectMode(); renderAll();
+    showToast(`${ids.length} book${ids.length!==1?'s':''} marked recommended ✓`);
+  }catch(e){ hideLoading(); showToast('Failed: '+e.message); }
+});
+
+// Bulk unrecommend
+document.getElementById('bulkBtnUnrec').addEventListener('click', async()=>{
+  const ids=[...selectedIds].filter(id=>{ const b=library.find(x=>x.id===id); return b&&b.recommended; });
+  if(!ids.length) return;
+  showLoading('Updating…');
+  try{
+    for(const id of ids){
+      await updateDoc(doc(db,'books',id),{recommended:false,updatedAt:serverTimestamp()});
+      const b=library.find(x=>x.id===id); if(b) b.recommended=false;
+    }
+    hideLoading(); toggleSelectMode(); renderAll();
+    showToast(`${ids.length} book${ids.length!==1?'s':''} unrecommended ✓`);
+  }catch(e){ hideLoading(); showToast('Failed: '+e.message); }
+});
+
+// Cancel
+document.getElementById('bulkBtnCancel').addEventListener('click', toggleSelectMode);
   
 renderAll();
 </script>
