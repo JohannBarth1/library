@@ -1520,7 +1520,7 @@ function renderDeskHome(){
   const el = document.getElementById('deskHomePanel'); if(!el) return;
   const name=(currentUser?.displayName||'').split(' ')[0]||'Reader';
   document.getElementById('deskHomeGreeting').textContent=`Hello, ${name}`;
-
+const recommended = communityLib.filter(b => b.recommended);
   const recSection=document.getElementById('deskHomeRecSection');
   const recGrid=document.getElementById('deskHomeRecGrid');
   if(recommended.length){
