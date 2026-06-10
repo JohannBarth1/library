@@ -340,7 +340,30 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 
 /* desktop settings popover */
 #deskSettings{display:none;position:fixed;top:calc(var(--header-h) + 8px);right:1rem;background:var(--warm-white);border:1px solid var(--border);border-radius:6px;padding:1.2rem 1.4rem;width:280px;z-index:80;box-shadow:0 4px 20px rgba(0,0,0,0.15);}
+  
+  /* TAGS */
+.tag-pill{display:inline-block;padding:2px 8px;font-size:.65rem;font-weight:700;border-radius:10px;background:#ece8f8;color:#5a48b0;margin:2px;cursor:pointer;transition:all .15s;}
+.tag-pill:hover{background:#d8d0f0;}
+.tag-pill.active{background:#5a48b0;color:#fff;}
+.tag-pill-remove{margin-left:3px;opacity:.6;font-size:.7rem;}
+.tag-pill-remove:hover{opacity:1;}
 
+/* CHECKOUT */
+.checkout-badge{display:inline-block;font-size:.65rem;font-weight:700;padding:2px 8px;border-radius:10px;background:#fff4e0;color:#a87820;margin-top:.3rem;}
+.checkout-badge.overdue{background:#fbeaea;color:var(--danger);}
+.checkout-history{margin-top:1rem;}
+.checkout-history h4{font-size:.65rem;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:.5rem;}
+.checkout-row{font-size:.78rem;padding:.4rem 0;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;gap:.5rem;}
+.checkout-row-name{font-weight:700;color:var(--navy2);}
+.checkout-row-date{font-size:.7rem;color:var(--muted);}
+.btn-checkout{background:#276749;color:#fff;border-color:#276749;}
+.btn-checkout:hover{background:#1e5038;}
+.btn-return{background:transparent;color:#276749;border-color:#276749;}
+.btn-return:hover{background:#f0fff4;}
+
+/* RECOMMENDED badge on card */
+.rec-badge{position:absolute;top:.4rem;left:.4rem;background:var(--gold);color:var(--navy);font-size:.55rem;font-weight:700;padding:2px 5px;border-radius:2px;letter-spacing:.04em;text-transform:uppercase;}
+  
 /* ── RESPONSIVE ── */
 @media(max-width:640px){
   .filter-sidebar{display:none;}
@@ -715,6 +738,35 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
   </div>
 </div>
 
+  <!-- Tags Modal -->
+<div class="modal-overlay" id="tagsModal">
+  <div class="modal">
+    <h3>Edit Tags</h3>
+    <div id="tagsCurrentWrap" style="margin-bottom:.8rem;min-height:28px"></div>
+    <div class="form-row">
+      <label>Add Tag</label>
+      <input type="text" id="tagsInput" placeholder="e.g. Favourite, To Read…" autocomplete="off"/>
+    </div>
+    <div style="font-size:.72rem;color:var(--muted);margin-bottom:.5rem">Your tags:</div>
+    <div id="tagsAllWrap" style="margin-bottom:.8rem"></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" id="btnCloseTagsModal">Done</button>
+    </div>
+  </div>
+</div>
+
+<!-- Checkout History Modal -->
+<div class="modal-overlay" id="checkoutModal">
+  <div class="modal" style="max-width:480px">
+    <h3>📋 Checkout History</h3>
+    <p style="font-size:.82rem;color:var(--muted);margin-bottom:1rem" id="checkoutModalSubtitle"></p>
+    <div id="checkoutHistoryList"></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" id="btnCloseCheckoutModal">Close</button>
+    </div>
+  </div>
+</div>
+  
 <!-- EPUB Reader -->
 <div class="reader-overlay theme-day" id="readerOverlay">
   <div class="reader-toolbar">
@@ -824,6 +876,7 @@ let shelfMode     = 'mine';   // 'mine' | 'community'
 let activeCat     = 'All';
 let searchQ       = '';
 let mobPrevPanel  = 'mobPanelLib';
+let allTags = []; // all tags used across user's library
 
 // Reader
 let readerZip      = null;
@@ -1305,12 +1358,16 @@ document.getElementById('drawerActions').addEventListener('click',handleAction);
 
 function buildActions(book,isMine){
   const btns=[`<button class="btn-action btn-read" data-action="read">▶ Read</button>`];
+  btns.push(`<button class="btn-action btn-checkout" data-action="checkout">📋 Sign Out</button>`);
+  btns.push(`<button class="btn-action btn-return" data-action="history">📖 History</button>`);
   if(isMine) btns.push(`<button class="btn-action btn-download" data-action="download">⬇ Download</button>`);
   if(isMine&&book.visibility!=='community') btns.push(`<button class="btn-action btn-share" data-action="share">⇧ Publish</button>`);
   if(isMine&&book.visibility==='community') btns.push(`<button class="btn-action btn-unpublish" data-action="unpublish">↓ Unpublish</button>`);
   if(isMine) btns.push(`<button class="btn-action btn-share-private" data-action="shareprivate">🔒 Share Privately</button>`);
   if(isMine) btns.push(`<button class="btn-action btn-link" data-action="link">🔗 Get Link</button>`);
   if(isMine) btns.push(`<button class="btn-action btn-edit-cat" data-action="editmeta">✎ Edit Details</button>`);
+  if(isMine) btns.push(`<button class="btn-action ${book.recommended?'btn-unpublish':'btn-share'}" data-action="recommend">${book.recommended?'★ Recommended':'☆ Recommend'}</button>`);
+  if(isMine) btns.push(`<button class="btn-action btn-edit-cat" data-action="tags">🏷 Tags</button>`);
   if(isMine) btns.push(`<button class="btn-action btn-delete" data-action="delete">✕ Delete</button>`);
   return btns.join('');
 }
@@ -1324,6 +1381,10 @@ function handleAction(e){
   if(a==='shareprivate') showPrivateShare();
   if(a==='link')         showDirectLink();
   if(a==='editmeta')     showEditMeta();
+  if(a==='recommend')    toggleRecommended();
+  if(a==='tags')         showTagsModal();
+  if(a==='checkout')     signOutBook();
+  if(a==='history')      showCheckoutHistory(currentId);
   if(a==='delete')       deleteCurrentBook();
 }
 
@@ -1502,25 +1563,39 @@ function renderMobPublic(){
 function renderMobHome(){
   const name=(currentUser?.displayName||'').split(' ')[0]||'Reader';
   document.getElementById('mobHomeGreeting').textContent=`Hello, ${name}`;
+  const recommended=library.filter(b=>b.recommended);
   const recent=library.slice(0,6);
-  const html=recent.length
-    ?`<div style="font-size:.7rem;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:.6rem">Recently Added</div><div class="mob-book-grid" style="margin-bottom:1.5rem">${recent.map(b=>bookCardHtml(b,false)).join('')}</div>`
+  let html='';
+  if(recommended.length){
+    html+=`<div style="font-size:.7rem;letter-spacing:.18em;text-transform:uppercase;color:var(--gold);font-weight:700;margin-bottom:.6rem">⭐ Recommended</div>
+    <div class="mob-book-grid" style="margin-bottom:1.5rem">${recommended.map(b=>bookCardHtml(b,false)).join('')}</div>`;
+  }
+  html+=`<div style="font-size:.7rem;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:.6rem">Recently Added</div>`;
+  html+=recent.length
+    ?`<div class="mob-book-grid">${recent.map(b=>bookCardHtml(b,false)).join('')}</div>`
     :'<div style="text-align:center;padding:2rem;color:var(--muted);font-size:.88rem">Upload books to get started</div>';
   document.getElementById('mobHomeContent').innerHTML=html;
-  document.getElementById('mobHomeContent').querySelectorAll('.book-card[data-bookid]').forEach(c=>c.addEventListener('click',()=>{ mobPrevPanel='mobPanelHome'; mob_showBook(c.dataset.bookid); }));
+  document.getElementById('mobHomeContent').querySelectorAll('.book-card[data-bookid]').forEach(c=>{
+    c.addEventListener('click',()=>{ mobPrevPanel='mobPanelHome'; mob_showBook(c.dataset.bookid); });
+  });
 }
 
 function bookCardHtml(b,isComm){
   const avg=isComm?getAvgRating(b):0;
   const starsHtml=isComm?[1,2,3,4,5].map(n=>`<span class="bcs ${n<=Math.round(avg)?'filled':''}">★</span>`).join(''):'';
-  const coverHtml=b.coverDataUrl?`<img class="book-card-cover" src="${b.coverDataUrl}" alt="" loading="lazy"/>`:`<div class="book-card-cover-ph"><div class="ph-icon">📖</div><div class="ph-title">${esc(b.title)}</div><div class="ph-author">${esc(b.author)}</div></div>`;
+  const coverHtml=b.coverDataUrl
+    ?`<img class="book-card-cover" src="${b.coverDataUrl}" alt="" loading="lazy"/>`
+    :`<div class="book-card-cover-ph"><div class="ph-icon">📖</div><div class="ph-title">${esc(b.title)}</div><div class="ph-author">${esc(b.author)}</div></div>`;
+  const tagsHtml=(b.tags||[]).slice(0,2).map(t=>`<span class="tag-pill" style="font-size:.55rem;padding:1px 5px">${esc(t)}</span>`).join('');
   return `<div class="book-card" data-bookid="${b.id}">
     ${coverHtml}
+    ${b.recommended?'<span class="rec-badge">⭐ Pick</span>':''}
     <div class="book-card-body">
       <div class="book-card-title">${esc(b.title)}</div>
       <div class="book-card-author">${esc(b.author)}</div>
       ${isComm&&b.ownerId!==currentUser?.uid?`<div class="book-card-shared-by">by ${esc(b.ownerName||'')}</div>`:''}
       ${isComm?`<div class="book-card-stars">${starsHtml}</div>`:''}
+      ${tagsHtml}
     </div>
   </div>`;
 }
@@ -1766,6 +1841,138 @@ function hideLoading(){ document.getElementById('loadingOverlay').classList.remo
 function showToast(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.classList.remove('show'),2800); }
 function esc(s){ return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
+  // ── TAGS ──────────────────────────────────────────────────────────────────────
+function getAllTags(){
+  const set=new Set();
+  library.forEach(b=>(b.tags||[]).forEach(t=>set.add(t)));
+  return [...set].sort();
+}
+
+document.getElementById('btnCloseTagsModal').addEventListener('click',()=>document.getElementById('tagsModal').classList.remove('open'));
+document.getElementById('tagsInput').addEventListener('keydown',async e=>{
+  if(e.key!=='Enter') return;
+  const tag=e.target.value.trim(); if(!tag) return;
+  e.target.value='';
+  const book=library.find(b=>b.id===currentId); if(!book) return;
+  const tags=[...new Set([...(book.tags||[]),tag])];
+  book.tags=tags;
+  await updateDoc(doc(db,'books',currentId),{tags,updatedAt:serverTimestamp()});
+  renderTagsModal();
+});
+
+async function removeTag(tag){
+  const book=library.find(b=>b.id===currentId); if(!book) return;
+  const tags=(book.tags||[]).filter(t=>t!==tag);
+  book.tags=tags;
+  await updateDoc(doc(db,'books',currentId),{tags,updatedAt:serverTimestamp()});
+  renderTagsModal();
+}
+
+function showTagsModal(){
+  if(!currentId) return;
+  document.getElementById('tagsModal').classList.add('open');
+  renderTagsModal();
+}
+
+function renderTagsModal(){
+  const book=library.find(b=>b.id===currentId); if(!book) return;
+  const current=book.tags||[];
+  document.getElementById('tagsCurrentWrap').innerHTML=current.length
+    ?current.map(t=>`<span class="tag-pill">${esc(t)}<span class="tag-pill-remove" data-tag="${esc(t)}" title="Remove">✕</span></span>`).join('')
+    :'<span style="font-size:.8rem;color:var(--muted)">No tags yet</span>';
+  document.getElementById('tagsCurrentWrap').querySelectorAll('.tag-pill-remove').forEach(el=>{
+    el.addEventListener('click',()=>removeTag(el.dataset.tag));
+  });
+  const allT=getAllTags().filter(t=>!current.includes(t));
+  document.getElementById('tagsAllWrap').innerHTML=allT.length
+    ?allT.map(t=>`<span class="tag-pill" data-quicktag="${esc(t)}">${esc(t)}</span>`).join('')
+    :'<span style="font-size:.75rem;color:var(--muted)">No other tags yet</span>';
+  document.getElementById('tagsAllWrap').querySelectorAll('[data-quicktag]').forEach(el=>{
+    el.addEventListener('click',async()=>{
+      const book=library.find(b=>b.id===currentId); if(!book) return;
+      const tags=[...new Set([...(book.tags||[]),el.dataset.quicktag])];
+      book.tags=tags;
+      await updateDoc(doc(db,'books',currentId),{tags,updatedAt:serverTimestamp()});
+      renderTagsModal();
+    });
+  });
+}
+
+// ── RECOMMENDED ───────────────────────────────────────────────────────────────
+async function toggleRecommended(){
+  if(!currentId) return;
+  const book=library.find(b=>b.id===currentId); if(!book) return;
+  const rec=!book.recommended;
+  book.recommended=rec;
+  await updateDoc(doc(db,'books',currentId),{recommended:rec,updatedAt:serverTimestamp()});
+  renderAll(); showBookById(currentId);
+  showToast(rec?'Marked as Recommended ⭐':'Removed from Recommended');
+}
+
+// ── CHECKOUT SYSTEM ───────────────────────────────────────────────────────────
+async function signOutBook(){
+  if(!currentId||!currentUser) return;
+  const book=[...library,...communityLib].find(b=>b.id===currentId); if(!book) return;
+  const due=new Date(); due.setDate(due.getDate()+14);
+  showLoading('Signing out…');
+  try{
+    await addDoc(collection(db,'checkouts'),{
+      bookId:    currentId,
+      bookTitle: book.title,
+      userId:    currentUser.uid,
+      userName:  currentUser.displayName||currentUser.email,
+      checkedOutAt: serverTimestamp(),
+      dueDate:   due.toISOString(),
+      returnedAt: null
+    });
+    hideLoading();
+    showToast(`"${book.title}" signed out — due ${due.toLocaleDateString()}`);
+    showCheckoutHistory(currentId);
+  }catch(e){ hideLoading(); showToast('Sign-out failed: '+e.message); }
+}
+
+async function returnBook(checkoutId){
+  showLoading('Returning…');
+  try{
+    await updateDoc(doc(db,'checkouts',checkoutId),{returnedAt:new Date().toISOString()});
+    hideLoading(); showToast('Book returned ✓');
+    showCheckoutHistory(currentId);
+  }catch(e){ hideLoading(); showToast('Return failed: '+e.message); }
+}
+
+async function showCheckoutHistory(bookId){
+  const book=[...library,...communityLib].find(b=>b.id===bookId);
+  document.getElementById('checkoutModalSubtitle').textContent=book?`"${book.title}"`:'';
+  document.getElementById('checkoutModal').classList.add('open');
+  document.getElementById('checkoutHistoryList').innerHTML='<div style="color:var(--muted);font-size:.85rem">Loading…</div>';
+  try{
+    const q=query(collection(db,'checkouts'),where('bookId','==',bookId),orderBy('checkedOutAt','desc'));
+    const snap=await getDocs(q);
+    const rows=snap.docs.map(d=>({id:d.id,...d.data()}));
+    if(!rows.length){ document.getElementById('checkoutHistoryList').innerHTML='<div style="color:var(--muted);font-size:.85rem;padding:.5rem 0">No checkouts yet</div>'; return; }
+    document.getElementById('checkoutHistoryList').innerHTML=rows.map(r=>{
+      const out=r.checkedOutAt?.toDate?.()??new Date(r.checkedOutAt);
+      const due=new Date(r.dueDate);
+      const isOverdue=!r.returnedAt&&due<new Date();
+      const isMine=r.userId===currentUser?.uid;
+      const returnBtn=(!r.returnedAt&&isMine)?`<button class="btn-action btn-return" style="padding:.25rem .6rem;font-size:.65rem" data-checkoutid="${r.id}">Return</button>`:'';
+      return `<div class="checkout-row">
+        <div>
+          <div class="checkout-row-name">${esc(r.userName)}</div>
+          <div class="checkout-row-date">Out: ${out.toLocaleDateString()} · Due: <span class="${isOverdue?'checkout-badge overdue':'checkout-row-date'}">${due.toLocaleDateString()}</span></div>
+          ${r.returnedAt?`<div class="checkout-row-date">Returned: ${new Date(r.returnedAt).toLocaleDateString()}</div>`:''}
+        </div>
+        ${returnBtn}
+      </div>`;
+    }).join('');
+    document.getElementById('checkoutHistoryList').querySelectorAll('[data-checkoutid]').forEach(btn=>{
+      btn.addEventListener('click',()=>returnBook(btn.dataset.checkoutid));
+    });
+  }catch(e){ document.getElementById('checkoutHistoryList').innerHTML='<div style="color:var(--danger);font-size:.85rem">Error loading history</div>'; console.error(e); }
+}
+
+document.getElementById('btnCloseCheckoutModal').addEventListener('click',()=>document.getElementById('checkoutModal').classList.remove('open'));
+  
 renderAll();
 </script>
 </body>
