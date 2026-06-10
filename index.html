@@ -1521,11 +1521,6 @@ function renderDeskHome(){
   const name=(currentUser?.displayName||'').split(' ')[0]||'Reader';
   document.getElementById('deskHomeGreeting').textContent=`Hello, ${name}`;
 
-  // Recommended: own library + community books
-  const recommended = communityLib.filter(b => b.recommended);
-  const commRec=communityLib.filter(b=>b.recommended&&!recommended.find(x=>x.id===b.id));
-  const recommended=[...recommended,...commRec];
-
   const recSection=document.getElementById('deskHomeRecSection');
   const recGrid=document.getElementById('deskHomeRecGrid');
   if(recommended.length){
