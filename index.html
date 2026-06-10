@@ -1522,9 +1522,9 @@ function renderDeskHome(){
   document.getElementById('deskHomeGreeting').textContent=`Hello, ${name}`;
 
   // Recommended: own library + community books
-  const myRec=library.filter(b=>b.recommended);
-  const commRec=communityLib.filter(b=>b.recommended&&!myRec.find(x=>x.id===b.id));
-  const recommended=[...myRec,...commRec];
+  const recommended = communityLib.filter(b => b.recommended);
+  const commRec=communityLib.filter(b=>b.recommended&&!recommended.find(x=>x.id===b.id));
+  const recommended=[...recommended,...commRec];
 
   const recSection=document.getElementById('deskHomeRecSection');
   const recGrid=document.getElementById('deskHomeRecGrid');
@@ -1824,21 +1824,41 @@ function renderMobPublic(){
 }
 
 // ── HOME PANEL (mobile) ───────────────────────────────────────────────────────
-function renderMobHome(){
+async function renderMobHome(){
   const name=(currentUser?.displayName||'').split(' ')[0]||'Reader';
   document.getElementById('mobHomeGreeting').textContent=`Hello, ${name}`;
 
-  // Show recommended from both personal library AND community
-  const myRec=library.filter(b=>b.recommended);
-  const commRec=communityLib.filter(b=>b.recommended&&!myRec.find(x=>x.id===b.id));
-  const recommended=[...myRec,...commRec];
-  const recent=library.slice(0,6);
+  // Recommended from community (all users)
+  const recommended = communityLib.filter(b => b.recommended);
+
+  // My signed-out books
+  let checkedOut = [];
+  try {
+    const q = query(
+      collection(db,'checkouts'),
+      where('userId','==',currentUser.uid),
+      where('returnedAt','==',null),
+      orderBy('checkedOutAt','desc')
+    );
+    const snap = await getDocs(q);
+    const ids = snap.docs.map(d => d.data().bookId);
+    checkedOut = ids.map(id => [...library,...communityLib].find(b=>b.id===id)).filter(Boolean);
+  } catch(e){ console.warn('Checkouts:', e); }
+
+  const recent = library.slice(0,6);
 
   let html='';
+
   if(recommended.length){
-    html+=`<div style="font-size:.7rem;letter-spacing:.18em;text-transform:uppercase;color:var(--gold);font-weight:700;margin-bottom:.6rem">⭐ Recommended</div>
-    <div class="mob-book-grid" style="margin-bottom:1.5rem">${recommended.map(b=>bookCardHtml(b,communityLib.some(x=>x.id===b.id))).join('')}</div>`;
+    html+=`<div style="font-size:.7rem;letter-spacing:.18em;text-transform:uppercase;color:var(--gold);font-weight:700;margin-bottom:.6rem">⭐ Recommended by the Community</div>
+    <div class="mob-book-grid" style="margin-bottom:1.5rem">${recommended.map(b=>bookCardHtml(b,true)).join('')}</div>`;
   }
+
+  if(checkedOut.length){
+    html+=`<div style="font-size:.7rem;letter-spacing:.18em;text-transform:uppercase;color:var(--teal);font-weight:700;margin-bottom:.6rem;margin-top:.5rem">📋 Currently Signed Out</div>
+    <div class="mob-book-grid" style="margin-bottom:1.5rem">${checkedOut.map(b=>bookCardHtml(b,communityLib.some(x=>x.id===b.id))).join('')}</div>`;
+  }
+
   html+=`<div style="font-size:.7rem;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:.6rem">Recently Added</div>`;
   html+=recent.length
     ?`<div class="mob-book-grid">${recent.map(b=>bookCardHtml(b,false)).join('')}</div>`
