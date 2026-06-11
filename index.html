@@ -14,12 +14,12 @@
 :root {
   --navy:#0f1a2e; --navy2:#1a2840; --cream:#faf7f2; --warm-white:#fffefb;
   --gold:#c8952a; --gold2:#e8b84b; --teal:#2a7c8a; --teal-light:#e1f2f5;
-  --rust:#b84c1a; --light-blue:#d8e8f0; --border:#c8d8e4; --muted:#7a8a9a;
-  --panel:#f0f5f8; --danger:#a02828; --header-h:60px; --mob-nav-h:68px;
-  --filter-w:220px;
+  --teal-dark:#1e5f6a; --rust:#b84c1a; --light-blue:#d8e8f0; --border:#c8d8e4;
+  --muted:#7a8a9a; --panel:#f0f5f8; --danger:#a02828;
+  --header-h:60px; --mob-nav-h:64px; --filter-w:220px;
 }
 *{box-sizing:border-box;margin:0;padding:0;}
-html,body{height:100%;}
+html,body{height:100%;max-width:100vw;overflow-x:hidden;}
 body{font-family:'Lato',sans-serif;background:var(--cream);color:var(--navy);display:flex;flex-direction:column;height:100%;overflow:hidden;}
 
 /* ── AUTH ── */
@@ -42,12 +42,12 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .header-right{display:flex;gap:.5rem;align-items:center;flex-shrink:0;}
 .hbtn{border:none;padding:.42rem .85rem;font-family:'Lato',sans-serif;font-size:.72rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;border-radius:2px;transition:background .2s;white-space:nowrap;}
 .hbtn-upload{background:var(--teal);color:#fff;}
-.hbtn-upload:hover{background:#1e5f6a;}
+.hbtn-upload:hover{background:var(--teal-dark);}
 .hbtn-ghost{background:transparent;color:#d8e8f0;border:1px solid #334;font-size:.8rem;padding:.42rem .6rem;}
 .hbtn-ghost:hover{background:#1a2840;}
-.hbtn-home{background:rgba(200,149,42,0.15);color:var(--gold);border:1px solid rgba(200,149,42,0.35);font-size:.8rem;padding:.42rem .75rem;}
-.hbtn-home:hover{background:rgba(200,149,42,0.25);}
-.hbtn-home.active{background:var(--gold);color:var(--navy);}
+.hbtn-home{background:rgba(42,124,138,0.2);color:var(--teal-light);border:1px solid rgba(42,124,138,0.4);font-size:.8rem;padding:.42rem .75rem;}
+.hbtn-home:hover{background:rgba(42,124,138,0.35);}
+.hbtn-home.active{background:var(--teal);color:#fff;}
 .header-user{display:flex;align-items:center;gap:.5rem;cursor:pointer;padding:.3rem .5rem;border-radius:3px;transition:background .15s;position:relative;}
 .header-user:hover{background:rgba(255,255,255,0.08);}
 .user-avatar{width:30px;height:30px;border-radius:50%;object-fit:cover;border:2px solid var(--gold);}
@@ -61,7 +61,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .user-dropdown .signout-btn{color:var(--danger);}
 
 /* ── LAYOUT ── */
-.app{display:flex;flex:1;overflow:hidden;}
+.app{display:flex;flex:1;overflow:hidden;min-width:0;}
 
 /* ── DESKTOP FILTER SIDEBAR ── */
 .filter-sidebar{width:var(--filter-w);min-width:var(--filter-w);background:var(--panel);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;flex-shrink:0;}
@@ -69,34 +69,28 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .filter-sidebar-top h3{font-family:'Playfair Display',serif;font-size:1rem;color:var(--navy2);margin-bottom:.7rem;}
 .filter-search{width:100%;padding:.45rem .7rem;font-family:'Lato',sans-serif;font-size:.83rem;border:1px solid var(--border);border-radius:3px;background:var(--warm-white);color:var(--navy);outline:none;}
 .filter-search:focus{border-color:var(--teal);}
-
-/* shelf tabs */
 .shelf-tabs{display:flex;border-bottom:1px solid var(--border);flex-shrink:0;}
 .shelf-tab{flex:1;padding:.55rem .3rem;font-family:'Lato',sans-serif;font-size:.68rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);background:none;border:none;border-bottom:2px solid transparent;cursor:pointer;transition:color .15s;}
 .shelf-tab.active{color:var(--teal);border-bottom-color:var(--teal);}
 .shelf-tab:hover:not(.active){color:var(--navy2);}
-
-/* category filter list */
 .filter-cats{flex:1;overflow-y:auto;padding:.5rem 0;}
 .filter-cat-item{display:flex;align-items:center;justify-content:space-between;padding:.42rem 1rem;font-size:.82rem;cursor:pointer;border-left:3px solid transparent;transition:background .12s,border-color .12s;}
 .filter-cat-item:hover{background:var(--light-blue);}
 .filter-cat-item.active{border-left-color:var(--teal);background:rgba(42,124,138,0.1);font-weight:700;color:var(--teal);}
 .filter-cat-count{font-size:.65rem;background:var(--teal-light);color:var(--teal);padding:1px 6px;border-radius:8px;font-weight:700;}
 .filter-cat-item.active .filter-cat-count{background:var(--teal);color:#fff;}
-
 .filter-sort{padding:.7rem 1rem;border-top:1px solid var(--border);flex-shrink:0;}
 .filter-sort label{font-size:.62rem;letter-spacing:.15em;text-transform:uppercase;color:var(--muted);font-weight:700;display:block;margin-bottom:.4rem;}
 .filter-sort select{width:100%;padding:.4rem .6rem;font-family:'Lato',sans-serif;font-size:.8rem;border:1px solid var(--border);border-radius:3px;background:var(--warm-white);color:var(--navy);outline:none;cursor:pointer;}
-
 .filter-footer{padding:.7rem;border-top:1px solid var(--border);display:flex;gap:.4rem;}
 .filter-footer button{flex:1;padding:.48rem .3rem;font-size:.68rem;font-family:'Lato',sans-serif;font-weight:700;letter-spacing:.05em;text-transform:uppercase;border-radius:2px;cursor:pointer;transition:all .15s;border:1px solid var(--border);}
 .btn-upload-f{background:var(--teal);color:#fff;border-color:var(--teal);}
-.btn-upload-f:hover{background:#1e5f6a;}
+.btn-upload-f:hover{background:var(--teal-dark);}
 .btn-refresh-f{background:transparent;color:var(--navy2);}
 .btn-refresh-f:hover{background:var(--light-blue);}
 
 /* ── MAIN GRID AREA ── */
-.main-area{flex:1;overflow-y:auto;display:flex;flex-direction:column;-webkit-overflow-scrolling:touch;}
+.main-area{flex:1;overflow-y:auto;display:flex;flex-direction:column;-webkit-overflow-scrolling:touch;min-width:0;}
 .grid-header{padding:.9rem 1.5rem .6rem;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);flex-shrink:0;}
 .grid-header-left{display:flex;align-items:center;gap:.7rem;}
 .grid-header h2{font-family:'Playfair Display',serif;font-size:1.1rem;color:var(--navy2);}
@@ -111,6 +105,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .desk-home-section{margin-top:.5rem;}
 .desk-home-section-label{font-size:.65rem;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:.9rem;padding-bottom:.4rem;border-bottom:1px solid var(--border);}
 .desk-home-section-label.gold{color:var(--gold);}
+.desk-home-section-label.teal{color:var(--teal);}
 .desk-home-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:1rem;}
 
 /* ── BOOK CARD ── */
@@ -129,9 +124,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .bcs{font-size:.65rem;color:#ccc;}
 .bcs.filled{color:var(--gold);}
 .book-card .community-badge{position:absolute;top:.4rem;right:.4rem;background:var(--gold);color:var(--navy);font-size:.55rem;font-weight:700;padding:2px 5px;border-radius:2px;letter-spacing:.04em;text-transform:uppercase;}
-
-/* empty state */
-.grid-empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:3rem 1rem;color:var(--muted);text-align:center;}
+.rec-badge{position:absolute;top:.4rem;left:.4rem;background:var(--teal);color:#fff;font-size:.55rem;font-weight:700;padding:2px 5px;border-radius:2px;letter-spacing:.04em;text-transform:uppercase;}
 
 /* ── BOOK DETAIL DRAWER (desktop) ── */
 .book-drawer{position:fixed;top:var(--header-h);right:0;bottom:0;width:360px;background:var(--warm-white);border-left:1px solid var(--border);box-shadow:-4px 0 20px rgba(0,0,0,0.1);z-index:30;display:flex;flex-direction:column;transform:translateX(100%);transition:transform .25s ease;}
@@ -153,38 +146,40 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .drawer-desc{font-size:.85rem;line-height:1.7;color:#3a4a5a;margin-bottom:1rem;}
 .drawer-sharedby{font-size:.75rem;color:var(--teal);margin-bottom:.5rem;font-weight:700;}
 
-/* ── DRAWER ACTIONS — redesigned as grouped icon-pill buttons ── */
+/* ── DRAWER ACTIONS ── */
 .drawer-actions{padding:.9rem 1.2rem 1rem;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:.55rem;flex-shrink:0;}
-.action-group{display:flex;gap:.4rem;flex-wrap:wrap;}
-.action-group-label{font-size:.58rem;letter-spacing:.15em;text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:.1rem;}
-.btn-action{display:inline-flex;align-items:center;gap:.35rem;padding:.42rem .85rem;font-size:.72rem;font-family:'Lato',sans-serif;font-weight:700;letter-spacing:.04em;border-radius:20px;cursor:pointer;border:1px solid;transition:all .15s;white-space:nowrap;}
+.action-group{display:flex;gap:.4rem;flex-wrap:wrap;align-items:center;}
+.btn-action{display:inline-flex;align-items:center;gap:.35rem;padding:.42rem .85rem;font-size:.72rem;font-family:'Lato',sans-serif;font-weight:700;letter-spacing:.04em;border-radius:20px;cursor:pointer;border:1px solid;transition:all .15s;white-space:nowrap;position:relative;}
 .btn-action .ba-icon{font-size:.85rem;line-height:1;}
 .btn-read{background:var(--navy2);color:#fff;border-color:var(--navy2);}
 .btn-read:hover{background:var(--navy);}
 .btn-download{background:var(--teal);color:#fff;border-color:var(--teal);}
-.btn-download:hover{background:#1e5f6a;}
-.btn-share{background:transparent;color:var(--teal);border-color:var(--teal);}
-.btn-share:hover{background:var(--teal-light);}
-.btn-unpublish{background:transparent;color:var(--muted);border-color:var(--border);}
-.btn-unpublish:hover{background:var(--light-blue);}
-.btn-edit-cat{background:transparent;color:var(--navy2);border-color:var(--border);}
-.btn-edit-cat:hover{background:var(--light-blue);}
-.btn-delete{background:transparent;color:var(--danger);border-color:#e0b0b0;}
-.btn-delete:hover{background:#fbeaea;}
+.btn-download:hover{background:var(--teal-dark);}
 .btn-checkout{background:transparent;color:#276749;border-color:#86efac;}
 .btn-checkout:hover{background:#f0fff4;}
 .btn-return{background:transparent;color:var(--muted);border-color:var(--border);}
 .btn-return:hover{background:var(--light-blue);}
-.btn-share-private{background:transparent;color:#5a48b0;border-color:#d0c8f0;}
-.btn-share-private:hover{background:#ece8f8;}
-.btn-link{background:transparent;color:var(--muted);border-color:var(--border);}
-.btn-link:hover{background:var(--light-blue);}
 .btn-recommend{background:transparent;color:var(--gold);border-color:rgba(200,149,42,.4);}
 .btn-recommend:hover{background:#fff8ec;}
 .btn-recommended{background:rgba(200,149,42,.12);color:var(--gold);border-color:var(--gold);}
 .btn-recommended:hover{background:#fff8ec;}
-.btn-tags{background:transparent;color:#5a48b0;border-color:#d0c8f0;}
-.btn-tags:hover{background:#ece8f8;}
+.btn-delete{background:transparent;color:var(--danger);border-color:#e0b0b0;}
+.btn-delete:hover{background:#fbeaea;}
+
+/* Dropdown menus for actions */
+.action-dropdown{position:relative;display:inline-flex;}
+.action-dropdown-btn{display:inline-flex;align-items:center;gap:.35rem;padding:.42rem .85rem;font-size:.72rem;font-family:'Lato',sans-serif;font-weight:700;letter-spacing:.04em;border-radius:20px;cursor:pointer;border:1px solid;transition:all .15s;white-space:nowrap;background:transparent;color:var(--navy2);border-color:var(--border);}
+.action-dropdown-btn:hover{background:var(--light-blue);}
+.action-dropdown-btn.share-btn{color:var(--teal);border-color:var(--teal);}
+.action-dropdown-btn.share-btn:hover{background:var(--teal-light);}
+.action-dropdown-btn.edit-btn{color:#5a48b0;border-color:#d0c8f0;}
+.action-dropdown-btn.edit-btn:hover{background:#ece8f8;}
+.action-dropdown-menu{display:none;position:absolute;bottom:calc(100% + 4px);left:0;background:var(--warm-white);border:1px solid var(--border);border-radius:6px;padding:.4rem 0;min-width:160px;z-index:200;box-shadow:0 4px 16px rgba(0,0,0,0.15);}
+.action-dropdown-menu.open{display:block;}
+.action-dropdown-item{display:flex;align-items:center;gap:.5rem;padding:.5rem 1rem;font-size:.8rem;font-family:'Lato',sans-serif;font-weight:700;color:var(--navy2);cursor:pointer;transition:background .1s;white-space:nowrap;border:none;background:none;width:100%;text-align:left;}
+.action-dropdown-item:hover{background:var(--teal-light);}
+.action-dropdown-item.danger{color:var(--danger);}
+.action-dropdown-item.danger:hover{background:#fbeaea;}
 
 /* star rating */
 .star-rating{display:flex;align-items:center;gap:.3rem;}
@@ -258,9 +253,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .reader-overlay.theme-day .reader-content{color:#1a1a1a;}
 .reader-overlay.theme-sepia .reader-content{color:#3b2a1a;}
 .reader-overlay.theme-night .reader-content{color:#c8c8d8;}
-.reader-overlay.theme-night .reader-content h1,
-.reader-overlay.theme-night .reader-content h2,
-.reader-overlay.theme-night .reader-content h3{color:#e8d8b0;}
+.reader-overlay.theme-night .reader-content h1,.reader-overlay.theme-night .reader-content h2,.reader-overlay.theme-night .reader-content h3{color:#e8d8b0;}
 
 /* ── LOADING ── */
 .loading-overlay{display:none;position:fixed;inset:0;background:rgba(15,26,46,.6);z-index:200;align-items:center;justify-content:center;flex-direction:column;gap:1rem;}
@@ -286,7 +279,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .modal .form-row input:focus,.modal .form-row select:focus{border-color:var(--teal);}
 .modal-actions{display:flex;gap:.6rem;margin-top:1.2rem;justify-content:flex-end;}
 .btn-save{background:var(--teal);color:#fff;border:none;padding:.65rem 1.4rem;font-family:'Lato',sans-serif;font-size:.82rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;border-radius:2px;cursor:pointer;}
-.btn-save:hover{background:#1e5f6a;}
+.btn-save:hover{background:var(--teal-dark);}
 .btn-cancel{background:transparent;color:var(--muted);border:1px solid var(--border);padding:.65rem 1.2rem;font-family:'Lato',sans-serif;font-size:.82rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;border-radius:2px;cursor:pointer;}
 .btn-cancel:hover{background:var(--light-blue);}
 
@@ -306,67 +299,56 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .toast{position:fixed;bottom:1.5rem;left:auto;right:2rem;background:var(--navy);color:#d8e8f0;padding:.7rem 1.3rem;border-radius:3px;font-size:.85rem;font-weight:700;letter-spacing:.05em;opacity:0;transition:opacity .3s,transform .3s;transform:translateY(6px);pointer-events:none;z-index:220;white-space:nowrap;}
 .toast.show{opacity:1;transform:translateY(0);}
 
-/* ── MOBILE NAV — curved arch with prominent Home ── */
-.mob-nav{display:none;position:fixed;bottom:0;left:0;right:0;z-index:50;}
-.mob-nav-bg{position:absolute;inset:0;background:var(--navy);border-top:2px solid var(--gold);z-index:-1;}
-.mob-nav-inner{display:flex;height:var(--mob-nav-h);align-items:flex-end;position:relative;}
-.mob-tab{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;cursor:pointer;color:var(--muted);font-size:.57rem;letter-spacing:.07em;text-transform:uppercase;font-weight:700;border:none;background:none;transition:color .15s;-webkit-tap-highlight-color:transparent;padding-bottom:10px;height:100%;}
-.mob-tab .tab-icon{font-size:1.2rem;line-height:1;}
-.mob-tab.active{color:var(--gold);}
+/* ── MOBILE NAV ── */
+.mob-nav{display:none;position:fixed;bottom:0;left:0;right:0;z-index:50;height:var(--mob-nav-h);}
+.mob-nav-bg{position:absolute;inset:0;background:var(--navy);border-top:2px solid rgba(42,124,138,0.5);z-index:0;}
+.mob-nav-inner{display:flex;height:100%;align-items:stretch;position:relative;z-index:1;}
+.mob-tab{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;cursor:pointer;color:var(--muted);font-size:.55rem;letter-spacing:.06em;text-transform:uppercase;font-weight:700;border:none;background:none;transition:color .15s;-webkit-tap-highlight-color:transparent;padding-bottom:6px;}
+.mob-tab .tab-icon{font-size:1.15rem;line-height:1;}
+.mob-tab.active{color:var(--teal-light);}
 
-/* Home center button — raised pill */
-.mob-tab-home{flex:0 0 72px;position:relative;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding-top:0;cursor:pointer;border:none;background:none;-webkit-tap-highlight-color:transparent;}
-.mob-home-bubble{width:58px;height:58px;border-radius:50%;background:linear-gradient(145deg,var(--gold2),var(--gold));box-shadow:0 -4px 16px rgba(200,149,42,0.5),0 2px 8px rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center;font-size:1.6rem;margin-top:-22px;transition:transform .15s,box-shadow .15s;border:3px solid var(--cream);}
-.mob-tab-home:active .mob-home-bubble{transform:scale(.93);}
-.mob-tab-home.active .mob-home-bubble{background:linear-gradient(145deg,#ffda6a,var(--gold2));box-shadow:0 -4px 20px rgba(200,149,42,0.7),0 2px 10px rgba(0,0,0,0.3);}
-.mob-home-label{font-size:.57rem;letter-spacing:.07em;text-transform:uppercase;font-weight:700;color:var(--gold);margin-top:3px;padding-bottom:8px;}
-
-/* The arch curve behind home button */
-.mob-nav-arch{position:absolute;top:-18px;left:50%;transform:translateX(-50%);width:90px;height:36px;overflow:hidden;pointer-events:none;}
-.mob-nav-arch::before{content:'';position:absolute;top:0;left:0;right:0;bottom:-2px;background:var(--navy);border-radius:50% 50% 0 0 / 100% 100% 0 0;border:2px solid var(--gold);border-bottom:none;}
+/* Home centre tab — larger but flat, no arch */
+.mob-tab-home{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;cursor:pointer;border:none;background:none;-webkit-tap-highlight-color:transparent;padding-bottom:6px;}
+.mob-home-inner{display:flex;flex-direction:column;align-items:center;gap:3px;}
+.mob-home-icon{width:44px;height:44px;border-radius:12px;background:linear-gradient(145deg,var(--teal),var(--navy2));display:flex;align-items:center;justify-content:center;font-size:1.4rem;border:1px solid rgba(42,124,138,0.5);box-shadow:0 2px 8px rgba(0,0,0,0.3);transition:transform .15s;}
+.mob-tab-home:active .mob-home-icon{transform:scale(.92);}
+.mob-tab-home.active .mob-home-icon{background:linear-gradient(145deg,var(--teal-dark),var(--teal));border-color:var(--teal);box-shadow:0 2px 12px rgba(42,124,138,0.5);}
+.mob-home-label{font-size:.55rem;letter-spacing:.06em;text-transform:uppercase;font-weight:700;color:var(--muted);}
+.mob-tab-home.active .mob-home-label{color:var(--teal-light);}
 
 /* mobile panels */
-.mob-panels{display:none;flex-direction:column;flex:1;overflow:visible;padding-bottom:var(--mob-nav-h);}
+.mob-panels{display:none;flex-direction:column;flex:1;overflow:hidden;}
 .mob-panel{display:none;flex-direction:column;height:100%;overflow:hidden;}
 .mob-panel.active{display:flex;}
 
 /* mobile library panel */
 .mob-lib-top{flex-shrink:0;background:var(--warm-white);border-bottom:1px solid var(--border);}
-.mob-shelf-tabs{display:flex;}
-.mob-shelf-tab{flex:1;padding:.6rem .3rem;font-size:.7rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);background:none;border:none;border-bottom:2px solid transparent;cursor:pointer;-webkit-tap-highlight-color:transparent;}
-.mob-shelf-tab.active{color:var(--teal);border-bottom-color:var(--teal);}
 .mob-search-bar{padding:.6rem .9rem;display:flex;gap:.5rem;align-items:center;}
-.mob-search-bar input{flex:1;padding:.5rem .75rem;font-size:.9rem;font-family:'Lato',sans-serif;border:1px solid var(--border);border-radius:3px;background:var(--cream);color:var(--navy);outline:none;}
+.mob-search-bar input{flex:1;padding:.5rem .75rem;font-size:.9rem;font-family:'Lato',sans-serif;border:1px solid var(--border);border-radius:3px;background:var(--cream);color:var(--navy);outline:none;min-width:0;}
 .mob-search-bar input:focus{border-color:var(--teal);}
-
-/* mobile filter chips */
-.mob-filter-scroll{overflow-x:auto;padding:.4rem .9rem .6rem;display:flex;gap:.4rem;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
+.mob-filter-scroll{overflow-x:auto;padding:.4rem .9rem .5rem;display:flex;gap:.4rem;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
 .mob-filter-scroll::-webkit-scrollbar{display:none;}
-.mob-chip{padding:.3rem .75rem;font-size:.72rem;font-weight:700;border-radius:20px;cursor:pointer;border:1px solid var(--border);background:var(--warm-white);color:var(--navy2);white-space:nowrap;transition:all .15s;-webkit-tap-highlight-color:transparent;}
+.mob-chip{padding:.28rem .7rem;font-size:.7rem;font-weight:700;border-radius:20px;cursor:pointer;border:1px solid var(--border);background:var(--warm-white);color:var(--navy2);white-space:nowrap;transition:all .15s;-webkit-tap-highlight-color:transparent;}
 .mob-chip.active{background:var(--teal);color:#fff;border-color:var(--teal);}
-.mob-sort-row{padding:.3rem .9rem .5rem;display:flex;align-items:center;gap:.5rem;}
-.mob-sort-row label{font-size:.65rem;color:var(--muted);font-weight:700;letter-spacing:.1em;text-transform:uppercase;white-space:nowrap;}
-.mob-sort-row select{font-size:.78rem;font-family:'Lato',sans-serif;border:1px solid var(--border);border-radius:3px;padding:.25rem .4rem;background:var(--warm-white);color:var(--navy);outline:none;}
-
-/* mobile book grid */
+.mob-sort-row{padding:.25rem .9rem .45rem;display:flex;align-items:center;gap:.5rem;}
+.mob-sort-row label{font-size:.62rem;color:var(--muted);font-weight:700;letter-spacing:.1em;text-transform:uppercase;white-space:nowrap;}
+.mob-sort-row select{font-size:.78rem;font-family:'Lato',sans-serif;border:1px solid var(--border);border-radius:3px;padding:.22rem .4rem;background:var(--warm-white);color:var(--navy);outline:none;}
 .mob-grid-scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;}
-.mob-book-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:.8rem;padding:.9rem;}
+.mob-book-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(95px,1fr));gap:.7rem;padding:.8rem;}
 
 /* mobile book detail */
-.mob-detail-panel{display:none;flex-direction:column;height:100%;overflow:hidden;}
-.mob-detail-panel.active{display:flex;}
-.mob-detail-header{padding:.7rem 1rem;border-bottom:1px solid var(--border);background:var(--warm-white);display:flex;align-items:center;gap:.6rem;flex-shrink:0;}
+.mob-detail-header{padding:.65rem 1rem;border-bottom:1px solid var(--border);background:var(--warm-white);display:flex;align-items:center;gap:.6rem;flex-shrink:0;}
 .mob-back-btn{background:none;border:none;font-size:.78rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--teal);cursor:pointer;-webkit-tap-highlight-color:transparent;display:flex;align-items:center;gap:.3rem;padding:0;}
-.mob-detail-scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:1.2rem;}
-.mob-detail-top{display:flex;gap:1rem;margin-bottom:1rem;}
-.mob-detail-cover{width:90px;height:130px;object-fit:cover;border-radius:3px;border:1px solid var(--border);flex-shrink:0;}
-.mob-detail-cover-ph{width:90px;height:130px;background:linear-gradient(145deg,var(--navy2),#2a3d5a);border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:2rem;flex-shrink:0;}
+.mob-detail-scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:1rem;}
+.mob-detail-top{display:flex;gap:.9rem;margin-bottom:1rem;}
+.mob-detail-cover{width:85px;height:125px;object-fit:cover;border-radius:3px;border:1px solid var(--border);flex-shrink:0;}
+.mob-detail-cover-ph{width:85px;height:125px;background:linear-gradient(145deg,var(--navy2),#2a3d5a);border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:2rem;flex-shrink:0;}
 .mob-detail-text{flex:1;min-width:0;}
 .mob-detail-cat{font-size:.6rem;letter-spacing:.2em;text-transform:uppercase;color:var(--teal);font-weight:700;margin-bottom:.2rem;}
-.mob-detail-title{font-family:'Playfair Display',serif;font-size:1.1rem;line-height:1.2;margin-bottom:.2rem;}
-.mob-detail-author{font-size:.82rem;color:var(--muted);font-style:italic;margin-bottom:.5rem;}
+.mob-detail-title{font-family:'Playfair Display',serif;font-size:1rem;line-height:1.2;margin-bottom:.2rem;}
+.mob-detail-author{font-size:.8rem;color:var(--muted);font-style:italic;margin-bottom:.5rem;}
 .mob-detail-actions{display:flex;flex-wrap:wrap;gap:.4rem;margin-bottom:1rem;}
-.mob-detail-desc{font-size:.85rem;line-height:1.7;color:#3a4a5a;}
+.mob-detail-desc{font-size:.84rem;line-height:1.7;color:#3a4a5a;}
 
 /* mobile settings */
 .mob-settings-scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:1.5rem 1.2rem;}
@@ -420,7 +402,6 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .bulk-btn-unrec:hover{background:rgba(255,255,255,.06);}
 .bulk-btn-cancel{background:transparent;color:var(--muted);border-color:rgba(255,255,255,.15);}
 .bulk-btn-cancel:hover{background:rgba(255,255,255,.05);}
-/* select checkmark on cards */
 .book-card .select-check{position:absolute;top:.4rem;left:.4rem;width:22px;height:22px;border-radius:50%;background:rgba(15,26,46,.65);border:2px solid rgba(255,255,255,.5);display:none;align-items:center;justify-content:center;font-size:.75rem;color:#fff;transition:all .15s;}
 .select-mode .book-card .select-check{display:flex;}
 .book-card.selected .select-check{background:var(--teal);border-color:var(--teal);}
@@ -428,39 +409,36 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 
 /* desktop settings popover */
 #deskSettings{display:none;position:fixed;top:calc(var(--header-h) + 8px);right:1rem;background:var(--warm-white);border:1px solid var(--border);border-radius:6px;padding:1.2rem 1.4rem;width:280px;z-index:80;box-shadow:0 4px 20px rgba(0,0,0,0.15);}
-  
+
 /* TAGS */
 .tag-pill{display:inline-block;padding:2px 8px;font-size:.65rem;font-weight:700;border-radius:10px;background:#ece8f8;color:#5a48b0;margin:2px;cursor:pointer;transition:all .15s;}
 .tag-pill:hover{background:#d8d0f0;}
-.tag-pill.active{background:#5a48b0;color:#fff;}
 .tag-pill-remove{margin-left:3px;opacity:.6;font-size:.7rem;}
 .tag-pill-remove:hover{opacity:1;}
 
 /* CHECKOUT */
 .checkout-badge{display:inline-block;font-size:.65rem;font-weight:700;padding:2px 8px;border-radius:10px;background:#fff4e0;color:#a87820;margin-top:.3rem;}
 .checkout-badge.overdue{background:#fbeaea;color:var(--danger);}
-.checkout-history{margin-top:1rem;}
-.checkout-history h4{font-size:.65rem;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:.5rem;}
 .checkout-row{font-size:.78rem;padding:.4rem 0;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;gap:.5rem;}
 .checkout-row-name{font-weight:700;color:var(--navy2);}
 .checkout-row-date{font-size:.7rem;color:var(--muted);}
 
-/* RECOMMENDED badge on card */
-.rec-badge{position:absolute;top:.4rem;left:.4rem;background:var(--gold);color:var(--navy);font-size:.55rem;font-weight:700;padding:2px 5px;border-radius:2px;letter-spacing:.04em;text-transform:uppercase;}
-  
 /* ── RESPONSIVE ── */
-@media(max-width:640px){
+@media(max-width:768px){
   .filter-sidebar{display:none;}
-  .desktop-main{display:none;}
+  .desktop-main{display:none!important;}
   .book-drawer{display:none;}
   .mob-nav{display:block;}
   .mob-panels{display:flex;}
+  /* Hide desktop-only header buttons */
+  .hbtn-home{display:none;}
+  .hbtn-upload{display:none;}
+  .btnToggleSettingsDesk{display:none;}
   .toast{bottom:calc(var(--mob-nav-h) + .8rem);left:50%;right:auto;transform:translateX(-50%) translateY(6px);}
   .toast.show{transform:translateX(-50%) translateY(0);}
-  header .hbtn-upload{display:none;}
 }
-@media(min-width:641px){
-  .mob-panels{display:none;}
+@media(min-width:769px){
+  .mob-panels{display:none!important;}
   .desktop-main{display:flex;flex:1;overflow:hidden;}
 }
 </style>
@@ -506,12 +484,10 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
     </div>
   </div>
   <div class="header-right">
-    <button class="hbtn hbtn-home" id="btnDeskHome">🏠 Home</button>
+    <!-- Desktop-only buttons -->
+    <button class="hbtn hbtn-home btnToggleSettingsDesk" id="btnDeskHome">🏠 Home</button>
     <button class="hbtn hbtn-upload" id="btnHeaderUpload">📤 Upload</button>
-    <button class="hbtn hbtn-ghost" id="btnToggleSettings">⚙</button>
-    <button class="hbtn hbtn-ghost" id="btnNotifBell" style="position:relative;font-size:1rem;padding:.42rem .55rem" title="Notifications">
-      🔔<span id="notifBadge" style="display:none;position:absolute;top:2px;right:2px;width:8px;height:8px;background:#e74c3c;border-radius:50%;border:1px solid var(--navy)"></span>
-    </button>
+    <button class="hbtn hbtn-ghost btnToggleSettingsDesk" id="btnToggleSettings">⚙</button>
     <div class="header-user" id="headerUser">
       <div class="user-avatar-initials" id="userAvatarInitials">?</div>
       <img class="user-avatar" id="userAvatarImg" src="" alt="" style="display:none"/>
@@ -527,7 +503,6 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 <div class="app">
   <!-- DESKTOP -->
   <div class="desktop-main">
-    <!-- Filter sidebar -->
     <aside class="filter-sidebar">
       <div class="filter-sidebar-top">
         <h3>Browse</h3>
@@ -563,13 +538,16 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
         <div class="desk-home-section-label gold">⭐ Recommended Picks</div>
         <div class="desk-home-grid" id="deskHomeRecGrid"></div>
       </div>
+      <div class="desk-home-section" id="deskHomeCheckoutSection" style="display:none">
+        <div class="desk-home-section-label teal">📋 Currently Signed Out</div>
+        <div class="desk-home-grid" id="deskHomeCheckoutGrid"></div>
+      </div>
       <div class="desk-home-section">
         <div class="desk-home-section-label">Recently Added to My Library</div>
         <div class="desk-home-grid" id="deskHomeRecentGrid"></div>
       </div>
     </div>
 
-    <!-- Main grid -->
     <main class="main-area" id="deskMain">
       <div class="grid-header">
         <div class="grid-header-left">
@@ -597,8 +575,8 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
     <!-- Search panel -->
     <div class="mob-panel" id="mobPanelSearch">
       <div class="mob-lib-top">
-        <div style="padding:.7rem .9rem .3rem;font-family:'Playfair Display',serif;font-size:1.1rem;color:var(--navy2)">Global Search</div>
-        <div class="mob-search-bar"><input type="text" id="mobSearchGlobal" placeholder="Search all books…" autofocus/></div>
+        <div style="padding:.7rem .9rem .3rem;font-family:'Playfair Display',serif;font-size:1.1rem;color:var(--navy2)">Search</div>
+        <div class="mob-search-bar"><input type="text" id="mobSearchGlobal" placeholder="Search all books…"/></div>
         <div class="mob-filter-scroll" id="mobSearchFilters">
           <div class="mob-chip active" data-sfilter="all">All</div>
           <div class="mob-chip" data-sfilter="mine">My Books</div>
@@ -611,6 +589,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
     <!-- Public Library panel -->
     <div class="mob-panel" id="mobPanelPublic">
       <div class="mob-lib-top">
+        <div style="padding:.6rem .9rem .2rem;font-family:'Playfair Display',serif;font-size:1rem;color:var(--navy2)">Public Library</div>
         <div class="mob-search-bar"><input type="text" id="mobSearchPublic" placeholder="Search Public Library…"/></div>
         <div class="mob-filter-scroll" id="mobChipsPublic"></div>
         <div class="mob-sort-row">
@@ -629,8 +608,8 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
     <!-- Home panel -->
     <div class="mob-panel active" id="mobPanelHome">
       <div class="mob-grid-scroll" style="padding:1rem">
-        <div style="font-family:'Playfair Display',serif;font-size:1.4rem;color:var(--navy2);margin-bottom:.2rem" id="mobHomeGreeting">Welcome</div>
-        <div style="font-size:.82rem;color:var(--muted);margin-bottom:1.2rem">Your reading at a glance</div>
+        <div style="font-family:'Playfair Display',serif;font-size:1.3rem;color:var(--navy2);margin-bottom:.2rem" id="mobHomeGreeting">Welcome</div>
+        <div style="font-size:.8rem;color:var(--muted);margin-bottom:1.2rem">Your reading at a glance</div>
         <div id="mobHomeContent"><div style="text-align:center;padding:2rem;color:var(--muted);font-size:.88rem">Loading…</div></div>
       </div>
     </div>
@@ -658,7 +637,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
     <!-- Detail panel -->
     <div class="mob-panel" id="mobPanelDetail">
       <div class="mob-detail-header">
-        <button class="mob-back-btn" id="btnMobBack">← Library</button>
+        <button class="mob-back-btn" id="btnMobBack">← Back</button>
       </div>
       <div class="mob-detail-scroll">
         <div class="mob-detail-top">
@@ -737,29 +716,29 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
   <h3 style="font-family:'Playfair Display',serif;font-size:1rem;color:var(--navy2);margin-bottom:.9rem;padding-bottom:.4rem;border-bottom:1px solid var(--border)">⚙ Settings</h3>
   <div style="font-size:.65rem;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:.4rem">Default category for uploads</div>
   <input type="text" id="defaultCatInput" placeholder="e.g. Fiction" style="width:100%;padding:.5rem .7rem;font-size:.88rem;font-family:'Lato',sans-serif;border:1px solid var(--border);border-radius:3px;background:var(--cream);color:var(--navy);outline:none;margin-bottom:.8rem"/>
-  <div style="font-size:.65rem;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:.4rem">Install App</div>
   <button id="deskInstallBtn" style="display:none;width:100%;padding:.45rem;font-size:.78rem;font-family:'Lato',sans-serif;font-weight:700;border-radius:3px;cursor:pointer;border:1px solid var(--teal);color:var(--teal);background:var(--cream);margin-bottom:.5rem">📲 Install eLibrary</button>
   <p style="font-size:.72rem;color:var(--muted);line-height:1.5;margin-bottom:.8rem" id="deskInstallNote">Use your browser's "Add to Home Screen" or "Install" option.</p>
   <button id="btnClearCache" style="width:100%;padding:.45rem;font-size:.72rem;font-family:'Lato',sans-serif;font-weight:700;border-radius:3px;cursor:pointer;border:1px solid #e0b0b0;color:var(--danger);background:var(--cream)">✕ Clear Cache</button>
 </div>
 
-<!-- Mobile nav — curved arch with prominent home -->
+<!-- Mobile nav -->
 <nav class="mob-nav">
-  <div class="mob-nav-arch"></div>
+  <div class="mob-nav-bg"></div>
   <div class="mob-nav-inner">
     <button class="mob-tab" id="mobNavSearch"><span class="tab-icon">🔍</span><span>Search</span></button>
     <button class="mob-tab" id="mobNavPublic"><span class="tab-icon">🌐</span><span>Public</span></button>
     <button class="mob-tab-home" id="mobNavHome">
-      <div class="mob-home-bubble">🏠</div>
-      <span class="mob-home-label">Home</span>
+      <div class="mob-home-inner">
+        <div class="mob-home-icon">🏠</div>
+        <span class="mob-home-label">Home</span>
+      </div>
     </button>
     <button class="mob-tab" id="mobNavMine"><span class="tab-icon">📚</span><span>My Books</span></button>
     <button class="mob-tab" id="mobNavSettings"><span class="tab-icon">⚙️</span><span>Settings</span></button>
   </div>
-  <div class="mob-nav-bg"></div>
 </nav>
 
-<!-- Upload Modal -->
+<!-- Modals -->
 <div class="modal-overlay" id="uploadModal">
   <div class="modal upload-modal-wide">
     <h3>Upload EPUB Files</h3>
@@ -773,23 +752,6 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
   </div>
 </div>
 
-<!-- Edit Category Modal -->
-<div class="modal-overlay" id="editCatModal">
-  <div class="modal">
-    <h3>Edit Category</h3>
-    <div class="form-row">
-      <label>Category</label>
-      <input type="text" id="editCatInput" placeholder="e.g. Fiction" autocomplete="off" list="catSuggestions"/>
-      <datalist id="catSuggestions"></datalist>
-    </div>
-    <div class="modal-actions">
-      <button class="btn-cancel" id="btnCancelEditCat">Cancel</button>
-      <button class="btn-save" id="btnSaveCategory">Save</button>
-    </div>
-  </div>
-</div>
-
-<!-- Share Modal -->
 <div class="modal-overlay" id="shareModal">
   <div class="modal">
     <h3>Publish to Public Library</h3>
@@ -801,7 +763,6 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
   </div>
 </div>
 
-<!-- Edit Metadata Modal -->
 <div class="modal-overlay" id="editMetaModal">
   <div class="modal" style="max-width:480px">
     <h3>Edit Book Details</h3>
@@ -817,7 +778,6 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
   </div>
 </div>
 
-<!-- Private Share Modal -->
 <div class="modal-overlay" id="privateShareModal">
   <div class="modal">
     <h3>Share Privately</h3>
@@ -840,7 +800,6 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
   </div>
 </div>
 
-<!-- Direct Link Modal -->
 <div class="modal-overlay" id="linkModal">
   <div class="modal">
     <h3>🔗 Direct Link</h3>
@@ -853,7 +812,6 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
   </div>
 </div>
 
-<!-- Tags Modal -->
 <div class="modal-overlay" id="tagsModal">
   <div class="modal">
     <h3>Edit Tags</h3>
@@ -864,57 +822,30 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
     </div>
     <div style="font-size:.72rem;color:var(--muted);margin-bottom:.5rem">Your tags:</div>
     <div id="tagsAllWrap" style="margin-bottom:.8rem"></div>
-    <div class="modal-actions">
-      <button class="btn-cancel" id="btnCloseTagsModal">Done</button>
-    </div>
+    <div class="modal-actions"><button class="btn-cancel" id="btnCloseTagsModal">Done</button></div>
   </div>
 </div>
 
-<!-- Checkout History Modal -->
 <div class="modal-overlay" id="checkoutModal">
   <div class="modal" style="max-width:480px">
     <h3>📋 Checkout History</h3>
     <p style="font-size:.82rem;color:var(--muted);margin-bottom:1rem" id="checkoutModalSubtitle"></p>
     <div id="checkoutHistoryList"></div>
-    <div class="modal-actions">
-      <button class="btn-cancel" id="btnCloseCheckoutModal">Close</button>
-    </div>
+    <div class="modal-actions"><button class="btn-cancel" id="btnCloseCheckoutModal">Close</button></div>
   </div>
 </div>
 
-<!-- Bulk Edit Modal -->
 <div class="modal-overlay" id="bulkEditModal">
   <div class="modal" style="max-width:500px">
     <h3>Edit <span id="bulkEditCount">0</span> Books</h3>
-    <p style="font-size:.78rem;color:var(--muted);margin-bottom:1rem;line-height:1.5">
-      Leave any field blank to keep existing values. Only filled fields will be updated.
-    </p>
-    <div class="form-row">
-      <label>Category</label>
-      <input type="text" id="bulkCat" placeholder="Leave blank to keep existing" list="bulkCatSuggestions"/>
-      <datalist id="bulkCatSuggestions"></datalist>
-    </div>
-    <div class="form-row">
-      <label>Language</label>
-      <input type="text" id="bulkLang" placeholder="e.g. en — leave blank to keep existing"/>
-    </div>
-    <div class="form-row">
-      <label>Description <span style="font-size:.65rem;color:var(--muted);font-weight:400">(replaces existing on all selected)</span></label>
-      <textarea id="bulkDesc" rows="3" style="width:100%;padding:.6rem .85rem;font-family:'Lato',sans-serif;font-size:.88rem;color:var(--navy);background:var(--cream);border:1px solid var(--border);border-radius:3px;outline:none;resize:vertical;line-height:1.5" placeholder="Leave blank to keep existing"></textarea>
-    </div>
-    <div class="form-row">
-      <label>Tags <span style="font-size:.65rem;color:var(--muted);font-weight:400">(comma-separated, added to existing tags)</span></label>
-      <input type="text" id="bulkTags" placeholder="e.g. Favourite, Classic"/>
-    </div>
+    <p style="font-size:.78rem;color:var(--muted);margin-bottom:1rem;line-height:1.5">Leave any field blank to keep existing values.</p>
+    <div class="form-row"><label>Category</label><input type="text" id="bulkCat" placeholder="Leave blank to keep existing" list="bulkCatSuggestions"/><datalist id="bulkCatSuggestions"></datalist></div>
+    <div class="form-row"><label>Language</label><input type="text" id="bulkLang" placeholder="e.g. en — leave blank to keep existing"/></div>
+    <div class="form-row"><label>Description</label><textarea id="bulkDesc" rows="3" style="width:100%;padding:.6rem .85rem;font-family:'Lato',sans-serif;font-size:.88rem;color:var(--navy);background:var(--cream);border:1px solid var(--border);border-radius:3px;outline:none;resize:vertical;line-height:1.5" placeholder="Leave blank to keep existing"></textarea></div>
+    <div class="form-row"><label>Tags <span style="font-size:.65rem;color:var(--muted);font-weight:400">(comma-separated, added to existing)</span></label><input type="text" id="bulkTags" placeholder="e.g. Favourite, Classic"/></div>
     <div style="display:flex;gap:1.5rem;margin:.8rem 0">
-      <label style="display:flex;align-items:center;gap:.5rem;font-size:.85rem;cursor:pointer">
-        <input type="checkbox" id="bulkSetRecommended" style="width:15px;height:15px"/>
-        Mark as Recommended
-      </label>
-      <label style="display:flex;align-items:center;gap:.5rem;font-size:.85rem;cursor:pointer">
-        <input type="checkbox" id="bulkUnsetRecommended" style="width:15px;height:15px"/>
-        Remove Recommended
-      </label>
+      <label style="display:flex;align-items:center;gap:.5rem;font-size:.85rem;cursor:pointer"><input type="checkbox" id="bulkSetRecommended" style="width:15px;height:15px"/> Mark Recommended</label>
+      <label style="display:flex;align-items:center;gap:.5rem;font-size:.85rem;cursor:pointer"><input type="checkbox" id="bulkUnsetRecommended" style="width:15px;height:15px"/> Remove Recommended</label>
     </div>
     <div class="modal-actions">
       <button class="btn-cancel" id="btnCancelBulkEdit">Cancel</button>
@@ -923,14 +854,10 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
   </div>
 </div>
 
-<!-- Chapter Manager Modal -->
 <div class="modal-overlay" id="chapterMgrModal">
   <div class="modal" style="max-width:560px">
     <h3>📑 Chapter Manager</h3>
-    <p class="chapter-mgr-save-note">
-      Drag to reorder · Click a name to rename · ✕ to mark for deletion.<br>
-      Deletions remove the chapter from the spine and file listing. Changes are saved back to your EPUB file.
-    </p>
+    <p class="chapter-mgr-save-note">Drag to reorder · Click to rename · ✕ to mark for deletion.</p>
     <div class="chapter-mgr-list" id="chapterMgrList"></div>
     <p class="chapter-mgr-info" id="chapterMgrInfo"></p>
     <div class="modal-actions" style="margin-top:1rem">
@@ -978,7 +905,6 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
   </div>
 </div>
 
-<!-- Loading overlay -->
 <div class="loading-overlay" id="loadingOverlay">
   <div class="loading-spinner"></div>
   <div class="loading-msg" id="loadingMsg">Loading…</div>
@@ -988,256 +914,175 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 <input type="file" id="epubFileInput" accept=".epub" multiple style="display:none"/>
 
 <script type="module">
-import { initializeApp }              from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
 import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut }
   from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
 import { getFirestore, collection, addDoc, getDocs, getDoc, doc,
-         query, where, orderBy, updateDoc, deleteDoc, serverTimestamp, setDoc, Timestamp  }
+         query, where, orderBy, updateDoc, deleteDoc, serverTimestamp, setDoc, Timestamp }
   from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 import { getStorage, ref as storageRef, uploadBytes, getDownloadURL, getBytes }
   from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js';
 
 // ── PWA ──────────────────────────────────────────────────────────────────────
 (function(){
-  const manifest = {
-    name:'eLibrary',short_name:'eLibrary',description:'Your personal EPUB library',
-    start_url:'./',display:'standalone',background_color:'#0f1a2e',theme_color:'#0f1a2e',
-    icons:[
-      {src:"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'%3E%3Crect width='192' height='192' rx='32' fill='%230f1a2e'/%3E%3Ctext y='130' x='30' font-size='120' fill='%23c8952a'%3E📚%3C/text%3E%3C/svg%3E",sizes:'192x192',type:'image/svg+xml'},
-      {src:"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='80' fill='%230f1a2e'/%3E%3Ctext y='360' x='60' font-size='320' fill='%23c8952a'%3E📚%3C/text%3E%3C/svg%3E",sizes:'512x512',type:'image/svg+xml'}
-    ]
-  };
-  const blob = new Blob([JSON.stringify(manifest)],{type:'application/json'});
-  document.getElementById('manifestLink').href = URL.createObjectURL(blob);
-  if('serviceWorker' in navigator){
-    const sw=`const C='elib-v1';self.addEventListener('install',e=>{self.skipWaiting();});self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(k=>Promise.all(k.filter(x=>x!==C).map(x=>caches.delete(x)))));self.clients.claim();});self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWith(caches.match(e.request).then(c=>c||fetch(e.request)));});`;
-    navigator.serviceWorker.register(URL.createObjectURL(new Blob([sw],{type:'application/javascript'}))).catch(()=>{});
-  }
+  const manifest={name:'eLibrary',short_name:'eLibrary',description:'Your personal EPUB library',start_url:'./',display:'standalone',background_color:'#0f1a2e',theme_color:'#0f1a2e',icons:[{src:"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'%3E%3Crect width='192' height='192' rx='32' fill='%230f1a2e'/%3E%3Ctext y='130' x='30' font-size='120' fill='%23c8952a'%3E📚%3C/text%3E%3C/svg%3E",sizes:'192x192',type:'image/svg+xml'},{src:"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='80' fill='%230f1a2e'/%3E%3Ctext y='360' x='60' font-size='320' fill='%23c8952a'%3E📚%3C/text%3E%3C/svg%3E",sizes:'512x512',type:'image/svg+xml'}]};
+  const blob=new Blob([JSON.stringify(manifest)],{type:'application/json'});
+  document.getElementById('manifestLink').href=URL.createObjectURL(blob);
+  if('serviceWorker' in navigator){const sw=`const C='elib-v1';self.addEventListener('install',e=>{self.skipWaiting();});self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(k=>Promise.all(k.filter(x=>x!==C).map(x=>caches.delete(x)))));self.clients.claim();});self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWith(caches.match(e.request).then(c=>c||fetch(e.request)));});`;navigator.serviceWorker.register(URL.createObjectURL(new Blob([sw],{type:'application/javascript'}))).catch(()=>{});}
 })();
 
-let deferredInstall = null;
-window.addEventListener('beforeinstallprompt', e => {
-  e.preventDefault(); deferredInstall = e;
-  document.getElementById('deskInstallBtn').style.display = 'block';
-  document.getElementById('deskInstallNote').style.display = 'none';
-  document.getElementById('mobInstallBtn').style.display = 'flex';
-  document.getElementById('mobInstallNote').style.display = 'none';
-});
+let deferredInstall=null;
+window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredInstall=e;document.getElementById('deskInstallBtn').style.display='block';document.getElementById('deskInstallNote').style.display='none';document.getElementById('mobInstallBtn').style.display='flex';document.getElementById('mobInstallNote').style.display='none';});
 
 // ── FIREBASE ─────────────────────────────────────────────────────────────────
-const app = initializeApp({
-  apiKey:'AIzaSyA1hCS7-C_W0VS7_JVcPIPdJ4aluDuL_-Q',
-  authDomain:'elibrary-c0074.firebaseapp.com',
-  projectId:'elibrary-c0074',
-  storageBucket:'elibrary-c0074.firebasestorage.app',
-  messagingSenderId:'310807052995',
-  appId:'1:310807052995:web:a06dbe84f3924731749876'
-});
-const auth      = getAuth(app);
-const db        = getFirestore(app);
-const storage   = getStorage(app);
-const gprovider = new GoogleAuthProvider();
+const app=initializeApp({apiKey:'AIzaSyA1hCS7-C_W0VS7_JVcPIPdJ4aluDuL_-Q',authDomain:'elibrary-c0074.firebaseapp.com',projectId:'elibrary-c0074',storageBucket:'elibrary-c0074.firebasestorage.app',messagingSenderId:'310807052995',appId:'1:310807052995:web:a06dbe84f3924731749876'});
+const auth=getAuth(app),db=getFirestore(app),storage=getStorage(app),gprovider=new GoogleAuthProvider();
 
 // ── STATE ─────────────────────────────────────────────────────────────────────
-let currentUser   = null;
-let library       = [];
-let communityLib  = [];
-let allUsers      = [];
-let userRatings   = {};
-let currentId     = null;
-let shelfMode     = 'mine';
-let activeCat     = 'All';
-let searchQ       = '';
-let mobPrevPanel  = 'mobPanelLib';
-let allTags       = [];
-let selectMode    = false;
-let selectedIds   = new Set();
-let deskView      = 'library'; // 'home' | 'library'
+let currentUser=null,library=[],communityLib=[],allUsers=[],userRatings={},currentId=null;
+let shelfMode='mine',activeCat='All',searchQ='',mobPrevPanel='mobPanelLib';
+let selectMode=false,selectedIds=new Set(),deskView='library';
+let myCheckedOutIds=new Set(); // track books user has checked out
 
-// Reader
-let readerZip      = null;
-let readerSpine    = [];
-let readerChapter  = 0;
-let readerOpfBase  = '';
-let readerFontSize = parseInt(localStorage.getItem('elib_reader_font') || '17');
-let readerTheme    = localStorage.getItem('elib_reader_theme') || 'day';
+// Reader state
+let readerZip=null,readerSpine=[],readerChapter=0,readerOpfBase='';
+let readerFontSize=parseInt(localStorage.getItem('elib_reader_font')||'17');
+let readerTheme=localStorage.getItem('elib_reader_theme')||'day';
 
 // ── AUTH ──────────────────────────────────────────────────────────────────────
-onAuthStateChanged(auth, async user => {
-  currentUser = user;
-  if (user) {
+onAuthStateChanged(auth,async user=>{
+  currentUser=user;
+  if(user){
     document.getElementById('authScreen').classList.add('hidden');
     updateUserUI(user);
-    try {
-      await setDoc(doc(db,'users',user.uid), {
-        displayName: user.displayName||'', email: user.email,
-        uid: user.uid, lastSeen: serverTimestamp()
-      }, { merge: true });
-    } catch(e) { console.warn('User doc update failed:', e); }
+    try{await setDoc(doc(db,'users',user.uid),{displayName:user.displayName||'',email:user.email,uid:user.uid,lastSeen:serverTimestamp()},{merge:true});}catch(e){console.warn(e);}
     await loadLibrary();
     await loadCommunity();
     await loadUserRatings();
+    await loadMyCheckouts();
     checkUrlHash();
   } else {
     document.getElementById('authScreen').classList.remove('hidden');
   }
 });
-document.getElementById('btnGoogleSignIn').addEventListener('click', () =>
-  signInWithPopup(auth, gprovider).catch(e => showToast('Sign-in failed: ' + e.message))
-);
-document.getElementById('btnSignOut').addEventListener('click', doSignOut);
-document.getElementById('btnMobSignOut').addEventListener('click', doSignOut);
-function doSignOut(){ if(!confirm('Sign out?')) return; signOut(auth); }
+document.getElementById('btnGoogleSignIn').addEventListener('click',()=>signInWithPopup(auth,gprovider).catch(e=>showToast('Sign-in failed: '+e.message)));
+document.getElementById('btnSignOut').addEventListener('click',doSignOut);
+document.getElementById('btnMobSignOut').addEventListener('click',doSignOut);
+function doSignOut(){if(!confirm('Sign out?'))return;signOut(auth);}
 
 function updateUserUI(user){
-  const initials = (user.displayName||user.email||'?').split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
-  document.getElementById('userAvatarInitials').textContent = initials;
-  document.getElementById('userNameDisplay').textContent    = (user.displayName||'').split(' ')[0];
-  document.getElementById('userDropdownEmail').textContent  = user.email;
-  if(user.photoURL){
-    const img = document.getElementById('userAvatarImg');
-    img.src = user.photoURL; img.style.display='block';
-    document.getElementById('userAvatarInitials').style.display='none';
-  }
-  document.getElementById('mobUserName').textContent   = user.displayName||user.email;
-  document.getElementById('mobUserEmail').textContent  = user.email;
-  document.getElementById('mobUserAvatar').textContent = initials;
+  const initials=(user.displayName||user.email||'?').split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
+  document.getElementById('userAvatarInitials').textContent=initials;
+  document.getElementById('userNameDisplay').textContent=(user.displayName||'').split(' ')[0];
+  document.getElementById('userDropdownEmail').textContent=user.email;
+  if(user.photoURL){const img=document.getElementById('userAvatarImg');img.src=user.photoURL;img.style.display='block';document.getElementById('userAvatarInitials').style.display='none';}
+  document.getElementById('mobUserName').textContent=user.displayName||user.email;
+  document.getElementById('mobUserEmail').textContent=user.email;
+  document.getElementById('mobUserAvatar').textContent=initials;
 }
-document.getElementById('headerUser').addEventListener('click', e => {
-  e.stopPropagation();
-  document.getElementById('userDropdown').classList.toggle('open');
+document.getElementById('headerUser').addEventListener('click',e=>{e.stopPropagation();document.getElementById('userDropdown').classList.toggle('open');});
+document.addEventListener('click',()=>{
+  document.getElementById('userDropdown').classList.remove('open');
+  // close any open action dropdowns
+  document.querySelectorAll('.action-dropdown-menu.open').forEach(m=>m.classList.remove('open'));
 });
-document.addEventListener('click', () => document.getElementById('userDropdown').classList.remove('open'));
 
 // ── FIRESTORE ─────────────────────────────────────────────────────────────────
 async function loadLibrary(){
-  if(!currentUser) return;
+  if(!currentUser)return;
   showLoading('Loading library…');
-  try {
-    const q = query(collection(db,'books'), where('ownerId','==',currentUser.uid), orderBy('createdAt','desc'));
-    const snap = await getDocs(q);
-    library = snap.docs.map(d=>({id:d.id,...d.data()}));
-    hideLoading(); renderAll();
-  } catch(e){ 
-    hideLoading(); 
-    console.error('LIBRARY LOAD ERROR:', e.code, e.message);
-    showToast('Error loading library'); 
-  }
+  try{
+    const q=query(collection(db,'books'),where('ownerId','==',currentUser.uid),orderBy('createdAt','desc'));
+    const snap=await getDocs(q);
+    library=snap.docs.map(d=>({id:d.id,...d.data()}));
+    hideLoading();renderAll();
+  }catch(e){hideLoading();console.error('LIBRARY LOAD ERROR:',e.code,e.message);showToast('Error loading library');}
 }
 async function loadCommunity(){
-  try {
-    const q    = query(collection(db,'community'), orderBy('sharedAt','desc'));
-    const snap = await getDocs(q);
-    communityLib = snap.docs.map(d=>({id:d.id,...d.data()}));
-    if(shelfMode==='community') renderAll();
-    else { renderMobHome(); renderDeskHome(); }
-  } catch(e){ console.error('Community load error:',e); }
+  try{
+    const q=query(collection(db,'community'),orderBy('sharedAt','desc'));
+    const snap=await getDocs(q);
+    communityLib=snap.docs.map(d=>({id:d.id,...d.data()}));
+    renderAll();
+  }catch(e){console.error('Community load error:',e);}
 }
 async function loadUserRatings(){
-  if(!currentUser) return;
-  try {
-    const q    = query(collection(db,'ratings'), where('userId','==',currentUser.uid));
-    const snap = await getDocs(q);
-    userRatings = {};
-    snap.docs.forEach(d=>{ userRatings[d.data().bookId]=d.data().rating; });
-  } catch(e){ userRatings={}; if(e.code!=='permission-denied') console.error(e); }
-}
-
-async function loadAllUsers(){
-  if(allUsers.length) return allUsers;
+  if(!currentUser)return;
   try{
-    const snap=await getDocs(collection(db,'users'));
-    allUsers=snap.docs.map(d=>({...d.data()})).filter(u=>u.uid&&u.uid!==currentUser?.uid);
-    return allUsers;
-  }catch(e){ console.error('Load users error:',e); showToast('Could not load users — check Firestore rules'); return []; }
+    const q=query(collection(db,'ratings'),where('userId','==',currentUser.uid));
+    const snap=await getDocs(q);
+    userRatings={};
+    snap.docs.forEach(d=>{userRatings[d.data().bookId]=d.data().rating;});
+  }catch(e){userRatings={};if(e.code!=='permission-denied')console.error(e);}
+}
+async function loadMyCheckouts(){
+  if(!currentUser)return;
+  try{
+    const q=query(collection(db,'checkouts'),where('userId','==',currentUser.uid),orderBy('checkedOutAt','desc'));
+    const snap=await getDocs(q);
+    myCheckedOutIds=new Set();
+    snap.docs.forEach(d=>{
+      const data=d.data();
+      if(!data.returnedAt) myCheckedOutIds.add(data.bookId);
+    });
+  }catch(e){console.warn('Checkouts load:',e);}
+}
+async function loadAllUsers(){
+  if(allUsers.length)return allUsers;
+  try{const snap=await getDocs(collection(db,'users'));allUsers=snap.docs.map(d=>({...d.data()})).filter(u=>u.uid&&u.uid!==currentUser?.uid);return allUsers;}
+  catch(e){console.error('Load users:',e);showToast('Could not load users');return[];}
 }
 
 // ── RATINGS ───────────────────────────────────────────────────────────────────
-async function submitRating(bookId, rating){
-  if(!currentUser){ showToast('Sign in to rate'); return; }
-  try {
-    const bookRef  = doc(db,'community',bookId);
-    const bookSnap = await getDoc(bookRef);
-    if(!bookSnap.exists()) return;
-    const data = bookSnap.data();
-    const prev = userRatings[bookId]||0;
-    let newCount = data.ratingCount||0, newSum = data.ratingSum||0;
-    if(prev>0){ newSum=newSum-prev+rating; } else { newCount+=1; newSum+=rating; }
+async function submitRating(bookId,rating){
+  if(!currentUser){showToast('Sign in to rate');return;}
+  try{
+    const bookRef=doc(db,'community',bookId);
+    const bookSnap=await getDoc(bookRef);
+    if(!bookSnap.exists())return;
+    const data=bookSnap.data();
+    const prev=userRatings[bookId]||0;
+    let newCount=data.ratingCount||0,newSum=data.ratingSum||0;
+    if(prev>0){newSum=newSum-prev+rating;}else{newCount+=1;newSum+=rating;}
     userRatings[bookId]=rating;
     await updateDoc(bookRef,{ratingSum:newSum,ratingCount:newCount});
     const book=communityLib.find(b=>b.id===bookId);
-    if(book){ book.ratingSum=newSum; book.ratingCount=newCount; }
+    if(book){book.ratingSum=newSum;book.ratingCount=newCount;}
     renderStars('deskStars','deskRatingCount',bookId,true);
     renderStars('mobStars','mobRatingCount',bookId,true);
     showToast('Rating saved ✓');
-  } catch(e){ showToast('Rating failed'); console.error(e); }
+  }catch(e){showToast('Rating failed');console.error(e);}
 }
-function getAvgRating(book){ return book.ratingCount ? (book.ratingSum||0)/book.ratingCount : 0; }
-function renderStars(cid, countId, bookId, editable){
-  const container=document.getElementById(cid);
-  const countEl  =document.getElementById(countId);
-  if(!container) return;
+function getAvgRating(book){return book.ratingCount?(book.ratingSum||0)/book.ratingCount:0;}
+function renderStars(cid,countId,bookId,editable){
+  const container=document.getElementById(cid),countEl=document.getElementById(countId);
+  if(!container)return;
   const book=communityLib.find(b=>b.id===bookId);
-  if(!book){ container.closest('.star-rating').style.display='none'; return; }
+  if(!book){container.closest('.star-rating').style.display='none';return;}
   container.closest('.star-rating').style.display='flex';
-  const avg=getAvgRating(book), myR=userRatings[bookId]||0;
+  const avg=getAvgRating(book),myR=userRatings[bookId]||0;
   const display=(editable&&myR>0)?myR:avg;
-  container.innerHTML=[1,2,3,4,5].map(n=>
-    `<span class="star ${n<=Math.round(display)?'filled':''}" data-n="${n}" data-bookid="${bookId}" data-cid="${cid}" data-countid="${countId}" ${editable?'data-editable="1"':''}>★</span>`
-  ).join('');
-  if(countEl){
-    const cnt=book.ratingCount||0;
-    countEl.textContent=cnt?`${avg.toFixed(1)} (${cnt} rating${cnt!==1?'s':''})`:'No ratings yet';
-  }
+  container.innerHTML=[1,2,3,4,5].map(n=>`<span class="star ${n<=Math.round(display)?'filled':''}" data-n="${n}" data-bookid="${bookId}" data-cid="${cid}" data-countid="${countId}" ${editable?'data-editable="1"':''}>★</span>`).join('');
+  if(countEl){const cnt=book.ratingCount||0;countEl.textContent=cnt?`${avg.toFixed(1)} (${cnt} rating${cnt!==1?'s':''})`:'No ratings yet';}
 }
-document.addEventListener('mouseover', e=>{
-  const star=e.target.closest('.star[data-editable]'); if(!star) return;
-  const n=parseInt(star.dataset.n);
-  [...star.parentElement.children].forEach((s,i)=>s.classList.toggle('hover',i<n));
-});
-document.addEventListener('mouseout', e=>{
-  const star=e.target.closest('.star[data-editable]'); if(!star) return;
-  const book=communityLib.find(b=>b.id===star.dataset.bookid);
-  const avg=book?getAvgRating(book):0, myR=userRatings[star.dataset.bookid]||0;
-  const display=myR>0?myR:avg;
-  const container=document.getElementById(star.dataset.cid); if(!container) return;
-  [...container.children].forEach((s,i)=>{ s.classList.remove('hover'); s.classList.toggle('filled',i<Math.round(display)); });
-});
-document.addEventListener('click', e=>{
-  const star=e.target.closest('.star[data-editable]'); if(!star) return;
-  submitRating(star.dataset.bookid,parseInt(star.dataset.n));
-});
+document.addEventListener('mouseover',e=>{const star=e.target.closest('.star[data-editable]');if(!star)return;const n=parseInt(star.dataset.n);[...star.parentElement.children].forEach((s,i)=>s.classList.toggle('hover',i<n));});
+document.addEventListener('mouseout',e=>{const star=e.target.closest('.star[data-editable]');if(!star)return;const book=communityLib.find(b=>b.id===star.dataset.bookid);const avg=book?getAvgRating(book):0,myR=userRatings[star.dataset.bookid]||0;const display=myR>0?myR:avg;const container=document.getElementById(star.dataset.cid);if(!container)return;[...container.children].forEach((s,i)=>{s.classList.remove('hover');s.classList.toggle('filled',i<Math.round(display));});});
+document.addEventListener('click',e=>{const star=e.target.closest('.star[data-editable]');if(!star)return;submitRating(star.dataset.bookid,parseInt(star.dataset.n));});
 
 // ── UPLOAD ────────────────────────────────────────────────────────────────────
-function showUploadModal(){
-  if(!currentUser){ showToast('Please sign in first'); return; }
-  document.getElementById('uploadList').innerHTML='';
-  document.getElementById('uploadModal').classList.add('open');
-}
-function closeUploadModal(){ document.getElementById('uploadModal').classList.remove('open'); }
-document.getElementById('dropZone').addEventListener('click',    ()=>document.getElementById('epubFileInput').click());
-document.getElementById('dropZone').addEventListener('dragover', e=>{ e.preventDefault(); e.currentTarget.classList.add('drag-over'); });
+function showUploadModal(){if(!currentUser){showToast('Please sign in first');return;}document.getElementById('uploadList').innerHTML='';document.getElementById('uploadModal').classList.add('open');}
+function closeUploadModal(){document.getElementById('uploadModal').classList.remove('open');}
+document.getElementById('dropZone').addEventListener('click',()=>document.getElementById('epubFileInput').click());
+document.getElementById('dropZone').addEventListener('dragover',e=>{e.preventDefault();e.currentTarget.classList.add('drag-over');});
 document.getElementById('dropZone').addEventListener('dragleave',e=>e.currentTarget.classList.remove('drag-over'));
-document.getElementById('dropZone').addEventListener('drop',     e=>{
-  e.preventDefault(); e.currentTarget.classList.remove('drag-over');
-  const files=[...e.dataTransfer.files].filter(f=>f.name.toLowerCase().endsWith('.epub'));
-  if(!files.length){ showToast('Please drop EPUB files only'); return; }
-  processUploadFiles(files);
-});
-document.getElementById('epubFileInput').addEventListener('change',e=>{ const files=[...e.target.files]; e.target.value=''; processUploadFiles(files); });
+document.getElementById('dropZone').addEventListener('drop',e=>{e.preventDefault();e.currentTarget.classList.remove('drag-over');const files=[...e.dataTransfer.files].filter(f=>f.name.toLowerCase().endsWith('.epub'));if(!files.length){showToast('Please drop EPUB files only');return;}processUploadFiles(files);});
+document.getElementById('epubFileInput').addEventListener('change',e=>{const files=[...e.target.files];e.target.value='';processUploadFiles(files);});
 document.getElementById('btnCloseUpload').addEventListener('click',closeUploadModal);
-
-async function processUploadFiles(files){ for(const f of files) await uploadOneEpub(f); await loadLibrary(); }
+async function processUploadFiles(files){for(const f of files)await uploadOneEpub(f);await loadLibrary();}
 async function uploadOneEpub(file){
   const rowId='up_'+Date.now()+Math.random().toString(36).slice(2);
-  document.getElementById('uploadList').insertAdjacentHTML('beforeend',`
-    <div class="upload-progress" id="${rowId}">
-      <span class="up-icon">📗</span>
-      <div style="flex:1"><div class="up-name">${esc(file.name)}</div>
-      <div class="progress-bar-wrap"><div class="progress-bar" id="${rowId}_bar" style="width:10%"></div></div></div>
-      <span class="up-status" id="${rowId}_st">Reading…</span>
-    </div>`);
-  try {
+  document.getElementById('uploadList').insertAdjacentHTML('beforeend',`<div class="upload-progress" id="${rowId}"><span class="up-icon">📗</span><div style="flex:1"><div class="up-name">${esc(file.name)}</div><div class="progress-bar-wrap"><div class="progress-bar" id="${rowId}_bar" style="width:10%"></div></div></div><span class="up-status" id="${rowId}_st">Reading…</span></div>`);
+  try{
     setUpP(rowId,20,'Parsing…');
     const meta=await parseEpubMeta(file);
     setUpP(rowId,40,'Uploading…');
@@ -1245,63 +1090,47 @@ async function uploadOneEpub(file){
     const snap=await uploadBytes(sRef,file);
     setUpP(rowId,70,'Saving…');
     const epubUrl=await getDownloadURL(snap.ref);
-    await addDoc(collection(db,'books'),{
-      ownerId:currentUser.uid, ownerName:currentUser.displayName||currentUser.email,
-      filename:file.name, title:meta.title, author:meta.author, description:meta.description,
-      category:meta.category||localStorage.getItem('elib_default_cat')||'Uncategorised',
-      language:meta.language, publisher:meta.publisher, coverDataUrl:meta.coverDataUrl||null,
-      epubUrl, storagePath:snap.ref.fullPath, visibility:'private',
-      createdAt:serverTimestamp(), updatedAt:serverTimestamp(), fileSizeBytes:file.size
-    });
-    setUpP(rowId,100,'✓ Done');
-    document.getElementById(rowId)?.classList.add('done');
-  } catch(e){
-    console.error(e); setUpP(rowId,100,'✗ Failed');
-    document.getElementById(rowId)?.classList.add('error');
-    showToast('Upload failed: '+e.message);
-  }
+    await addDoc(collection(db,'books'),{ownerId:currentUser.uid,ownerName:currentUser.displayName||currentUser.email,filename:file.name,title:meta.title,author:meta.author,description:meta.description,category:meta.category||localStorage.getItem('elib_default_cat')||'Uncategorised',language:meta.language,publisher:meta.publisher,coverDataUrl:meta.coverDataUrl||null,epubUrl,storagePath:snap.ref.fullPath,visibility:'private',createdAt:serverTimestamp(),updatedAt:serverTimestamp(),fileSizeBytes:file.size});
+    setUpP(rowId,100,'✓ Done');document.getElementById(rowId)?.classList.add('done');
+  }catch(e){console.error(e);setUpP(rowId,100,'✗ Failed');document.getElementById(rowId)?.classList.add('error');showToast('Upload failed: '+e.message);}
 }
-function setUpP(rowId,pct,status){
-  const bar=document.getElementById(rowId+'_bar'), st=document.getElementById(rowId+'_st');
-  if(bar) bar.style.width=pct+'%'; if(st) st.textContent=status;
-}
+function setUpP(rowId,pct,status){const bar=document.getElementById(rowId+'_bar'),st=document.getElementById(rowId+'_st');if(bar)bar.style.width=pct+'%';if(st)st.textContent=status;}
 
 // ── DOWNLOAD ──────────────────────────────────────────────────────────────────
 async function downloadCurrentBook(){
-  if(!currentId) return;
+  if(!currentId)return;
   const book=[...library,...communityLib].find(b=>b.id===currentId);
-  if(!book?.storagePath){ showToast('No file available'); return; }
+  if(!book?.storagePath){showToast('No file available');return;}
   showLoading('Preparing download…');
-  try {
+  try{
     const bytes=await getBytes(storageRef(storage,book.storagePath));
     const blob=new Blob([bytes],{type:'application/epub+zip'});
     const url=URL.createObjectURL(blob);
-    const a=document.createElement('a'); a.href=url; a.download=book.filename||book.title+'.epub';
-    document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
-    hideLoading(); showToast('Downloaded: '+(book.filename||book.title));
-  } catch(e){ hideLoading(); showToast('Download failed: '+e.message); }
+    const a=document.createElement('a');a.href=url;a.download=book.filename||book.title+'.epub';
+    document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);
+    hideLoading();showToast('Downloaded: '+(book.filename||book.title));
+  }catch(e){hideLoading();showToast('Download failed: '+e.message);}
 }
 
 // ── DELETE ────────────────────────────────────────────────────────────────────
 async function deleteCurrentBook(){
-  if(!currentId) return;
+  if(!currentId)return;
   const book=library.find(b=>b.id===currentId);
-  if(!book||!confirm(`Delete "${book.title}" permanently?`)) return;
+  if(!book||!confirm(`Delete "${book.title}" permanently?`))return;
   showLoading('Deleting…');
-  try {
+  try{
     await deleteDoc(doc(db,'books',currentId));
     const q=query(collection(db,'community'),where('sourceId','==',currentId));
-    const snap=await getDocs(q);
-    for(const d of snap.docs) await deleteDoc(doc(db,'community',d.id));
-    library=library.filter(b=>b.id!==currentId); currentId=null;
-    closeDrawer(); hideLoading(); renderAll(); showToast('Book deleted');
-  } catch(e){ hideLoading(); showToast('Delete failed: '+e.message); }
+    const snap=await getDocs(q);for(const d of snap.docs)await deleteDoc(doc(db,'community',d.id));
+    library=library.filter(b=>b.id!==currentId);currentId=null;
+    closeDrawer();hideLoading();renderAll();showToast('Book deleted');
+  }catch(e){hideLoading();showToast('Delete failed: '+e.message);}
 }
 
 // ── SHARE ─────────────────────────────────────────────────────────────────────
 function shareCurrentBook(){
-  if(!currentId) return;
-  const book=library.find(b=>b.id===currentId); if(!book) return;
+  if(!currentId)return;
+  const book=library.find(b=>b.id===currentId);if(!book)return;
   document.getElementById('shareBookTitle').textContent=`"${book.title}"`;
   document.getElementById('shareModal').classList.add('open');
 }
@@ -1309,329 +1138,242 @@ document.getElementById('btnCancelShare').addEventListener('click',()=>document.
 document.getElementById('btnConfirmShare').addEventListener('click',confirmShare);
 async function confirmShare(){
   document.getElementById('shareModal').classList.remove('open');
-  if(!currentId) return;
-  const book=library.find(b=>b.id===currentId); if(!book) return;
+  if(!currentId)return;
+  const book=library.find(b=>b.id===currentId);if(!book)return;
   showLoading('Sharing…');
-  try {
-    await addDoc(collection(db,'community'),{
-      sourceId:currentId, ownerId:currentUser.uid, ownerName:currentUser.displayName||currentUser.email,
-      filename:book.filename, title:book.title, author:book.author, description:book.description,
-      category:book.category, language:book.language, coverDataUrl:book.coverDataUrl||null,
-      storagePath:book.storagePath, sharedAt:serverTimestamp(), ratingSum:0, ratingCount:0,
-      recommended: book.recommended||false
-    });
+  try{
+    await addDoc(collection(db,'community'),{sourceId:currentId,ownerId:currentUser.uid,ownerName:currentUser.displayName||currentUser.email,filename:book.filename,title:book.title,author:book.author,description:book.description,category:book.category,language:book.language,coverDataUrl:book.coverDataUrl||null,storagePath:book.storagePath,sharedAt:serverTimestamp(),ratingSum:0,ratingCount:0,recommended:book.recommended||false});
     await updateDoc(doc(db,'books',currentId),{visibility:'community',updatedAt:serverTimestamp()});
-    book.visibility='community';
-    hideLoading(); renderAll(); showBookById(currentId);
+    book.visibility='community';hideLoading();renderAll();showBookById(currentId);
     showToast(`"${book.title}" published to Public Library ✓`);
-  } catch(e){ hideLoading(); showToast('Share failed: '+e.message); console.error(e); }
-}
-
-// ── EDIT CATEGORY ─────────────────────────────────────────────────────────────
-function showEditCategory(){
-  if(!currentId) return;
-  const book=[...library,...communityLib].find(b=>b.id===currentId); if(!book) return;
-  document.getElementById('editCatInput').value=book.category||'';
-  const cats=[...new Set(library.map(b=>b.category).filter(Boolean))].sort();
-  document.getElementById('catSuggestions').innerHTML=cats.map(c=>`<option value="${esc(c)}">`).join('');
-  document.getElementById('editCatModal').classList.add('open');
-  setTimeout(()=>document.getElementById('editCatInput').focus(),80);
-}
-document.getElementById('btnCancelEditCat').addEventListener('click',()=>document.getElementById('editCatModal').classList.remove('open'));
-document.getElementById('btnSaveCategory').addEventListener('click',saveCategory);
-document.getElementById('editCatInput').addEventListener('keydown',e=>{ if(e.key==='Enter') saveCategory(); if(e.key==='Escape') document.getElementById('editCatModal').classList.remove('open'); });
-async function saveCategory(){
-  const val=document.getElementById('editCatInput').value.trim();
-  if(!val){ document.getElementById('editCatInput').focus(); return; }
-  document.getElementById('editCatModal').classList.remove('open');
-  const book=library.find(b=>b.id===currentId); if(!book) return;
-  book.category=val;
-  await updateDoc(doc(db,'books',currentId),{category:val,updatedAt:serverTimestamp()});
-  activeCat='All'; renderAll(); showBookById(currentId);
-  showToast('Category updated ✓');
+  }catch(e){hideLoading();showToast('Share failed: '+e.message);console.error(e);}
 }
 
 // ── DATA HELPERS ─────────────────────────────────────────────────────────────
-function activeBooks(){
-  return shelfMode==='mine' ? library : communityLib;
-}
+function activeBooks(){return shelfMode==='mine'?library:communityLib;}
 function filteredBooks(){
   let books=activeBooks();
-  if(activeCat!=='All') books=books.filter(b=>(b.category||'Uncategorised')===activeCat);
-  if(searchQ) books=books.filter(b=>
-    b.title?.toLowerCase().includes(searchQ)||
-    b.author?.toLowerCase().includes(searchQ)||
-    b.category?.toLowerCase().includes(searchQ)
-  );
+  if(activeCat!=='All')books=books.filter(b=>(b.category||'Uncategorised')===activeCat);
+  if(searchQ)books=books.filter(b=>b.title?.toLowerCase().includes(searchQ)||b.author?.toLowerCase().includes(searchQ)||b.category?.toLowerCase().includes(searchQ));
   return sortBooks(books);
 }
-function sortBooks(books, sort){
-  if(!sort) sort=document.getElementById('deskSortSelect')?.value||'recent';
+function sortBooks(books,sort){
+  if(!sort)sort=document.getElementById('deskSortSelect')?.value||'recent';
   const copy=[...books];
-  if(sort==='title')  copy.sort((a,b)=>(a.title||'').localeCompare(b.title||''));
-  if(sort==='author') copy.sort((a,b)=>(a.author||'').localeCompare(b.author||''));
-  if(sort==='rating') copy.sort((a,b)=>getAvgRating(b)-getAvgRating(a));
+  if(sort==='title')copy.sort((a,b)=>(a.title||'').localeCompare(b.title||''));
+  if(sort==='author')copy.sort((a,b)=>(a.author||'').localeCompare(b.author||''));
+  if(sort==='rating')copy.sort((a,b)=>getAvgRating(b)-getAvgRating(a));
   return copy;
 }
 function getCats(){
   const map={};
-  for(const b of activeBooks()){
-    const c=b.category||'Uncategorised';
-    map[c]=(map[c]||0)+1;
-  }
+  for(const b of activeBooks()){const c=b.category||'Uncategorised';map[c]=(map[c]||0)+1;}
   return Object.entries(map).sort(([a],[b])=>a.localeCompare(b));
 }
 
 // ── RENDER ────────────────────────────────────────────────────────────────────
 function renderAll(){
-  renderFilterCats();
-  renderMobChips();
-  document.getElementById('deskBookGrid').classList.toggle('select-mode', selectMode);
-  renderGrid('deskBookGrid');
-  renderGrid('mobBookGrid');
-  renderMobPublic();
-  renderMobHome();
-  renderDeskHome();
+  renderFilterCats();renderMobChips();
+  document.getElementById('deskBookGrid').classList.toggle('select-mode',selectMode);
+  renderGrid('deskBookGrid');renderGrid('mobBookGrid');
+  renderMobPublic();renderMobHome();renderDeskHome();
   const books=filteredBooks();
   document.getElementById('deskGridCount').textContent=`${books.length} book${books.length!==1?'s':''}`;
   document.getElementById('deskGridTitle').textContent=shelfMode==='mine'?'My Library':'Public Library';
 }
-
 function renderFilterCats(){
-  const cats=getCats();
-  const total=activeBooks().length;
+  const cats=getCats(),total=activeBooks().length;
   const el=document.getElementById('deskFilterCats');
-  el.innerHTML=`<div class="filter-cat-item ${activeCat==='All'?'active':''}" data-cat="All">
-    <span>All</span><span class="filter-cat-count">${total}</span>
-  </div>`+cats.map(([cat,cnt])=>`
-    <div class="filter-cat-item ${activeCat===cat?'active':''}" data-cat="${encodeURIComponent(cat)}">
-      <span>${esc(cat)}</span><span class="filter-cat-count">${cnt}</span>
-    </div>`).join('');
+  el.innerHTML=`<div class="filter-cat-item ${activeCat==='All'?'active':''}" data-cat="All"><span>All</span><span class="filter-cat-count">${total}</span></div>`+cats.map(([cat,cnt])=>`<div class="filter-cat-item ${activeCat===cat?'active':''}" data-cat="${encodeURIComponent(cat)}"><span>${esc(cat)}</span><span class="filter-cat-count">${cnt}</span></div>`).join('');
 }
-
 function renderMobChips(){
   const cats=getCats();
-  const el=document.getElementById('mobFilterChips');
-  el.innerHTML=[['All',activeBooks().length],...cats].map(([cat,cnt])=>
-    `<div class="mob-chip ${activeCat===cat?'active':''}" data-cat="${encodeURIComponent(cat)}">${esc(cat)} <span style="opacity:.7">${cnt}</span></div>`
-  ).join('');
+  document.getElementById('mobFilterChips').innerHTML=[['All',activeBooks().length],...cats].map(([cat,cnt])=>`<div class="mob-chip ${activeCat===cat?'active':''}" data-cat="${encodeURIComponent(cat)}">${esc(cat)} <span style="opacity:.7">${cnt}</span></div>`).join('');
 }
-
 function renderGrid(gridId){
-  const grid=document.getElementById(gridId); if(!grid) return;
+  const grid=document.getElementById(gridId);if(!grid)return;
   const books=filteredBooks();
   if(!books.length){
     const isEmpty=activeBooks().length===0;
-    grid.innerHTML=`<div style="grid-column:1/-1;padding:3rem 1rem;text-align:center;color:var(--muted)">
-      <div style="font-size:2.5rem;opacity:.25;margin-bottom:.8rem">📚</div>
-      <div style="font-family:'Playfair Display',serif;font-size:1.1rem;color:var(--navy2);margin-bottom:.4rem">${isEmpty?'Your library is empty':'No books match'}</div>
-      <div style="font-size:.85rem">${isEmpty?'Upload an EPUB to get started':'Try a different search or filter'}</div>
-      ${isEmpty&&shelfMode==='mine'?`<div style="margin-top:1rem"><button class="hbtn hbtn-upload" onclick="document.getElementById('uploadModal').classList.add('open')">📤 Upload EPUB</button></div>`:''}
-    </div>`;
+    grid.innerHTML=`<div style="grid-column:1/-1;padding:3rem 1rem;text-align:center;color:var(--muted)"><div style="font-size:2.5rem;opacity:.25;margin-bottom:.8rem">📚</div><div style="font-family:'Playfair Display',serif;font-size:1.1rem;color:var(--navy2);margin-bottom:.4rem">${isEmpty?'Your library is empty':'No books match'}</div><div style="font-size:.85rem">${isEmpty?'Upload an EPUB to get started':'Try a different search or filter'}</div>${isEmpty&&shelfMode==='mine'?`<div style="margin-top:1rem"><button class="hbtn hbtn-upload" onclick="document.getElementById('uploadModal').classList.add('open')">📤 Upload EPUB</button></div>`:''}</div>`;
     return;
   }
   grid.innerHTML=books.map(b=>{
     const isComm=communityLib.some(x=>x.id===b.id);
     const avg=isComm?getAvgRating(b):0;
     const starsHtml=isComm?[1,2,3,4,5].map(n=>`<span class="bcs ${n<=Math.round(avg)?'filled':''}">★</span>`).join(''):'';
-    const coverHtml=b.coverDataUrl
-      ?`<img class="book-card-cover" src="${b.coverDataUrl}" alt="" loading="lazy"/>`
-      :`<div class="book-card-cover-ph"><div class="ph-icon">📖</div><div class="ph-title">${esc(b.title)}</div><div class="ph-author">${esc(b.author)}</div></div>`;
-    const isSelected = selectedIds.has(b.id);
-    return `<div class="book-card ${isSelected?'selected':''}" data-bookid="${b.id}">
-      ${coverHtml}
-      <div class="select-check">✓</div>
-      ${isComm&&b.ownerId!==currentUser?.uid?'<span class="community-badge">Shared</span>':''}
-      <div class="book-card-body">
-        <div class="book-card-title">${esc(b.title)}</div>
-        <div class="book-card-author">${esc(b.author)}</div>
-        ${isComm?`<div class="book-card-shared-by">by ${esc(b.ownerName||'')}</div>`:''}
-        ${isComm?`<div class="book-card-stars">${starsHtml}</div>`:''}
-      </div>
-    </div>`;
+    const coverHtml=b.coverDataUrl?`<img class="book-card-cover" src="${b.coverDataUrl}" alt="" loading="lazy"/>`:`<div class="book-card-cover-ph"><div class="ph-icon">📖</div><div class="ph-title">${esc(b.title)}</div><div class="ph-author">${esc(b.author)}</div></div>`;
+    const isSelected=selectedIds.has(b.id);
+    return `<div class="book-card ${isSelected?'selected':''}" data-bookid="${b.id}">${coverHtml}<div class="select-check">✓</div>${isComm&&b.ownerId!==currentUser?.uid?'<span class="community-badge">Shared</span>':''}<div class="book-card-body"><div class="book-card-title">${esc(b.title)}</div><div class="book-card-author">${esc(b.author)}</div>${isComm&&b.ownerId!==currentUser?.uid?`<div class="book-card-shared-by">by ${esc(b.ownerName||'')}</div>`:''}${isComm?`<div class="book-card-stars">${starsHtml}</div>`:''}</div></div>`;
   }).join('');
 }
 
-// filter cat click (desktop sidebar)
-document.getElementById('deskFilterCats').addEventListener('click',e=>{
-  const item=e.target.closest('.filter-cat-item[data-cat]'); if(!item) return;
-  activeCat=decodeURIComponent(item.dataset.cat); renderAll();
-});
-// filter chip click (mobile)
-document.getElementById('mobFilterChips').addEventListener('click',e=>{
-  const chip=e.target.closest('.mob-chip[data-cat]'); if(!chip) return;
-  activeCat=decodeURIComponent(chip.dataset.cat); renderAll();
-});
-// grid click (desktop)
+document.getElementById('deskFilterCats').addEventListener('click',e=>{const item=e.target.closest('.filter-cat-item[data-cat]');if(!item)return;activeCat=decodeURIComponent(item.dataset.cat);renderAll();});
+document.getElementById('mobFilterChips').addEventListener('click',e=>{const chip=e.target.closest('.mob-chip[data-cat]');if(!chip)return;activeCat=decodeURIComponent(chip.dataset.cat);renderAll();});
 document.getElementById('deskBookGrid').addEventListener('click',e=>{
-  const card=e.target.closest('.book-card[data-bookid]'); if(!card) return;
-  if(selectMode){
-    const id=card.dataset.bookid;
-    if(selectedIds.has(id)){ selectedIds.delete(id); card.classList.remove('selected'); }
-    else { selectedIds.add(id); card.classList.add('selected'); }
-    updateBulkBar(); return;
-  }
+  const card=e.target.closest('.book-card[data-bookid]');if(!card)return;
+  if(selectMode){const id=card.dataset.bookid;if(selectedIds.has(id)){selectedIds.delete(id);card.classList.remove('selected');}else{selectedIds.add(id);card.classList.add('selected');}updateBulkBar();return;}
   showBookById(card.dataset.bookid);
 });
-// grid click (mobile)
-document.getElementById('mobBookGrid').addEventListener('click',e=>{
-  const card=e.target.closest('.book-card[data-bookid]'); if(!card) return;
-  mobPrevPanel='mobPanelLib'; mob_showBook(card.dataset.bookid);
-});
-
-// search
-document.getElementById('deskSearch').addEventListener('input',e=>{ searchQ=e.target.value.toLowerCase().trim(); renderAll(); });
-document.getElementById('mobSearch').addEventListener('input',e=>{ searchQ=e.target.value.toLowerCase().trim(); renderAll(); });
-// sort
+document.getElementById('mobBookGrid').addEventListener('click',e=>{const card=e.target.closest('.book-card[data-bookid]');if(!card)return;mobPrevPanel='mobPanelLib';mob_showBook(card.dataset.bookid);});
+document.getElementById('deskSearch').addEventListener('input',e=>{searchQ=e.target.value.toLowerCase().trim();renderAll();});
+document.getElementById('mobSearch').addEventListener('input',e=>{searchQ=e.target.value.toLowerCase().trim();renderAll();});
 document.getElementById('deskSortSelect').addEventListener('change',()=>renderAll());
-document.getElementById('mobSortSelect').addEventListener('change',()=>{ document.getElementById('deskSortSelect').value=document.getElementById('mobSortSelect').value; renderAll(); });
-
-// shelf tabs (desktop)
+document.getElementById('mobSortSelect').addEventListener('change',()=>{document.getElementById('deskSortSelect').value=document.getElementById('mobSortSelect').value;renderAll();});
 document.getElementById('tabMineDesk').addEventListener('click',()=>switchShelf('mine'));
 document.getElementById('tabCommDesk').addEventListener('click',()=>switchShelf('community'));
-function switchShelf(mode){
-  shelfMode=mode; activeCat='All'; searchQ='';
-  document.getElementById('deskSearch').value='';
-  document.getElementById('mobSearch').value='';
-  document.getElementById('tabMineDesk').classList.toggle('active',mode==='mine');
-  document.getElementById('tabCommDesk').classList.toggle('active',mode==='community');
-  renderAll();
-}
+function switchShelf(mode){shelfMode=mode;activeCat='All';searchQ='';document.getElementById('deskSearch').value='';document.getElementById('mobSearch').value='';document.getElementById('tabMineDesk').classList.toggle('active',mode==='mine');document.getElementById('tabCommDesk').classList.toggle('active',mode==='community');renderAll();}
 
 // ── DESKTOP HOME ──────────────────────────────────────────────────────────────
-function showDeskHome(){
-  deskView='home';
-  document.getElementById('deskHomePanel').classList.add('active');
-  document.getElementById('deskMain').style.display='none';
-  document.getElementById('btnDeskHome').classList.add('active');
-  renderDeskHome();
-}
-function hideDeskHome(){
-  deskView='library';
-  document.getElementById('deskHomePanel').classList.remove('active');
-  document.getElementById('deskMain').style.display='flex';
-  document.getElementById('btnDeskHome').classList.remove('active');
-}
-document.getElementById('btnDeskHome').addEventListener('click',()=>{
-  if(deskView==='home') hideDeskHome(); else showDeskHome();
-});
+function showDeskHome(){deskView='home';document.getElementById('deskHomePanel').classList.add('active');document.getElementById('deskMain').style.display='none';document.getElementById('btnDeskHome').classList.add('active');renderDeskHome();}
+function hideDeskHome(){deskView='library';document.getElementById('deskHomePanel').classList.remove('active');document.getElementById('deskMain').style.display='flex';document.getElementById('btnDeskHome').classList.remove('active');}
+document.getElementById('btnDeskHome').addEventListener('click',()=>{if(deskView==='home')hideDeskHome();else showDeskHome();});
 
-function renderDeskHome(){
-  const el = document.getElementById('deskHomePanel'); if(!el) return;
+async function renderDeskHome(){
+  const el=document.getElementById('deskHomePanel');if(!el)return;
   const name=(currentUser?.displayName||'').split(' ')[0]||'Reader';
   document.getElementById('deskHomeGreeting').textContent=`Hello, ${name}`;
-const recommended = communityLib.filter(b => b.recommended);
+  const recommended=communityLib.filter(b=>b.recommended);
   const recSection=document.getElementById('deskHomeRecSection');
   const recGrid=document.getElementById('deskHomeRecGrid');
   if(recommended.length){
     recSection.style.display='';
-    recGrid.innerHTML=recommended.map(b=>bookCardHtml(b,communityLib.some(x=>x.id===b.id))).join('');
-    recGrid.querySelectorAll('.book-card[data-bookid]').forEach(c=>{
-      c.addEventListener('click',()=>{ hideDeskHome(); showBookById(c.dataset.bookid); });
-    });
-  } else {
-    recSection.style.display='none';
-  }
+    recGrid.innerHTML=recommended.map(b=>bookCardHtml(b,true)).join('');
+    recGrid.querySelectorAll('.book-card[data-bookid]').forEach(c=>c.addEventListener('click',()=>{hideDeskHome();showBookById(c.dataset.bookid);}));
+  } else recSection.style.display='none';
+
+  // Checked out books
+  const checkoutSection=document.getElementById('deskHomeCheckoutSection');
+  const checkoutGrid=document.getElementById('deskHomeCheckoutGrid');
+  const checkedOutBooks=[...myCheckedOutIds].map(id=>[...library,...communityLib].find(b=>b.id===id)).filter(Boolean);
+  if(checkedOutBooks.length){
+    checkoutSection.style.display='';
+    checkoutGrid.innerHTML=checkedOutBooks.map(b=>bookCardHtml(b,communityLib.some(x=>x.id===b.id))).join('');
+    checkoutGrid.querySelectorAll('.book-card[data-bookid]').forEach(c=>c.addEventListener('click',()=>{hideDeskHome();showBookById(c.dataset.bookid);}));
+  } else checkoutSection.style.display='none';
 
   const recent=library.slice(0,12);
   const recentGrid=document.getElementById('deskHomeRecentGrid');
   if(recent.length){
     recentGrid.innerHTML=recent.map(b=>bookCardHtml(b,false)).join('');
-    recentGrid.querySelectorAll('.book-card[data-bookid]').forEach(c=>{
-      c.addEventListener('click',()=>{ hideDeskHome(); showBookById(c.dataset.bookid); });
-    });
-  } else {
-    recentGrid.innerHTML='<div style="color:var(--muted);font-size:.88rem;padding:1rem 0">Upload books to get started</div>';
-  }
+    recentGrid.querySelectorAll('.book-card[data-bookid]').forEach(c=>c.addEventListener('click',()=>{hideDeskHome();showBookById(c.dataset.bookid);}));
+  } else recentGrid.innerHTML='<div style="color:var(--muted);font-size:.88rem;padding:1rem 0">Upload books to get started</div>';
 }
 
 // ── BOOK DETAIL ───────────────────────────────────────────────────────────────
 function showBookById(id){
-  const book=[...library,...communityLib].find(b=>b.id===id); if(!book) return;
+  const book=[...library,...communityLib].find(b=>b.id===id);if(!book)return;
   currentId=id;
   const isMine=book.ownerId===currentUser?.uid;
   const isComm=communityLib.some(b=>b.id===id);
-
-  const img=document.getElementById('drawerCoverImg');
-  const ph =document.getElementById('drawerCoverPh');
-  if(book.coverDataUrl){ img.src=book.coverDataUrl; img.style.display='block'; ph.style.display='none'; }
-  else { img.style.display='none'; ph.style.display='flex'; }
-
-  document.getElementById('drawerCat').textContent   = book.category||'';
-  document.getElementById('drawerTitle').textContent = book.title||'';
-  document.getElementById('drawerAuthor').textContent= book.author||'';
-  document.getElementById('drawerDesc').textContent  = stripHtml(book.description||'');
-
+  const img=document.getElementById('drawerCoverImg'),ph=document.getElementById('drawerCoverPh');
+  if(book.coverDataUrl){img.src=book.coverDataUrl;img.style.display='block';ph.style.display='none';}
+  else{img.style.display='none';ph.style.display='flex';}
+  document.getElementById('drawerCat').textContent=book.category||'';
+  document.getElementById('drawerTitle').textContent=book.title||'';
+  document.getElementById('drawerAuthor').textContent=book.author||'';
+  document.getElementById('drawerDesc').textContent=stripHtml(book.description||'');
   const sharedByEl=document.getElementById('drawerSharedBy');
-  if(isComm&&!isMine){ sharedByEl.textContent='Shared by '+(book.ownerName||'Anonymous'); sharedByEl.style.display='block'; }
+  if(isComm&&!isMine){sharedByEl.textContent='Shared by '+(book.ownerName||'Anonymous');sharedByEl.style.display='block';}
   else sharedByEl.style.display='none';
-
   let badges='';
-  if(book.category) badges+=`<span class="dbadge dbadge-cat">${esc(book.category)}</span>`;
-  if(book.language) badges+=`<span class="dbadge dbadge-lang">${esc(book.language.toUpperCase())}</span>`;
-  if(book.visibility==='community') badges+=`<span class="dbadge dbadge-shared">Public Library</span>`;
+  if(book.category)badges+=`<span class="dbadge dbadge-cat">${esc(book.category)}</span>`;
+  if(book.language)badges+=`<span class="dbadge dbadge-lang">${esc(book.language.toUpperCase())}</span>`;
+  if(book.visibility==='community')badges+=`<span class="dbadge dbadge-shared">Public Library</span>`;
   document.getElementById('drawerBadges').innerHTML=badges;
-
-  if(isComm){ renderStars('deskStars','deskRatingCount',id,true); }
+  if(isComm)renderStars('deskStars','deskRatingCount',id,true);
   else document.getElementById('deskStarRating').style.display='none';
-
   document.getElementById('drawerActions').innerHTML=buildActions(book,isMine);
   document.querySelectorAll('.book-card').forEach(c=>c.classList.toggle('active',c.dataset.bookid===id));
   document.getElementById('bookDrawer').classList.add('open');
+  // re-bind dropdown toggles
+  bindActionDropdowns(document.getElementById('drawerActions'));
 }
-
-function closeDrawer(){
-  document.getElementById('bookDrawer').classList.remove('open');
-  document.querySelectorAll('.book-card').forEach(c=>c.classList.remove('active'));
-  currentId=null;
-}
+function closeDrawer(){document.getElementById('bookDrawer').classList.remove('open');document.querySelectorAll('.book-card').forEach(c=>c.classList.remove('active'));currentId=null;}
 document.getElementById('drawerClose').addEventListener('click',closeDrawer);
 document.getElementById('drawerActions').addEventListener('click',handleAction);
 
-function buildActions(book, isMine){
-  // Grouped layout: primary actions, then management actions
-  let html = `<div class="action-group">`;
-  html += `<button class="btn-action btn-read" data-action="read"><span class="ba-icon">▶</span> Read</button>`;
-  if(isMine) html += `<button class="btn-action btn-download" data-action="download"><span class="ba-icon">⬇</span> Download</button>`;
-  html += `</div>`;
+function buildActions(book,isMine){
+  const isComm=communityLib.some(b=>b.id===book.id);
+  const isSignedOut=myCheckedOutIds.has(book.id);
+  const isPublicOnly=isComm&&!isMine; // book from public library that user doesn't own
 
-  // Publish / Share row
-  if(isMine){
-    html += `<div class="action-group">`;
-    if(book.visibility!=='community'){
-      html += `<button class="btn-action btn-share" data-action="share"><span class="ba-icon">⇧</span> Publish</button>`;
-    } else {
-      html += `<button class="btn-action btn-unpublish" data-action="unpublish"><span class="ba-icon">↓</span> Unpublish</button>`;
-    }
-    html += `<button class="btn-action btn-share-private" data-action="shareprivate"><span class="ba-icon">🔒</span> Private</button>`;
-    html += `<button class="btn-action btn-link" data-action="link"><span class="ba-icon">🔗</span> Link</button>`;
-    html += `</div>`;
+  let html='';
+
+  // Read & Download — only show if: it's your own book, OR you've signed it out
+  if(isMine||isSignedOut){
+    html+=`<div class="action-group">`;
+    html+=`<button class="btn-action btn-read" data-action="read"><span class="ba-icon">▶</span> Read</button>`;
+    if(isMine)html+=`<button class="btn-action btn-download" data-action="download"><span class="ba-icon">⬇</span> Download</button>`;
+    html+=`</div>`;
+  } else if(isPublicOnly){
+    html+=`<div class="action-group"><p style="font-size:.75rem;color:var(--muted);padding:.3rem 0">Sign out this book to read it.</p></div>`;
   }
 
-  // Loan row
-  html += `<div class="action-group">`;
-  html += `<button class="btn-action btn-checkout" data-action="checkout"><span class="ba-icon">📋</span> Sign Out</button>`;
-  html += `<button class="btn-action btn-return" data-action="history"><span class="ba-icon">📖</span> History</button>`;
-  html += `</div>`;
+  // Sign out / History
+  html+=`<div class="action-group">`;
+  if(!isSignedOut){
+    html+=`<button class="btn-action btn-checkout" data-action="checkout"><span class="ba-icon">📋</span> Sign Out</button>`;
+  } else {
+    html+=`<button class="btn-action btn-return" data-action="returnbook"><span class="ba-icon">↩</span> Return</button>`;
+  }
+  html+=`<button class="btn-action btn-return" data-action="history"><span class="ba-icon">📖</span> History</button>`;
+  html+=`</div>`;
 
-  // Edit / manage row
+  // Recommend button (for community books you don't own)
+  if(isPublicOnly){
+    // just rating, no other controls
+  }
+
+  // Owner controls: Share dropdown + Edit dropdown
   if(isMine){
-    html += `<div class="action-group">`;
-    html += `<button class="btn-action btn-edit-cat" data-action="editmeta"><span class="ba-icon">✎</span> Edit</button>`;
-    html += `<button class="btn-action btn-tags" data-action="tags"><span class="ba-icon">🏷</span> Tags</button>`;
-    html += `<button class="btn-action btn-edit-cat" data-action="chapters"><span class="ba-icon">📑</span> Chapters</button>`;
-    html += `<button class="btn-action ${book.recommended?'btn-recommended':'btn-recommend'}" data-action="recommend"><span class="ba-icon">${book.recommended?'★':'☆'}</span>${book.recommended?'Recommended':'Recommend'}</button>`;
-    html += `</div>`;
-    html += `<div class="action-group">`;
-    html += `<button class="btn-action btn-delete" data-action="delete"><span class="ba-icon">✕</span> Delete</button>`;
-    html += `</div>`;
+    html+=`<div class="action-group">`;
+    // Share dropdown
+    html+=`<div class="action-dropdown" id="ddShare">`;
+    html+=`<button class="action-dropdown-btn share-btn" data-dd="ddShare"><span class="ba-icon">⇧</span> Share ▾</button>`;
+    html+=`<div class="action-dropdown-menu" id="ddShareMenu">`;
+    if(book.visibility!=='community'){
+      html+=`<button class="action-dropdown-item" data-action="share">⇧ Publish to Library</button>`;
+    } else {
+      html+=`<button class="action-dropdown-item" data-action="unpublish">↓ Unpublish</button>`;
+    }
+    html+=`<button class="action-dropdown-item" data-action="shareprivate">🔒 Share Privately</button>`;
+    html+=`<button class="action-dropdown-item" data-action="link">🔗 Copy Link</button>`;
+    html+=`</div></div>`;
+
+    // Edit dropdown
+    html+=`<div class="action-dropdown" id="ddEdit">`;
+    html+=`<button class="action-dropdown-btn edit-btn" data-dd="ddEdit"><span class="ba-icon">✎</span> Edit ▾</button>`;
+    html+=`<div class="action-dropdown-menu" id="ddEditMenu">`;
+    html+=`<button class="action-dropdown-item" data-action="editmeta">✎ Edit Details</button>`;
+    html+=`<button class="action-dropdown-item" data-action="tags">🏷 Tags</button>`;
+    html+=`<button class="action-dropdown-item" data-action="chapters">📑 Chapters</button>`;
+    html+=`<button class="action-dropdown-item" data-action="recommend">${book.recommended?'☆ Remove Recommendation':'⭐ Recommend'}</button>`;
+    html+=`<button class="action-dropdown-item danger" data-action="delete">✕ Delete</button>`;
+    html+=`</div></div>`;
+    html+=`</div>`;
   }
   return html;
 }
 
+function bindActionDropdowns(container){
+  container.querySelectorAll('[data-dd]').forEach(btn=>{
+    btn.addEventListener('click',e=>{
+      e.stopPropagation();
+      const menuId=btn.dataset.dd+'Menu';
+      const menu=document.getElementById(menuId);
+      // close others
+      document.querySelectorAll('.action-dropdown-menu.open').forEach(m=>{if(m.id!==menuId)m.classList.remove('open');});
+      menu?.classList.toggle('open');
+    });
+  });
+}
+
 function handleAction(e){
-  const btn=e.target.closest('[data-action]'); if(!btn) return;
+  const btn=e.target.closest('[data-action]');if(!btn)return;
   const a=btn.dataset.action;
+  // close any open dropdown
+  document.querySelectorAll('.action-dropdown-menu.open').forEach(m=>m.classList.remove('open'));
   if(a==='read')         readCurrentBook();
   if(a==='download')     downloadCurrentBook();
   if(a==='share')        shareCurrentBook();
@@ -1643,74 +1385,70 @@ function handleAction(e){
   if(a==='recommend')    toggleRecommended();
   if(a==='tags')         showTagsModal();
   if(a==='checkout')     signOutBook();
+  if(a==='returnbook')   returnCurrentBook();
   if(a==='history')      showCheckoutHistory(currentId);
   if(a==='delete')       deleteCurrentBook();
 }
 
 // ── UNPUBLISH ─────────────────────────────────────────────────────────────────
 async function unpublishCurrentBook(){
-  if(!currentId) return;
+  if(!currentId)return;
   const book=library.find(b=>b.id===currentId);
-  if(!book||!confirm(`Remove "${book.title}" from the Public Library?`)) return;
+  if(!book||!confirm(`Remove "${book.title}" from the Public Library?`))return;
   showLoading('Unpublishing…');
   try{
     const q=query(collection(db,'community'),where('sourceId','==',currentId));
-    const snap=await getDocs(q); for(const d of snap.docs) await deleteDoc(doc(db,'community',d.id));
+    const snap=await getDocs(q);for(const d of snap.docs)await deleteDoc(doc(db,'community',d.id));
     await updateDoc(doc(db,'books',currentId),{visibility:'private',updatedAt:serverTimestamp()});
-    book.visibility='private'; communityLib=communityLib.filter(b=>b.sourceId!==currentId);
-    hideLoading(); renderAll(); showBookById(currentId); showToast('Unpublished ✓');
-  }catch(e){ hideLoading(); showToast('Unpublish failed: '+e.message); }
+    book.visibility='private';communityLib=communityLib.filter(b=>b.sourceId!==currentId);
+    hideLoading();renderAll();showBookById(currentId);showToast('Unpublished ✓');
+  }catch(e){hideLoading();showToast('Unpublish failed: '+e.message);}
 }
 
 // ── PRIVATE SHARE ─────────────────────────────────────────────────────────────
 async function showPrivateShare(){
-  if(!currentId) return;
-  const book=library.find(b=>b.id===currentId); if(!book) return;
+  if(!currentId)return;
+  const book=library.find(b=>b.id===currentId);if(!book)return;
   document.getElementById('privateShareTitle').textContent=`"${book.title}"`;
   document.getElementById('privateShareLinkWrap').style.display='none';
   document.getElementById('privateShareModal').classList.add('open');
   const users=await loadAllUsers();
   const sel=document.getElementById('privateShareUserSelect');
-  if(!users.length){ sel.innerHTML='<option value="">No other users found yet</option>'; return; }
+  if(!users.length){sel.innerHTML='<option value="">No other users found yet</option>';return;}
   sel.innerHTML='<option value="">— Select a user —</option>'+users.map(u=>`<option value="${u.uid}">${esc(u.displayName||u.email||u.uid)}</option>`).join('');
 }
 document.getElementById('btnCancelPrivateShare').addEventListener('click',()=>document.getElementById('privateShareModal').classList.remove('open'));
 document.getElementById('btnConfirmPrivateShare').addEventListener('click',async()=>{
   const uid=document.getElementById('privateShareUserSelect').value;
-  if(!uid){ showToast('Please select a user'); return; }
-  if(!currentId) return;
-  const book=library.find(b=>b.id===currentId); if(!book) return;
+  if(!uid){showToast('Please select a user');return;}
+  if(!currentId)return;
+  const book=library.find(b=>b.id===currentId);if(!book)return;
   showLoading('Granting access…');
   try{
     const allowed=[...(book.allowedUsers||[])];
-    if(!allowed.includes(uid)) allowed.push(uid);
+    if(!allowed.includes(uid))allowed.push(uid);
     await updateDoc(doc(db,'books',currentId),{allowedUsers:allowed,updatedAt:serverTimestamp()});
-    book.allowedUsers=allowed; hideLoading();
+    book.allowedUsers=allowed;hideLoading();
     const link=getDirectLink(currentId);
     document.getElementById('privateShareLink').textContent=link;
     document.getElementById('privateShareLinkWrap').style.display='block';
     showToast('Access granted ✓');
-  }catch(e){ hideLoading(); showToast('Failed: '+e.message); }
+  }catch(e){hideLoading();showToast('Failed: '+e.message);}
 });
-document.getElementById('btnCopyPrivateLink').addEventListener('click',()=>{ navigator.clipboard.writeText(document.getElementById('privateShareLink').textContent).then(()=>showToast('Link copied ✓')); });
+document.getElementById('btnCopyPrivateLink').addEventListener('click',()=>navigator.clipboard.writeText(document.getElementById('privateShareLink').textContent).then(()=>showToast('Link copied ✓')));
 
 // ── DIRECT LINK ───────────────────────────────────────────────────────────────
-function showDirectLink(){
-  if(!currentId) return;
-  document.getElementById('directLinkBox').textContent=getDirectLink(currentId);
-  document.getElementById('linkModal').classList.add('open');
-}
-function getDirectLink(id){ return `${location.origin}${location.pathname}#book=${id}`; }
+function showDirectLink(){if(!currentId)return;document.getElementById('directLinkBox').textContent=getDirectLink(currentId);document.getElementById('linkModal').classList.add('open');}
+function getDirectLink(id){return `${location.origin}${location.pathname}#book=${id}`;}
 document.getElementById('btnCloseLinkModal').addEventListener('click',()=>document.getElementById('linkModal').classList.remove('open'));
-document.getElementById('btnCopyDirectLink').addEventListener('click',()=>{ navigator.clipboard.writeText(document.getElementById('directLinkBox').textContent).then(()=>showToast('Link copied ✓')); });
-
-function checkUrlHash(){ const m=window.location.hash.match(/[#&]book=([a-zA-Z0-9]+)/); if(m) setTimeout(()=>showBookById(m[1]),400); }
+document.getElementById('btnCopyDirectLink').addEventListener('click',()=>navigator.clipboard.writeText(document.getElementById('directLinkBox').textContent).then(()=>showToast('Link copied ✓')));
+function checkUrlHash(){const m=window.location.hash.match(/[#&]book=([a-zA-Z0-9]+)/);if(m)setTimeout(()=>showBookById(m[1]),400);}
 
 // ── EDIT METADATA ─────────────────────────────────────────────────────────────
-function stripHtml(s){ const d=document.createElement('div'); d.innerHTML=s; return d.textContent||d.innerText||s; }
+function stripHtml(s){const d=document.createElement('div');d.innerHTML=s;return d.textContent||d.innerText||s;}
 function showEditMeta(){
-  if(!currentId) return;
-  const book=library.find(b=>b.id===currentId); if(!book) return;
+  if(!currentId)return;
+  const book=library.find(b=>b.id===currentId);if(!book)return;
   document.getElementById('metaTitle').value=book.title||'';
   document.getElementById('metaAuthor').value=book.author||'';
   document.getElementById('metaCategory').value=book.category||'';
@@ -1722,35 +1460,22 @@ function showEditMeta(){
 }
 document.getElementById('btnCancelEditMeta').addEventListener('click',()=>document.getElementById('editMetaModal').classList.remove('open'));
 document.getElementById('btnSaveEditMeta').addEventListener('click',async()=>{
-  const book=library.find(b=>b.id===currentId); if(!book) return;
-  const updates={
-    title:    document.getElementById('metaTitle').value.trim()||book.title,
-    author:   document.getElementById('metaAuthor').value.trim()||book.author,
-    category: document.getElementById('metaCategory').value.trim()||book.category,
-    language: document.getElementById('metaLanguage').value.trim(),
-    description: stripHtml(document.getElementById('metaDesc').value.trim()),
-    updatedAt: serverTimestamp()
-  };
+  const book=library.find(b=>b.id===currentId);if(!book)return;
+  const updates={title:document.getElementById('metaTitle').value.trim()||book.title,author:document.getElementById('metaAuthor').value.trim()||book.author,category:document.getElementById('metaCategory').value.trim()||book.category,language:document.getElementById('metaLanguage').value.trim(),description:stripHtml(document.getElementById('metaDesc').value.trim()),updatedAt:serverTimestamp()};
   document.getElementById('editMetaModal').classList.remove('open');
   showLoading('Saving…');
-  try{
-    await updateDoc(doc(db,'books',currentId),updates);
-    Object.assign(book,updates);
-    hideLoading(); renderAll(); showBookById(currentId); showToast('Details saved ✓');
-  }catch(e){ hideLoading(); showToast('Save failed: '+e.message); }
+  try{await updateDoc(doc(db,'books',currentId),updates);Object.assign(book,updates);hideLoading();renderAll();showBookById(currentId);showToast('Details saved ✓');}
+  catch(e){hideLoading();showToast('Save failed: '+e.message);}
 });
-
-// ── NOTIFICATION BELL ─────────────────────────────────────────────────────────
-document.getElementById('btnNotifBell').addEventListener('click',()=>{ showToast('Notifications coming soon'); });
 
 // ── MOBILE DETAIL ─────────────────────────────────────────────────────────────
 function mob_showBook(id){
-  const book=[...library,...communityLib].find(b=>b.id===id); if(!book) return;
+  const book=[...library,...communityLib].find(b=>b.id===id);if(!book)return;
   currentId=id;
-  const isMine=book.ownerId===currentUser?.uid, isComm=communityLib.some(b=>b.id===id);
-  const img=document.getElementById('mobDetailCoverImg'), ph=document.getElementById('mobDetailCoverPh');
-  if(book.coverDataUrl){ img.src=book.coverDataUrl; img.style.display='block'; ph.style.display='none'; }
-  else { img.style.display='none'; ph.style.display='flex'; }
+  const isMine=book.ownerId===currentUser?.uid,isComm=communityLib.some(b=>b.id===id);
+  const img=document.getElementById('mobDetailCoverImg'),ph=document.getElementById('mobDetailCoverPh');
+  if(book.coverDataUrl){img.src=book.coverDataUrl;img.style.display='block';ph.style.display='none';}
+  else{img.style.display='none';ph.style.display='flex';}
   document.getElementById('mobDetailCat').textContent=book.category||'';
   document.getElementById('mobDetailTitle').textContent=book.title||'';
   document.getElementById('mobDetailAuthor').textContent=book.author||'';
@@ -1758,15 +1483,13 @@ function mob_showBook(id){
   const actEl=document.getElementById('mobDetailActions');
   actEl.innerHTML=buildActions(book,isMine);
   actEl.onclick=handleAction;
-  if(isComm){ renderStars('mobStars','mobRatingCount',id,true); }
+  bindActionDropdowns(actEl);
+  if(isComm)renderStars('mobStars','mobRatingCount',id,true);
   else document.getElementById('mobStarRating').style.display='none';
   mob_showPanel('mobPanelDetail');
 }
 document.getElementById('btnMobBack').addEventListener('click',()=>mob_showPanel(mobPrevPanel||'mobPanelHome'));
-function mob_showPanel(id){
-  document.querySelectorAll('.mob-panel').forEach(p=>p.classList.remove('active'));
-  document.getElementById(id)?.classList.add('active');
-}
+function mob_showPanel(id){document.querySelectorAll('.mob-panel').forEach(p=>p.classList.remove('active'));document.getElementById(id)?.classList.add('active');}
 
 // mob nav
 let searchFilter='all';
@@ -1782,38 +1505,39 @@ function mob_switchTab(tab){
   document.getElementById(tabMap[tab])?.classList.add('active');
   const panelMap={search:'mobPanelSearch',public:'mobPanelPublic',home:'mobPanelHome',mine:'mobPanelLib',settings:'mobPanelSettings'};
   mob_showPanel(panelMap[tab]||'mobPanelHome');
-  if(tab==='search') setTimeout(()=>document.getElementById('mobSearchGlobal')?.focus(),200);
-  if(tab==='home') renderMobHome();
+  if(tab==='search')setTimeout(()=>document.getElementById('mobSearchGlobal')?.focus(),200);
+  if(tab==='home')renderMobHome();
+  if(tab==='public')renderMobPublic();
 }
-// Set home as active on load
 document.getElementById('mobNavHome').classList.add('active');
 
 // Search panel
-document.getElementById('mobSearchGlobal').addEventListener('input',e=>{ renderMobSearch(e.target.value.toLowerCase().trim()); });
-document.getElementById('mobSearchFilters').addEventListener('click',e=>{ const c=e.target.closest('.mob-chip[data-sfilter]'); if(!c) return; searchFilter=c.dataset.sfilter; document.querySelectorAll('#mobSearchFilters .mob-chip').forEach(x=>x.classList.toggle('active',x.dataset.sfilter===searchFilter)); renderMobSearch(document.getElementById('mobSearchGlobal').value.toLowerCase().trim()); });
+document.getElementById('mobSearchGlobal').addEventListener('input',e=>{renderMobSearch(e.target.value.toLowerCase().trim());});
+document.getElementById('mobSearchFilters').addEventListener('click',e=>{const c=e.target.closest('.mob-chip[data-sfilter]');if(!c)return;searchFilter=c.dataset.sfilter;document.querySelectorAll('#mobSearchFilters .mob-chip').forEach(x=>x.classList.toggle('active',x.dataset.sfilter===searchFilter));renderMobSearch(document.getElementById('mobSearchGlobal').value.toLowerCase().trim());});
 function renderMobSearch(q){
-  const grid=document.getElementById('mobGridSearch'); if(!q){ grid.innerHTML='<div style="padding:2rem;text-align:center;color:var(--muted);font-size:.88rem">Start typing to search…</div>'; return; }
+  const grid=document.getElementById('mobGridSearch');
+  if(!q){grid.innerHTML='<div style="padding:2rem;text-align:center;color:var(--muted);font-size:.88rem">Start typing to search…</div>';return;}
   let books=[];
-  if(searchFilter==='all'||searchFilter==='mine') books.push(...library.filter(b=>matchesQ(b,q)));
-  if(searchFilter==='all'||searchFilter==='public') books.push(...communityLib.filter(b=>matchesQ(b,q)&&!books.find(x=>x.id===b.id)));
+  if(searchFilter==='all'||searchFilter==='mine')books.push(...library.filter(b=>matchesQ(b,q)));
+  if(searchFilter==='all'||searchFilter==='public')books.push(...communityLib.filter(b=>matchesQ(b,q)&&!books.find(x=>x.id===b.id)));
   grid.innerHTML=books.length?books.map(b=>bookCardHtml(b,communityLib.some(x=>x.id===b.id))).join(''):'<div style="padding:2rem;text-align:center;color:var(--muted);font-size:.88rem">No results</div>';
 }
-function matchesQ(b,q){ return (b.title||'').toLowerCase().includes(q)||(b.author||'').toLowerCase().includes(q)||(b.category||'').toLowerCase().includes(q); }
-document.getElementById('mobGridSearch').addEventListener('click',e=>{ const c=e.target.closest('.book-card[data-bookid]'); if(c){ mobPrevPanel='mobPanelSearch'; mob_showBook(c.dataset.bookid); } });
+function matchesQ(b,q){return(b.title||'').toLowerCase().includes(q)||(b.author||'').toLowerCase().includes(q)||(b.category||'').toLowerCase().includes(q);}
+document.getElementById('mobGridSearch').addEventListener('click',e=>{const c=e.target.closest('.book-card[data-bookid]');if(c){mobPrevPanel='mobPanelSearch';mob_showBook(c.dataset.bookid);}});
 
 // Public Library panel
-document.getElementById('mobSearchPublic').addEventListener('input',e=>{ searchQ=(shelfMode==='community'?e.target.value:''); renderMobPublic(); });
+document.getElementById('mobSearchPublic').addEventListener('input',renderMobPublic);
 document.getElementById('mobSortPublic').addEventListener('change',renderMobPublic);
-document.getElementById('mobGridPublic').addEventListener('click',e=>{ const c=e.target.closest('.book-card[data-bookid]'); if(c){ mobPrevPanel='mobPanelPublic'; mob_showBook(c.dataset.bookid); } });
-document.getElementById('mobChipsPublic').addEventListener('click',e=>{ const c=e.target.closest('.mob-chip[data-cat]'); if(!c) return; activeCat=decodeURIComponent(c.dataset.cat); renderMobPublic(); });
+document.getElementById('mobGridPublic').addEventListener('click',e=>{const c=e.target.closest('.book-card[data-bookid]');if(c){mobPrevPanel='mobPanelPublic';mob_showBook(c.dataset.bookid);}});
+document.getElementById('mobChipsPublic').addEventListener('click',e=>{const c=e.target.closest('.mob-chip[data-cat]');if(!c)return;activeCat=decodeURIComponent(c.dataset.cat);renderMobPublic();});
 function renderMobPublic(){
   const q=document.getElementById('mobSearchPublic').value.toLowerCase().trim();
   const sort=document.getElementById('mobSortPublic').value;
   let books=communityLib;
-  if(activeCat!=='All') books=books.filter(b=>(b.category||'Uncategorised')===activeCat);
-  if(q) books=books.filter(b=>matchesQ(b,q));
+  if(activeCat!=='All')books=books.filter(b=>(b.category||'Uncategorised')===activeCat);
+  if(q)books=books.filter(b=>matchesQ(b,q));
   books=sortBooks(books,sort);
-  const cats={}; communityLib.forEach(b=>{ const c=b.category||'Uncategorised'; cats[c]=(cats[c]||0)+1; });
+  const cats={};communityLib.forEach(b=>{const c=b.category||'Uncategorised';cats[c]=(cats[c]||0)+1;});
   document.getElementById('mobChipsPublic').innerHTML=[['All',communityLib.length],...Object.entries(cats).sort()].map(([cat,cnt])=>`<div class="mob-chip ${activeCat===cat?'active':''}" data-cat="${encodeURIComponent(cat)}">${esc(cat)} <span style="opacity:.65">${cnt}</span></div>`).join('');
   document.getElementById('mobGridPublic').innerHTML=books.length?books.map(b=>bookCardHtml(b,true)).join(''):'<div style="padding:2rem;text-align:center;color:var(--muted);font-size:.88rem">No books yet</div>';
 }
@@ -1822,156 +1546,84 @@ function renderMobPublic(){
 async function renderMobHome(){
   const name=(currentUser?.displayName||'').split(' ')[0]||'Reader';
   document.getElementById('mobHomeGreeting').textContent=`Hello, ${name}`;
-
-  // Recommended from community (all users)
-  const recommended = communityLib.filter(b => b.recommended);
-
-  // My signed-out books
-  let checkedOut = [];
-  try {
-    const q = query(
-      collection(db,'checkouts'),
-      where('userId','==',currentUser.uid),
-      where('returnedAt','==',null),
-      orderBy('checkedOutAt','desc')
-    );
-    const snap = await getDocs(q);
-    const ids = snap.docs.map(d => d.data().bookId);
-    checkedOut = ids.map(id => [...library,...communityLib].find(b=>b.id===id)).filter(Boolean);
-  } catch(e){ console.warn('Checkouts:', e); }
-
-  const recent = library.slice(0,6);
-
+  const recommended=communityLib.filter(b=>b.recommended);
+  const checkedOutBooks=[...myCheckedOutIds].map(id=>[...library,...communityLib].find(b=>b.id===id)).filter(Boolean);
+  const recent=library.slice(0,6);
   let html='';
-
   if(recommended.length){
-    html+=`<div style="font-size:.7rem;letter-spacing:.18em;text-transform:uppercase;color:var(--gold);font-weight:700;margin-bottom:.6rem">⭐ Recommended by the Community</div>
-    <div class="mob-book-grid" style="margin-bottom:1.5rem">${recommended.map(b=>bookCardHtml(b,true)).join('')}</div>`;
+    html+=`<div style="font-size:.68rem;letter-spacing:.18em;text-transform:uppercase;color:var(--gold);font-weight:700;margin-bottom:.6rem">⭐ Recommended</div><div class="mob-book-grid" style="margin-bottom:1.5rem">${recommended.map(b=>bookCardHtml(b,true)).join('')}</div>`;
   }
-
-  if(checkedOut.length){
-    html+=`<div style="font-size:.7rem;letter-spacing:.18em;text-transform:uppercase;color:var(--teal);font-weight:700;margin-bottom:.6rem;margin-top:.5rem">📋 Currently Signed Out</div>
-    <div class="mob-book-grid" style="margin-bottom:1.5rem">${checkedOut.map(b=>bookCardHtml(b,communityLib.some(x=>x.id===b.id))).join('')}</div>`;
+  if(checkedOutBooks.length){
+    html+=`<div style="font-size:.68rem;letter-spacing:.18em;text-transform:uppercase;color:var(--teal);font-weight:700;margin-bottom:.6rem;margin-top:.5rem">📋 Currently Signed Out</div><div class="mob-book-grid" style="margin-bottom:1.5rem">${checkedOutBooks.map(b=>bookCardHtml(b,communityLib.some(x=>x.id===b.id))).join('')}</div>`;
   }
-
-  html+=`<div style="font-size:.7rem;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:.6rem">Recently Added</div>`;
-  html+=recent.length
-    ?`<div class="mob-book-grid">${recent.map(b=>bookCardHtml(b,false)).join('')}</div>`
-    :'<div style="text-align:center;padding:2rem;color:var(--muted);font-size:.88rem">Upload books to get started</div>';
-
+  html+=`<div style="font-size:.68rem;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:.6rem">Recently Added</div>`;
+  html+=recent.length?`<div class="mob-book-grid">${recent.map(b=>bookCardHtml(b,false)).join('')}</div>`:'<div style="text-align:center;padding:2rem;color:var(--muted);font-size:.88rem">Upload books to get started</div>';
   document.getElementById('mobHomeContent').innerHTML=html;
   document.getElementById('mobHomeContent').querySelectorAll('.book-card[data-bookid]').forEach(c=>{
-    c.addEventListener('click',()=>{ mobPrevPanel='mobPanelHome'; mob_showBook(c.dataset.bookid); });
+    c.addEventListener('click',()=>{mobPrevPanel='mobPanelHome';mob_showBook(c.dataset.bookid);});
   });
 }
 
 function bookCardHtml(b,isComm){
   const avg=isComm?getAvgRating(b):0;
   const starsHtml=isComm?[1,2,3,4,5].map(n=>`<span class="bcs ${n<=Math.round(avg)?'filled':''}">★</span>`).join(''):'';
-  const coverHtml=b.coverDataUrl
-    ?`<img class="book-card-cover" src="${b.coverDataUrl}" alt="" loading="lazy"/>`
-    :`<div class="book-card-cover-ph"><div class="ph-icon">📖</div><div class="ph-title">${esc(b.title)}</div><div class="ph-author">${esc(b.author)}</div></div>`;
+  const coverHtml=b.coverDataUrl?`<img class="book-card-cover" src="${b.coverDataUrl}" alt="" loading="lazy"/>`:`<div class="book-card-cover-ph"><div class="ph-icon">📖</div><div class="ph-title">${esc(b.title)}</div><div class="ph-author">${esc(b.author)}</div></div>`;
   const tagsHtml=(b.tags||[]).slice(0,2).map(t=>`<span class="tag-pill" style="font-size:.55rem;padding:1px 5px">${esc(t)}</span>`).join('');
-  return `<div class="book-card" data-bookid="${b.id}">
-    ${coverHtml}
-    ${b.recommended?'<span class="rec-badge">⭐ Pick</span>':''}
-    <div class="book-card-body">
-      <div class="book-card-title">${esc(b.title)}</div>
-      <div class="book-card-author">${esc(b.author)}</div>
-      ${isComm&&b.ownerId!==currentUser?.uid?`<div class="book-card-shared-by">by ${esc(b.ownerName||'')}</div>`:''}
-      ${isComm?`<div class="book-card-stars">${starsHtml}</div>`:''}
-      ${tagsHtml}
-    </div>
-  </div>`;
+  return `<div class="book-card" data-bookid="${b.id}">${coverHtml}${b.recommended?'<span class="rec-badge">⭐ Pick</span>':''}<div class="book-card-body"><div class="book-card-title">${esc(b.title)}</div><div class="book-card-author">${esc(b.author)}</div>${isComm&&b.ownerId!==currentUser?.uid?`<div class="book-card-shared-by">by ${esc(b.ownerName||'')}</div>`:''}${isComm?`<div class="book-card-stars">${starsHtml}</div>`:''}${tagsHtml}</div></div>`;
 }
 
 // ── EPUB READER ───────────────────────────────────────────────────────────────
-function applyReaderTheme(theme){
-  const o=document.getElementById('readerOverlay');
-  o.classList.remove('theme-day','theme-sepia','theme-night');
-  o.classList.add('theme-'+theme);
-  document.querySelectorAll('.rs-theme-btn').forEach(b=>b.classList.toggle('active',b.dataset.theme===theme));
-}
-function setReaderFont(size){
-  readerFontSize=size; localStorage.setItem('elib_reader_font',size);
-  document.getElementById('readerContent').style.fontSize=size+'px';
-  document.querySelectorAll('.rs-font-btn').forEach(b=>b.classList.toggle('active',parseInt(b.dataset.size)===size));
-}
+function applyReaderTheme(theme){const o=document.getElementById('readerOverlay');o.classList.remove('theme-day','theme-sepia','theme-night');o.classList.add('theme-'+theme);document.querySelectorAll('.rs-theme-btn').forEach(b=>b.classList.toggle('active',b.dataset.theme===theme));}
+function setReaderFont(size){readerFontSize=size;localStorage.setItem('elib_reader_font',size);document.getElementById('readerContent').style.fontSize=size+'px';document.querySelectorAll('.rs-font-btn').forEach(b=>b.classList.toggle('active',parseInt(b.dataset.size)===size));}
 document.querySelectorAll('.rs-font-btn').forEach(b=>b.addEventListener('click',()=>setReaderFont(parseInt(b.dataset.size))));
-document.querySelectorAll('.rs-theme-btn').forEach(b=>b.addEventListener('click',()=>{ readerTheme=b.dataset.theme; localStorage.setItem('elib_reader_theme',readerTheme); applyReaderTheme(readerTheme); }));
+document.querySelectorAll('.rs-theme-btn').forEach(b=>b.addEventListener('click',()=>{readerTheme=b.dataset.theme;localStorage.setItem('elib_reader_theme',readerTheme);applyReaderTheme(readerTheme);}));
 document.getElementById('btnToggleReaderSettings').addEventListener('click',()=>document.getElementById('readerSettingsBar').classList.toggle('open'));
 document.getElementById('btnToggleChapters').addEventListener('click',()=>document.getElementById('readerChapterList').classList.toggle('open'));
 document.getElementById('btnReaderPrev').addEventListener('click',()=>readerGoToChapter(readerChapter-1));
 document.getElementById('btnReaderNext').addEventListener('click',()=>readerGoToChapter(readerChapter+1));
 document.getElementById('btnCloseReader').addEventListener('click',closeReader);
 document.addEventListener('keydown',e=>{
-  if(!document.getElementById('readerOverlay').classList.contains('open')) return;
-  if(e.key==='ArrowRight'||e.key==='ArrowDown') readerGoToChapter(readerChapter+1);
-  if(e.key==='ArrowLeft'||e.key==='ArrowUp')   readerGoToChapter(readerChapter-1);
-  if(e.key==='Escape') closeReader();
+  if(!document.getElementById('readerOverlay').classList.contains('open'))return;
+  if(e.key==='ArrowRight'||e.key==='ArrowDown')readerGoToChapter(readerChapter+1);
+  if(e.key==='ArrowLeft'||e.key==='ArrowUp')readerGoToChapter(readerChapter-1);
+  if(e.key==='Escape')closeReader();
 });
 
 async function readCurrentBook(){
-  if(!currentId) return;
-  const book=[...library,...communityLib].find(b=>b.id===currentId); if(!book) return;
+  if(!currentId)return;
+  const book=[...library,...communityLib].find(b=>b.id===currentId);if(!book)return;
   let storagePath=book.storagePath;
-  if(!storagePath&&book.epubUrl){
-    const match=book.epubUrl.match(/\/o\/(.+?)\?/);
-    if(match) storagePath=decodeURIComponent(match[1]);
-  }
-  if(!storagePath){ showToast('EPUB not available'); return; }
+  if(!storagePath&&book.epubUrl){const match=book.epubUrl.match(/\/o\/(.+?)\?/);if(match)storagePath=decodeURIComponent(match[1]);}
+  if(!storagePath){showToast('EPUB not available');return;}
   showLoading('Opening book…');
-  try {
+  try{
     const bytes=await getBytes(storageRef(storage,storagePath));
-    readerZip=await JSZip.loadAsync(bytes);
-    readerSpine=[]; readerChapter=0;
+    readerZip=await JSZip.loadAsync(bytes);readerSpine=[];readerChapter=0;
     const container=await readerZip.file('META-INF/container.xml')?.async('string');
     const opfPath=container?.match(/full-path="([^"]+\.opf)"/i)?.[1];
-    if(!opfPath) throw new Error('No OPF found');
+    if(!opfPath)throw new Error('No OPF found');
     const opfXml=await readerZip.file(opfPath)?.async('string');
     readerOpfBase=opfPath.includes('/')?opfPath.replace(/\/[^/]+$/,'/'):'';
     const manifestMap={};
-    const mRe=/<item\s+([^>]+)>/gi; let m;
-    while((m=mRe.exec(opfXml))!==null){
-      const attrs=m[1];
-      const id=attrs.match(/\bid="([^"]+)"/)?.[1];
-      const href=attrs.match(/\bhref="([^"]+)"/)?.[1];
-      const mt=attrs.match(/\bmedia-type="([^"]+)"/)?.[1];
-      if(id&&href) manifestMap[id]={href,mediaType:mt};
-    }
+    const mRe=/<item\s+([^>]+)>/gi;let m;
+    while((m=mRe.exec(opfXml))!==null){const attrs=m[1];const id=attrs.match(/\bid="([^"]+)"/)?.[1];const href=attrs.match(/\bhref="([^"]+)"/)?.[1];const mt=attrs.match(/\bmedia-type="([^"]+)"/)?.[1];if(id&&href)manifestMap[id]={href,mediaType:mt};}
     const labelMap={};
     const ncxId=Object.keys(manifestMap).find(k=>manifestMap[k].mediaType==='application/x-dtbncx+xml');
-    if(ncxId&&manifestMap[ncxId]){
-      const ncxXml=await readerZip.file(readerOpfBase+manifestMap[ncxId].href)?.async('string');
-      if(ncxXml){
-        const npRe=/<navPoint[^>]*>[\s\S]*?<navLabel[^>]*>[\s\S]*?<text>([^<]*)<\/text>[\s\S]*?<content\s+src="([^"]+)"/gi; let np;
-        while((np=npRe.exec(ncxXml))!==null) labelMap[np[2].split('#')[0]]=np[1].trim();
-      }
-    }
-    const spineRe=/<itemref\s+idref="([^"]+)"/gi; let sp;
-    while((sp=spineRe.exec(opfXml))!==null){
-      const item=manifestMap[sp[1]];
-      if(item) readerSpine.push({id:sp[1],href:item.href,label:labelMap[item.href]||item.href.split('/').pop().replace(/\.x?html?$/i,'')});
-    }
-    if(!readerSpine.length) throw new Error('Empty spine');
+    if(ncxId&&manifestMap[ncxId]){const ncxXml=await readerZip.file(readerOpfBase+manifestMap[ncxId].href)?.async('string');if(ncxXml){const npRe=/<navPoint[^>]*>[\s\S]*?<navLabel[^>]*>[\s\S]*?<text>([^<]*)<\/text>[\s\S]*?<content\s+src="([^"]+)"/gi;let np;while((np=npRe.exec(ncxXml))!==null)labelMap[np[2].split('#')[0]]=np[1].trim();}}
+    const spineRe=/<itemref\s+idref="([^"]+)"/gi;let sp;
+    while((sp=spineRe.exec(opfXml))!==null){const item=manifestMap[sp[1]];if(item)readerSpine.push({id:sp[1],href:item.href,label:labelMap[item.href]||item.href.split('/').pop().replace(/\.x?html?$/i,'')});}
+    if(!readerSpine.length)throw new Error('Empty spine');
     document.getElementById('readerTitle').textContent=book.title||'Reading…';
-    document.getElementById('readerChapterItems').innerHTML=readerSpine.map((ch,i)=>
-      `<div class="chapter-item" id="chItem_${i}" data-idx="${i}">${esc(ch.label)}</div>`
-    ).join('');
-    document.getElementById('readerChapterItems').addEventListener('click',e=>{
-      const item=e.target.closest('.chapter-item[data-idx]');
-      if(item) readerGoToChapter(parseInt(item.dataset.idx));
-    });
-    hideLoading();
-    applyReaderTheme(readerTheme); setReaderFont(readerFontSize);
+    document.getElementById('readerChapterItems').innerHTML=readerSpine.map((ch,i)=>`<div class="chapter-item" id="chItem_${i}" data-idx="${i}">${esc(ch.label)}</div>`).join('');
+    document.getElementById('readerChapterItems').addEventListener('click',e=>{const item=e.target.closest('.chapter-item[data-idx]');if(item)readerGoToChapter(parseInt(item.dataset.idx));});
+    hideLoading();applyReaderTheme(readerTheme);setReaderFont(readerFontSize);
     document.getElementById('readerSettingsBar').classList.remove('open');
     document.getElementById('readerOverlay').classList.add('open');
     readerGoToChapter(0);
-  } catch(e){ hideLoading(); showToast('Could not open EPUB: '+e.message); console.error(e); }
+  }catch(e){hideLoading();showToast('Could not open EPUB: '+e.message);console.error(e);}
 }
-
 async function readerGoToChapter(idx){
-  if(idx<0||idx>=readerSpine.length) return;
+  if(idx<0||idx>=readerSpine.length)return;
   readerChapter=idx;
   document.querySelectorAll('.chapter-item').forEach((el,i)=>el.classList.toggle('active',i===idx));
   const ch=readerSpine[idx];
@@ -1980,257 +1632,133 @@ async function readerGoToChapter(idx){
   const content=document.getElementById('readerContent');
   content.innerHTML='<p style="text-align:center;padding-top:3rem;opacity:.5">Loading chapter…</p>';
   content.scrollTop=0;
-  if(window.innerWidth<=640) document.getElementById('readerChapterList').classList.remove('open');
-  try {
+  if(window.innerWidth<=768)document.getElementById('readerChapterList').classList.remove('open');
+  try{
     let html=await readerZip.file(readerOpfBase+ch.href)?.async('string');
-    if(!html){ content.innerHTML='<p>Chapter not found.</p>'; return; }
+    if(!html){content.innerHTML='<p>Chapter not found.</p>';return;}
     html=await inlineImagesInHtml(html,readerOpfBase,ch.href);
     const bodyMatch=html.match(/<body[^>]*>([\s\S]*)<\/body>/i);
     let bodyHtml=bodyMatch?bodyMatch[1]:html;
     bodyHtml=bodyHtml.replace(/<script[\s\S]*?<\/script>/gi,'');
-    bodyHtml=bodyHtml.replace(/href="([^"#]+)(#[^"]+)?"/g,(_,href)=>{
-      const si=readerSpine.findIndex(s=>s.href===href||s.href.endsWith('/'+href));
-      return si>=0?`href="javascript:void(0)" onclick="readerGoToChapter_global(${si})"` :`href="javascript:void(0)"`;
-    });
+    bodyHtml=bodyHtml.replace(/href="([^"#]+)(#[^"]+)?"/g,(_,href)=>{const si=readerSpine.findIndex(s=>s.href===href||s.href.endsWith('/'+href));return si>=0?`href="javascript:void(0)" onclick="readerGoToChapter_global(${si})"` :`href="javascript:void(0)"`;});
     content.innerHTML=bodyHtml;
-  } catch(e){ content.innerHTML=`<p style="color:var(--danger)">Error: ${e.message}</p>`; }
+  }catch(e){content.innerHTML=`<p style="color:var(--danger)">Error: ${e.message}</p>`;}
 }
 window.readerGoToChapter_global=idx=>readerGoToChapter(idx);
-
 async function inlineImagesInHtml(html,base,chapterHref){
   const chapterDir=chapterHref&&chapterHref.includes('/')?chapterHref.replace(/\/[^/]+$/,'/'):'';
   html=html.replace(/(<img[^>]+)src="([^"]+)"/gi,(match,pre,src)=>`${pre}data-src="${src}"`);
-  const imgRe=/data-src="([^"]+)"/gi;
-  const found=[]; let m;
-  while((m=imgRe.exec(html))!==null){
-    const src=m[1];
-    if(src.startsWith('data:')||src.startsWith('http')) continue;
-    found.push({orig:src,candidates:[base+chapterDir+src,base+src,chapterDir+src,src]});
-  }
-  for(const p of found){
-    try {
-      let blob=null;
-      for(const path of p.candidates){ const f=readerZip.file(path); if(f){ blob=await f.async('blob'); break; } }
-      html=html.replace(new RegExp(`data-src="${p.orig.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')}"`, 'g'),
-        blob?`src="${await blobToDataUrl(blob)}"` : `src=""`);
-    } catch(e){ /* skip */ }
-  }
+  const imgRe=/data-src="([^"]+)"/gi;const found=[];let m;
+  while((m=imgRe.exec(html))!==null){const src=m[1];if(src.startsWith('data:')||src.startsWith('http'))continue;found.push({orig:src,candidates:[base+chapterDir+src,base+src,chapterDir+src,src]});}
+  for(const p of found){try{let blob=null;for(const path of p.candidates){const f=readerZip.file(path);if(f){blob=await f.async('blob');break;}}html=html.replace(new RegExp(`data-src="${p.orig.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')}"`, 'g'),blob?`src="${await blobToDataUrl(blob)}"` :`src=""`);} catch(e){/* skip */}}
   return html;
 }
-
-function closeReader(){
-  document.getElementById('readerOverlay').classList.remove('open');
-  document.getElementById('readerChapterList').classList.remove('open');
-  document.getElementById('readerSettingsBar').classList.remove('open');
-  readerZip=null; readerSpine=[];
-}
+function closeReader(){document.getElementById('readerOverlay').classList.remove('open');document.getElementById('readerChapterList').classList.remove('open');document.getElementById('readerSettingsBar').classList.remove('open');readerZip=null;readerSpine=[];}
 
 // ── EPUB META ─────────────────────────────────────────────────────────────────
 async function parseEpubMeta(file){
-  try {
+  try{
     const zip=await JSZip.loadAsync(file);
     const container=await zip.file('META-INF/container.xml')?.async('string');
-    if(!container) return fallbackMeta(file);
+    if(!container)return fallbackMeta(file);
     const opfPath=container.match(/full-path="([^"]+\.opf)"/i)?.[1];
-    if(!opfPath) return fallbackMeta(file);
+    if(!opfPath)return fallbackMeta(file);
     const opfXml=await zip.file(opfPath)?.async('string');
-    if(!opfXml) return fallbackMeta(file);
+    if(!opfXml)return fallbackMeta(file);
     const get=tag=>opfXml.match(new RegExp(`<dc:${tag}[^>]*>([^<]+)<\/dc:${tag}>`,'i'))?.[1]?.trim()||'';
-    const getAll=tag=>{ const re=new RegExp(`<dc:${tag}[^>]*>([^<]+)<\/dc:${tag}>`,'gi'),r=[];let m;while((m=re.exec(opfXml))!==null)r.push(m[1].trim());return r; };
-
+    const getAll=tag=>{const re=new RegExp(`<dc:${tag}[^>]*>([^<]+)<\/dc:${tag}>`,'gi'),r=[];let m;while((m=re.exec(opfXml))!==null)r.push(m[1].trim());return r;};
     let coverDataUrl=null;
-    try {
+    try{
       const opfDir=opfPath.includes('/')?opfPath.replace(/\/[^/]+$/,'/'):'';
       const coverId=opfXml.match(/name="cover"\s+content="([^"]+)"/i)?.[1]||opfXml.match(/content="([^"]+)"\s+name="cover"/i)?.[1];
-      if(coverId){
-        const mi=opfXml.match(new RegExp(`id="${coverId}"[^>]+href="([^"]+)"`,'i'))||opfXml.match(new RegExp(`href="([^"]+)"[^>]+id="${coverId}"`,'i'));
-        const coverHref=mi?.[1];
-        if(coverHref){ const cf=zip.file(opfDir+coverHref)||zip.file(coverHref); if(cf) coverDataUrl=await blobToDataUrl(await cf.async('blob')); }
-      }
-      if(!coverDataUrl){
-        const itemRe=/<item\s+([^>]+)>/gi; let im;
-        while((im=itemRe.exec(opfXml))!==null){
-          const attrs=im[1];
-          const id=attrs.match(/\bid="([^"]+)"/i)?.[1]||'';
-          const href=attrs.match(/\bhref="([^"]+)"/i)?.[1]||'';
-          const mt=attrs.match(/\bmedia-type="([^"]+)"/i)?.[1]||'';
-          if(!mt.startsWith('image/')) continue;
-          if(id.toLowerCase().includes('cover')||href.toLowerCase().includes('cover')){
-            const f=zip.file(opfDir+href)||zip.file(href);
-            if(f){ coverDataUrl=await blobToDataUrl(await f.async('blob')); break; }
-          }
-        }
-      }
-      if(!coverDataUrl){
-        const firstSpineId=opfXml.match(/<itemref\s+idref="([^"]+)"/i)?.[1];
-        if(firstSpineId){
-          const firstHref=opfXml.match(new RegExp(`id="${firstSpineId}"[^>]+href="([^"]+)"`, 'i'))?.[1]||opfXml.match(new RegExp(`href="([^"]+)"[^>]+id="${firstSpineId}"`, 'i'))?.[1];
-          if(firstHref){
-            const firstHtml=await zip.file(opfDir+firstHref)?.async('string');
-            if(firstHtml){
-              const srcMatch=firstHtml.match(/src="([^"]+\.(jpe?g|png|gif|webp))"/i);
-              if(srcMatch){
-                const imgPath=srcMatch[1];
-                const chapterDir=firstHref.includes('/')?firstHref.replace(/\/[^/]+$/,'/'):'';
-                const f=zip.file(opfDir+chapterDir+imgPath)||zip.file(opfDir+imgPath)||zip.file(imgPath);
-                if(f) coverDataUrl=await blobToDataUrl(await f.async('blob'));
-              }
-            }
-          }
-        }
-      }
-      if(!coverDataUrl){
-        for(const p of ['cover.jpg','cover.jpeg','cover.png','images/cover.jpg','OEBPS/cover.jpg','OEBPS/cover.jpeg','OEBPS/cover.png','OEBPS/images/cover.jpg','OEBPS/images/cover.jpeg','OPS/images/cover.jpg','OPS/cover.jpg']){
-          const f=zip.file(p); if(f){ coverDataUrl=await blobToDataUrl(await f.async('blob')); break; }
-        }
-      }
-    } catch(e){ /* silent */ }
-
-    return { title:get('title')||file.name.replace(/\.epub$/i,''), author:getAll('creator').join(', ')||'Unknown Author', description:get('description')||'', category:getAll('subject')[0]||'Uncategorised', language:get('language')||'', publisher:get('publisher')||'', coverDataUrl };
-  } catch(e){ return fallbackMeta(file); }
+      if(coverId){const mi=opfXml.match(new RegExp(`id="${coverId}"[^>]+href="([^"]+)"`,'i'))||opfXml.match(new RegExp(`href="([^"]+)"[^>]+id="${coverId}"`,'i'));const coverHref=mi?.[1];if(coverHref){const cf=zip.file(opfDir+coverHref)||zip.file(coverHref);if(cf)coverDataUrl=await blobToDataUrl(await cf.async('blob'));}}
+      if(!coverDataUrl){const itemRe=/<item\s+([^>]+)>/gi;let im;while((im=itemRe.exec(opfXml))!==null){const attrs=im[1];const id=attrs.match(/\bid="([^"]+)"/i)?.[1]||'';const href=attrs.match(/\bhref="([^"]+)"/i)?.[1]||'';const mt=attrs.match(/\bmedia-type="([^"]+)"/i)?.[1]||'';if(!mt.startsWith('image/'))continue;if(id.toLowerCase().includes('cover')||href.toLowerCase().includes('cover')){const f=zip.file(opfDir+href)||zip.file(href);if(f){coverDataUrl=await blobToDataUrl(await f.async('blob'));break;}}}}
+      if(!coverDataUrl){for(const p of ['cover.jpg','cover.jpeg','cover.png','images/cover.jpg','OEBPS/cover.jpg','OEBPS/cover.jpeg','OEBPS/cover.png','OEBPS/images/cover.jpg','OEBPS/images/cover.jpeg','OPS/images/cover.jpg','OPS/cover.jpg']){const f=zip.file(p);if(f){coverDataUrl=await blobToDataUrl(await f.async('blob'));break;}}}
+    }catch(e){/* silent */}
+    return{title:get('title')||file.name.replace(/\.epub$/i,''),author:getAll('creator').join(', ')||'Unknown Author',description:get('description')||'',category:getAll('subject')[0]||'Uncategorised',language:get('language')||'',publisher:get('publisher')||'',coverDataUrl};
+  }catch(e){return fallbackMeta(file);}
 }
-function fallbackMeta(file){ return {title:file.name.replace(/\.epub$/i,''),author:'Unknown Author',description:'',category:'Uncategorised',language:'',publisher:'',coverDataUrl:null}; }
-function blobToDataUrl(blob){ return new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(r.result); r.onerror=rej; r.readAsDataURL(blob); }); }
+function fallbackMeta(file){return{title:file.name.replace(/\.epub$/i,''),author:'Unknown Author',description:'',category:'Uncategorised',language:'',publisher:'',coverDataUrl:null};}
+function blobToDataUrl(blob){return new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=rej;r.readAsDataURL(blob);});}
 
 // ── MISC UI ───────────────────────────────────────────────────────────────────
-[document.getElementById('btnHeaderUpload'),document.getElementById('btnSideUpload'),document.getElementById('btnMobUpload')]
-  .forEach(b=>b?.addEventListener('click',showUploadModal));
-[document.getElementById('btnSideRefresh'),document.getElementById('btnMobRefresh')]
-  .forEach(b=>b?.addEventListener('click',loadLibrary));
-
-document.getElementById('btnToggleSettings').addEventListener('click',e=>{
-  e.stopPropagation();
-  const s=document.getElementById('deskSettings');
-  s.style.display=s.style.display==='none'?'block':'none';
-});
-document.addEventListener('click',e=>{
-  const s=document.getElementById('deskSettings');
-  if(s.style.display!=='none'&&!s.contains(e.target)&&e.target.id!=='btnToggleSettings') s.style.display='none';
-});
+[document.getElementById('btnHeaderUpload'),document.getElementById('btnSideUpload'),document.getElementById('btnMobUpload')].forEach(b=>b?.addEventListener('click',showUploadModal));
+[document.getElementById('btnSideRefresh'),document.getElementById('btnMobRefresh')].forEach(b=>b?.addEventListener('click',loadLibrary));
+document.getElementById('btnToggleSettings').addEventListener('click',e=>{e.stopPropagation();const s=document.getElementById('deskSettings');s.style.display=s.style.display==='none'?'block':'none';});
+document.addEventListener('click',e=>{const s=document.getElementById('deskSettings');if(s.style.display!=='none'&&!s.contains(e.target)&&e.target.id!=='btnToggleSettings')s.style.display='none';});
 document.getElementById('defaultCatInput').value=localStorage.getItem('elib_default_cat')||'';
-document.getElementById('defaultCatInput').addEventListener('keydown',e=>{
-  if(e.key==='Enter'){ localStorage.setItem('elib_default_cat',e.target.value); showToast('Default category saved'); }
-});
-document.getElementById('btnClearCache').addEventListener('click',()=>{
-  if(!confirm('Clear local cache?')) return;
-  library=[]; communityLib=[]; currentId=null; activeCat='All'; renderAll(); closeDrawer();
-  showToast('Cache cleared');
-});
+document.getElementById('defaultCatInput').addEventListener('keydown',e=>{if(e.key==='Enter'){localStorage.setItem('elib_default_cat',e.target.value);showToast('Default category saved');}});
+document.getElementById('btnClearCache').addEventListener('click',()=>{if(!confirm('Clear local cache?'))return;library=[];communityLib=[];currentId=null;activeCat='All';renderAll();closeDrawer();showToast('Cache cleared');});
 document.getElementById('deskInstallBtn').addEventListener('click',triggerInstall);
 document.getElementById('mobInstallBtn').addEventListener('click',triggerInstall);
-function triggerInstall(){ if(deferredInstall){ deferredInstall.prompt(); deferredInstall.userChoice.then(()=>deferredInstall=null); } }
+function triggerInstall(){if(deferredInstall){deferredInstall.prompt();deferredInstall.userChoice.then(()=>deferredInstall=null);}}
 
 let toastTimer;
-function showLoading(msg){ document.getElementById('loadingMsg').textContent=msg||'Loading…'; document.getElementById('loadingOverlay').classList.add('open'); }
-function hideLoading(){ document.getElementById('loadingOverlay').classList.remove('open'); }
-function showToast(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.classList.remove('show'),2800); }
-function esc(s){ return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function showLoading(msg){document.getElementById('loadingMsg').textContent=msg||'Loading…';document.getElementById('loadingOverlay').classList.add('open');}
+function hideLoading(){document.getElementById('loadingOverlay').classList.remove('open');}
+function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.remove('show'),2800);}
+function esc(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 
 // ── TAGS ──────────────────────────────────────────────────────────────────────
-function getAllTags(){
-  const set=new Set();
-  library.forEach(b=>(b.tags||[]).forEach(t=>set.add(t)));
-  return [...set].sort();
-}
-
+function getAllTags(){const set=new Set();library.forEach(b=>(b.tags||[]).forEach(t=>set.add(t)));return[...set].sort();}
 document.getElementById('btnCloseTagsModal').addEventListener('click',()=>document.getElementById('tagsModal').classList.remove('open'));
 document.getElementById('tagsInput').addEventListener('keydown',async e=>{
-  if(e.key!=='Enter') return;
-  const tag=e.target.value.trim(); if(!tag) return;
-  e.target.value='';
-  const book=library.find(b=>b.id===currentId); if(!book) return;
-  const tags=[...new Set([...(book.tags||[]),tag])];
-  book.tags=tags;
-  await updateDoc(doc(db,'books',currentId),{tags,updatedAt:serverTimestamp()});
-  renderTagsModal();
+  if(e.key!=='Enter')return;const tag=e.target.value.trim();if(!tag)return;e.target.value='';
+  const book=library.find(b=>b.id===currentId);if(!book)return;
+  const tags=[...new Set([...(book.tags||[]),tag])];book.tags=tags;
+  await updateDoc(doc(db,'books',currentId),{tags,updatedAt:serverTimestamp()});renderTagsModal();
 });
-
-async function removeTag(tag){
-  const book=library.find(b=>b.id===currentId); if(!book) return;
-  const tags=(book.tags||[]).filter(t=>t!==tag);
-  book.tags=tags;
-  await updateDoc(doc(db,'books',currentId),{tags,updatedAt:serverTimestamp()});
-  renderTagsModal();
-}
-
-function showTagsModal(){
-  if(!currentId) return;
-  document.getElementById('tagsModal').classList.add('open');
-  renderTagsModal();
-}
-
+async function removeTag(tag){const book=library.find(b=>b.id===currentId);if(!book)return;const tags=(book.tags||[]).filter(t=>t!==tag);book.tags=tags;await updateDoc(doc(db,'books',currentId),{tags,updatedAt:serverTimestamp()});renderTagsModal();}
+function showTagsModal(){if(!currentId)return;document.getElementById('tagsModal').classList.add('open');renderTagsModal();}
 function renderTagsModal(){
-  const book=library.find(b=>b.id===currentId); if(!book) return;
+  const book=library.find(b=>b.id===currentId);if(!book)return;
   const current=book.tags||[];
-  document.getElementById('tagsCurrentWrap').innerHTML=current.length
-    ?current.map(t=>`<span class="tag-pill">${esc(t)}<span class="tag-pill-remove" data-tag="${esc(t)}" title="Remove">✕</span></span>`).join('')
-    :'<span style="font-size:.8rem;color:var(--muted)">No tags yet</span>';
-  document.getElementById('tagsCurrentWrap').querySelectorAll('.tag-pill-remove').forEach(el=>{
-    el.addEventListener('click',()=>removeTag(el.dataset.tag));
-  });
+  document.getElementById('tagsCurrentWrap').innerHTML=current.length?current.map(t=>`<span class="tag-pill">${esc(t)}<span class="tag-pill-remove" data-tag="${esc(t)}" title="Remove">✕</span></span>`).join(''):'<span style="font-size:.8rem;color:var(--muted)">No tags yet</span>';
+  document.getElementById('tagsCurrentWrap').querySelectorAll('.tag-pill-remove').forEach(el=>el.addEventListener('click',()=>removeTag(el.dataset.tag)));
   const allT=getAllTags().filter(t=>!current.includes(t));
-  document.getElementById('tagsAllWrap').innerHTML=allT.length
-    ?allT.map(t=>`<span class="tag-pill" data-quicktag="${esc(t)}">${esc(t)}</span>`).join('')
-    :'<span style="font-size:.75rem;color:var(--muted)">No other tags yet</span>';
-  document.getElementById('tagsAllWrap').querySelectorAll('[data-quicktag]').forEach(el=>{
-    el.addEventListener('click',async()=>{
-      const book=library.find(b=>b.id===currentId); if(!book) return;
-      const tags=[...new Set([...(book.tags||[]),el.dataset.quicktag])];
-      book.tags=tags;
-      await updateDoc(doc(db,'books',currentId),{tags,updatedAt:serverTimestamp()});
-      renderTagsModal();
-    });
-  });
+  document.getElementById('tagsAllWrap').innerHTML=allT.length?allT.map(t=>`<span class="tag-pill" data-quicktag="${esc(t)}">${esc(t)}</span>`).join(''):'<span style="font-size:.75rem;color:var(--muted)">No other tags yet</span>';
+  document.getElementById('tagsAllWrap').querySelectorAll('[data-quicktag]').forEach(el=>el.addEventListener('click',async()=>{const book=library.find(b=>b.id===currentId);if(!book)return;const tags=[...new Set([...(book.tags||[]),el.dataset.quicktag])];book.tags=tags;await updateDoc(doc(db,'books',currentId),{tags,updatedAt:serverTimestamp()});renderTagsModal();}));
 }
 
 // ── RECOMMENDED ───────────────────────────────────────────────────────────────
 async function toggleRecommended(){
-  if(!currentId) return;
-  const book=library.find(b=>b.id===currentId); if(!book) return;
-  const rec=!book.recommended;
-  book.recommended=rec;
+  if(!currentId)return;const book=library.find(b=>b.id===currentId);if(!book)return;
+  const rec=!book.recommended;book.recommended=rec;
   await updateDoc(doc(db,'books',currentId),{recommended:rec,updatedAt:serverTimestamp()});
-  // Also update community entry if published
-  try{
-    const q=query(collection(db,'community'),where('sourceId','==',currentId));
-    const snap=await getDocs(q);
-    for(const d of snap.docs) await updateDoc(doc(db,'community',d.id),{recommended:rec});
-    const commBook=communityLib.find(b=>b.sourceId===currentId);
-    if(commBook) commBook.recommended=rec;
-  }catch(e){ console.warn('Community recommended sync failed:',e); }
-  renderAll(); showBookById(currentId);
-  showToast(rec?'Marked as Recommended ⭐':'Removed from Recommended');
+  try{const q=query(collection(db,'community'),where('sourceId','==',currentId));const snap=await getDocs(q);for(const d of snap.docs)await updateDoc(doc(db,'community',d.id),{recommended:rec});const commBook=communityLib.find(b=>b.sourceId===currentId);if(commBook)commBook.recommended=rec;}catch(e){console.warn('Community recommended sync:',e);}
+  renderAll();showBookById(currentId);showToast(rec?'Marked as Recommended ⭐':'Removed from Recommended');
 }
 
 // ── CHECKOUT SYSTEM ───────────────────────────────────────────────────────────
 async function signOutBook(){
-  if(!currentId||!currentUser) return;
-  const book=[...library,...communityLib].find(b=>b.id===currentId); if(!book) return;
-  const due=new Date(); due.setDate(due.getDate()+14);
+  if(!currentId||!currentUser)return;
+  const book=[...library,...communityLib].find(b=>b.id===currentId);if(!book)return;
+  if(myCheckedOutIds.has(currentId)){showToast('Already signed out — return it first');return;}
+  const due=new Date();due.setDate(due.getDate()+14);
   showLoading('Signing out…');
   try{
-    await addDoc(collection(db,'checkouts'),{
-      bookId:    currentId,
-      bookTitle: book.title,
-      userId:    currentUser.uid,
-      userName:  currentUser.displayName||currentUser.email,
-      checkedOutAt: serverTimestamp(),
-      dueDate:   Timestamp.fromDate(due),
-      returnedAt: null
-    });
-    hideLoading();
-    showToast(`"${book.title}" signed out — due ${due.toLocaleDateString()}`);
-    showCheckoutHistory(currentId);
-  }catch(e){ hideLoading(); showToast('Sign-out failed: '+e.message); }
+    await addDoc(collection(db,'checkouts'),{bookId:currentId,bookTitle:book.title,userId:currentUser.uid,userName:currentUser.displayName||currentUser.email,checkedOutAt:serverTimestamp(),dueDate:Timestamp.fromDate(due),returnedAt:null});
+    myCheckedOutIds.add(currentId);
+    hideLoading();showToast(`"${book.title}" signed out — due ${due.toLocaleDateString()}`);
+    // refresh the action buttons
+    if(document.getElementById('bookDrawer').classList.contains('open'))showBookById(currentId);
+  }catch(e){hideLoading();showToast('Sign-out failed: '+e.message);}
 }
 
-async function returnBook(checkoutId){
-  showLoading('Returning…');
+async function returnCurrentBook(){
+  if(!currentId||!currentUser)return;
+  // Find most recent unreturned checkout for this book by this user
   try{
-    await updateDoc(doc(db,'checkouts',checkoutId),{returnedAt:serverTimestamp()});
-    hideLoading(); showToast('Book returned ✓');
-    showCheckoutHistory(currentId);
-  }catch(e){ hideLoading(); showToast('Return failed: '+e.message); }
+    const q=query(collection(db,'checkouts'),where('bookId','==',currentId),where('userId','==',currentUser.uid));
+    const snap=await getDocs(q);
+    const unreturned=snap.docs.filter(d=>!d.data().returnedAt).sort((a,b)=>b.data().checkedOutAt?.toMillis()-a.data().checkedOutAt?.toMillis());
+    if(!unreturned.length){showToast('No active checkout found');return;}
+    showLoading('Returning…');
+    await updateDoc(doc(db,'checkouts',unreturned[0].id),{returnedAt:serverTimestamp()});
+    myCheckedOutIds.delete(currentId);
+    hideLoading();showToast('Book returned ✓');
+    if(document.getElementById('bookDrawer').classList.contains('open'))showBookById(currentId);
+  }catch(e){hideLoading();showToast('Return failed: '+e.message);}
 }
 
 async function showCheckoutHistory(bookId){
@@ -2239,480 +1767,190 @@ async function showCheckoutHistory(bookId){
   document.getElementById('checkoutModal').classList.add('open');
   document.getElementById('checkoutHistoryList').innerHTML='<div style="color:var(--muted);font-size:.85rem">Loading…</div>';
   try{
-    const q=query(
-      collection(db,'checkouts'),
-      where('bookId','==',bookId),
-      orderBy('checkedOutAt','desc')
-    );
+    const q=query(collection(db,'checkouts'),where('bookId','==',bookId),orderBy('checkedOutAt','desc'));
     const snap=await getDocs(q);
     const rows=snap.docs.map(d=>({id:d.id,...d.data()}));
-    if(!rows.length){ 
-      document.getElementById('checkoutHistoryList').innerHTML=
-        '<div style="color:var(--muted);font-size:.85rem;padding:.5rem 0">No checkouts yet</div>'; 
-      return; 
-    }
+    if(!rows.length){document.getElementById('checkoutHistoryList').innerHTML='<div style="color:var(--muted);font-size:.85rem;padding:.5rem 0">No checkouts yet</div>';return;}
     document.getElementById('checkoutHistoryList').innerHTML=rows.map(r=>{
       const out=r.checkedOutAt?.toDate?.()??new Date();
       const due=r.dueDate?.toDate?.()??new Date();
       const returnedAt=r.returnedAt?.toDate?.()??null;
       const isOverdue=!returnedAt&&due<new Date();
-      const isMine=r.userId===currentUser?.uid;
-      const returnBtn=(!returnedAt&&isMine)
-        ?`<button class="btn-action btn-return" style="padding:.25rem .6rem;font-size:.65rem;border-radius:3px" data-checkoutid="${r.id}">Return</button>`:'';
-      return `<div class="checkout-row">
-        <div>
-          <div class="checkout-row-name">${esc(r.userName)}</div>
-          <div class="checkout-row-date">Out: ${out.toLocaleDateString()} · Due: 
-            <span class="${isOverdue?'checkout-badge overdue':'checkout-row-date'}">${due.toLocaleDateString()}</span>
-          </div>
-          ${returnedAt?`<div class="checkout-row-date">Returned: ${returnedAt.toLocaleDateString()}</div>`:''}
-        </div>
-        ${returnBtn}
-      </div>`;
+      return `<div class="checkout-row"><div><div class="checkout-row-name">${esc(r.userName)}</div><div class="checkout-row-date">Out: ${out.toLocaleDateString()} · Due: <span class="${isOverdue?'checkout-badge overdue':'checkout-row-date'}">${due.toLocaleDateString()}</span></div>${returnedAt?`<div class="checkout-row-date">Returned: ${returnedAt.toLocaleDateString()}</div>`:''}</div></div>`;
     }).join('');
-    document.getElementById('checkoutHistoryList').querySelectorAll('[data-checkoutid]').forEach(btn=>{
-      btn.addEventListener('click',()=>returnBook(btn.dataset.checkoutid));
-    });
-  }catch(e){ 
-    document.getElementById('checkoutHistoryList').innerHTML=
-      '<div style="color:var(--muted);font-size:.85rem;padding:.5rem 0">No checkouts yet</div>';
-    console.warn('Checkout history:', e.code, e.message);
-  }
+  }catch(e){document.getElementById('checkoutHistoryList').innerHTML='<div style="color:var(--muted);font-size:.85rem;padding:.5rem 0">No checkouts yet</div>';console.warn('Checkout history:',e.code,e.message);}
 }
-
 document.getElementById('btnCloseCheckoutModal').addEventListener('click',()=>document.getElementById('checkoutModal').classList.remove('open'));
 
 // ── MULTI-SELECT ──────────────────────────────────────────────────────────────
-document.getElementById('btnSelectMode').addEventListener('click', toggleSelectMode);
-
+document.getElementById('btnSelectMode').addEventListener('click',toggleSelectMode);
 function toggleSelectMode(){
-  selectMode = !selectMode;
-  selectedIds.clear();
-  const btn = document.getElementById('btnSelectMode');
-  btn.classList.toggle('active', selectMode);
-  btn.textContent = selectMode ? '✕ Done' : '☑ Select';
-  document.getElementById('deskBookGrid').classList.toggle('select-mode', selectMode);
-  document.getElementById('bulkBar').classList.toggle('open', selectMode);
+  selectMode=!selectMode;selectedIds.clear();
+  const btn=document.getElementById('btnSelectMode');
+  btn.classList.toggle('active',selectMode);btn.textContent=selectMode?'✕ Done':'☑ Select';
+  document.getElementById('deskBookGrid').classList.toggle('select-mode',selectMode);
+  document.getElementById('bulkBar').classList.toggle('open',selectMode);
   document.querySelectorAll('.book-card.selected').forEach(c=>c.classList.remove('selected'));
   updateBulkBar();
 }
-
 function updateBulkBar(){
-  const n = selectedIds.size;
-  document.getElementById('bulkBarCount').textContent = `${n} book${n!==1?'s':''} selected`;
-  const myBooks = [...selectedIds].map(id=>library.find(b=>b.id===id)).filter(Boolean);
-  const hasPublished = myBooks.some(b=>b.visibility==='community');
-  const hasUnpublished = myBooks.some(b=>b.visibility!=='community');
-  const hasUnrecommended = myBooks.some(b=>!b.recommended);
-  const hasRecommended = myBooks.some(b=>b.recommended);
-  document.getElementById('bulkBtnPublish').style.display = hasUnpublished&&n>0?'':'none';
-  document.getElementById('bulkBtnUnpublish').style.display = hasPublished&&n>0?'':'none';
-  document.getElementById('bulkBtnRec').style.display = hasUnrecommended&&n>0?'':'none';
-  document.getElementById('bulkBtnUnrec').style.display = hasRecommended&&n>0?'':'none';
-  document.getElementById('bulkBtnCheckout').style.display = n>0?'':'none';
-  document.getElementById('bulkBtnEdit').style.display = n>0?'':'none';
+  const n=selectedIds.size;
+  document.getElementById('bulkBarCount').textContent=`${n} book${n!==1?'s':''} selected`;
+  const myBooks=[...selectedIds].map(id=>library.find(b=>b.id===id)).filter(Boolean);
+  const hasPublished=myBooks.some(b=>b.visibility==='community');
+  const hasUnpublished=myBooks.some(b=>b.visibility!=='community');
+  const hasUnrecommended=myBooks.some(b=>!b.recommended);
+  const hasRecommended=myBooks.some(b=>b.recommended);
+  document.getElementById('bulkBtnPublish').style.display=hasUnpublished&&n>0?'':'none';
+  document.getElementById('bulkBtnUnpublish').style.display=hasPublished&&n>0?'':'none';
+  document.getElementById('bulkBtnRec').style.display=hasUnrecommended&&n>0?'':'none';
+  document.getElementById('bulkBtnUnrec').style.display=hasRecommended&&n>0?'':'none';
+  document.getElementById('bulkBtnCheckout').style.display=n>0?'':'none';
+  document.getElementById('bulkBtnEdit').style.display=n>0?'':'none';
 }
-
-// Bulk edit modal
 document.getElementById('btnCancelBulkEdit').addEventListener('click',()=>document.getElementById('bulkEditModal').classList.remove('open'));
 document.getElementById('bulkBtnEdit').addEventListener('click',()=>{
-  if(!selectedIds.size){ showToast('Select books first'); return; }
-  document.getElementById('bulkEditCount').textContent = selectedIds.size;
-  document.getElementById('bulkCat').value = '';
-  document.getElementById('bulkLang').value = '';
-  document.getElementById('bulkDesc').value = '';
-  document.getElementById('bulkTags').value = '';
-  document.getElementById('bulkSetRecommended').checked = false;
-  document.getElementById('bulkUnsetRecommended').checked = false;
-  const cats = [...new Set(library.map(b=>b.category).filter(Boolean))].sort();
-  document.getElementById('bulkCatSuggestions').innerHTML = cats.map(c=>`<option value="${esc(c)}">`).join('');
+  if(!selectedIds.size){showToast('Select books first');return;}
+  document.getElementById('bulkEditCount').textContent=selectedIds.size;
+  document.getElementById('bulkCat').value='';document.getElementById('bulkLang').value='';document.getElementById('bulkDesc').value='';document.getElementById('bulkTags').value='';document.getElementById('bulkSetRecommended').checked=false;document.getElementById('bulkUnsetRecommended').checked=false;
+  const cats=[...new Set(library.map(b=>b.category).filter(Boolean))].sort();
+  document.getElementById('bulkCatSuggestions').innerHTML=cats.map(c=>`<option value="${esc(c)}">`).join('');
   document.getElementById('bulkEditModal').classList.add('open');
 });
-
-document.getElementById('btnSaveBulkEdit').addEventListener('click', async()=>{
-  const cat  = document.getElementById('bulkCat').value.trim();
-  const lang = document.getElementById('bulkLang').value.trim();
-  const desc = stripHtml(document.getElementById('bulkDesc').value.trim());
-  const tagsRaw = document.getElementById('bulkTags').value.trim();
-  const newTags = tagsRaw ? tagsRaw.split(',').map(t=>t.trim()).filter(Boolean) : [];
-  const setRec   = document.getElementById('bulkSetRecommended').checked;
-  const unsetRec = document.getElementById('bulkUnsetRecommended').checked;
-  const updates = { updatedAt: serverTimestamp() };
-  if(cat)  updates.category = cat;
-  if(lang) updates.language = lang;
-  if(desc) updates.description = desc;
-  if(setRec)   updates.recommended = true;
-  if(unsetRec) updates.recommended = false;
-  const ids = [...selectedIds];
+document.getElementById('btnSaveBulkEdit').addEventListener('click',async()=>{
+  const cat=document.getElementById('bulkCat').value.trim();
+  const lang=document.getElementById('bulkLang').value.trim();
+  const desc=stripHtml(document.getElementById('bulkDesc').value.trim());
+  const tagsRaw=document.getElementById('bulkTags').value.trim();
+  const newTags=tagsRaw?tagsRaw.split(',').map(t=>t.trim()).filter(Boolean):[];
+  const setRec=document.getElementById('bulkSetRecommended').checked;
+  const unsetRec=document.getElementById('bulkUnsetRecommended').checked;
+  const updates={updatedAt:serverTimestamp()};
+  if(cat)updates.category=cat;if(lang)updates.language=lang;if(desc)updates.description=desc;
+  if(setRec)updates.recommended=true;if(unsetRec)updates.recommended=false;
+  const ids=[...selectedIds];
   document.getElementById('bulkEditModal').classList.remove('open');
   showLoading(`Updating ${ids.length} book${ids.length!==1?'s':''}…`);
   try{
-    for(const id of ids){
-      const book = library.find(b=>b.id===id); if(!book) continue;
-      const bookUpdates = {...updates};
-      if(newTags.length){
-        bookUpdates.tags = [...new Set([...(book.tags||[]), ...newTags])];
-      }
-      await updateDoc(doc(db,'books',id), bookUpdates);
-      Object.assign(book, bookUpdates);
-    }
-    hideLoading();
-    toggleSelectMode();
-    renderAll();
-    showToast(`${ids.length} book${ids.length!==1?'s':''} updated ✓`);
-  }catch(e){ hideLoading(); showToast('Update failed: '+e.message); console.error(e); }
+    for(const id of ids){const book=library.find(b=>b.id===id);if(!book)continue;const bookUpdates={...updates};if(newTags.length)bookUpdates.tags=[...new Set([...(book.tags||[]),...newTags])];await updateDoc(doc(db,'books',id),bookUpdates);Object.assign(book,bookUpdates);}
+    hideLoading();toggleSelectMode();renderAll();showToast(`${ids.length} book${ids.length!==1?'s':''} updated ✓`);
+  }catch(e){hideLoading();showToast('Update failed: '+e.message);}
 });
-
-// Bulk publish
-document.getElementById('bulkBtnPublish').addEventListener('click', async()=>{
-  const ids = [...selectedIds].filter(id=>{ const b=library.find(x=>x.id===id); return b&&b.visibility!=='community'; });
-  if(!ids.length) return;
-  if(!confirm(`Publish ${ids.length} book${ids.length!==1?'s':''} to Public Library?`)) return;
+document.getElementById('bulkBtnPublish').addEventListener('click',async()=>{
+  const ids=[...selectedIds].filter(id=>{const b=library.find(x=>x.id===id);return b&&b.visibility!=='community';});
+  if(!ids.length)return;if(!confirm(`Publish ${ids.length} book${ids.length!==1?'s':''} to Public Library?`))return;
   showLoading('Publishing…');
   try{
-    for(const id of ids){
-      const book=library.find(b=>b.id===id); if(!book) continue;
-      await addDoc(collection(db,'community'),{
-        sourceId:id, ownerId:currentUser.uid, ownerName:currentUser.displayName||currentUser.email,
-        filename:book.filename, title:book.title, author:book.author, description:book.description,
-        category:book.category, language:book.language, coverDataUrl:book.coverDataUrl||null,
-        storagePath:book.storagePath, sharedAt:serverTimestamp(), ratingSum:0, ratingCount:0,
-        recommended:book.recommended||false
-      });
-      await updateDoc(doc(db,'books',id),{visibility:'community',updatedAt:serverTimestamp()});
-      book.visibility='community';
-    }
-    await loadCommunity();
-    hideLoading(); toggleSelectMode(); renderAll();
-    showToast(`${ids.length} book${ids.length!==1?'s':''} published ✓`);
-  }catch(e){ hideLoading(); showToast('Publish failed: '+e.message); }
+    for(const id of ids){const book=library.find(b=>b.id===id);if(!book)continue;await addDoc(collection(db,'community'),{sourceId:id,ownerId:currentUser.uid,ownerName:currentUser.displayName||currentUser.email,filename:book.filename,title:book.title,author:book.author,description:book.description,category:book.category,language:book.language,coverDataUrl:book.coverDataUrl||null,storagePath:book.storagePath,sharedAt:serverTimestamp(),ratingSum:0,ratingCount:0,recommended:book.recommended||false});await updateDoc(doc(db,'books',id),{visibility:'community',updatedAt:serverTimestamp()});book.visibility='community';}
+    await loadCommunity();hideLoading();toggleSelectMode();renderAll();showToast(`${ids.length} book${ids.length!==1?'s':''} published ✓`);
+  }catch(e){hideLoading();showToast('Publish failed: '+e.message);}
 });
-
-// Bulk unpublish
-document.getElementById('bulkBtnUnpublish').addEventListener('click', async()=>{
-  const ids = [...selectedIds].filter(id=>{ const b=library.find(x=>x.id===id); return b&&b.visibility==='community'; });
-  if(!ids.length) return;
-  if(!confirm(`Unpublish ${ids.length} book${ids.length!==1?'s':''} from Public Library?`)) return;
+document.getElementById('bulkBtnUnpublish').addEventListener('click',async()=>{
+  const ids=[...selectedIds].filter(id=>{const b=library.find(x=>x.id===id);return b&&b.visibility==='community';});
+  if(!ids.length)return;if(!confirm(`Unpublish ${ids.length} book${ids.length!==1?'s':''}?`))return;
   showLoading('Unpublishing…');
   try{
-    for(const id of ids){
-      const q=query(collection(db,'community'),where('sourceId','==',id));
-      const snap=await getDocs(q);
-      for(const d of snap.docs) await deleteDoc(doc(db,'community',d.id));
-      await updateDoc(doc(db,'books',id),{visibility:'private',updatedAt:serverTimestamp()});
-      const book=library.find(b=>b.id===id); if(book) book.visibility='private';
-      communityLib=communityLib.filter(b=>b.sourceId!==id);
-    }
-    hideLoading(); toggleSelectMode(); renderAll();
-    showToast(`${ids.length} book${ids.length!==1?'s':''} unpublished ✓`);
-  }catch(e){ hideLoading(); showToast('Unpublish failed: '+e.message); }
+    for(const id of ids){const q=query(collection(db,'community'),where('sourceId','==',id));const snap=await getDocs(q);for(const d of snap.docs)await deleteDoc(doc(db,'community',d.id));await updateDoc(doc(db,'books',id),{visibility:'private',updatedAt:serverTimestamp()});const book=library.find(b=>b.id===id);if(book)book.visibility='private';communityLib=communityLib.filter(b=>b.sourceId!==id);}
+    hideLoading();toggleSelectMode();renderAll();showToast(`${ids.length} book${ids.length!==1?'s':''} unpublished ✓`);
+  }catch(e){hideLoading();showToast('Unpublish failed: '+e.message);}
 });
-
-// Bulk sign out
-document.getElementById('bulkBtnCheckout').addEventListener('click', async()=>{
-  if(!selectedIds.size) return;
-  if(!confirm(`Sign out ${selectedIds.size} book${selectedIds.size!==1?'s':''}? Each gets a 2-week loan period.`)) return;
+document.getElementById('bulkBtnCheckout').addEventListener('click',async()=>{
+  if(!selectedIds.size)return;if(!confirm(`Sign out ${selectedIds.size} book${selectedIds.size!==1?'s':''}? Each gets a 2-week loan period.`))return;
   showLoading('Signing out…');
   try{
-    const due=new Date(); due.setDate(due.getDate()+14);
-    for(const id of selectedIds){
-      const book=[...library,...communityLib].find(b=>b.id===id); if(!book) continue;
-      await addDoc(collection(db,'checkouts'),{
-        bookId:id, bookTitle:book.title,
-        userId:currentUser.uid, userName:currentUser.displayName||currentUser.email,
-        checkedOutAt:serverTimestamp(), dueDate:Timestamp.fromDate(due), returnedAt:null
-      });
-    }
-    hideLoading(); toggleSelectMode();
-    showToast(`${selectedIds.size} book${selectedIds.size!==1?'s':''} signed out ✓`);
-  }catch(e){ hideLoading(); showToast('Sign-out failed: '+e.message); }
+    const due=new Date();due.setDate(due.getDate()+14);
+    for(const id of selectedIds){const book=[...library,...communityLib].find(b=>b.id===id);if(!book)continue;await addDoc(collection(db,'checkouts'),{bookId:id,bookTitle:book.title,userId:currentUser.uid,userName:currentUser.displayName||currentUser.email,checkedOutAt:serverTimestamp(),dueDate:Timestamp.fromDate(due),returnedAt:null});myCheckedOutIds.add(id);}
+    hideLoading();toggleSelectMode();showToast(`${selectedIds.size} book${selectedIds.size!==1?'s':''} signed out ✓`);
+  }catch(e){hideLoading();showToast('Sign-out failed: '+e.message);}
 });
-
-// Bulk recommend
-document.getElementById('bulkBtnRec').addEventListener('click', async()=>{
-  const ids=[...selectedIds].filter(id=>{ const b=library.find(x=>x.id===id); return b&&!b.recommended; });
-  if(!ids.length) return;
-  showLoading('Updating…');
-  try{
-    for(const id of ids){
-      await updateDoc(doc(db,'books',id),{recommended:true,updatedAt:serverTimestamp()});
-      const b=library.find(x=>x.id===id); if(b) b.recommended=true;
-    }
-    hideLoading(); toggleSelectMode(); renderAll();
-    showToast(`${ids.length} book${ids.length!==1?'s':''} marked recommended ✓`);
-  }catch(e){ hideLoading(); showToast('Failed: '+e.message); }
+document.getElementById('bulkBtnRec').addEventListener('click',async()=>{
+  const ids=[...selectedIds].filter(id=>{const b=library.find(x=>x.id===id);return b&&!b.recommended;});if(!ids.length)return;showLoading('Updating…');
+  try{for(const id of ids){await updateDoc(doc(db,'books',id),{recommended:true,updatedAt:serverTimestamp()});const b=library.find(x=>x.id===id);if(b)b.recommended=true;}hideLoading();toggleSelectMode();renderAll();showToast(`${ids.length} marked recommended ✓`);}
+  catch(e){hideLoading();showToast('Failed: '+e.message);}
 });
-
-// Bulk unrecommend
-document.getElementById('bulkBtnUnrec').addEventListener('click', async()=>{
-  const ids=[...selectedIds].filter(id=>{ const b=library.find(x=>x.id===id); return b&&b.recommended; });
-  if(!ids.length) return;
-  showLoading('Updating…');
-  try{
-    for(const id of ids){
-      await updateDoc(doc(db,'books',id),{recommended:false,updatedAt:serverTimestamp()});
-      const b=library.find(x=>x.id===id); if(b) b.recommended=false;
-    }
-    hideLoading(); toggleSelectMode(); renderAll();
-    showToast(`${ids.length} book${ids.length!==1?'s':''} unrecommended ✓`);
-  }catch(e){ hideLoading(); showToast('Failed: '+e.message); }
+document.getElementById('bulkBtnUnrec').addEventListener('click',async()=>{
+  const ids=[...selectedIds].filter(id=>{const b=library.find(x=>x.id===id);return b&&b.recommended;});if(!ids.length)return;showLoading('Updating…');
+  try{for(const id of ids){await updateDoc(doc(db,'books',id),{recommended:false,updatedAt:serverTimestamp()});const b=library.find(x=>x.id===id);if(b)b.recommended=false;}hideLoading();toggleSelectMode();renderAll();showToast(`${ids.length} unrecommended ✓`);}
+  catch(e){hideLoading();showToast('Failed: '+e.message);}
 });
-
-document.getElementById('bulkBtnCancel').addEventListener('click', toggleSelectMode);
+document.getElementById('bulkBtnCancel').addEventListener('click',toggleSelectMode);
 
 // ── CHAPTER MANAGER ──────────────────────────────────────────────────────────
-let chapterMgrSpine   = [];
-let chapterMgrZip     = null;
-let chapterMgrOpfBase = '';
-let chapterMgrOpfPath = '';
-let chapterMgrBookId  = null;
-let chapterMgrDragIdx = null;
-
-document.getElementById('btnCancelChapterMgr').addEventListener('click', ()=>{
-  document.getElementById('chapterMgrModal').classList.remove('open');
-  chapterMgrZip = null; chapterMgrSpine = [];
-});
-
+let chapterMgrSpine=[],chapterMgrZip=null,chapterMgrOpfBase='',chapterMgrOpfPath='',chapterMgrBookId=null;
+document.getElementById('btnCancelChapterMgr').addEventListener('click',()=>{document.getElementById('chapterMgrModal').classList.remove('open');chapterMgrZip=null;chapterMgrSpine=[];});
 async function openChapterManager(){
-  if(!currentId) return;
-  const book = [...library,...communityLib].find(b=>b.id===currentId);
-  if(!book) return;
-  let sp = book.storagePath;
-  if(!sp && book.epubUrl){ const m=book.epubUrl.match(/\/o\/(.+?)\?/); if(m) sp=decodeURIComponent(m[1]); }
-  if(!sp){ showToast('No EPUB file found'); return; }
-
+  if(!currentId)return;
+  const book=[...library,...communityLib].find(b=>b.id===currentId);if(!book)return;
+  let sp=book.storagePath;
+  if(!sp&&book.epubUrl){const m=book.epubUrl.match(/\/o\/(.+?)\?/);if(m)sp=decodeURIComponent(m[1]);}
+  if(!sp){showToast('No EPUB file found');return;}
   showLoading('Loading EPUB…');
   try{
-    const bytes = await getBytes(storageRef(storage, sp));
-    chapterMgrZip = await JSZip.loadAsync(bytes);
-    chapterMgrBookId = currentId;
-
-    const container = await chapterMgrZip.file('META-INF/container.xml')?.async('string');
-    chapterMgrOpfPath = container?.match(/full-path="([^"]+\.opf)"/i)?.[1];
-    if(!chapterMgrOpfPath) throw new Error('No OPF found');
-    const opfXml = await chapterMgrZip.file(chapterMgrOpfPath)?.async('string');
-    chapterMgrOpfBase = chapterMgrOpfPath.includes('/') ? chapterMgrOpfPath.replace(/\/[^/]+$/,'/') : '';
-
-    const manifestMap = {};
-    const mRe = /<item\s+([^>]+)>/gi; let m;
-    while((m=mRe.exec(opfXml))!==null){
-      const a=m[1];
-      const id=a.match(/\bid="([^"]+)"/)?.[1];
-      const href=a.match(/\bhref="([^"]+)"/)?.[1];
-      const mt=a.match(/\bmedia-type="([^"]+)"/)?.[1];
-      if(id&&href) manifestMap[id]={href,mediaType:mt};
-    }
-
-    const labelMap = {};
-    const ncxId = Object.keys(manifestMap).find(k=>manifestMap[k].mediaType==='application/x-dtbncx+xml');
-    if(ncxId && manifestMap[ncxId]){
-      const ncxXml = await chapterMgrZip.file(chapterMgrOpfBase+manifestMap[ncxId].href)?.async('string');
-      if(ncxXml){
-        const npRe = /<navPoint[^>]*>[\s\S]*?<navLabel[^>]*>[\s\S]*?<text>([^<]*)<\/text>[\s\S]*?<content\s+src="([^"]+)"/gi; let np;
-        while((np=npRe.exec(ncxXml))!==null) labelMap[np[2].split('#')[0]] = np[1].trim();
-      }
-    }
-
-    chapterMgrSpine = [];
-    const spineRe = /<itemref\s+([^>]+)>/gi; let sp2;
-    while((sp2=spineRe.exec(opfXml))!==null){
-      const attrs = sp2[1];
-      const idref = attrs.match(/\bidref="([^"]+)"/)?.[1];
-      if(!idref) continue;
-      const item = manifestMap[idref];
-      if(!item) continue;
-      const fallbackLabel = item.href.split('/').pop().replace(/\.x?html?$/i,'').replace(/[-_]/g,' ');
-      const label = labelMap[item.href] || fallbackLabel;
-      chapterMgrSpine.push({ id:idref, href:item.href, label, originalLabel:label, deleted:false });
-    }
-
-    if(!chapterMgrSpine.length) throw new Error('No chapters found in spine');
-    hideLoading();
-    renderChapterMgrList();
-    document.getElementById('chapterMgrModal').classList.add('open');
-  }catch(e){
-    hideLoading();
-    showToast('Could not load EPUB: '+e.message);
-    console.error(e);
-  }
+    const bytes=await getBytes(storageRef(storage,sp));
+    chapterMgrZip=await JSZip.loadAsync(bytes);chapterMgrBookId=currentId;
+    const container=await chapterMgrZip.file('META-INF/container.xml')?.async('string');
+    chapterMgrOpfPath=container?.match(/full-path="([^"]+\.opf)"/i)?.[1];
+    if(!chapterMgrOpfPath)throw new Error('No OPF found');
+    const opfXml=await chapterMgrZip.file(chapterMgrOpfPath)?.async('string');
+    chapterMgrOpfBase=chapterMgrOpfPath.includes('/')?chapterMgrOpfPath.replace(/\/[^/]+$/,'/'):'';
+    const manifestMap={};const mRe=/<item\s+([^>]+)>/gi;let m;
+    while((m=mRe.exec(opfXml))!==null){const a=m[1];const id=a.match(/\bid="([^"]+)"/)?.[1];const href=a.match(/\bhref="([^"]+)"/)?.[1];const mt=a.match(/\bmedia-type="([^"]+)"/)?.[1];if(id&&href)manifestMap[id]={href,mediaType:mt};}
+    const labelMap={};const ncxId=Object.keys(manifestMap).find(k=>manifestMap[k].mediaType==='application/x-dtbncx+xml');
+    if(ncxId&&manifestMap[ncxId]){const ncxXml=await chapterMgrZip.file(chapterMgrOpfBase+manifestMap[ncxId].href)?.async('string');if(ncxXml){const npRe=/<navPoint[^>]*>[\s\S]*?<navLabel[^>]*>[\s\S]*?<text>([^<]*)<\/text>[\s\S]*?<content\s+src="([^"]+)"/gi;let np;while((np=npRe.exec(ncxXml))!==null)labelMap[np[2].split('#')[0]]=np[1].trim();}}
+    chapterMgrSpine=[];const spineRe=/<itemref\s+([^>]+)>/gi;let sp2;
+    while((sp2=spineRe.exec(opfXml))!==null){const attrs=sp2[1];const idref=attrs.match(/\bidref="([^"]+)"/)?.[1];if(!idref)continue;const item=manifestMap[idref];if(!item)continue;const fallbackLabel=item.href.split('/').pop().replace(/\.x?html?$/i,'').replace(/[-_]/g,' ');const label=labelMap[item.href]||fallbackLabel;chapterMgrSpine.push({id:idref,href:item.href,label,originalLabel:label,deleted:false});}
+    if(!chapterMgrSpine.length)throw new Error('No chapters found in spine');
+    hideLoading();renderChapterMgrList();document.getElementById('chapterMgrModal').classList.add('open');
+  }catch(e){hideLoading();showToast('Could not load EPUB: '+e.message);console.error(e);}
 }
-
 function renderChapterMgrList(){
-  const list = document.getElementById('chapterMgrList');
-  const active = chapterMgrSpine.filter(c=>!c.deleted);
-  const deleted = chapterMgrSpine.filter(c=>c.deleted);
-
-  list.innerHTML = chapterMgrSpine.map((ch,i)=>`
-    <div class="chapter-mgr-row ${ch.deleted?'deleted':''}" data-idx="${i}" draggable="${!ch.deleted}">
-      <span class="chapter-mgr-drag" title="Drag to reorder">⠿</span>
-      <span class="chapter-mgr-num">${ch.deleted?'–':active.indexOf(ch)+1}</span>
-      <input class="chapter-mgr-input" type="text" value="${esc(ch.label)}" 
-             data-idx="${i}" ${ch.deleted?'disabled':''} 
-             title="Click to rename"/>
-      ${ch.deleted
-        ? `<button class="chapter-mgr-restore" data-restore="${i}">Restore</button>`
-        : `<button class="chapter-mgr-del" data-delete="${i}" title="Mark for deletion">✕</button>`
-      }
-    </div>
-  `).join('');
-
-  document.getElementById('chapterMgrInfo').textContent =
-    `${active.length} chapter${active.length!==1?'s':''} · ${deleted.length} marked for deletion`;
-
-  list.querySelectorAll('.chapter-mgr-input').forEach(inp=>{
-    inp.addEventListener('change', e=>{
-      const idx = parseInt(e.target.dataset.idx);
-      chapterMgrSpine[idx].label = e.target.value;
-    });
-    inp.addEventListener('input', e=>{
-      const idx = parseInt(e.target.dataset.idx);
-      chapterMgrSpine[idx].label = e.target.value;
-    });
-  });
-
-  list.querySelectorAll('[data-delete]').forEach(btn=>{
-    btn.addEventListener('click', e=>{
-      const idx = parseInt(e.target.dataset.delete);
-      if(chapterMgrSpine.filter(c=>!c.deleted).length <= 1){
-        showToast("Can't delete the last chapter"); return;
-      }
-      chapterMgrSpine[idx].deleted = true;
-      renderChapterMgrList();
-    });
-  });
-
-  list.querySelectorAll('[data-restore]').forEach(btn=>{
-    btn.addEventListener('click', e=>{
-      const idx = parseInt(e.target.restore ?? e.target.dataset.restore);
-      chapterMgrSpine[idx].deleted = false;
-      renderChapterMgrList();
-    });
-  });
-
-  let dragSrc = null;
+  const list=document.getElementById('chapterMgrList');
+  const active=chapterMgrSpine.filter(c=>!c.deleted);
+  list.innerHTML=chapterMgrSpine.map((ch,i)=>`<div class="chapter-mgr-row ${ch.deleted?'deleted':''}" data-idx="${i}" draggable="${!ch.deleted}"><span class="chapter-mgr-drag" title="Drag to reorder">⠿</span><span class="chapter-mgr-num">${ch.deleted?'–':active.indexOf(ch)+1}</span><input class="chapter-mgr-input" type="text" value="${esc(ch.label)}" data-idx="${i}" ${ch.deleted?'disabled':''} title="Click to rename"/>${ch.deleted?`<button class="chapter-mgr-restore" data-restore="${i}">Restore</button>`:`<button class="chapter-mgr-del" data-delete="${i}" title="Mark for deletion">✕</button>`}</div>`).join('');
+  document.getElementById('chapterMgrInfo').textContent=`${active.length} chapter${active.length!==1?'s':''} · ${chapterMgrSpine.filter(c=>c.deleted).length} marked for deletion`;
+  list.querySelectorAll('.chapter-mgr-input').forEach(inp=>{inp.addEventListener('change',e=>{chapterMgrSpine[parseInt(e.target.dataset.idx)].label=e.target.value;});inp.addEventListener('input',e=>{chapterMgrSpine[parseInt(e.target.dataset.idx)].label=e.target.value;});});
+  list.querySelectorAll('[data-delete]').forEach(btn=>{btn.addEventListener('click',e=>{const idx=parseInt(e.target.dataset.delete);if(chapterMgrSpine.filter(c=>!c.deleted).length<=1){showToast("Can't delete the last chapter");return;}chapterMgrSpine[idx].deleted=true;renderChapterMgrList();});});
+  list.querySelectorAll('[data-restore]').forEach(btn=>{btn.addEventListener('click',e=>{const idx=parseInt(e.target.dataset.restore??e.target.dataset.restore);chapterMgrSpine[idx].deleted=false;renderChapterMgrList();});});
+  let dragSrc=null;
   list.querySelectorAll('.chapter-mgr-row[draggable="true"]').forEach(row=>{
-    row.addEventListener('dragstart', e=>{
-      dragSrc = parseInt(row.dataset.idx);
-      row.style.opacity = '.4';
-    });
-    row.addEventListener('dragend', e=>{ row.style.opacity=''; });
-    row.addEventListener('dragover', e=>{ e.preventDefault(); row.style.background='var(--teal-light)'; });
-    row.addEventListener('dragleave', e=>{ row.style.background=''; });
-    row.addEventListener('drop', e=>{
-      e.preventDefault(); row.style.background='';
-      const dropIdx = parseInt(row.dataset.idx);
-      if(dragSrc===null || dragSrc===dropIdx) return;
-      const item = chapterMgrSpine.splice(dragSrc,1)[0];
-      chapterMgrSpine.splice(dropIdx,0,item);
-      dragSrc = null;
-      renderChapterMgrList();
-    });
+    row.addEventListener('dragstart',e=>{dragSrc=parseInt(row.dataset.idx);row.style.opacity='.4';});
+    row.addEventListener('dragend',e=>{row.style.opacity='';});
+    row.addEventListener('dragover',e=>{e.preventDefault();row.style.background='var(--teal-light)';});
+    row.addEventListener('dragleave',e=>{row.style.background='';});
+    row.addEventListener('drop',e=>{e.preventDefault();row.style.background='';const dropIdx=parseInt(row.dataset.idx);if(dragSrc===null||dragSrc===dropIdx)return;const item=chapterMgrSpine.splice(dragSrc,1)[0];chapterMgrSpine.splice(dropIdx,0,item);dragSrc=null;renderChapterMgrList();});
   });
 }
-
-document.getElementById('btnSaveChapterMgr').addEventListener('click', saveChapterManager);
-
+document.getElementById('btnSaveChapterMgr').addEventListener('click',saveChapterManager);
 async function saveChapterManager(){
-  if(!chapterMgrZip || !chapterMgrOpfPath || !chapterMgrBookId) return;
-
-  const active   = chapterMgrSpine.filter(c=>!c.deleted);
-  const toDelete = chapterMgrSpine.filter(c=>c.deleted);
-
-  if(!active.length){ showToast("Can't delete all chapters"); return; }
-
-  const renamedCount = active.filter(c=>c.label!==c.originalLabel).length;
-  const summary = [
-    toDelete.length ? `${toDelete.length} chapter${toDelete.length!==1?'s':''} deleted` : '',
-    renamedCount    ? `${renamedCount} renamed` : '',
-    active.length !== chapterMgrSpine.length - toDelete.length ? 'reordered' : ''
-  ].filter(Boolean).join(', ');
-
-  if(!confirm(`Save changes to EPUB?\n${summary || 'No changes detected'}\n\nThis will re-upload the file.`)) return;
-
+  if(!chapterMgrZip||!chapterMgrOpfPath||!chapterMgrBookId)return;
+  const active=chapterMgrSpine.filter(c=>!c.deleted);const toDelete=chapterMgrSpine.filter(c=>c.deleted);
+  if(!active.length){showToast("Can't delete all chapters");return;}
+  const renamedCount=active.filter(c=>c.label!==c.originalLabel).length;
+  const summary=[toDelete.length?`${toDelete.length} chapter${toDelete.length!==1?'s':''} deleted`:'',renamedCount?`${renamedCount} renamed`:''].filter(Boolean).join(', ');
+  if(!confirm(`Save changes to EPUB?\n${summary||'No changes detected'}\n\nThis will re-upload the file.`))return;
   document.getElementById('chapterMgrModal').classList.remove('open');
   showLoading('Rebuilding EPUB…');
-
   try{
-    const opfXml = await chapterMgrZip.file(chapterMgrOpfPath).async('string');
-
-    for(const ch of toDelete){
-      const fullPath = chapterMgrOpfBase + ch.href;
-      chapterMgrZip.remove(fullPath);
-    }
-
-    const deletedHrefs = new Set(toDelete.map(c=>c.href));
-    let newOpf = opfXml;
-
-    newOpf = newOpf.replace(/<item\s+[^>]+\/>/gi, match=>{
-      const href = match.match(/\bhref="([^"]+)"/)?.[1];
-      return href && deletedHrefs.has(href) ? '' : match;
-    });
-    newOpf = newOpf.replace(/<item\s+[^>]+><\/item>/gi, match=>{
-      const href = match.match(/\bhref="([^"]+)"/)?.[1];
-      return href && deletedHrefs.has(href) ? '' : match;
-    });
-
-    const newSpineItems = active.map(ch=>`<itemref idref="${ch.id}"/>`).join('\n    ');
-    newOpf = newOpf.replace(/<spine[^>]*>[\s\S]*?<\/spine>/i,
-      match => match.replace(/<itemref[\s\S]*?(?=<\/spine>)/, newSpineItems+'\n  ')
-    );
-
-    const ncxId = (() => {
-      const m = newOpf.match(/media-type="application\/x-dtbncx\+xml"[^>]+id="([^"]+)"/i)
-             || newOpf.match(/id="([^"]+)"[^>]+media-type="application\/x-dtbncx\+xml"/i);
-      return m?.[1];
-    })();
-    const ncxHrefMatch = ncxId && newOpf.match(new RegExp(`id="${ncxId}"[^>]+href="([^"]+)"`, 'i'));
-    const ncxHref = ncxHrefMatch?.[1];
-
-    if(ncxHref){
-      const ncxPath = chapterMgrOpfBase + ncxHref;
-      const ncxXml  = await chapterMgrZip.file(ncxPath)?.async('string');
-      if(ncxXml){
-        let playOrder = 1;
-        const newNavPoints = active.map(ch=>{
-          return `<navPoint id="navPoint-${ch.id}" playOrder="${playOrder++}">
-      <navLabel><text>${esc(ch.label)}</text></navLabel>
-      <content src="${ch.href}"/>
-    </navPoint>`;
-        }).join('\n    ');
-
-        const newNcx = ncxXml.replace(
-          /<navMap[^>]*>[\s\S]*?<\/navMap>/i,
-          `<navMap>\n    ${newNavPoints}\n  </navMap>`
-        );
-        chapterMgrZip.file(ncxPath, newNcx);
-      }
-    }
-
-    chapterMgrZip.file(chapterMgrOpfPath, newOpf);
-
+    const opfXml=await chapterMgrZip.file(chapterMgrOpfPath).async('string');
+    for(const ch of toDelete)chapterMgrZip.remove(chapterMgrOpfBase+ch.href);
+    const deletedHrefs=new Set(toDelete.map(c=>c.href));
+    let newOpf=opfXml;
+    newOpf=newOpf.replace(/<item\s+[^>]+\/>/gi,match=>{const href=match.match(/\bhref="([^"]+)"/)?.[1];return href&&deletedHrefs.has(href)?'':match;});
+    newOpf=newOpf.replace(/<item\s+[^>]+><\/item>/gi,match=>{const href=match.match(/\bhref="([^"]+)"/)?.[1];return href&&deletedHrefs.has(href)?'':match;});
+    const newSpineItems=active.map(ch=>`<itemref idref="${ch.id}"/>`).join('\n    ');
+    newOpf=newOpf.replace(/<spine[^>]*>[\s\S]*?<\/spine>/i,match=>match.replace(/<itemref[\s\S]*?(?=<\/spine>)/,newSpineItems+'\n  '));
+    const ncxId=(()=>{const m=newOpf.match(/media-type="application\/x-dtbncx\+xml"[^>]+id="([^"]+)"/i)||newOpf.match(/id="([^"]+)"[^>]+media-type="application\/x-dtbncx\+xml"/i);return m?.[1];})();
+    const ncxHrefMatch=ncxId&&newOpf.match(new RegExp(`id="${ncxId}"[^>]+href="([^"]+)"`, 'i'));
+    const ncxHref=ncxHrefMatch?.[1];
+    if(ncxHref){const ncxPath=chapterMgrOpfBase+ncxHref;const ncxXml=await chapterMgrZip.file(ncxPath)?.async('string');if(ncxXml){let playOrder=1;const newNavPoints=active.map(ch=>`<navPoint id="navPoint-${ch.id}" playOrder="${playOrder++}"><navLabel><text>${esc(ch.label)}</text></navLabel><content src="${ch.href}"/></navPoint>`).join('\n    ');const newNcx=ncxXml.replace(/<navMap[^>]*>[\s\S]*?<\/navMap>/i,`<navMap>\n    ${newNavPoints}\n  </navMap>`);chapterMgrZip.file(ncxPath,newNcx);}}
+    chapterMgrZip.file(chapterMgrOpfPath,newOpf);
     showLoading('Compressing…');
-    const newBlob = await chapterMgrZip.generateAsync({
-      type:'blob',
-      mimeType:'application/epub+zip',
-      compression:'DEFLATE',
-      compressionOptions:{ level:6 }
-    });
-
-    const book = library.find(b=>b.id===chapterMgrBookId);
-    const path = book?.storagePath;
-    if(!path) throw new Error('No storage path found');
-    showLoading('Uploading…');
-    await uploadBytes(storageRef(storage, path), newBlob);
-
-    await updateDoc(doc(db,'books',chapterMgrBookId),{ updatedAt:serverTimestamp() });
-
-    hideLoading();
-    chapterMgrZip = null;
-    chapterMgrSpine = [];
-    showToast(`EPUB saved — ${summary||'no changes'} ✓`);
-
-  }catch(e){
-    hideLoading();
-    showToast('Save failed: '+e.message);
-    console.error(e);
-  }
+    const newBlob=await chapterMgrZip.generateAsync({type:'blob',mimeType:'application/epub+zip',compression:'DEFLATE',compressionOptions:{level:6}});
+    const book=library.find(b=>b.id===chapterMgrBookId);const path=book?.storagePath;if(!path)throw new Error('No storage path found');
+    showLoading('Uploading…');await uploadBytes(storageRef(storage,path),newBlob);
+    await updateDoc(doc(db,'books',chapterMgrBookId),{updatedAt:serverTimestamp()});
+    hideLoading();chapterMgrZip=null;chapterMgrSpine=[];showToast(`EPUB saved — ${summary||'no changes'} ✓`);
+  }catch(e){hideLoading();showToast('Save failed: '+e.message);console.error(e);}
 }
 
 renderAll();
