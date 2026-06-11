@@ -48,8 +48,8 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .hbtn-upload:hover{background:var(--teal-dark);}
 .hbtn-ghost{background:transparent;color:#d8e8f0;border:1px solid #334;font-size:.8rem;padding:.42rem .6rem;}
 .hbtn-ghost:hover{background:#1a2840;}
-.hbtn-home{background:rgba(42,124,138,0.2);color:var(--teal-light);border:1px solid rgba(42,124,138,0.4);font-size:.8rem;padding:.42rem .75rem;}
-.hbtn-home:hover{background:rgba(42,124,138,0.35);}
+.hbtn-home{background:transparent;color:#d8e8f0;border:1px solid #334;font-size:.95rem;padding:.42rem .75rem;}
+.hbtn-home:hover{background:#1a2840;}
 .hbtn-home.active{background:var(--teal);color:var(--gold);}
 .header-user{display:flex;align-items:center;gap:.5rem;cursor:pointer;padding:.3rem .5rem;border-radius:3px;transition:background .15s;position:relative;}
 .header-user:hover{background:rgba(255,255,255,0.08);}
@@ -486,7 +486,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
     </div>
   </div>
   <div class="header-right">
-    <button class="hbtn hbtn-home btnToggleSettingsDesk" id="btnDeskHome">🏠 Home</button>
+    <button class="hbtn hbtn-home btnToggleSettingsDesk" id="btnDeskHome">📚 Home</button>
     <button class="hbtn hbtn-upload" id="btnHeaderUpload">📤 Upload</button>
     <button class="hbtn hbtn-ghost btnToggleSettingsDesk" id="btnToggleSettings">⚙</button>
     <div class="header-user" id="headerUser">
@@ -722,11 +722,11 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
     <button class="mob-tab" id="mobNavPublic"><span class="tab-icon">🌐</span><span>Public</span></button>
     <button class="mob-tab-home" id="mobNavHome">
       <div class="mob-home-inner">
-        <div class="mob-home-icon">🏠</div>
+        <div class="mob-home-icon">📚</div>
         <span class="mob-home-label">Home</span>
       </div>
     </button>
-    <button class="mob-tab" id="mobNavMine"><span class="tab-icon">📚</span><span>My Books</span></button>
+    <button class="mob-tab" id="mobNavMine"><span class="tab-icon">📖</span><span>My Books</span></button>
     <button class="mob-tab" id="mobNavSettings"><span class="tab-icon">⚙️</span><span>Settings</span></button>
   </div>
 </nav>
@@ -1409,14 +1409,10 @@ function buildActions(book,isMine){
   const isSignedOut=myCheckedOutIds.has(book.id);
   const isPublicOnly=isComm&&!isMine;
   let html='';
-  if(isMine||isSignedOut){
-    html+=`<div class="action-group">`;
-    html+=`<button class="btn-action btn-read" data-action="read"><span class="ba-icon">▶</span> Read</button>`;
-    if(isMine)html+=`<button class="btn-action btn-download" data-action="download"><span class="ba-icon">⬇</span> Download</button>`;
-    html+=`</div>`;
-  } else if(isPublicOnly){
-    html+=`<div class="action-group"><p style="font-size:.75rem;color:var(--muted);padding:.3rem 0">Sign out this book to read it.</p></div>`;
-  }
+  html+=`<div class="action-group">`;
+  html+=`<button class="btn-action btn-read" data-action="read"><span class="ba-icon">▶</span> Read</button>`;
+  if(isMine||isSignedOut)html+=`<button class="btn-action btn-download" data-action="download"><span class="ba-icon">⬇</span> Download</button>`;
+  html+=`</div>`;
   html+=`<div class="action-group">`;
   if(!isSignedOut){
     html+=`<button class="btn-action btn-checkout" data-action="checkout"><span class="ba-icon">📋</span> Sign Out</button>`;
