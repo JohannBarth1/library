@@ -934,7 +934,7 @@ const app=initializeApp({apiKey:'AIzaSyA1hCS7-C_W0VS7_JVcPIPdJ4aluDuL_-Q',authDo
 const auth=getAuth(app),db=getFirestore(app),storage=getStorage(app),gprovider=new GoogleAuthProvider();
 
 // ── STATE ─────────────────────────────────────────────────────────────────────
-let currentUser=null,library=[],communityLib=[],allUsers=[],userRatings={},currentId=null;
+let currentUser=null,library=[],allUsers=[],userRatings={},currentId=null;
 let shelfMode='mine',activeCat='All',searchQ='',mobPrevPanel='mobPanelLib';
 let selectMode=false,selectedIds=new Set(),deskView='library';
 let myCheckedOutIds=new Set();
@@ -999,25 +999,61 @@ document.addEventListener('click',(e)=>{
 });
 
 // ── FIRESTORE ─────────────────────────────────────────────────────────────────
-async function loadLibrary(){
-  if(!currentUser)return;
+async function loadLibrary() {
+  if (!currentUser) return;
   showLoading('Loading library…');
-  try{
-    // First page: 20 books
-    const firstQ=query(
-      collection(db,'books'),
-      where('ownerId','==',currentUser.uid),
-      orderBy('createdAt','desc'),
-      limit(20)
+  try {
+    // My books
+    const myQ = query(
+      collection(db, 'books'),
+      where('ownerId', '==', currentUser.uid),
+      orderBy('createdAt', 'desc')
     );
-    const firstSnap=await getDocs(firstQ);
-    library=firstSnap.docs.map(d=>({id:d.id,...d.data()}));
-    libraryLastDoc=firstSnap.docs[firstSnap.docs.length-1]||null;
-    libraryFullyLoaded=firstSnap.docs.length<20;
-    hideLoading();renderAll();
-    // Load remaining books in the background
-    if(!libraryFullyLoaded) loadLibraryRest();
-  }catch(e){hideLoading();console.error('LIBRARY LOAD ERROR:',e.code,e.message);showToast('Error loading library');}
+    // Public books from others
+    const pubQ = query(
+      collection(db, 'books'),
+      where('visibility', '==', 'public'),
+      orderBy('createdAt', 'desc')
+    );
+    // Books shared privately with me
+    const sharedQ = query(
+      collection(db, 'books'),
+      where('allowedUsers', 'array-contains', currentUser.uid)
+    );
+
+    const [mySnap, pubSnap, sharedSnap] = await Promise.all([
+      getDocs(myQ),
+      getDocs(pubQ),
+      getDocs(sharedSnap)  // reuse existing loadSharedWithMe logic
+    ]);
+
+    library = mySnap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+    // Public books not owned by me
+    const pubBooks = pubSnap.docs
+      .map(d => ({ id: d.id, ...d.data() }))
+      .filter(b => b.ownerId !== currentUser.uid);
+
+    // Shared-with-me books not already in library or pubBooks
+    const sharedBooks = sharedSnap.docs
+      .map(d => ({ id: d.id, ...d.data() }))
+      .filter(b => b.ownerId !== currentUser.uid);
+
+    // communityLib = all books visible to me that aren't mine
+    communityLib = dedupe([...pubBooks, ...sharedBooks]);
+
+    hideLoading();
+    renderAll();
+  } catch (e) {
+    hideLoading();
+    showToast('Error loading library');
+    console.error(e);
+  }
+}
+
+function dedupe(books) {
+  const seen = new Set();
+  return books.filter(b => seen.has(b.id) ? false : seen.add(b.id));
 }
 
 async function loadLibraryRest(){
@@ -1098,30 +1134,35 @@ async function loadAllUsers(){
 }
 
 // ── RATINGS ───────────────────────────────────────────────────────────────────
-async function submitRating(bookId,rating){
-  if(!currentUser){showToast('Sign in to rate');return;}
-  try{
-    const bookRef=doc(db,'community',bookId);
-    const bookSnap=await getDoc(bookRef);
-    if(!bookSnap.exists())return;
-    const data=bookSnap.data();
-    const prev=userRatings[bookId]||0;
-    let newCount=data.ratingCount||0,newSum=data.ratingSum||0;
-    if(prev>0){newSum=newSum-prev+rating;}else{newCount+=1;newSum+=rating;}
-    userRatings[bookId]=rating;
-    await updateDoc(bookRef,{ratingSum:newSum,ratingCount:newCount});
-    const book=communityLib.find(b=>b.id===bookId);
-    if(book){book.ratingSum=newSum;book.ratingCount=newCount;}
-    renderStars('deskStars','deskRatingCount',bookId,true);
-    renderStars('mobStars','mobRatingCount',bookId,true);
+async function submitRating(bookId, rating) {
+  if (!currentUser) { showToast('Sign in to rate'); return; }
+  try {
+    const bookRef = doc(db, 'books', bookId);
+    const bookSnap = await getDoc(bookRef);
+    if (!bookSnap.exists()) return;
+    const data = bookSnap.data();
+    const prev = userRatings[bookId] || 0;
+    let newCount = data.ratingCount || 0, newSum = data.ratingSum || 0;
+    if (prev > 0) { newSum = newSum - prev + rating; }
+    else { newCount += 1; newSum += rating; }
+    userRatings[bookId] = rating;
+    await updateDoc(bookRef, { ratingSum: newSum, ratingCount: newCount });
+    // Update local copy
+    const book = [...library, ...communityLib].find(b => b.id === bookId);
+    if (book) { book.ratingSum = newSum; book.ratingCount = newCount; }
+    renderStars('deskStars', 'deskRatingCount', bookId, true);
+    renderStars('mobStars', 'mobRatingCount', bookId, true);
     showToast('Rating saved ✓');
-  }catch(e){showToast('Rating failed');console.error(e);}
+  } catch (e) {
+    showToast('Rating failed');
+    console.error(e);
+  }
 }
 function getAvgRating(book){return book.ratingCount?(book.ratingSum||0)/book.ratingCount:0;}
 function renderStars(cid,countId,bookId,editable){
   const container=document.getElementById(cid),countEl=document.getElementById(countId);
   if(!container)return;
-  const book=communityLib.find(b=>b.id===bookId);
+  const book = [...library, ...communityLib].find(b => b.id === bookId);
   if(!book){container.closest('.star-rating').style.display='none';return;}
   container.closest('.star-rating').style.display='flex';
   const avg=getAvgRating(book),myR=userRatings[bookId]||0;
@@ -1174,7 +1215,6 @@ setUpP(rowId,70,'Saving…');
       category:meta.category||localStorage.getItem('elib_default_cat')||'Uncategorised',
       language:meta.language,publisher:meta.publisher,
       coverUrl:coverUrl||null,
-      coverDataUrl:null,
       epubUrl,
       storagePath:snap.ref.fullPath,
       visibility:'private',
@@ -1226,28 +1266,30 @@ function shareCurrentBook(){
 }
 document.getElementById('btnCancelShare').addEventListener('click',()=>document.getElementById('shareModal').classList.remove('open'));
 document.getElementById('btnConfirmShare').addEventListener('click',confirmShare);
-async function confirmShare(){
+async function confirmShare() {
   document.getElementById('shareModal').classList.remove('open');
-  if(!currentId)return;
-  const book=library.find(b=>b.id===currentId);if(!book)return;
-  showLoading('Sharing…');
-  try{
-    await addDoc(collection(db,'community'),{
-      sourceId:currentId,
-      ownerId:currentUser.uid,
-      ownerName:currentUser.displayName||currentUser.email,
-      filename:book.filename,
-      title:book.title,
-      author:book.author,
-      description: stripHtml(book.description || ''),
-      category:book.category,
-      language:book.language,
-      coverUrl:book.coverUrl||null,
-      storagePath:book.storagePath,sharedAt:serverTimestamp(),ratingSum:0,ratingCount:0,recommended:book.recommended||false});
-    await updateDoc(doc(db,'books',currentId),{visibility:'community',updatedAt:serverTimestamp()});
-    book.visibility='community';hideLoading();renderAll();showBookById(currentId);
-    showToast(`"${book.title}" published to Public Library ✓`);
-  }catch(e){hideLoading();showToast('Share failed: '+e.message);console.error(e);}
+  if (!currentId) return;
+  const book = library.find(b => b.id === currentId);
+  if (!book) return;
+  showLoading('Publishing…');
+  try {
+    await updateDoc(doc(db, 'books', currentId), {
+      visibility: 'public',
+      updatedAt: serverTimestamp()
+    });
+    book.visibility = 'public';
+    // Add to communityLib so it appears immediately in public view
+    if (!communityLib.find(b => b.id === currentId)) {
+      communityLib.push(book);
+    }
+    hideLoading();
+    renderAll();
+    showBookById(currentId);
+    showToast(`"${book.title}" published ✓`);
+  } catch (e) {
+    hideLoading();
+    showToast('Share failed: ' + e.message);
+  }
 }
 
 // ── DATA HELPERS ─────────────────────────────────────────────────────────────
@@ -1492,18 +1534,26 @@ function handleAction(e){
 }
 
 // ── UNPUBLISH ─────────────────────────────────────────────────────────────────
-async function unpublishCurrentBook(){
-  if(!currentId)return;
-  const book=library.find(b=>b.id===currentId);
-  if(!book||!confirm(`Remove "${book.title}" from the Public Library?`))return;
+async function unpublishCurrentBook() {
+  if (!currentId) return;
+  const book = library.find(b => b.id === currentId);
+  if (!book || !confirm(`Remove "${book.title}" from the Public Library?`)) return;
   showLoading('Unpublishing…');
-  try{
-    const q=query(collection(db,'community'),where('sourceId','==',currentId));
-    const snap=await getDocs(q);for(const d of snap.docs)await deleteDoc(doc(db,'community',d.id));
-    await updateDoc(doc(db,'books',currentId),{visibility:'private',updatedAt:serverTimestamp()});
-    book.visibility='private';communityLib=communityLib.filter(b=>b.sourceId!==currentId);
-    hideLoading();renderAll();showBookById(currentId);showToast('Unpublished ✓');
-  }catch(e){hideLoading();showToast('Unpublish failed: '+e.message);}
+  try {
+    await updateDoc(doc(db, 'books', currentId), {
+      visibility: 'private',
+      updatedAt: serverTimestamp()
+    });
+    book.visibility = 'private';
+    communityLib = communityLib.filter(b => b.id !== currentId);
+    hideLoading();
+    renderAll();
+    showBookById(currentId);
+    showToast('Unpublished ✓');
+  } catch (e) {
+    hideLoading();
+    showToast('Unpublish failed: ' + e.message);
+  }
 }
 
 // ── PRIVATE SHARE ─────────────────────────────────────────────────────────────
@@ -1825,12 +1875,22 @@ function renderTagsModal(){
 }
 
 // ── RECOMMENDED ───────────────────────────────────────────────────────────────
-async function toggleRecommended(){
-  if(!currentId)return;const book=library.find(b=>b.id===currentId);if(!book)return;
-  const rec=!book.recommended;book.recommended=rec;
-  await updateDoc(doc(db,'books',currentId),{recommended:rec,updatedAt:serverTimestamp()});
-  try{const q=query(collection(db,'community'),where('sourceId','==',currentId));const snap=await getDocs(q);for(const d of snap.docs)await updateDoc(doc(db,'community',d.id),{recommended:rec});const commBook=communityLib.find(b=>b.sourceId===currentId);if(commBook)commBook.recommended=rec;}catch(e){console.warn('Community recommended sync:',e);}
-  renderAll();showBookById(currentId);showToast(rec?'Marked as Recommended ⭐':'Removed from Recommended');
+async function toggleRecommended() {
+  if (!currentId) return;
+  const book = library.find(b => b.id === currentId);
+  if (!book) return;
+  const rec = !book.recommended;
+  book.recommended = rec;
+  await updateDoc(doc(db, 'books', currentId), {
+    recommended: rec,
+    updatedAt: serverTimestamp()
+  });
+  // Keep communityLib in sync (same object reference if public)
+  const commBook = communityLib.find(b => b.id === currentId);
+  if (commBook) commBook.recommended = rec;
+  renderAll();
+  showBookById(currentId);
+  showToast(rec ? 'Marked as Recommended ⭐' : 'Removed from Recommended');
 }
 
 // ── CHECKOUT SYSTEM ───────────────────────────────────────────────────────────
@@ -1938,14 +1998,60 @@ document.getElementById('btnSaveBulkEdit').addEventListener('click',async()=>{
     hideLoading();toggleSelectMode();renderAll();showToast(`${ids.length} book${ids.length!==1?'s':''} updated ✓`);
   }catch(e){hideLoading();showToast('Update failed: '+e.message);}
 });
-document.getElementById('bulkBtnPublish').addEventListener('click',async()=>{
-  const ids=[...selectedIds].filter(id=>{const b=library.find(x=>x.id===id);return b&&b.visibility!=='community';});
-  if(!ids.length)return;if(!confirm(`Publish ${ids.length} book${ids.length!==1?'s':''} to Public Library?`))return;
+document.getElementById('bulkBtnPublish').addEventListener('click', async () => {
+  const ids = [...selectedIds].filter(id => {
+    const b = library.find(x => x.id === id);
+    return b && b.visibility !== 'public';
+  });
+  if (!ids.length) return;
+  if (!confirm(`Publish ${ids.length} book${ids.length !== 1 ? 's' : ''} to Public Library?`)) return;
   showLoading('Publishing…');
-  try{
-    for(const id of ids){const book=library.find(b=>b.id===id);if(!book)continue;await addDoc(collection(db,'community'),{sourceId:id,ownerId:currentUser.uid,ownerName:currentUser.displayName||currentUser.email,filename:book.filename,title:book.title,author:book.author,description:book.description,category:book.category,language:book.language,coverUrl:book.coverUrl||null,storagePath:book.storagePath,sharedAt:serverTimestamp(),ratingSum:0,ratingCount:0,recommended:book.recommended||false});await updateDoc(doc(db,'books',id),{visibility:'community',updatedAt:serverTimestamp()});book.visibility='community';}
-    await loadCommunity();hideLoading();toggleSelectMode();renderAll();showToast(`${ids.length} book${ids.length!==1?'s':''} published ✓`);
-  }catch(e){hideLoading();showToast('Publish failed: '+e.message);}
+  try {
+    for (const id of ids) {
+      const book = library.find(b => b.id === id);
+      if (!book) continue;
+      await updateDoc(doc(db, 'books', id), {
+        visibility: 'public',
+        updatedAt: serverTimestamp()
+      });
+      book.visibility = 'public';
+      if (!communityLib.find(b => b.id === id)) communityLib.push(book);
+    }
+    hideLoading();
+    toggleSelectMode();
+    renderAll();
+    showToast(`${ids.length} book${ids.length !== 1 ? 's' : ''} published ✓`);
+  } catch (e) {
+    hideLoading();
+    showToast('Publish failed: ' + e.message);
+  }
+});document.getElementById('bulkBtnPublish').addEventListener('click', async () => {
+  const ids = [...selectedIds].filter(id => {
+    const b = library.find(x => x.id === id);
+    return b && b.visibility !== 'public';
+  });
+  if (!ids.length) return;
+  if (!confirm(`Publish ${ids.length} book${ids.length !== 1 ? 's' : ''} to Public Library?`)) return;
+  showLoading('Publishing…');
+  try {
+    for (const id of ids) {
+      const book = library.find(b => b.id === id);
+      if (!book) continue;
+      await updateDoc(doc(db, 'books', id), {
+        visibility: 'public',
+        updatedAt: serverTimestamp()
+      });
+      book.visibility = 'public';
+      if (!communityLib.find(b => b.id === id)) communityLib.push(book);
+    }
+    hideLoading();
+    toggleSelectMode();
+    renderAll();
+    showToast(`${ids.length} book${ids.length !== 1 ? 's' : ''} published ✓`);
+  } catch (e) {
+    hideLoading();
+    showToast('Publish failed: ' + e.message);
+  }
 });
 document.getElementById('bulkBtnUnpublish').addEventListener('click',async()=>{
   const ids=[...selectedIds].filter(id=>{const b=library.find(x=>x.id===id);return b&&b.visibility==='community';});
