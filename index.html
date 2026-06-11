@@ -419,6 +419,8 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .bulk-btn-unrec:hover{background:rgba(255,255,255,.06);}
 .bulk-btn-cancel{background:transparent;color:var(--muted);border-color:rgba(255,255,255,.15);}
 .bulk-btn-cancel:hover{background:rgba(255,255,255,.05);}
+.bulk-btn-delete{background:transparent;color:#f87171;border-color:#f87171;}
+.bulk-btn-delete:hover{background:rgba(248,113,113,0.12);}
 .book-card .select-check{position:absolute;top:.4rem;left:.4rem;width:22px;height:22px;border-radius:50%;background:rgba(15,26,46,.65);border:2px solid rgba(255,255,255,.5);display:none;align-items:center;justify-content:center;font-size:.75rem;color:#fff;transition:all .15s;}
 .select-mode .book-card .select-check{display:flex;}
 .book-card.selected .select-check{background:var(--teal);border-color:var(--teal);}
@@ -565,6 +567,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
         <button class="bulk-btn bulk-btn-checkout" id="bulkBtnCheckout">📋 Sign Out</button>
         <button class="bulk-btn bulk-btn-rec" id="bulkBtnRec">★ Recommend</button>
         <button class="bulk-btn bulk-btn-unrec" id="bulkBtnUnrec">☆ Unrecommend</button>
+        <button class="bulk-btn bulk-btn-delete" id="bulkBtnDelete">✕ Delete</button>
         <button class="bulk-btn bulk-btn-cancel" id="bulkBtnCancel">✕ Cancel</button>
       </div>
       <div class="book-grid" id="deskBookGrid"></div>
@@ -1946,6 +1949,7 @@ function updateBulkBar(){
   document.getElementById('bulkBtnUnrec').style.display=hasRecommended&&n>0?'':'none';
   document.getElementById('bulkBtnCheckout').style.display=n>0?'':'none';
   document.getElementById('bulkBtnEdit').style.display=n>0?'':'none';
+  document.getElementById('bulkBtnDelete').style.display = n > 0 ? '' : 'none';  
 }
 document.getElementById('btnCancelBulkEdit').addEventListener('click',()=>document.getElementById('bulkEditModal').classList.remove('open'));
 document.getElementById('bulkBtnEdit').addEventListener('click',()=>{
@@ -1955,6 +1959,25 @@ document.getElementById('bulkBtnEdit').addEventListener('click',()=>{
   const cats=[...new Set(library.map(b=>b.category).filter(Boolean))].sort();
   document.getElementById('bulkCatSuggestions').innerHTML=cats.map(c=>`<option value="${esc(c)}">`).join('');
   document.getElementById('bulkEditModal').classList.add('open');
+});
+  document.getElementById('bulkBtnDelete').addEventListener('click', async () => {
+  if (!selectedIds.size) return;
+  if (!confirm(`Permanently delete ${selectedIds.size} book${selectedIds.size !== 1 ? 's' : ''}? This cannot be undone.`)) return;
+  showLoading('Deleting…');
+  try {
+    for (const id of selectedIds) {
+      await deleteDoc(doc(db, 'books', id));
+      library = library.filter(b => b.id !== id);
+      communityLib = communityLib.filter(b => b.id !== id);
+    }
+    hideLoading();
+    toggleSelectMode();
+    renderAll();
+    showToast(`${selectedIds.size} book${selectedIds.size !== 1 ? 's' : ''} deleted ✓`);
+  } catch (e) {
+    hideLoading();
+    showToast('Delete failed: ' + e.message);
+  }
 });
 document.getElementById('btnSaveBulkEdit').addEventListener('click',async()=>{
   const cat=document.getElementById('bulkCat').value.trim();
