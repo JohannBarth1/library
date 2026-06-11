@@ -1538,8 +1538,9 @@ async function unpublishCurrentBook() {
 
 // ── PRIVATE SHARE ─────────────────────────────────────────────────────────────
 async function showPrivateShare(){
-  if(!currentId)return;
-  const book=library.find(b=>b.id===currentId);if(!book)return;
+  if(!currentId) { console.log('no currentId'); return; }
+  const book = library.find(b => b.id === currentId);
+  if(!book) { console.log('book not found in library, currentId:', currentId); return; }
   document.getElementById('privateShareTitle').textContent=`"${book.title}"`;
   document.getElementById('privateShareLinkWrap').style.display='none';
   document.getElementById('privateShareModal').classList.add('open');
