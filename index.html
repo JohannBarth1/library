@@ -373,7 +373,6 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .settings-group-label{font-size:.65rem;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:.8rem;padding-bottom:.4rem;border-bottom:1px solid var(--border);}
 .settings-btn{width:100%;padding:1rem 1.2rem;font-family:'Lato',sans-serif;font-size:.92rem;font-weight:700;text-align:left;border:1px solid var(--border);border-radius:4px;cursor:pointer;margin-bottom:.7rem;display:flex;align-items:center;gap:.8rem;transition:background .15s;-webkit-tap-highlight-color:transparent;}
 .settings-btn .s-icon{font-size:1.3rem;}
-/* PATCH 6f: gold text on upload settings button */
 .settings-btn.upload-s{background:var(--teal);color:var(--gold);border-color:var(--teal);}
 .settings-btn.neutral{background:var(--warm-white);color:var(--navy2);}
 .settings-btn.danger-s{background:var(--warm-white);color:var(--danger);border-color:#e0b0b0;}
@@ -1232,7 +1231,18 @@ async function confirmShare(){
   const book=library.find(b=>b.id===currentId);if(!book)return;
   showLoading('Sharing…');
   try{
-    await addDoc(collection(db,'community'),{sourceId:currentId,ownerId:currentUser.uid,ownerName:currentUser.displayName||currentUser.email,filename:book.filename,title:book.title,author:book.author,description: stripHtml(book.description || ''),category:book.category,language:book.language,coverUrl:book.coverUrl||null,coverDataUrl:book.coverDataUrl||null,storagePath:book.storagePath,sharedAt:serverTimestamp(),ratingSum:0,ratingCount:0,recommended:book.recommended||false});
+    await addDoc(collection(db,'community'),{
+      sourceId:currentId,
+      ownerId:currentUser.uid,
+      ownerName:currentUser.displayName||currentUser.email,
+      filename:book.filename,
+      title:book.title,
+      author:book.author,
+      description: stripHtml(book.description || ''),
+      category:book.category,
+      language:book.language,
+      coverUrl:book.coverUrl||null,
+      storagePath:book.storagePath,sharedAt:serverTimestamp(),ratingSum:0,ratingCount:0,recommended:book.recommended||false});
     await updateDoc(doc(db,'books',currentId),{visibility:'community',updatedAt:serverTimestamp()});
     book.visibility='community';hideLoading();renderAll();showBookById(currentId);
     showToast(`"${book.title}" published to Public Library ✓`);
@@ -1932,7 +1942,7 @@ document.getElementById('bulkBtnPublish').addEventListener('click',async()=>{
   if(!ids.length)return;if(!confirm(`Publish ${ids.length} book${ids.length!==1?'s':''} to Public Library?`))return;
   showLoading('Publishing…');
   try{
-    for(const id of ids){const book=library.find(b=>b.id===id);if(!book)continue;await addDoc(collection(db,'community'),{sourceId:id,ownerId:currentUser.uid,ownerName:currentUser.displayName||currentUser.email,filename:book.filename,title:book.title,author:book.author,description:book.description,category:book.category,language:book.language,coverDataUrl:book.coverDataUrl||null,storagePath:book.storagePath,sharedAt:serverTimestamp(),ratingSum:0,ratingCount:0,recommended:book.recommended||false});await updateDoc(doc(db,'books',id),{visibility:'community',updatedAt:serverTimestamp()});book.visibility='community';}
+    for(const id of ids){const book=library.find(b=>b.id===id);if(!book)continue;await addDoc(collection(db,'community'),{sourceId:id,ownerId:currentUser.uid,ownerName:currentUser.displayName||currentUser.email,filename:book.filename,title:book.title,author:book.author,description:book.description,category:book.category,language:book.language,coverUrl:book.coverUrl||null,storagePath:book.storagePath,sharedAt:serverTimestamp(),ratingSum:0,ratingCount:0,recommended:book.recommended||false});await updateDoc(doc(db,'books',id),{visibility:'community',updatedAt:serverTimestamp()});book.visibility='community';}
     await loadCommunity();hideLoading();toggleSelectMode();renderAll();showToast(`${ids.length} book${ids.length!==1?'s':''} published ✓`);
   }catch(e){hideLoading();showToast('Publish failed: '+e.message);}
 });
