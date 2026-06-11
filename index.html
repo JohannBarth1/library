@@ -967,11 +967,14 @@ onAuthStateChanged(auth,async user=>{
     renderSkeleton('mobBookGrid',12);
     renderSkeleton('deskHomeRecentGrid',8);
     try{await setDoc(doc(db,'users',user.uid),{displayName:user.displayName||'',email:user.email,uid:user.uid,lastSeen:serverTimestamp()},{merge:true});}catch(e){console.warn(e);}
-    await loadLibrary();
-    await loadCommunity();
-    await loadUserRatings();
-    await loadMyCheckouts();
+    await Promise.all([
+      loadLibrary(),
+      loadCommunity(),
+      loadUserRatings(),
+      loadMyCheckouts()
+    ]);
     checkUrlHash();
+    showDeskHome();
   } else {
     document.getElementById('authScreen').classList.remove('hidden');
   }
@@ -1270,7 +1273,13 @@ function renderGrid(gridId){
   }).join('');
 }
 
-document.getElementById('deskFilterCats').addEventListener('click',e=>{const item=e.target.closest('.filter-cat-item[data-cat]');if(!item)return;activeCat=decodeURIComponent(item.dataset.cat);renderAll();});
+document.getElementById('deskFilterCats').addEventListener('click',e=>{
+  const item=e.target.closest('.filter-cat-item[data-cat]');
+  if(!item)return;
+  hideDeskHome();
+  activeCat=decodeURIComponent(item.dataset.cat);
+  renderAll();
+});
 document.getElementById('mobFilterChips').addEventListener('click',e=>{const chip=e.target.closest('.mob-chip[data-cat]');if(!chip)return;activeCat=decodeURIComponent(chip.dataset.cat);renderAll();});
 document.getElementById('deskBookGrid').addEventListener('click',e=>{
   const card=e.target.closest('.book-card[data-bookid]');if(!card)return;
@@ -1284,7 +1293,17 @@ document.getElementById('deskSortSelect').addEventListener('change',()=>renderAl
 document.getElementById('mobSortSelect').addEventListener('change',()=>{document.getElementById('deskSortSelect').value=document.getElementById('mobSortSelect').value;renderAll();});
 document.getElementById('tabMineDesk').addEventListener('click',()=>switchShelf('mine'));
 document.getElementById('tabCommDesk').addEventListener('click',()=>switchShelf('community'));
-function switchShelf(mode){shelfMode=mode;activeCat='All';searchQ='';document.getElementById('deskSearch').value='';document.getElementById('mobSearch').value='';document.getElementById('tabMineDesk').classList.toggle('active',mode==='mine');document.getElementById('tabCommDesk').classList.toggle('active',mode==='community');renderAll();}
+function switchShelf(mode){
+  hideDeskHome();
+  shelfMode=mode;
+  activeCat='All';
+  searchQ='';
+  document.getElementById('deskSearch').value='';
+  document.getElementById('mobSearch').value='';
+  document.getElementById('tabMineDesk').classList.toggle('active',mode==='mine');
+  document.getElementById('tabCommDesk').classList.toggle('active',mode==='community');
+  renderAll();
+}
 
 // ── DESKTOP HOME ──────────────────────────────────────────────────────────────
 function showDeskHome(){deskView='home';document.getElementById('deskHomePanel').classList.add('active');document.getElementById('deskMain').style.display='none';document.getElementById('btnDeskHome').classList.add('active');renderDeskHome();}
