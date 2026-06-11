@@ -934,7 +934,7 @@ const app=initializeApp({apiKey:'AIzaSyA1hCS7-C_W0VS7_JVcPIPdJ4aluDuL_-Q',authDo
 const auth=getAuth(app),db=getFirestore(app),storage=getStorage(app),gprovider=new GoogleAuthProvider();
 
 // ── STATE ─────────────────────────────────────────────────────────────────────
-let currentUser=null,library=[],allUsers=[],userRatings={},currentId=null;
+let currentUser=null,library=[],allUsers=[],userRatings={},currentId=null,let communityLib = [];
 let shelfMode='mine',activeCat='All',searchQ='',mobPrevPanel='mobPanelLib';
 let selectMode=false,selectedIds=new Set(),deskView='library';
 let myCheckedOutIds=new Set();
@@ -958,11 +958,9 @@ onAuthStateChanged(auth,async user=>{
     try{await setDoc(doc(db,'users',user.uid),{displayName:user.displayName||'',email:user.email,uid:user.uid,lastSeen:serverTimestamp()},{merge:true});}catch(e){console.warn(e);}
     await Promise.all([
       loadLibrary(),
-      loadCommunity(),
       loadUserRatings(),
       loadMyCheckouts(),
     ]);
-    loadSharedWithMe();
     checkUrlHash();
     showDeskHome();
   } else {
@@ -1021,11 +1019,14 @@ async function loadLibrary() {
       where('allowedUsers', 'array-contains', currentUser.uid)
     );
 
-    const [mySnap, pubSnap, sharedSnap] = await Promise.all([
-      getDocs(myQ),
-      getDocs(pubQ),
-      getDocs(sharedSnap)  // reuse existing loadSharedWithMe logic
-    ]);
+const [mySnap, pubSnap, sharedSnap] = await Promise.all([
+  getDocs(myQ),
+  getDocs(pubQ),
+  getDocs(query(
+    collection(db, 'books'),
+    where('allowedUsers', 'array-contains', currentUser.uid)
+  ))
+]);
 
     library = mySnap.docs.map(d => ({ id: d.id, ...d.data() }));
 
@@ -1079,15 +1080,6 @@ async function loadLibraryRest(){
     renderAll();
   }catch(e){console.error('Background library load error:',e);}
 }
-async function loadCommunity(){
-  try{
-    const q=query(collection(db,'community'),orderBy('sharedAt','desc'));
-    const snap=await getDocs(q);
-    // PATCH 1: trigger all home/public renders after community loads
-    communityLib=snap.docs.map(d=>({id:d.id,...d.data()}));
-    renderAll();renderMobPublic();renderMobHome();renderDeskHome();
-  }catch(e){console.error('Community load error:',e);}
-}
 async function loadUserRatings(){
   if(!currentUser)return;
   try{
@@ -1112,21 +1104,6 @@ async function loadMyCheckouts(){
   }catch(e){console.warn('Checkouts load:',e);}
 }
 
-  async function loadSharedWithMe(){
-  if(!currentUser)return;
-  try{
-    const q=query(
-      collection(db,'books'),
-      where('allowedUsers','array-contains',currentUser.uid)
-    );
-    const snap=await getDocs(q);
-    sharedWithMe=snap.docs.map(d=>({id:d.id,...d.data()}));
-    renderAll();renderMobHome();renderDeskHome();
-  }catch(e){
-    console.warn('Shared-with-me load error:',e.code,e.message);
-    sharedWithMe=[];
-  }
-}
 async function loadAllUsers(){
   if(allUsers.length)return allUsers;
   try{const snap=await getDocs(collection(db,'users'));allUsers=snap.docs.map(d=>({...d.data()})).filter(u=>u.uid&&u.uid!==currentUser?.uid);return allUsers;}
