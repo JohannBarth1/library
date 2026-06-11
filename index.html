@@ -998,6 +998,14 @@ document.getElementById('headerUser').addEventListener('click',e=>{e.stopPropaga
 document.addEventListener('click',()=>{
   document.getElementById('userDropdown').classList.remove('open');
   document.querySelectorAll('.action-dropdown-menu.open').forEach(m=>m.classList.remove('open'));
+  const drawer = document.getElementById('bookDrawer');
+  if (
+    drawer.classList.contains('open') &&
+    !drawer.contains(e.target) &&
+    !e.target.closest('.book-card')  // don't close if clicking a card (that opens a new book)
+  ) {
+    closeDrawer();
+  }
 });
 
 // ── FIRESTORE ─────────────────────────────────────────────────────────────────
