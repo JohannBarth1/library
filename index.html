@@ -558,6 +558,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
           <span class="grid-count" id="deskGridCount"></span>
         </div>
         <button class="select-mode-toggle" id="btnSelectMode">☑ Select</button>
+        <button class="select-mode-toggle" id="btnSelectAll" style="display:none">☑ All</button>
       </div>
       <div class="bulk-bar" id="bulkBar">
         <span class="bulk-bar-count" id="bulkBarCount">0 selected</span>
@@ -1930,12 +1931,24 @@ document.getElementById('btnSelectMode').addEventListener('click',toggleSelectMo
 function toggleSelectMode(){
   selectMode=!selectMode;selectedIds.clear();
   const btn=document.getElementById('btnSelectMode');
-  btn.classList.toggle('active',selectMode);btn.textContent=selectMode?'✕ Done':'☑ Select';
+  const btnAll=document.getElementById('btnSelectAll');
+  btn.classList.toggle('active',selectMode);
+  btn.textContent=selectMode?'✕ Done':'☑ Select';
+  btnAll.style.display=selectMode?'':'none';  // add this line
   document.getElementById('deskBookGrid').classList.toggle('select-mode',selectMode);
   document.getElementById('bulkBar').classList.toggle('open',selectMode);
   document.querySelectorAll('.book-card.selected').forEach(c=>c.classList.remove('selected'));
   updateBulkBar();
 }
+
+  document.getElementById('btnSelectAll').addEventListener('click', () => {
+  const books = filteredBooks();
+  books.forEach(b => selectedIds.add(b.id));
+  document.querySelectorAll('#deskBookGrid .book-card[data-bookid]').forEach(c => {
+    c.classList.add('selected');
+  });
+  updateBulkBar();
+});
 function updateBulkBar(){
   const n=selectedIds.size;
   document.getElementById('bulkBarCount').textContent=`${n} book${n!==1?'s':''} selected`;
