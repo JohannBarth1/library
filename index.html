@@ -938,6 +938,7 @@ let currentUser=null,library=[],communityLib=[],allUsers=[],userRatings={},curre
 let shelfMode='mine',activeCat='All',searchQ='',mobPrevPanel='mobPanelLib';
 let selectMode=false,selectedIds=new Set(),deskView='library';
 let myCheckedOutIds=new Set();
+let sharedWithMe=[];
 let libraryLastDoc=null, libraryFullyLoaded=false;
 
 // Reader state
@@ -959,8 +960,9 @@ onAuthStateChanged(auth,async user=>{
       loadLibrary(),
       loadCommunity(),
       loadUserRatings(),
-      loadMyCheckouts()
+      loadMyCheckouts(),
     ]);
+    loadSharedWithMe();
     checkUrlHash();
     showDeskHome();
   } else {
@@ -1073,6 +1075,22 @@ async function loadMyCheckouts(){
     renderMobHome();renderDeskHome();
   }catch(e){console.warn('Checkouts load:',e);}
 }
+
+  async function loadSharedWithMe(){
+  if(!currentUser)return;
+  try{
+    const q=query(
+      collection(db,'books'),
+      where('allowedUsers','array-contains',currentUser.uid)
+    );
+    const snap=await getDocs(q);
+    sharedWithMe=snap.docs.map(d=>({id:d.id,...d.data()}));
+    renderAll();renderMobHome();renderDeskHome();
+  }catch(e){
+    console.warn('Shared-with-me load error:',e.code,e.message);
+    sharedWithMe=[];
+  }
+}
 async function loadAllUsers(){
   if(allUsers.length)return allUsers;
   try{const snap=await getDocs(collection(db,'users'));allUsers=snap.docs.map(d=>({...d.data()})).filter(u=>u.uid&&u.uid!==currentUser?.uid);return allUsers;}
@@ -1146,7 +1164,24 @@ setUpP(rowId,70,'Saving…');
         coverUrl=await getDownloadURL(coverSnap.ref);
       }catch(e){console.warn('Cover upload failed, skipping:',e);}
     }
-    await addDoc(collection(db,'books'),{ownerId:currentUser.uid,ownerName:currentUser.displayName||currentUser.email,filename:file.name,title:meta.title,author:meta.author,description:stripHtml(meta.description||''),category:meta.category||localStorage.getItem('elib_default_cat')||'Uncategorised',language:meta.language,publisher:meta.publisher,coverUrl:coverUrl||null,coverDataUrl:null,epubUrl,storagePath:snap.ref.fullPath,visibility:'private',createdAt:serverTimestamp(),updatedAt:serverTimestamp(),fileSizeBytes:file.size});
+    await addDoc(collection(db,'books'),{
+      ownerId:currentUser.uid,
+      ownerName:currentUser.displayName||currentUser.email,
+      filename:file.name,
+      title:meta.title,
+      author:meta.author,
+      description:stripHtml(meta.description||''),
+      category:meta.category||localStorage.getItem('elib_default_cat')||'Uncategorised',
+      language:meta.language,publisher:meta.publisher,
+      coverUrl:coverUrl||null,
+      coverDataUrl:null,
+      epubUrl,
+      storagePath:snap.ref.fullPath,
+      visibility:'private',
+      createdAt:serverTimestamp(),
+      updatedAt:serverTimestamp(),
+      fileSizeBytes:file.size
+    });
   }catch(e){console.error(e);setUpP(rowId,100,'✗ Failed');document.getElementById(rowId)?.classList.add('error');showToast('Upload failed: '+e.message);}
 }
 function setUpP(rowId,pct,status){const bar=document.getElementById(rowId+'_bar'),st=document.getElementById(rowId+'_st');if(bar)bar.style.width=pct+'%';if(st)st.textContent=status;}
@@ -1197,7 +1232,7 @@ async function confirmShare(){
   const book=library.find(b=>b.id===currentId);if(!book)return;
   showLoading('Sharing…');
   try{
-    await addDoc(collection(db,'community'),{sourceId:currentId,ownerId:currentUser.uid,ownerName:currentUser.displayName||currentUser.email,filename:book.filename,title:book.title,author:book.author,description:book.description,category:book.category,language:book.language,coverUrl:book.coverUrl||null,coverDataUrl:book.coverDataUrl||null,storagePath:book.storagePath,sharedAt:serverTimestamp(),ratingSum:0,ratingCount:0,recommended:book.recommended||false});
+    await addDoc(collection(db,'community'),{sourceId:currentId,ownerId:currentUser.uid,ownerName:currentUser.displayName||currentUser.email,filename:book.filename,title:book.title,author:book.author,description: stripHtml(book.description || ''),,category:book.category,language:book.language,coverUrl:book.coverUrl||null,coverDataUrl:book.coverDataUrl||null,storagePath:book.storagePath,sharedAt:serverTimestamp(),ratingSum:0,ratingCount:0,recommended:book.recommended||false});
     await updateDoc(doc(db,'books',currentId),{visibility:'community',updatedAt:serverTimestamp()});
     book.visibility='community';hideLoading();renderAll();showBookById(currentId);
     showToast(`"${book.title}" published to Public Library ✓`);
