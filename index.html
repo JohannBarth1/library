@@ -1232,7 +1232,7 @@ async function confirmShare(){
   const book=library.find(b=>b.id===currentId);if(!book)return;
   showLoading('Sharing…');
   try{
-    await addDoc(collection(db,'community'),{sourceId:currentId,ownerId:currentUser.uid,ownerName:currentUser.displayName||currentUser.email,filename:book.filename,title:book.title,author:book.author,description: stripHtml(book.description || ''),,category:book.category,language:book.language,coverUrl:book.coverUrl||null,coverDataUrl:book.coverDataUrl||null,storagePath:book.storagePath,sharedAt:serverTimestamp(),ratingSum:0,ratingCount:0,recommended:book.recommended||false});
+    await addDoc(collection(db,'community'),{sourceId:currentId,ownerId:currentUser.uid,ownerName:currentUser.displayName||currentUser.email,filename:book.filename,title:book.title,author:book.author,description: stripHtml(book.description || ''),category:book.category,language:book.language,coverUrl:book.coverUrl||null,coverDataUrl:book.coverDataUrl||null,storagePath:book.storagePath,sharedAt:serverTimestamp(),ratingSum:0,ratingCount:0,recommended:book.recommended||false});
     await updateDoc(doc(db,'books',currentId),{visibility:'community',updatedAt:serverTimestamp()});
     book.visibility='community';hideLoading();renderAll();showBookById(currentId);
     showToast(`"${book.title}" published to Public Library ✓`);
