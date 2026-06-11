@@ -984,7 +984,7 @@ function updateUserUI(user){
   document.getElementById('mobUserAvatar').textContent=initials;
 }
 document.getElementById('headerUser').addEventListener('click',e=>{e.stopPropagation();document.getElementById('userDropdown').classList.toggle('open');});
-document.addEventListener('click',()=>{
+document.addEventListener('click',(e)=>{
   document.getElementById('userDropdown').classList.remove('open');
   document.querySelectorAll('.action-dropdown-menu.open').forEach(m=>m.classList.remove('open'));
   const drawer = document.getElementById('bookDrawer');
