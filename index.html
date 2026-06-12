@@ -1013,46 +1013,37 @@ async function loadLibrary() {
   if (!currentUser) return;
   showLoading('Loading library…');
   try {
-    // My books
     const myQ = query(
       collection(db, 'books'),
       where('ownerId', '==', currentUser.uid),
       orderBy('createdAt', 'desc')
     );
-    // Public books from others
     const pubQ = query(
       collection(db, 'books'),
       where('visibility', '==', 'public'),
       orderBy('createdAt', 'desc')
     );
-    // Books shared privately with me
     const sharedQ = query(
       collection(db, 'books'),
       where('allowedUsers', 'array-contains', currentUser.uid)
     );
 
-const [mySnap, pubSnap, sharedSnap] = await Promise.all([
-  getDocs(myQ),
-  getDocs(pubQ),
-  getDocs(query(
-    collection(db, 'books'),
-    where('allowedUsers', 'array-contains', currentUser.uid)
-  ))
-]);
+    const [mySnap, pubSnap, sharedSnap] = await Promise.all([
+      getDocs(myQ),
+      getDocs(pubQ),
+      getDocs(sharedQ)
+    ]);
 
     library = mySnap.docs.map(d => ({ id: d.id, ...d.data() }));
 
-    // Public books not owned by me
     const pubBooks = pubSnap.docs
       .map(d => ({ id: d.id, ...d.data() }))
       .filter(b => b.ownerId !== currentUser.uid);
 
-    // Shared-with-me books not already in library or pubBooks
     const sharedBooks = sharedSnap.docs
       .map(d => ({ id: d.id, ...d.data() }))
       .filter(b => b.ownerId !== currentUser.uid);
 
-    // communityLib = all books visible to me that aren't mine
     communityLib = dedupe([...pubBooks, ...sharedBooks]);
 
     hideLoading();
@@ -1725,20 +1716,53 @@ function renderMobPublic(){
 async function renderMobHome(){
   const name=(currentUser?.displayName||'').split(' ')[0]||'Reader';
   document.getElementById('mobHomeGreeting').textContent=`Hello, ${name}`;
-  const recommended = [...library, ...communityLib]
-    .filter(b => b.recommended)
-    .filter((b, i, arr) => arr.findIndex(x => x.id === b.id) === i); // dedupe
+
+  // Recommended — includes your own recommended books
+  const recommended=[...library,...communityLib]
+    .filter(b=>b.recommended)
+    .filter((b,i,arr)=>arr.findIndex(x=>x.id===b.id)===i);
+
+  // Signed out books
   const checkedOutBooks=[...myCheckedOutIds].map(id=>[...library,...communityLib].find(b=>b.id===id)).filter(Boolean);
+
+  // Books I have shared privately with others
+  const sharedByMe=library.filter(b=>b.allowedUsers&&b.allowedUsers.length>0);
+
+  // Books others have shared privately with me
+  const sharedWithMe=communityLib.filter(b=>
+    b.ownerId!==currentUser?.uid&&
+    b.allowedUsers&&
+    b.allowedUsers.includes(currentUser?.uid)
+  );
+
   const recent=library.slice(0,6);
   let html='';
+
   if(recommended.length){
-    html+=`<div style="font-size:.68rem;letter-spacing:.18em;text-transform:uppercase;color:var(--gold);font-weight:700;margin-bottom:.6rem">⭐ Recommended</div><div class="mob-book-grid" style="margin-bottom:1.5rem">${recommended.map(b=>bookCardHtml(b,true)).join('')}</div>`;
+    html+=`<div style="font-size:.68rem;letter-spacing:.18em;text-transform:uppercase;color:var(--gold);font-weight:700;margin-bottom:.6rem">⭐ Recommended</div>
+    <div class="mob-book-grid" style="margin-bottom:1.5rem">${recommended.map(b=>bookCardHtml(b,communityLib.some(x=>x.id===b.id))).join('')}</div>`;
   }
+
   if(checkedOutBooks.length){
-    html+=`<div style="font-size:.68rem;letter-spacing:.18em;text-transform:uppercase;color:var(--teal);font-weight:700;margin-bottom:.6rem;margin-top:.5rem">📋 Currently Signed Out</div><div class="mob-book-grid" style="margin-bottom:1.5rem">${checkedOutBooks.map(b=>bookCardHtml(b,communityLib.some(x=>x.id===b.id))).join('')}</div>`;
+    html+=`<div style="font-size:.68rem;letter-spacing:.18em;text-transform:uppercase;color:var(--teal);font-weight:700;margin-bottom:.6rem;margin-top:.5rem">📋 Currently Signed Out</div>
+    <div class="mob-book-grid" style="margin-bottom:1.5rem">${checkedOutBooks.map(b=>bookCardHtml(b,communityLib.some(x=>x.id===b.id))).join('')}</div>`;
   }
+
+  if(sharedByMe.length){
+    html+=`<div style="font-size:.68rem;letter-spacing:.18em;text-transform:uppercase;color:var(--teal);font-weight:700;margin-bottom:.6rem;margin-top:.5rem">🔒 Shared by Me</div>
+    <div class="mob-book-grid" style="margin-bottom:1.5rem">${sharedByMe.map(b=>bookCardHtml(b,false)).join('')}</div>`;
+  }
+
+  if(sharedWithMe.length){
+    html+=`<div style="font-size:.68rem;letter-spacing:.18em;text-transform:uppercase;color:#5a48b0;font-weight:700;margin-bottom:.6rem;margin-top:.5rem">🔒 Shared with Me</div>
+    <div class="mob-book-grid" style="margin-bottom:1.5rem">${sharedWithMe.map(b=>bookCardHtml(b,true)).join('')}</div>`;
+  }
+
   html+=`<div style="font-size:.68rem;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:.6rem">Recently Added</div>`;
-  html+=recent.length?`<div class="mob-book-grid">${recent.map(b=>bookCardHtml(b,false)).join('')}</div>`:'<div style="text-align:center;padding:2rem;color:var(--muted);font-size:.88rem">Upload books to get started</div>';
+  html+=recent.length
+    ?`<div class="mob-book-grid">${recent.map(b=>bookCardHtml(b,false)).join('')}</div>`
+    :'<div style="text-align:center;padding:2rem;color:var(--muted);font-size:.88rem">Upload books to get started</div>';
+
   document.getElementById('mobHomeContent').innerHTML=html;
   document.getElementById('mobHomeContent').querySelectorAll('.book-card[data-bookid]').forEach(c=>{
     c.addEventListener('click',()=>{mobPrevPanel='mobPanelHome';mob_showBook(c.dataset.bookid);});
