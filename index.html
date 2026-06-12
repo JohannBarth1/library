@@ -485,7 +485,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 <!-- HEADER -->
 <header>
   <div class="brand">
-    <img src="icon-192.png" alt="eLibrary" style="width:36px;height:36px;border-radius:8px;"/>>
+    <img src="icon-192.png" alt="eLibrary" style="width:36px;height:36px;border-radius:8px;"/>
     <div>
       <div class="brand-title">eLibrary</div>
       <div class="brand-sub">Your EPUB collection</div>
@@ -2178,34 +2178,8 @@ document.getElementById('bulkBtnPublish').addEventListener('click', async () => 
     hideLoading();
     showToast('Publish failed: ' + e.message);
   }
-});document.getElementById('bulkBtnPublish').addEventListener('click', async () => {
-  const ids = [...selectedIds].filter(id => {
-    const b = library.find(x => x.id === id);
-    return b && b.visibility !== 'public';
-  });
-  if (!ids.length) return;
-  if (!confirm(`Publish ${ids.length} book${ids.length !== 1 ? 's' : ''} to Public Library?`)) return;
-  showLoading('Publishing…');
-  try {
-    for (const id of ids) {
-      const book = library.find(b => b.id === id);
-      if (!book) continue;
-      await updateDoc(doc(db, 'books', id), {
-        visibility: 'public',
-        updatedAt: serverTimestamp()
-      });
-      book.visibility = 'public';
-      if (!communityLib.find(b => b.id === id)) communityLib.push(book);
-    }
-    hideLoading();
-    toggleSelectMode();
-    renderAll();
-    showToast(`${ids.length} book${ids.length !== 1 ? 's' : ''} published ✓`);
-  } catch (e) {
-    hideLoading();
-    showToast('Publish failed: ' + e.message);
-  }
 });
+
 document.getElementById('bulkBtnCheckout').addEventListener('click',async()=>{
   if(!selectedIds.size)return;if(!confirm(`Sign out ${selectedIds.size} book${selectedIds.size!==1?'s':''}? Each gets a 2-week loan period.`))return;
   showLoading('Signing out…');
