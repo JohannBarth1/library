@@ -2022,11 +2022,12 @@ async function signOutBook(){
   try{
     await addDoc(collection(db,'checkouts'),{bookId:currentId,bookTitle:book.title,userId:currentUser.uid,userName:currentUser.displayName||currentUser.email,checkedOutAt:serverTimestamp(),dueDate:Timestamp.fromDate(due),returnedAt:null});
     myCheckedOutIds.add(currentId);
-    hideLoading();showToast(`"${book.title}" signed out — due ${due.toLocaleDateString()}`);
-    if(document.getElementById('bookDrawer').classList.contains('open'))showBookById(currentId);
-  }catch(e){hideLoading();showToast('Sign-out failed: '+e.message);}
-}
-
+    hideLoading();
+    showToast(`"${book.title}" signed out — due ${due.toLocaleDateString()}`);
+    showBookById(currentId);
+    mob_showBook(currentId);
+      }catch(e){hideLoading();showToast('Sign-out failed: '+e.message);}
+    }
 async function returnCurrentBook(){
   if(!currentId||!currentUser)return;
   try{
