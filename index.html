@@ -541,6 +541,14 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
         <div class="desk-home-section-label gold">⭐ Recommended Picks</div>
         <div class="desk-home-grid" id="deskHomeRecGrid"></div>
       </div>
+      <div class="desk-home-section" id="deskHomeSharedByMeSection" style="display:none">
+        <div class="desk-home-section-label teal">🔒 Shared by Me</div>
+        <div class="desk-home-grid" id="deskHomeSharedByMeGrid"></div>
+      </div>
+      <div class="desk-home-section" id="deskHomeSharedWithMeSection" style="display:none">
+        <div class="desk-home-section-label" style="color:#5a48b0">🔒 Shared with Me</div>
+        <div class="desk-home-grid" id="deskHomeSharedWithMeGrid"></div>
+      </div>     
       <div class="desk-home-section" id="deskHomeCheckoutSection" style="display:none">
         <div class="desk-home-section-label teal">📋 Currently Signed Out</div>
         <div class="desk-home-grid" id="deskHomeCheckoutGrid"></div>
@@ -1382,17 +1390,20 @@ async function renderDeskHome(){
   const el=document.getElementById('deskHomePanel');if(!el)return;
   const name=(currentUser?.displayName||'').split(' ')[0]||'Reader';
   document.getElementById('deskHomeGreeting').textContent=`Hello, ${name}`;
-  const recommended = [...library, ...communityLib]
-    .filter(b => b.recommended)
-    .filter((b, i, arr) => arr.findIndex(x => x.id === b.id) === i); // dedupe
+
+  // Recommended — includes your own recommended books
+  const recommended=[...library,...communityLib]
+    .filter(b=>b.recommended)
+    .filter((b,i,arr)=>arr.findIndex(x=>x.id===b.id)===i);
   const recSection=document.getElementById('deskHomeRecSection');
   const recGrid=document.getElementById('deskHomeRecGrid');
   if(recommended.length){
     recSection.style.display='';
-    recGrid.innerHTML=recommended.map(b=>bookCardHtml(b,true)).join('');
+    recGrid.innerHTML=recommended.map(b=>bookCardHtml(b,communityLib.some(x=>x.id===b.id))).join('');
     recGrid.querySelectorAll('.book-card[data-bookid]').forEach(c=>c.addEventListener('click',()=>{hideDeskHome();showBookById(c.dataset.bookid);}));
   } else recSection.style.display='none';
 
+  // Signed out books
   const checkoutSection=document.getElementById('deskHomeCheckoutSection');
   const checkoutGrid=document.getElementById('deskHomeCheckoutGrid');
   const checkedOutBooks=[...myCheckedOutIds].map(id=>[...library,...communityLib].find(b=>b.id===id)).filter(Boolean);
@@ -1402,6 +1413,31 @@ async function renderDeskHome(){
     checkoutGrid.querySelectorAll('.book-card[data-bookid]').forEach(c=>c.addEventListener('click',()=>{hideDeskHome();showBookById(c.dataset.bookid);}));
   } else checkoutSection.style.display='none';
 
+  // Books I have shared privately with others
+  const sharedByMe=library.filter(b=>b.allowedUsers&&b.allowedUsers.length>0);
+  const sharedByMeSection=document.getElementById('deskHomeSharedByMeSection');
+  const sharedByMeGrid=document.getElementById('deskHomeSharedByMeGrid');
+  if(sharedByMe.length){
+    sharedByMeSection.style.display='';
+    sharedByMeGrid.innerHTML=sharedByMe.map(b=>bookCardHtml(b,false)).join('');
+    sharedByMeGrid.querySelectorAll('.book-card[data-bookid]').forEach(c=>c.addEventListener('click',()=>{hideDeskHome();showBookById(c.dataset.bookid);}));
+  } else sharedByMeSection.style.display='none';
+
+  // Books others have shared privately with me
+  const sharedWithMe=communityLib.filter(b=>
+    b.ownerId!==currentUser?.uid&&
+    b.allowedUsers&&
+    b.allowedUsers.includes(currentUser?.uid)
+  );
+  const sharedWithMeSection=document.getElementById('deskHomeSharedWithMeSection');
+  const sharedWithMeGrid=document.getElementById('deskHomeSharedWithMeGrid');
+  if(sharedWithMe.length){
+    sharedWithMeSection.style.display='';
+    sharedWithMeGrid.innerHTML=sharedWithMe.map(b=>bookCardHtml(b,true)).join('');
+    sharedWithMeGrid.querySelectorAll('.book-card[data-bookid]').forEach(c=>c.addEventListener('click',()=>{hideDeskHome();showBookById(c.dataset.bookid);}));
+  } else sharedWithMeSection.style.display='none';
+
+  // Recently added to my library
   const recent=library.slice(0,12);
   const recentGrid=document.getElementById('deskHomeRecentGrid');
   if(recent.length){
