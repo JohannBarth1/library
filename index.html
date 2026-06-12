@@ -1238,8 +1238,7 @@ async function deleteCurrentBook(){
   showLoading('Deleting…');
   try{
     await deleteDoc(doc(db,'books',currentId));
-    const q=query(collection(db,'community'),where('sourceId','==',currentId));
-    const snap=await getDocs(q);for(const d of snap.docs)await deleteDoc(doc(db,'community',d.id));
+    communityLib = communityLib.filter(b => b.id !== currentId);
     library=library.filter(b=>b.id!==currentId);currentId=null;
     closeDrawer();hideLoading();renderAll();showToast('Book deleted');
   }catch(e){hideLoading();showToast('Delete failed: '+e.message);}
@@ -1506,7 +1505,10 @@ function showBookById(id){
 }
 function closeDrawer(){document.getElementById('bookDrawer').classList.remove('open');document.querySelectorAll('.book-card').forEach(c=>c.classList.remove('active'));currentId=null;}
 document.getElementById('drawerClose').addEventListener('click',closeDrawer);
-document.getElementById('drawerActions').addEventListener('click',handleAction);
+document.getElementById('drawerActions').addEventListener('click', e => {
+  if(e.target.closest('.action-dropdown-menu')) return; // handled by bindActionDropdowns
+  handleAction(e);
+});
 
 function buildActions(book,isMine){
   const isComm=communityLib.some(b=>b.id===book.id);
@@ -2184,30 +2186,6 @@ document.getElementById('bulkBtnPublish').addEventListener('click', async () => 
   } catch (e) {
     hideLoading();
     showToast('Publish failed: ' + e.message);
-  }
-});
-document.getElementById('bulkBtnUnpublish').addEventListener('click', async () => {
-  const ids = [...selectedIds].filter(id => {
-    const b = library.find(x => x.id === id);
-    return b && b.visibility === 'public';
-  });
-  if (!ids.length) return;
-  if (!confirm(`Unpublish ${ids.length} book${ids.length !== 1 ? 's' : ''}?`)) return;
-  showLoading('Unpublishing…');
-  try {
-    for (const id of ids) {
-      await updateDoc(doc(db, 'books', id), { visibility: 'private', updatedAt: serverTimestamp() });
-      const book = library.find(b => b.id === id);
-      if (book) book.visibility = 'private';
-      communityLib = communityLib.filter(b => b.id !== id);
-    }
-    hideLoading();
-    toggleSelectMode();
-    renderAll();
-    showToast(`${ids.length} book${ids.length !== 1 ? 's' : ''} unpublished ✓`);
-  } catch (e) {
-    hideLoading();
-    showToast('Unpublish failed: ' + e.message);
   }
 });
 document.getElementById('bulkBtnCheckout').addEventListener('click',async()=>{
