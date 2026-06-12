@@ -663,6 +663,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
             <div class="mob-detail-cat" id="mobDetailCat"></div>
             <div class="mob-detail-title" id="mobDetailTitle"></div>
             <div class="mob-detail-author" id="mobDetailAuthor"></div>
+            <div id="mobDetailSharedBy" style="display:none;font-size:.72rem;color:var(--teal);font-weight:700;margin-top:.2rem"></div>
             <div class="star-rating" id="mobStarRating" style="display:none;margin-top:.4rem">
               <div class="stars" id="mobStars"></div>
               <span class="rating-count" id="mobRatingCount"></span>
@@ -1342,7 +1343,7 @@ function renderGrid(gridId){
     // PATCH 4: hide "Shared" badge when browsing the public/community shelf
     return `<div class="book-card ${isSelected?'selected':''}" data-bookid="${b.id}">${coverHtml}<div class="select-check">✓</div>${isComm&&b.ownerId!==currentUser?.uid&&shelfMode!=='community'?'<span class="community-badge">Shared</span>':''}<div class="book-card-body"><div class="book-card-title">${esc(b.title)}</div><div class="book-card-author">${esc(b.author)}</div>
     ${isComm&&b.ownerId===currentUser?.uid?`<div class="book-card-shared-by" style="color:var(--gold)">★ My book</div>`:''}
-    ${isComm&&b.ownerId!==currentUser?.uid?`<div class="book-card-shared-by">by ${esc(b.ownerName||'')}</div>`:''}
+    ${isComm&&b.ownerId!==currentUser?.uid&&b.allowedUsers?.includes(currentUser?.uid)?`<div class="book-card-shared-by">Shared by ${esc(b.ownerName||'')}</div>`:''}
     ${isComm?`<div class="book-card-stars">${starsHtml}</div>`:''}</div></div>`;
   }).join('');
 }
@@ -1485,7 +1486,8 @@ function showBookById(id){
   document.getElementById('drawerAuthor').textContent=book.author||'';
   document.getElementById('drawerDesc').textContent=stripHtml(book.description||'');
   const sharedByEl=document.getElementById('drawerSharedBy');
-  if(isComm&&!isMine){sharedByEl.textContent='Shared by '+(book.ownerName||'Anonymous');sharedByEl.style.display='block';}
+  const isPrivatelyShared=book.allowedUsers?.includes(currentUser?.uid)&&book.visibility!=='public';
+  if(!isMine&&isPrivatelyShared){sharedByEl.textContent='Shared with you by '+(book.ownerName||'Anonymous');sharedByEl.style.display='block';}
   else sharedByEl.style.display='none';
   let badges='';
   if(book.category)badges+=`<span class="dbadge dbadge-cat">${esc(book.category)}</span>`;
@@ -1683,6 +1685,10 @@ function mob_showBook(id){
   document.getElementById('mobDetailCat').textContent=book.category||'';
   document.getElementById('mobDetailTitle').textContent=book.title||'';
   document.getElementById('mobDetailAuthor').textContent=book.author||'';
+  const mobSharedByEl=document.getElementById('mobDetailSharedBy');
+  const mobIsPrivatelyShared=book.allowedUsers?.includes(currentUser?.uid)&&book.visibility!=='public';
+  if(!isMine&&mobIsPrivatelyShared){mobSharedByEl.textContent='Shared with you by '+(book.ownerName||'Anonymous');mobSharedByEl.style.display='block';}
+  else mobSharedByEl.style.display='none';
   document.getElementById('mobDetailDesc').textContent=stripHtml(book.description||'');
   const actEl=document.getElementById('mobDetailActions');
   actEl.innerHTML=buildActions(book,isMine);
@@ -1809,7 +1815,7 @@ function bookCardHtml(b,isComm){
   const coverHtml=coverSrc?`<img class="book-card-cover" src="${coverSrc}" alt="" loading="lazy"/>`:`<div class="book-card-cover-ph"><div class="ph-icon">📖</div><div class="ph-title">${esc(b.title)}</div><div class="ph-author">${esc(b.author)}</div></div>`;const tagsHtml=(b.tags||[]).slice(0,2).map(t=>`<span class="tag-pill" style="font-size:.55rem;padding:1px 5px">${esc(t)}</span>`).join('');
   return `<div class="book-card" data-bookid="${b.id}">${coverHtml}${b.recommended?'<span class="rec-badge">⭐ Pick</span>':''}<div class="book-card-body"><div class="book-card-title">${esc(b.title)}</div><div class="book-card-author">${esc(b.author)}</div>
   ${isComm&&b.ownerId===currentUser?.uid?`<div class="book-card-shared-by" style="color:var(--gold)">★ My book</div>`:''}
-  ${isComm&&b.ownerId!==currentUser?.uid?`<div class="book-card-shared-by">by ${esc(b.ownerName||'')}</div>`:''}
+  ${isComm&&b.ownerId!==currentUser?.uid&&b.allowedUsers?.includes(currentUser?.uid)?`<div class="book-card-shared-by">Shared by ${esc(b.ownerName||'')}</div>`:''}
   ${isComm?`<div class="book-card-stars">${starsHtml}</div>`:''}${tagsHtml}</div></div>`;
 }
 
