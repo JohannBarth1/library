@@ -1343,7 +1343,6 @@ function renderGrid(gridId){
     // PATCH 4: hide "Shared" badge when browsing the public/community shelf
     const isMyPublicBook=b.ownerId===currentUser?.uid&&b.visibility==='public';
     return `<div class="book-card ${isSelected?'selected':''}" data-bookid="${b.id}">${coverHtml}<div class="select-check">✓</div>${isMyPublicBook?'<span class="community-badge">Public</span>':''}
-    ${isComm&&b.ownerId!==currentUser?.uid&&shelfMode!=='community'?'<span class="community-badge">Public</span>':''}
     <div class="book-card-body"><div class="book-card-title">${esc(b.title)}</div>
     <div class="book-card-author">${esc(b.author)}</div>
     ${isComm&&b.ownerId!==currentUser?.uid&&b.allowedUsers?.includes(currentUser?.uid)?`<div class="book-card-shared-by">Shared by ${esc(b.ownerName||'')}</div>`:''}
