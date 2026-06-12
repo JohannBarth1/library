@@ -1492,6 +1492,10 @@ function bindActionDropdowns(container){
       menu?.classList.toggle('open');
     });
   });
+  // Also bind handleAction to each dropdown menu directly
+  container.querySelectorAll('.action-dropdown-menu').forEach(menu=>{
+    menu.addEventListener('click', handleAction);
+  });
 }
 
 function handleAction(e){
