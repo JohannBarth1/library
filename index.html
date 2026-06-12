@@ -1531,7 +1531,7 @@ function buildActions(book,isMine){
     html+=`<div class="action-dropdown" id="ddShare">`;
     html+=`<button class="action-dropdown-btn share-btn" data-dd="ddShare"><span class="ba-icon">⇧</span> Share ▾</button>`;
     html+=`<div class="action-dropdown-menu" id="ddShareMenu">`;
-    if(book.visibility!=='community'){
+    if(book.visibility!=='public'){
       html+=`<button class="action-dropdown-item" data-action="share">⇧ Publish to Library</button>`;
     } else {
       html+=`<button class="action-dropdown-item" data-action="unpublish">↓ Unpublish</button>`;
