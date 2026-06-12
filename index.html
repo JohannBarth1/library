@@ -1800,27 +1800,27 @@ async function renderMobHome(){
 
   if(recommended.length){
     html+=`<div style="font-size:.68rem;letter-spacing:.18em;text-transform:uppercase;color:var(--gold);font-weight:700;margin-bottom:.6rem">⭐ Recommended</div>
-    <div class="mob-book-grid" style="margin-bottom:1.5rem">${recommended.map(b=>bookCardHtml(b,communityLib.some(x=>x.id===b.id))).join('')}</div>`;
+    <div class="mob-book-grid" style="margin-bottom:1.5rem;grid-template-columns:repeat(auto-fill,minmax(140px,1fr))">${recommended.map(b=>bookCardHtml(b,communityLib.some(x=>x.id===b.id))).join('')}</div>`;
   }
 
   if(checkedOutBooks.length){
     html+=`<div style="font-size:.68rem;letter-spacing:.18em;text-transform:uppercase;color:var(--teal);font-weight:700;margin-bottom:.6rem;margin-top:.5rem">📋 Currently Signed Out</div>
-    <div class="mob-book-grid" style="margin-bottom:1.5rem">${checkedOutBooks.map(b=>bookCardHtml(b,communityLib.some(x=>x.id===b.id))).join('')}</div>`;
+    <div class="mob-book-grid" style="margin-bottom:1.5rem;grid-template-columns:repeat(auto-fill,minmax(140px,1fr))">${checkedOutBooks.map(b=>bookCardHtml(b,communityLib.some(x=>x.id===b.id))).join('')}</div>`;
   }
 
   if(sharedByMe.length){
     html+=`<div style="font-size:.68rem;letter-spacing:.18em;text-transform:uppercase;color:var(--teal);font-weight:700;margin-bottom:.6rem;margin-top:.5rem">🔒 Shared by Me</div>
-    <div class="mob-book-grid" style="margin-bottom:1.5rem">${sharedByMe.map(b=>bookCardHtml(b,false)).join('')}</div>`;
+    <div class="mob-book-grid" style="margin-bottom:1.5rem;grid-template-columns:repeat(auto-fill,minmax(140px,1fr))">${sharedByMe.map(b=>bookCardHtml(b,false)).join('')}</div>`;
   }
 
   if(sharedWithMe.length){
     html+=`<div style="font-size:.68rem;letter-spacing:.18em;text-transform:uppercase;color:#5a48b0;font-weight:700;margin-bottom:.6rem;margin-top:.5rem">🔒 Shared with Me</div>
-    <div class="mob-book-grid" style="margin-bottom:1.5rem">${sharedWithMe.map(b=>bookCardHtml(b,true)).join('')}</div>`;
+    <div class="mob-book-grid" style="margin-bottom:1.5rem;grid-template-columns:repeat(auto-fill,minmax(140px,1fr))">${sharedWithMe.map(b=>bookCardHtml(b,true)).join('')}</div>`;
   }
 
   html+=`<div style="font-size:.68rem;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:.6rem">Recently Added</div>`;
   html+=recent.length
-    ?`<div class="mob-book-grid">${recent.map(b=>bookCardHtml(b,false)).join('')}</div>`
+    ?`<div class="mob-book-grid" style="margin-bottom:1.5rem;grid-template-columns:repeat(auto-fill,minmax(140px,1fr))">${recent.map(b=>bookCardHtml(b,false)).join('')}</div>`
     :'<div style="text-align:center;padding:2rem;color:var(--muted);font-size:.88rem">Upload books to get started</div>';
 
   document.getElementById('mobHomeContent').innerHTML=html;
@@ -2038,8 +2038,10 @@ async function returnCurrentBook(){
     showLoading('Returning…');
     await updateDoc(doc(db,'checkouts',unreturned[0].id),{returnedAt:serverTimestamp()});
     myCheckedOutIds.delete(currentId);
-    hideLoading();showToast('Book returned ✓');
-    if(document.getElementById('bookDrawer').classList.contains('open'))showBookById(currentId);
+    hideLoading();
+    showToast('Book returned ✓');
+    showBookById(currentId);
+    mob_showBook(currentId);
   }catch(e){hideLoading();showToast('Return failed: '+e.message);}
 }
 
