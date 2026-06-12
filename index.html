@@ -1342,8 +1342,8 @@ function renderGrid(gridId){
     const isSelected=selectedIds.has(b.id);
     // PATCH 4: hide "Shared" badge when browsing the public/community shelf
     const isMyPublicBook=b.ownerId===currentUser?.uid&&b.visibility==='public';
-    return `<div class="book-card ${isSelected?'selected':''}" data-bookid="${b.id}">${coverHtml}<div class="select-check">✓</div>${isMyPublicBook?'<span class="community-badge">Shared</span>':''}
-    ${isComm&&b.ownerId!==currentUser?.uid&&shelfMode!=='community'?'<span class="community-badge">Shared</span>':''}
+    return `<div class="book-card ${isSelected?'selected':''}" data-bookid="${b.id}">${coverHtml}<div class="select-check">✓</div>${isMyPublicBook?'<span class="community-badge">Public</span>':''}
+    ${isComm&&b.ownerId!==currentUser?.uid&&shelfMode!=='community'?'<span class="community-badge">Public</span>':''}
     <div class="book-card-body"><div class="book-card-title">${esc(b.title)}</div>
     <div class="book-card-author">${esc(b.author)}</div>
     ${isComm&&b.ownerId!==currentUser?.uid&&b.allowedUsers?.includes(currentUser?.uid)?`<div class="book-card-shared-by">Shared by ${esc(b.ownerName||'')}</div>`:''}
@@ -1478,6 +1478,7 @@ async function renderDeskHome(){
 function showBookById(id){
   const book=[...library,...communityLib].find(b=>b.id===id);if(!book)return;
   currentId=id;
+  if(book.allowedUsers?.length>0) loadAllUsers();
   const isMine=book.ownerId===currentUser?.uid;
   const isComm=communityLib.some(b=>b.id===id);
   const img=document.getElementById('drawerCoverImg'),ph=document.getElementById('drawerCoverPh');
@@ -1490,8 +1491,19 @@ function showBookById(id){
   document.getElementById('drawerDesc').textContent=stripHtml(book.description||'');
   const sharedByEl=document.getElementById('drawerSharedBy');
   const isPrivatelyShared=book.allowedUsers?.includes(currentUser?.uid)&&book.visibility!=='public';
-  if(!isMine&&isPrivatelyShared){sharedByEl.textContent='Shared with you by '+(book.ownerName||'Anonymous');sharedByEl.style.display='block';}
-  else sharedByEl.style.display='none';
+  if(!isMine&&isPrivatelyShared){
+    sharedByEl.textContent='Shared with you by '+(book.ownerName||'Anonymous');
+    sharedByEl.style.display='block';
+  } else if(isMine&&book.allowedUsers?.length>0){
+    const names=book.allowedUsers.map(uid=>{
+      const u=allUsers.find(x=>x.uid===uid);
+      return u?(u.displayName||u.email||uid):uid;
+    });
+    sharedByEl.textContent='Shared with: '+names.join(', ');
+    sharedByEl.style.display='block';
+  } else {
+    sharedByEl.style.display='none';
+  }
   let badges='';
   if(book.category)badges+=`<span class="dbadge dbadge-cat">${esc(book.category)}</span>`;
   if(book.language)badges+=`<span class="dbadge dbadge-lang">${esc(book.language.toUpperCase())}</span>`;
