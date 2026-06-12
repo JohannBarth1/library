@@ -1616,6 +1616,7 @@ async function unpublishCurrentBook() {
 
 // ── PRIVATE SHARE ─────────────────────────────────────────────────────────────
 async function showPrivateShare(){
+  console.log('showPrivateShare called, currentId:', currentId);
   if(!currentId) { console.log('no currentId'); return; }
   const book = library.find(b => b.id === currentId);
   if(!book) { console.log('book not found in library, currentId:', currentId); return; }
@@ -1628,7 +1629,9 @@ async function showPrivateShare(){
   sel.innerHTML='<option value="">— Select a user —</option>'+users.map(u=>`<option value="${u.uid}">${esc(u.displayName||u.email||u.uid)}</option>`).join('');
 }
 document.getElementById('btnCancelPrivateShare').addEventListener('click',()=>document.getElementById('privateShareModal').classList.remove('open'));
+  
 document.getElementById('btnConfirmPrivateShare').addEventListener('click',async()=>{
+  console.log('confirm clicked, currentId:', currentId, 'uid:', document.getElementById('privateShareUserSelect').value);
   const uid=document.getElementById('privateShareUserSelect').value;
   if(!uid){showToast('Please select a user');return;}
   if(!currentId)return;
