@@ -1334,7 +1334,10 @@ function renderGrid(gridId){
     const coverHtml=coverSrc?`<img class="book-card-cover" src="${coverSrc}" alt="" loading="lazy"/>`:`<div class="book-card-cover-ph"><div class="ph-icon">📖</div><div class="ph-title">${esc(b.title)}</div><div class="ph-author">${esc(b.author)}</div></div>`;
     const isSelected=selectedIds.has(b.id);
     // PATCH 4: hide "Shared" badge when browsing the public/community shelf
-    return `<div class="book-card ${isSelected?'selected':''}" data-bookid="${b.id}">${coverHtml}<div class="select-check">✓</div>${isComm&&b.ownerId!==currentUser?.uid&&shelfMode!=='community'?'<span class="community-badge">Shared</span>':''}<div class="book-card-body"><div class="book-card-title">${esc(b.title)}</div><div class="book-card-author">${esc(b.author)}</div>${isComm&&b.ownerId!==currentUser?.uid?`<div class="book-card-shared-by">by ${esc(b.ownerName||'')}</div>`:''}${isComm?`<div class="book-card-stars">${starsHtml}</div>`:''}</div></div>`;
+    return `<div class="book-card ${isSelected?'selected':''}" data-bookid="${b.id}">${coverHtml}<div class="select-check">✓</div>${isComm&&b.ownerId!==currentUser?.uid&&shelfMode!=='community'?'<span class="community-badge">Shared</span>':''}<div class="book-card-body"><div class="book-card-title">${esc(b.title)}</div><div class="book-card-author">${esc(b.author)}</div>
+    ${isComm&&b.ownerId===currentUser?.uid?`<div class="book-card-shared-by" style="color:var(--gold)">★ My book</div>`:''}
+    ${isComm&&b.ownerId!==currentUser?.uid?`<div class="book-card-shared-by">by ${esc(b.ownerName||'')}</div>`:''}
+    ${isComm?`<div class="book-card-stars">${starsHtml}</div>`:''}</div></div>`;
   }).join('');
 }
 
@@ -1379,7 +1382,9 @@ async function renderDeskHome(){
   const el=document.getElementById('deskHomePanel');if(!el)return;
   const name=(currentUser?.displayName||'').split(' ')[0]||'Reader';
   document.getElementById('deskHomeGreeting').textContent=`Hello, ${name}`;
-  const recommended=communityLib.filter(b=>b.recommended);
+  const recommended = [...library, ...communityLib]
+    .filter(b => b.recommended)
+    .filter((b, i, arr) => arr.findIndex(x => x.id === b.id) === i); // dedupe
   const recSection=document.getElementById('deskHomeRecSection');
   const recGrid=document.getElementById('deskHomeRecGrid');
   if(recommended.length){
@@ -1684,7 +1689,9 @@ function renderMobPublic(){
 async function renderMobHome(){
   const name=(currentUser?.displayName||'').split(' ')[0]||'Reader';
   document.getElementById('mobHomeGreeting').textContent=`Hello, ${name}`;
-  const recommended=communityLib.filter(b=>b.recommended);
+  const recommended = [...library, ...communityLib]
+    .filter(b => b.recommended)
+    .filter((b, i, arr) => arr.findIndex(x => x.id === b.id) === i); // dedupe
   const checkedOutBooks=[...myCheckedOutIds].map(id=>[...library,...communityLib].find(b=>b.id===id)).filter(Boolean);
   const recent=library.slice(0,6);
   let html='';
@@ -1707,7 +1714,10 @@ function bookCardHtml(b,isComm){
   const starsHtml=isComm?[1,2,3,4,5].map(n=>`<span class="bcs ${n<=Math.round(avg)?'filled':''}">★</span>`).join(''):'';
   const coverSrc=getCoverSrc(b);
   const coverHtml=coverSrc?`<img class="book-card-cover" src="${coverSrc}" alt="" loading="lazy"/>`:`<div class="book-card-cover-ph"><div class="ph-icon">📖</div><div class="ph-title">${esc(b.title)}</div><div class="ph-author">${esc(b.author)}</div></div>`;const tagsHtml=(b.tags||[]).slice(0,2).map(t=>`<span class="tag-pill" style="font-size:.55rem;padding:1px 5px">${esc(t)}</span>`).join('');
-  return `<div class="book-card" data-bookid="${b.id}">${coverHtml}${b.recommended?'<span class="rec-badge">⭐ Pick</span>':''}<div class="book-card-body"><div class="book-card-title">${esc(b.title)}</div><div class="book-card-author">${esc(b.author)}</div>${isComm&&b.ownerId!==currentUser?.uid?`<div class="book-card-shared-by">by ${esc(b.ownerName||'')}</div>`:''}${isComm?`<div class="book-card-stars">${starsHtml}</div>`:''}${tagsHtml}</div></div>`;
+  return `<div class="book-card" data-bookid="${b.id}">${coverHtml}${b.recommended?'<span class="rec-badge">⭐ Pick</span>':''}<div class="book-card-body"><div class="book-card-title">${esc(b.title)}</div><div class="book-card-author">${esc(b.author)}</div>
+  ${isComm&&b.ownerId===currentUser?.uid?`<div class="book-card-shared-by" style="color:var(--gold)">★ My book</div>`:''}
+  ${isComm&&b.ownerId!==currentUser?.uid?`<div class="book-card-shared-by">by ${esc(b.ownerName||'')}</div>`:''}
+  ${isComm?`<div class="book-card-stars">${starsHtml}</div>`:''}${tagsHtml}</div></div>`;
 }
 
 // ── EPUB READER ───────────────────────────────────────────────────────────────
