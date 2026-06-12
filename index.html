@@ -1008,10 +1008,11 @@ document.addEventListener('click',(e)=>{
   document.getElementById('userDropdown').classList.remove('open');
   document.querySelectorAll('.action-dropdown-menu.open').forEach(m=>m.classList.remove('open'));
   const drawer = document.getElementById('bookDrawer');
-  if (
+if (
     drawer.classList.contains('open') &&
     !drawer.contains(e.target) &&
-    !e.target.closest('.book-card')  // don't close if clicking a card (that opens a new book)
+    !e.target.closest('.book-card') &&
+    !e.target.closest('.modal-overlay')
   ) {
     closeDrawer();
   }
