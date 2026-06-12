@@ -86,6 +86,10 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .filter-sort{padding:.7rem 1rem;border-top:1px solid var(--border);flex-shrink:0;}
 .filter-sort label{font-size:.62rem;letter-spacing:.15em;text-transform:uppercase;color:var(--muted);font-weight:700;display:block;margin-bottom:.4rem;}
 .filter-sort select{width:100%;padding:.4rem .6rem;font-family:'Lato',sans-serif;font-size:.8rem;border:1px solid var(--border);border-radius:3px;background:var(--warm-white);color:var(--navy);outline:none;cursor:pointer;}
+.sort-btn-group{display:flex;gap:.3rem;flex-wrap:wrap;padding:.5rem 1rem;border-top:1px solid var(--border);}
+.sort-btn{padding:.3rem .65rem;font-size:.68rem;font-family:'Lato',sans-serif;font-weight:700;border-radius:20px;cursor:pointer;border:1px solid var(--border);background:var(--warm-white);color:var(--navy2);transition:all .15s;}
+.sort-btn.active{background:var(--teal);color:#fff;border-color:var(--teal);}
+.sort-btn:hover:not(.active){background:var(--light-blue);}
 .filter-footer{padding:.7rem;border-top:1px solid var(--border);display:flex;gap:.4rem;}
 .filter-footer button{flex:1;padding:.48rem .3rem;font-size:.68rem;font-family:'Lato',sans-serif;font-weight:700;letter-spacing:.05em;text-transform:uppercase;border-radius:2px;cursor:pointer;transition:all .15s;border:1px solid var(--border);}
 /* PATCH 6b: gold text */
@@ -516,15 +520,13 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
         <button class="shelf-tab" id="tabCommDesk">Public Library</button>
       </div>
       <div class="filter-cats" id="deskFilterCats"></div>
-      <div class="filter-sort">
-        <label>Sort by</label>
-        <select id="deskSortSelect">
-          <option value="recent">Most Recent</option>
-          <option value="title">Title A–Z</option>
-          <option value="author">Author A–Z</option>
-          <option value="rating">Top Rated</option>
-        </select>
+      <div class="sort-btn-group" id="deskSortBtns">
+        <button class="sort-btn active" data-sort="recent">Recent</button>
+        <button class="sort-btn" data-sort="title">Title</button>
+        <button class="sort-btn" data-sort="author">Author</button>
+        <button class="sort-btn" data-sort="rating">Rating</button>
       </div>
+      <select id="deskSortSelect" style="display:none"></select>
       <div class="filter-footer">
         <button class="btn-upload-f" id="btnSideUpload">+ Upload</button>
         <button class="btn-refresh-f" id="btnSideRefresh">↻ Refresh</button>
@@ -603,15 +605,18 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
         <div style="padding:.6rem .9rem .2rem;font-family:'Playfair Display',serif;font-size:1rem;color:var(--navy2)">Public Library</div>
         <div class="mob-search-bar"><input type="text" id="mobSearchPublic" placeholder="Search Public Library…"/></div>
         <div class="mob-filter-scroll" id="mobChipsPublic"></div>
-        <div class="mob-sort-row">
-          <label>Sort</label>
-          <select id="mobSortPublic">
-            <option value="recent">Most Recent</option>
-            <option value="title">Title A–Z</option>
-            <option value="author">Author A–Z</option>
-            <option value="rating">Top Rated</option>
-          </select>
+        <div class="sort-btn-group" id="mobSortPublicBtns">
+          <button class="sort-btn active" data-sort="recent">Recent</button>
+          <button class="sort-btn" data-sort="title">Title</button>
+          <button class="sort-btn" data-sort="author">Author</button>
+          <button class="sort-btn" data-sort="rating">Rating</button>
         </div>
+        <select id="mobSortPublic" style="display:none">
+          <option value="recent">Most Recent</option>
+          <option value="title">Title A–Z</option>
+          <option value="author">Author A–Z</option>
+          <option value="rating">Top Rated</option>
+        </select>
       </div>
       <div class="mob-grid-scroll"><div class="mob-book-grid" id="mobGridPublic"></div></div>
     </div>
@@ -628,15 +633,18 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
       <div class="mob-lib-top">
         <div class="mob-search-bar"><input type="text" id="mobSearch" placeholder="Search my books…"/></div>
         <div class="mob-filter-scroll" id="mobFilterChips"></div>
-        <div class="mob-sort-row">
-          <label>Sort</label>
-          <select id="mobSortSelect">
-            <option value="recent">Most Recent</option>
-            <option value="title">Title A–Z</option>
-            <option value="author">Author A–Z</option>
-            <option value="rating">Top Rated</option>
-          </select>
+        <div class="sort-btn-group" id="mobSortBtns">
+          <button class="sort-btn active" data-sort="recent">Recent</button>
+          <button class="sort-btn" data-sort="title">Title</button>
+          <button class="sort-btn" data-sort="author">Author</button>
+          <button class="sort-btn" data-sort="rating">Rating</button>
         </div>
+        <select id="mobSortSelect" style="display:none">
+          <option value="recent">Most Recent</option>
+          <option value="title">Title A–Z</option>
+          <option value="author">Author A–Z</option>
+          <option value="rating">Top Rated</option>
+        </select>
       </div>
       <div class="mob-grid-scroll"><div class="mob-book-grid" id="mobBookGrid"></div></div>
     </div>
@@ -1037,8 +1045,7 @@ async function loadLibrary() {
     library = mySnap.docs.map(d => ({ id: d.id, ...d.data() }));
 
     const pubBooks = pubSnap.docs
-      .map(d => ({ id: d.id, ...d.data() }))
-      .filter(b => b.ownerId !== currentUser.uid);
+      .map(d => ({ id: d.id, ...d.data() }));
 
     const sharedBooks = sharedSnap.docs
       .map(d => ({ id: d.id, ...d.data() }))
@@ -1357,7 +1364,33 @@ document.getElementById('mobBookGrid').addEventListener('click',e=>{const card=e
 document.getElementById('deskSearch').addEventListener('input',e=>{searchQ=e.target.value.toLowerCase().trim();renderAll();});
 document.getElementById('mobSearch').addEventListener('input',e=>{searchQ=e.target.value.toLowerCase().trim();renderAll();});
 document.getElementById('deskSortSelect').addEventListener('change',()=>renderAll());
-document.getElementById('mobSortSelect').addEventListener('change',()=>{document.getElementById('deskSortSelect').value=document.getElementById('mobSortSelect').value;renderAll();});
+document.getElementById('deskSortBtns').addEventListener('click', e => {
+  const btn = e.target.closest('.sort-btn[data-sort]');
+  if(!btn) return;
+  document.querySelectorAll('#deskSortBtns .sort-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('deskSortSelect').value = btn.dataset.sort;
+  renderAll();
+});
+document.getElementById('mobSortBtns').addEventListener('click', e => {
+  const btn = e.target.closest('.sort-btn[data-sort]');
+  if(!btn) return;
+  document.querySelectorAll('#mobSortBtns .sort-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('mobSortSelect').value = btn.dataset.sort;
+  document.getElementById('deskSortSelect').value = btn.dataset.sort;
+  document.querySelectorAll('#deskSortBtns .sort-btn').forEach(b => b.classList.toggle('active', b.dataset.sort === btn.dataset.sort));
+  renderAll();
+});
+
+document.getElementById('mobSortPublicBtns').addEventListener('click', e => {
+  const btn = e.target.closest('.sort-btn[data-sort]');
+  if(!btn) return;
+  document.querySelectorAll('#mobSortPublicBtns .sort-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('mobSortPublic').value = btn.dataset.sort;
+  renderMobPublic();
+});
 document.getElementById('tabMineDesk').addEventListener('click',()=>switchShelf('mine'));
 document.getElementById('tabCommDesk').addEventListener('click',()=>switchShelf('community'));
 function switchShelf(mode){
@@ -1457,7 +1490,7 @@ function showBookById(id){
   let badges='';
   if(book.category)badges+=`<span class="dbadge dbadge-cat">${esc(book.category)}</span>`;
   if(book.language)badges+=`<span class="dbadge dbadge-lang">${esc(book.language.toUpperCase())}</span>`;
-  if(book.visibility==='community')badges+=`<span class="dbadge dbadge-shared">Public Library</span>`;
+  if(book.visibility==='public')badges+=`<span class="dbadge dbadge-shared">Public Library</span>`;
   document.getElementById('drawerBadges').innerHTML=badges;
   if(isComm)renderStars('deskStars','deskRatingCount',id,true);
   else document.getElementById('deskStarRating').style.display='none';
@@ -1476,7 +1509,8 @@ function buildActions(book,isMine){
   const isPublicOnly=isComm&&!isMine;
   let html='';
   html+=`<div class="action-group">`;
-  html+=`<button class="btn-action btn-read" data-action="read"><span class="ba-icon">▶</span> Read</button>`;
+  const canRead = isMine || isSignedOut;
+  if(canRead) html+=`<button class="btn-action btn-read" data-action="read"><span class="ba-icon">▶</span> Read</button>`;
   if(isMine||isSignedOut)html+=`<button class="btn-action btn-download" data-action="download"><span class="ba-icon">⬇</span> Download</button>`;
   html+=`</div>`;
   html+=`<div class="action-group">`;
@@ -1697,7 +1731,6 @@ document.getElementById('mobGridSearch').addEventListener('click',e=>{const c=e.
 
 // Public Library panel
 document.getElementById('mobSearchPublic').addEventListener('input',renderMobPublic);
-document.getElementById('mobSortPublic').addEventListener('change',renderMobPublic);
 document.getElementById('mobGridPublic').addEventListener('click',e=>{const c=e.target.closest('.book-card[data-bookid]');if(c){mobPrevPanel='mobPanelPublic';mob_showBook(c.dataset.bookid);}});
 document.getElementById('mobChipsPublic').addEventListener('click',e=>{const c=e.target.closest('.mob-chip[data-cat]');if(!c)return;activeCat=decodeURIComponent(c.dataset.cat);renderMobPublic();});
 function renderMobPublic(){
@@ -2027,8 +2060,8 @@ function updateBulkBar(){
   const n=selectedIds.size;
   document.getElementById('bulkBarCount').textContent=`${n} book${n!==1?'s':''} selected`;
   const myBooks=[...selectedIds].map(id=>library.find(b=>b.id===id)).filter(Boolean);
-  const hasPublished=myBooks.some(b=>b.visibility==='community');
-  const hasUnpublished=myBooks.some(b=>b.visibility!=='community');
+  const hasPublished=myBooks.some(b=>b.visibility==='public');
+  const hasUnpublished=myBooks.some(b=>b.visibility!=='public');
   const hasUnrecommended=myBooks.some(b=>!b.recommended);
   const hasRecommended=myBooks.some(b=>b.recommended);
   document.getElementById('bulkBtnPublish').style.display=hasUnpublished&&n>0?'':'none';
@@ -2142,11 +2175,12 @@ document.getElementById('bulkBtnPublish').addEventListener('click', async () => 
   }
 });
 document.getElementById('bulkBtnUnpublish').addEventListener('click',async()=>{
-  const ids=[...selectedIds].filter(id=>{const b=library.find(x=>x.id===id);return b&&b.visibility==='community';});
+  const ids=[...selectedIds].filter(id=>{const b=library.find(x=>x.id===id);return b&&b.visibility==='public';});
   if(!ids.length)return;if(!confirm(`Unpublish ${ids.length} book${ids.length!==1?'s':''}?`))return;
   showLoading('Unpublishing…');
   try{
-    for(const id of ids){const q=query(collection(db,'community'),where('sourceId','==',id));const snap=await getDocs(q);for(const d of snap.docs)await deleteDoc(doc(db,'community',d.id));await updateDoc(doc(db,'books',id),{visibility:'private',updatedAt:serverTimestamp()});const book=library.find(b=>b.id===id);if(book)book.visibility='private';communityLib=communityLib.filter(b=>b.sourceId!==id);}
+    for(const id of ids){const q=query(collection(db,'community'),where('sourceId','==',id));const snap=await getDocs(q);for(const d of snap.docs)await deleteDoc(doc(db,'community',d.id));await updateDoc(doc(db,'books',id),{visibility:'private',updatedAt:serverTimestamp()});const book=library.find(b=>b.id===id);if(book)book.visibility='private';
+      communityLib=communityLib.filter(b=>b.id!==id);
     hideLoading();toggleSelectMode();renderAll();showToast(`${ids.length} book${ids.length!==1?'s':''} unpublished ✓`);
   }catch(e){hideLoading();showToast('Unpublish failed: '+e.message);}
 });
