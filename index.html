@@ -956,10 +956,9 @@ const auth=getAuth(app),db=getFirestore(app),storage=getStorage(app),gprovider=n
 
 // ── STATE ─────────────────────────────────────────────────────────────────────
 let currentUser=null,library=[],allUsers=[],userRatings={},currentId=null,communityLib = [];
-let shelfMode='mine',activeCat='All',searchQ='',mobPrevPanel='mobPanelLib';
+let shelfMode='mine',activeCat='All',activeCatPublic='All',searchQ='',mobPrevPanel='mobPanelLib';
 let selectMode=false,selectedIds=new Set(),deskView='library';
 let myCheckedOutIds=new Set();
-let sharedWithMe=[];
 let libraryLastDoc=null, libraryFullyLoaded=false;
 
 // Reader state
@@ -1284,7 +1283,8 @@ async function confirmShare() {
 function activeBooks(){return shelfMode==='mine'?library:communityLib;}
 function filteredBooks(){
   let books=activeBooks();
-  if(activeCat!=='All')books=books.filter(b=>(b.category||'Uncategorised')===activeCat);
+  const cat=shelfMode==='community'?activeCatPublic:activeCat;
+    if(cat!=='All')books=books.filter(b=>(b.category||'Uncategorised')===cat);
   if(searchQ)books=books.filter(b=>b.title?.toLowerCase().includes(searchQ)||b.author?.toLowerCase().includes(searchQ)||b.category?.toLowerCase().includes(searchQ));
   return sortBooks(books);
 }
@@ -1319,7 +1319,8 @@ function renderAll(){
 function renderFilterCats(){
   const cats=getCats(),total=activeBooks().length;
   const el=document.getElementById('deskFilterCats');
-  el.innerHTML=`<div class="filter-cat-item ${activeCat==='All'?'active':''}" data-cat="All"><span>All</span><span class="filter-cat-count">${total}</span></div>`+cats.map(([cat,cnt])=>`<div class="filter-cat-item ${activeCat===cat?'active':''}" data-cat="${encodeURIComponent(cat)}"><span>${esc(cat)}</span><span class="filter-cat-count">${cnt}</span></div>`).join('');
+  const currentCat = shelfMode==='community' ? activeCatPublic : activeCat;
+  el.innerHTML=`<div class="filter-cat-item ${currentCat==='All'?'active':''}" data-cat="All"><span>All</span><span class="filter-cat-count">${total}</span></div>`+cats.map(([cat,cnt])=>`<div class="filter-cat-item ${currentCat===cat?'active':''}" data-cat="${encodeURIComponent(cat)}"><span>${esc(cat)}</span><span class="filter-cat-count">${cnt}</span></div>`).join('');
 }
 function renderMobChips(){
   const cats=getCats();
@@ -1354,7 +1355,8 @@ document.getElementById('deskFilterCats').addEventListener('click',e=>{
   const item=e.target.closest('.filter-cat-item[data-cat]');
   if(!item)return;
   hideDeskHome();
-  activeCat=decodeURIComponent(item.dataset.cat);
+  if(shelfMode==='community') activeCatPublic=decodeURIComponent(item.dataset.cat);
+    else activeCat=decodeURIComponent(item.dataset.cat);
   renderAll();
 });
 document.getElementById('mobFilterChips').addEventListener('click',e=>{const chip=e.target.closest('.mob-chip[data-cat]');if(!chip)return;activeCat=decodeURIComponent(chip.dataset.cat);renderAll();});
@@ -1758,16 +1760,16 @@ document.getElementById('mobGridSearch').addEventListener('click',e=>{const c=e.
 // Public Library panel
 document.getElementById('mobSearchPublic').addEventListener('input',renderMobPublic);
 document.getElementById('mobGridPublic').addEventListener('click',e=>{const c=e.target.closest('.book-card[data-bookid]');if(c){mobPrevPanel='mobPanelPublic';mob_showBook(c.dataset.bookid);}});
-document.getElementById('mobChipsPublic').addEventListener('click',e=>{const c=e.target.closest('.mob-chip[data-cat]');if(!c)return;activeCat=decodeURIComponent(c.dataset.cat);renderMobPublic();});
+document.getElementById('mobChipsPublic').addEventListener('click',e=>{const c=e.target.closest('.mob-chip[data-cat]');if(!c)return;activeCatPublic=decodeURIComponent(c.dataset.cat);renderMobPublic();});
 function renderMobPublic(){
   const q=document.getElementById('mobSearchPublic').value.toLowerCase().trim();
   const sort=document.getElementById('mobSortPublic').value;
   let books=communityLib;
-  if(activeCat!=='All')books=books.filter(b=>(b.category||'Uncategorised')===activeCat);
+  if(activeCatPublic!=='All')books=books.filter(b=>(b.category||'Uncategorised')===activeCatPublic);
   if(q)books=books.filter(b=>matchesQ(b,q));
   books=sortBooks(books,sort);
   const cats={};communityLib.forEach(b=>{const c=b.category||'Uncategorised';cats[c]=(cats[c]||0)+1;});
-  document.getElementById('mobChipsPublic').innerHTML=[['All',communityLib.length],...Object.entries(cats).sort()].map(([cat,cnt])=>`<div class="mob-chip ${activeCat===cat?'active':''}" data-cat="${encodeURIComponent(cat)}">${esc(cat)} <span style="opacity:.65">${cnt}</span></div>`).join('');
+  document.getElementById('mobChipsPublic').innerHTML=[['All',communityLib.length],...Object.entries(cats).sort()].map(([cat,cnt])=>`<div class="mob-chip ${activeCatPublic===cat?'active':''}" data-cat="${encodeURIComponent(cat)}">${esc(cat)} <span style="opacity:.65">${cnt}</span></div>`).join('');
   document.getElementById('mobGridPublic').innerHTML=books.length?books.map(b=>bookCardHtml(b,true)).join(''):'<div style="padding:2rem;text-align:center;color:var(--muted);font-size:.88rem">No books yet</div>';
 }
 
@@ -2023,8 +2025,8 @@ async function signOutBook(){
     myCheckedOutIds.add(currentId);
     hideLoading();
     showToast(`"${book.title}" signed out — due ${due.toLocaleDateString()}`);
-    showBookById(currentId);
-    mob_showBook(currentId);
+    if(window.innerWidth > 768) showBookById(currentId);
+      else mob_showBook(currentId);
       }catch(e){hideLoading();showToast('Sign-out failed: '+e.message);}
     }
 async function returnCurrentBook(){
@@ -2039,8 +2041,8 @@ async function returnCurrentBook(){
     myCheckedOutIds.delete(currentId);
     hideLoading();
     showToast('Book returned ✓');
-    showBookById(currentId);
-    mob_showBook(currentId);
+    if(window.innerWidth > 768) showBookById(currentId);
+      else mob_showBook(currentId);
   }catch(e){hideLoading();showToast('Return failed: '+e.message);}
 }
 
