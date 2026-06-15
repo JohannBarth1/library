@@ -933,8 +933,7 @@ import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/fireba
 import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut }
   from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
 import { getFirestore, collection, addDoc, getDocs, getDoc, doc,
-         query, where, orderBy, updateDoc, deleteDoc, serverTimestamp, setDoc, Timestamp,
-         limit, startAfter }
+         query, where, orderBy, updateDoc, deleteDoc, serverTimestamp, setDoc, Timestamp }
   from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 import { getStorage, ref as storageRef, uploadBytes, getDownloadURL, getBytes }
   from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js';
@@ -959,7 +958,6 @@ let currentUser=null,library=[],allUsers=[],userRatings={},currentId=null,commun
 let shelfMode='mine',activeCat='All',activeCatPublic='All',searchQ='',mobPrevPanel='mobPanelLib';
 let selectMode=false,selectedIds=new Set(),deskView='library';
 let myCheckedOutIds=new Set();
-let libraryLastDoc=null, libraryFullyLoaded=false;
 
 // Reader state
 let readerZip=null,readerSpine=[],readerChapter=0,readerOpfBase='';
@@ -1068,29 +1066,6 @@ function dedupe(books) {
   return books.filter(b => seen.has(b.id) ? false : seen.add(b.id));
 }
 
-async function loadLibraryRest(){
-  if(!currentUser||libraryFullyLoaded)return;
-  try{
-    let lastDoc=libraryLastDoc;
-    while(true){
-      const q=query(
-        collection(db,'books'),
-        where('ownerId','==',currentUser.uid),
-        orderBy('createdAt','desc'),
-        startAfter(lastDoc),
-        limit(50)
-      );
-      const snap=await getDocs(q);
-      if(!snap.docs.length){libraryFullyLoaded=true;break;}
-      const newBooks=snap.docs.map(d=>({id:d.id,...d.data()}));
-      library=[...library,...newBooks];
-      lastDoc=snap.docs[snap.docs.length-1];
-      if(snap.docs.length<50){libraryFullyLoaded=true;break;}
-      renderAll(); // update grid as batches arrive
-    }
-    renderAll();
-  }catch(e){console.error('Background library load error:',e);}
-}
 async function loadUserRatings(){
   if(!currentUser)return;
   try{
