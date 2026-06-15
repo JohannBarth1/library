@@ -2123,10 +2123,11 @@ document.getElementById('bulkBtnEdit').addEventListener('click',()=>{
       library = library.filter(b => b.id !== id);
       communityLib = communityLib.filter(b => b.id !== id);
     }
+    const deletedCount = selectedIds.size;
     hideLoading();
     toggleSelectMode();
     renderAll();
-    showToast(`${selectedIds.size} book${selectedIds.size !== 1 ? 's' : ''} deleted ✓`);
+    showToast(`${deletedCount} book${deletedCount !== 1 ? 's' : ''} deleted ✓`);
   } catch (e) {
     hideLoading();
     showToast('Delete failed: ' + e.message);
