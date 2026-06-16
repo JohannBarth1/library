@@ -439,6 +439,10 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .tag-pill-remove{margin-left:3px;opacity:.6;font-size:.7rem;}
 .tag-pill-remove:hover{opacity:1;}
 
+  /* KOBO */
+.btn-kobo{background:transparent;color:var(--teal);border-color:var(--teal);}
+.btn-kobo:hover{background:var(--teal-light);}
+
 /* CHECKOUT */
 .checkout-badge{display:inline-block;font-size:.65rem;font-weight:700;padding:2px 8px;border-radius:10px;background:#fff4e0;color:#a87820;margin-top:.3rem;}
 .checkout-badge.overdue{background:#fbeaea;color:var(--danger);}
@@ -578,6 +582,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
         <button class="bulk-btn bulk-btn-checkout" id="bulkBtnCheckout">📋 Sign Out</button>
         <button class="bulk-btn bulk-btn-rec" id="bulkBtnRec">★ Recommend</button>
         <button class="bulk-btn bulk-btn-unrec" id="bulkBtnUnrec">☆ Unrecommend</button>
+        <button class="bulk-btn" id="bulkBtnKobo" style="background:transparent;color:var(--teal-light);border-color:var(--teal)">📖 Send to Kobo</button>
         <button class="bulk-btn bulk-btn-delete" id="bulkBtnDelete">✕ Delete</button>
         <button class="bulk-btn bulk-btn-cancel" id="bulkBtnCancel">✕ Cancel</button>
       </div>
@@ -696,6 +701,10 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
           <button class="settings-btn neutral" id="btnMobRefresh"><span class="s-icon">↻</span><div><div>Refresh Library</div><div class="settings-note">Reload books from Firestore</div></div></button>
         </div>
         <div class="settings-group">
+          <div class="settings-group-label">📖 Kobo Devices</div>
+          <div id="mobKoboSettings"></div>
+        </div>
+        <div class="settings-group">
           <div class="settings-group-label">Install App</div>
           <button class="settings-btn neutral" id="mobInstallBtn" style="display:none"><span class="s-icon">📲</span><div><div>Add to Home Screen</div><div class="settings-note">Install eLibrary as an app</div></div></button>
           <p class="settings-note" id="mobInstallNote">Open in your browser's menu and choose "Add to Home Screen" to install.</p>
@@ -733,6 +742,11 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
   <button id="deskInstallBtn" style="display:none;width:100%;padding:.45rem;font-size:.78rem;font-family:'Lato',sans-serif;font-weight:700;border-radius:3px;cursor:pointer;border:1px solid var(--teal);color:var(--teal);background:var(--cream);margin-bottom:.5rem">📲 Install eLibrary</button>
   <p style="font-size:.72rem;color:var(--muted);line-height:1.5;margin-bottom:.8rem" id="deskInstallNote">Use your browser's "Add to Home Screen" or "Install" option.</p>
   <button id="btnClearCache" style="width:100%;padding:.45rem;font-size:.72rem;font-family:'Lato',sans-serif;font-weight:700;border-radius:3px;cursor:pointer;border:1px solid #e0b0b0;color:var(--danger);background:var(--cream)">✕ Clear Cache</button>
+  <div style="margin-top:1rem;padding-top:.8rem;border-top:1px solid var(--border)">
+    <div style="font-family:'Playfair Display',serif;font-size:.9rem;color:var(--navy2);
+                margin-bottom:.7rem">📖 Kobo Devices</div>
+    <div id="deskKoboSettings"></div>
+  </div>
 </div>
 
 <!-- Mobile nav -->
@@ -881,6 +895,22 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
   </div>
 </div>
 
+  <!-- Kobo Device Picker Modal -->
+<div class="modal-overlay" id="koboPickerModal">
+  <div class="modal" style="max-width:380px">
+    <h3>📖 Send to Kobo</h3>
+    <p style="font-size:.82rem;color:var(--muted);margin-bottom:.8rem;line-height:1.5">
+      Choose which device to send to:
+    </p>
+    <div id="koboPickerList" style="border:1px solid var(--border);border-radius:4px;
+         margin-bottom:1rem;max-height:240px;overflow-y:auto"></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" id="koboPickerCancel">Cancel</button>
+      <button class="btn-save" id="koboPickerConfirm">Send ✓</button>
+    </div>
+  </div>
+</div>
+
 <!-- EPUB Reader — PATCH 5: toolbar moved to bottom -->
 <div class="reader-overlay theme-day" id="readerOverlay">
   <div class="reader-settings-bar" id="readerSettingsBar">
@@ -978,6 +1008,7 @@ onAuthStateChanged(auth,async user=>{
       loadLibrary(),
       loadUserRatings(),
       loadMyCheckouts(),
+      loadKoboDevices(),
     ]);
     checkUrlHash();
     showDeskHome();
@@ -1504,6 +1535,11 @@ function buildActions(book,isMine){
   html+=`<button class="btn-action btn-return" data-action="history"><span class="ba-icon">📖</span> History</button>`;
   html+=`</div>`;
   if(isMine){
+    html+=`<div class="action-group">
+      <button class="btn-action btn-kobo" data-action="sendtokobo">
+        <span class="ba-icon">📖</span> Send to Kobo
+      </button>
+    </div>`;
     html+=`<div class="action-group">`;
     html+=`<div class="action-dropdown" id="ddShare">`;
     html+=`<button class="action-dropdown-btn share-btn" data-dd="ddShare"><span class="ba-icon">⇧</span> Share ▾</button>`;
@@ -1564,6 +1600,7 @@ function handleAction(e){
   if(a==='returnbook')   returnCurrentBook();
   if(a==='history')      showCheckoutHistory(currentId);
   if(a==='delete')       deleteCurrentBook();
+  if(a==='sendtokobo') { loadKoboDevices().then(()=>showKoboDevicePicker(currentId)); }
 }
 
 // ── UNPUBLISH ─────────────────────────────────────────────────────────────────
@@ -1701,6 +1738,7 @@ function mob_switchTab(tab){
   if(tab==='search')setTimeout(()=>document.getElementById('mobSearchGlobal')?.focus(),200);
   if(tab==='home')renderMobHome();
   if(tab==='public')renderMobPublic();
+  if(tab==='settings')renderKoboSettings(document.getElementById('mobKoboSettings'));
 }
 document.getElementById('mobNavHome').classList.add('active');
 
@@ -1918,7 +1956,14 @@ function dataUrlToBlob(dataUrl){const[header,data]=dataUrl.split(',');const mime
 // ── MISC UI ───────────────────────────────────────────────────────────────────
 [document.getElementById('btnHeaderUpload'),document.getElementById('btnSideUpload'),document.getElementById('btnMobUpload')].forEach(b=>b?.addEventListener('click',showUploadModal));
 [document.getElementById('btnSideRefresh'),document.getElementById('btnMobRefresh')].forEach(b=>b?.addEventListener('click',loadLibrary));
-document.getElementById('btnToggleSettings').addEventListener('click',e=>{e.stopPropagation();const s=document.getElementById('deskSettings');s.style.display=s.style.display==='none'?'block':'none';});
+document.getElementById('btnToggleSettings').addEventListener('click',e=>{
+  e.stopPropagation();
+  const s=document.getElementById('deskSettings');
+  s.style.display=s.style.display==='none'?'block':'none';
+  if(s.style.display!=='none'&&currentUser){
+    renderKoboSettings(document.getElementById('deskKoboSettings'));
+  }
+});
 document.addEventListener('click',e=>{const s=document.getElementById('deskSettings');if(s.style.display!=='none'&&!s.contains(e.target)&&e.target.id!=='btnToggleSettings')s.style.display='none';});
 document.getElementById('defaultCatInput').value=localStorage.getItem('elib_default_cat')||'';
 document.getElementById('defaultCatInput').addEventListener('keydown',e=>{if(e.key==='Enter'){localStorage.setItem('elib_default_cat',e.target.value);showToast('Default category saved');}});
@@ -2065,7 +2110,8 @@ function updateBulkBar(){
   document.getElementById('bulkBtnUnrec').style.display=hasRecommended&&n>0?'':'none';
   document.getElementById('bulkBtnCheckout').style.display=n>0?'':'none';
   document.getElementById('bulkBtnEdit').style.display=n>0?'':'none';
-  document.getElementById('bulkBtnDelete').style.display = n > 0 ? '' : 'none';  
+  document.getElementById('bulkBtnDelete').style.display = n > 0 ? '' : 'none';
+  document.getElementById('bulkBtnKobo').style.display = n > 0 ? '' : 'none';
 }
 document.getElementById('btnCancelBulkEdit').addEventListener('click',()=>document.getElementById('bulkEditModal').classList.remove('open'));
 document.getElementById('bulkBtnEdit').addEventListener('click',()=>{
@@ -2243,6 +2289,282 @@ async function saveChapterManager(){
   }catch(e){hideLoading();showToast('Save failed: '+e.message);console.error(e);}
 }
 
+  // ── KOBO INTEGRATION ─────────────────────────────────────────────────────────
+
+  // ─────────────────────────────────────────────────────────────────────────────
+
+// State — kobo devices for the current user
+let koboDevices = [];
+
+// ── LOAD / SAVE KOBO DEVICES ──────────────────────────────────────────────────
+
+async function loadKoboDevices() {
+  if (!currentUser) return;
+  try {
+    const snap = await getDocs(
+      query(collection(db, 'kobo_devices'), where('ownerId', '==', currentUser.uid))
+    );
+    koboDevices = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  } catch (e) {
+    console.warn('Could not load Kobo devices:', e);
+    koboDevices = [];
+  }
+}
+
+async function saveKoboDevice(name) {
+  if (!currentUser) return null;
+  // Generate a random token — shown once, stored hashed ideally but plain here for simplicity
+  const token = 'elib_' + Array.from(crypto.getRandomValues(new Uint8Array(16)))
+    .map(b => b.toString(16).padStart(2, '0')).join('');
+  const docRef = await addDoc(collection(db, 'kobo_devices'), {
+    ownerId: currentUser.uid,
+    name: name.trim() || 'My Kobo',
+    token,
+    createdAt: serverTimestamp(),
+  });
+  const device = { id: docRef.id, ownerId: currentUser.uid, name: name.trim() || 'My Kobo', token };
+  koboDevices.push(device);
+  return device;
+}
+
+async function deleteKoboDevice(deviceId) {
+  await deleteDoc(doc(db, 'kobo_devices', deviceId));
+  koboDevices = koboDevices.filter(d => d.id !== deviceId);
+}
+
+// ── SEND BOOK(S) TO KOBO ──────────────────────────────────────────────────────
+// Writes to the kobo_queue collection. The Kobo shell script polls this.
+
+async function sendBooksToKoboDevice(bookIds, deviceId) {
+  if (!currentUser) return;
+  const device = koboDevices.find(d => d.id === deviceId);
+  if (!device) { showToast('Device not found'); return; }
+
+  const allBooks = [...library, ...communityLib];
+  const toSend = bookIds
+    .map(id => allBooks.find(b => b.id === id))
+    .filter(Boolean);
+
+  if (!toSend.length) { showToast('No books to send'); return; }
+
+  showLoading(`Queuing ${toSend.length} book${toSend.length !== 1 ? 's' : ''}…`);
+  let queued = 0;
+  try {
+    for (const book of toSend) {
+      // Build download URL. If we have epubUrl directly, use it.
+      // If we have storagePath + storageDownloadToken, build it.
+      let downloadUrl = book.epubUrl || null;
+
+      if (!downloadUrl && book.storagePath && book.storageDownloadToken) {
+        const bucket = 'elibrary-c0074.firebasestorage.app';
+        const encoded = encodeURIComponent(book.storagePath);
+        downloadUrl = `https://firebasestorage.googleapis.com/v0/b/${bucket}/o/${encoded}?alt=media&token=${book.storageDownloadToken}`;
+      }
+
+      if (!downloadUrl) {
+        console.warn('No download URL for book:', book.title);
+        continue;
+      }
+
+      await addDoc(collection(db, 'kobo_queue'), {
+        deviceId,
+        deviceToken: device.token,
+        ownerId: currentUser.uid,
+        bookId: book.id,
+        title: book.title || 'Unknown Title',
+        author: book.author || '',
+        filename: book.filename || (book.title || 'book') + '.epub',
+        downloadUrl,
+        status: 'pending',
+        createdAt: serverTimestamp(),
+      });
+      queued++;
+    }
+    hideLoading();
+    if (queued > 0) {
+      showToast(`${queued} book${queued !== 1 ? 's' : ''} queued for "${device.name}" ✓`);
+    } else {
+      showToast('No books could be queued — missing download URLs');
+    }
+  } catch (e) {
+    hideLoading();
+    showToast('Queue failed: ' + e.message);
+    console.error(e);
+  }
+}
+
+// ── DEVICE PICKER MODAL ───────────────────────────────────────────────────────
+// bookIds can be a single string or an array
+
+let _pickerBookIds = [];
+
+function showKoboDevicePicker(bookIds) {
+  _pickerBookIds = Array.isArray(bookIds) ? bookIds : [bookIds];
+
+  const list = document.getElementById('koboPickerList');
+  if (!list) return;
+
+  if (!koboDevices.length) {
+    // No devices yet — prompt to add one inline
+    list.innerHTML = `<div style="padding:.9rem 1rem;font-size:.82rem;color:var(--muted);line-height:1.6">
+      You have no Kobo devices set up yet.<br>
+      <span style="font-size:.75rem">Add one in Settings → Kobo Devices.</span>
+    </div>`;
+    document.getElementById('koboPickerConfirm').style.display = 'none';
+  } else {
+    document.getElementById('koboPickerConfirm').style.display = '';
+    list.innerHTML = koboDevices.map(d => `
+      <label style="display:flex;align-items:center;gap:.7rem;padding:.6rem 1rem;cursor:pointer;border-bottom:1px solid var(--border);font-size:.85rem">
+        <input type="radio" name="koboPicker" value="${d.id}" style="accent-color:var(--teal);width:15px;height:15px;flex-shrink:0"/>
+        <span>${esc(d.name)}</span>
+      </label>`).join('');
+    // Auto-select first device
+    const first = list.querySelector('input[type=radio]');
+    if (first) first.checked = true;
+  }
+
+  document.getElementById('koboPickerModal').classList.add('open');
+}
+
+document.getElementById('koboPickerCancel')?.addEventListener('click', () => {
+  document.getElementById('koboPickerModal').classList.remove('open');
+});
+
+document.getElementById('koboPickerConfirm')?.addEventListener('click', async () => {
+  const selected = document.querySelector('input[name="koboPicker"]:checked');
+  if (!selected) { showToast('Please select a device'); return; }
+  document.getElementById('koboPickerModal').classList.remove('open');
+  await sendBooksToKoboDevice(_pickerBookIds, selected.value);
+});
+
+// ── RENDER KOBO SETTINGS (desktop + mobile) ───────────────────────────────────
+
+function renderKoboSettings(container) {
+  if (!container || !currentUser) return;
+
+  if (!koboDevices.length) {
+    container.innerHTML = `
+      <div style="font-size:.8rem;color:var(--muted);margin-bottom:.7rem;line-height:1.5">
+        No devices yet. Add one to start sending books to your Kobo.
+      </div>
+      ${addDeviceFormHtml()}`;
+  } else {
+    const list = koboDevices.map(d => `
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:.45rem 0;border-bottom:1px solid var(--border);gap:.5rem">
+        <span style="font-size:.82rem;font-weight:700;color:var(--navy2)">${esc(d.name)}</span>
+        <button class="btn-action btn-return" data-delete-kobo="${d.id}"
+          style="padding:.25rem .6rem;font-size:.65rem;border-radius:3px">✕ Remove</button>
+      </div>`).join('');
+
+    container.innerHTML = `
+      <div style="margin-bottom:.7rem">${list}</div>
+      ${addDeviceFormHtml()}
+      <div style="margin-top:.8rem;padding:.7rem;background:var(--panel);border:1px solid var(--border);border-radius:4px">
+        <div style="font-size:.62rem;letter-spacing:.15em;text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:.4rem">
+          Setup instructions
+        </div>
+        <ol style="font-size:.75rem;color:var(--navy2);line-height:1.8;padding-left:1.1rem;margin:0">
+          <li>Download <a href="https://github.com/YOUR_REPO/releases" target="_blank" style="color:var(--teal)">KoboRoot.tgz</a> and copy it to <code style="font-size:.72rem">.kobo/</code> on your device.</li>
+          <li>Create a file called <code style="font-size:.72rem">kobocloudrc</code> in <code style="font-size:.72rem">.kobo/</code> with the token for your device.</li>
+          <li>Safely eject and restart your Kobo.</li>
+        </ol>
+      </div>`;
+  }
+
+  // Bind remove buttons
+  container.querySelectorAll('[data-delete-kobo]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const id = btn.dataset.deleteKobo;
+      const device = koboDevices.find(d => d.id === id);
+      if (!device || !confirm(`Remove "${device.name}"?`)) return;
+      await deleteKoboDevice(id);
+      renderKoboSettings(container);
+      showToast('Device removed');
+    });
+  });
+
+  // Bind add-device form
+  const form = container.querySelector('.kobo-add-form');
+  if (form) {
+    const inp = form.querySelector('.kobo-name-input');
+    const btn = form.querySelector('.kobo-add-btn');
+
+    btn.addEventListener('click', async () => {
+      const name = inp.value.trim() || 'My Kobo';
+      btn.disabled = true;
+      btn.textContent = 'Adding…';
+      const device = await saveKoboDevice(name);
+      if (device) {
+        showKoboTokenModal(device);
+        inp.value = '';
+        renderKoboSettings(container);
+      } else {
+        showToast('Failed to add device');
+      }
+      btn.disabled = false;
+      btn.textContent = '+ Add';
+    });
+
+    inp.addEventListener('keydown', e => { if (e.key === 'Enter') btn.click(); });
+  }
+}
+
+function addDeviceFormHtml() {
+  return `<div class="kobo-add-form" style="display:flex;gap:.4rem;margin-top:.5rem">
+    <input class="kobo-name-input filter-search" type="text" placeholder="Device name (e.g. My Kobo)"
+      style="flex:1;font-size:.8rem;padding:.38rem .6rem"/>
+    <button class="kobo-add-btn btn-save" style="padding:.38rem .75rem;font-size:.75rem;border-radius:2px;white-space:nowrap">+ Add</button>
+  </div>`;
+}
+
+// ── TOKEN REVEAL MODAL ────────────────────────────────────────────────────────
+// Shows the token once after device creation.
+
+function showKoboTokenModal(device) {
+  // Re-use the generic link modal to avoid adding yet another modal
+  const box = document.getElementById('directLinkBox');
+  const modal = document.getElementById('linkModal');
+  const h = modal.querySelector('h3');
+  const p = modal.querySelector('p');
+
+  h.textContent = `📖 Device token for "${device.name}"`;
+  p.innerHTML = `Copy this token into your <code style="font-size:.82rem">kobocloudrc</code> file on the Kobo.
+    <strong>It won't be shown again.</strong>`;
+  box.textContent = device.token;
+
+  // Swap copy button label
+  const copyBtn = document.getElementById('btnCopyDirectLink');
+  copyBtn.textContent = 'Copy Token';
+  // Re-bind once (will be restored on next normal link open since we recreate via showDirectLink)
+  const orig = copyBtn.onclick;
+  copyBtn.onclick = () => {
+    navigator.clipboard.writeText(device.token).then(() => showToast('Token copied ✓'));
+  };
+
+  modal.classList.add('open');
+
+  // Restore when closed
+  document.getElementById('btnCloseLinkModal').addEventListener('click', () => {
+    h.textContent = '🔗 Direct Link';
+    p.innerHTML = 'Share this link. The recipient must be signed in to access the book.';
+    copyBtn.textContent = 'Copy Link';
+    copyBtn.onclick = orig;
+  }, { once: true });
+}
+
+// ── BULK BAR: ADD SEND TO KOBO BUTTON ─────────────────────────────────────────
+// The bulk-bar button is added via HTML (Change 7).
+// This wires up the click handler. Call after DOM is ready.
+
+(function wireBulkKoboButton() {
+  const btn = document.getElementById('bulkBtnKobo');
+  if (!btn) return;
+  btn.addEventListener('click', async () => {
+    if (!selectedIds.size) { showToast('Select books first'); return; }
+    await loadKoboDevices();
+    showKoboDevicePicker([...selectedIds]);
+  });
+})();
 renderAll();
 </script>
 </body>
