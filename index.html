@@ -1205,20 +1205,6 @@ async function downloadCurrentBook(){
   }catch(e){hideLoading();showToast('Download failed: '+e.message);}
 }
 
-// ── DELETE ────────────────────────────────────────────────────────────────────
-async function deleteCurrentBook(){
-  if(!currentId)return;
-  const book=library.find(b=>b.id===currentId);
-  if(!book||!confirm(`Delete "${book.title}" permanently?`))return;
-  showLoading('Deleting…');
-  try{
-    await deleteDoc(doc(db,'books',currentId));
-    communityLib = communityLib.filter(b => b.id !== currentId);
-    library=library.filter(b=>b.id!==currentId);currentId=null;
-    closeDrawer();hideLoading();renderAll();showToast('Book deleted');
-  }catch(e){hideLoading();showToast('Delete failed: '+e.message);}
-}
-
 // ── SHARE ─────────────────────────────────────────────────────────────────────
 function shareCurrentBook(){
   if(!currentId)return;
