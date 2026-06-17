@@ -450,91 +450,6 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .checkout-row-name{font-weight:700;color:var(--navy2);}
 .checkout-row-date{font-size:.7rem;color:var(--muted);}
 
-  /* ── NOTIFICATIONS / COMMUNITY POSTS ── */
-.notif-badge{position:absolute;top:2px;right:2px;min-width:16px;height:16px;background:#e74c3c;border-radius:8px;border:2px solid var(--navy);font-size:.6rem;font-weight:700;color:#fff;display:none;align-items:center;justify-content:center;padding:0 3px;line-height:1;}
-.notif-badge.visible{display:flex;}
-
-/* Desktop notification button */
-.notif-btn{position:relative;background:transparent;border:1px solid #334;color:#d8e8f0;font-size:1rem;padding:.42rem .6rem;border-radius:2px;cursor:pointer;transition:background .15s;line-height:1;}
-.notif-btn:hover{background:#1a2840;}
-
-/* Notification panel — desktop */
-.notif-panel{display:none;position:fixed;top:calc(var(--header-h) + 8px);right:3.5rem;width:400px;max-height:70vh;background:var(--warm-white);border:1px solid var(--border);border-radius:6px;box-shadow:0 8px 32px rgba(0,0,0,0.18);z-index:85;flex-direction:column;overflow:hidden;}
-.notif-panel.open{display:flex;}
-
-/* Notification panel — shared inner styles */
-.notif-panel-header{padding:.9rem 1.2rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;background:var(--panel);}
-.notif-panel-header h3{font-family:'Playfair Display',serif;font-size:1rem;color:var(--navy2);}
-.notif-tabs{display:flex;border-bottom:1px solid var(--border);flex-shrink:0;}
-.notif-tab{flex:1;padding:.5rem .3rem;font-family:'Lato',sans-serif;font-size:.68rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);background:none;border:none;border-bottom:2px solid transparent;cursor:pointer;transition:color .15s;}
-.notif-tab.active{color:var(--teal);border-bottom-color:var(--teal);}
-.notif-panel-body{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;}
-.notif-panel-footer{padding:.7rem 1rem;border-top:1px solid var(--border);flex-shrink:0;background:var(--panel);}
-
-/* Post list */
-.post-list{padding:.5rem 0;}
-.post-item{padding:.75rem 1.1rem;border-bottom:1px solid var(--border);cursor:pointer;transition:background .12s;}
-.post-item:hover{background:var(--teal-light);}
-.post-item:last-child{border-bottom:none;}
-.post-item-top{display:flex;align-items:flex-start;gap:.5rem;margin-bottom:.25rem;}
-.post-type-badge{font-size:.58rem;font-weight:700;padding:2px 7px;border-radius:10px;text-transform:uppercase;letter-spacing:.06em;flex-shrink:0;margin-top:1px;}
-.post-type-request{background:#fff4e0;color:#a87820;}
-.post-type-feature{background:#ece8f8;color:#5a48b0;}
-.post-type-bug{background:#fbeaea;color:var(--danger);}
-.post-type-broadcast{background:var(--navy2);color:var(--gold);}
-.post-item-title{font-family:'Playfair Display',serif;font-size:.88rem;color:var(--navy2);line-height:1.3;flex:1;}
-.post-item-meta{font-size:.7rem;color:var(--muted);display:flex;gap:.6rem;align-items:center;}
-.post-item-replies{font-size:.68rem;color:var(--teal);font-weight:700;}
-.post-item.unread .post-item-title{font-weight:700;color:var(--navy);}
-.post-item.unread::before{content:'';display:block;width:6px;height:6px;border-radius:50%;background:var(--teal);position:absolute;left:.5rem;top:50%;transform:translateY(-50%);}
-.post-item{position:relative;}
-
-/* Post detail / thread view */
-.post-thread{display:flex;flex-direction:column;height:100%;}
-.post-thread-back{padding:.6rem 1rem;border-bottom:1px solid var(--border);background:var(--panel);flex-shrink:0;}
-.post-thread-back button{background:none;border:none;font-size:.75rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--teal);cursor:pointer;display:flex;align-items:center;gap:.3rem;padding:0;}
-.post-thread-body{flex:1;overflow-y:auto;padding:1rem;}
-.post-thread-title{font-family:'Playfair Display',serif;font-size:1.1rem;color:var(--navy2);margin-bottom:.3rem;}
-.post-thread-author{font-size:.75rem;color:var(--muted);margin-bottom:.8rem;}
-.post-thread-content{font-size:.88rem;line-height:1.7;color:#3a4a5a;padding:.8rem;background:var(--panel);border-radius:4px;border:1px solid var(--border);margin-bottom:1rem;}
-.post-thread-actions{display:flex;gap:.4rem;margin-bottom:1rem;}
-
-/* Reply bubbles */
-.reply-list{display:flex;flex-direction:column;gap:.6rem;margin-bottom:1rem;}
-.reply-bubble{padding:.6rem .85rem;border-radius:6px;font-size:.83rem;line-height:1.6;position:relative;}
-.reply-bubble.mine{background:var(--teal);color:#fff;margin-left:2rem;border-bottom-right-radius:2px;}
-.reply-bubble.theirs{background:var(--panel);color:var(--navy2);margin-right:2rem;border-bottom-left-radius:2px;border:1px solid var(--border);}
-.reply-bubble-meta{font-size:.65rem;opacity:.75;margin-bottom:.2rem;font-weight:700;}
-.reply-bubble-actions{display:flex;gap:.4rem;margin-top:.35rem;}
-.reply-action-btn{background:none;border:none;font-size:.65rem;cursor:pointer;opacity:.7;padding:0;font-family:'Lato',sans-serif;font-weight:700;letter-spacing:.04em;text-transform:uppercase;}
-.reply-action-btn:hover{opacity:1;}
-.reply-bubble.mine .reply-action-btn{color:rgba(255,255,255,.85);}
-.reply-bubble.theirs .reply-action-btn{color:var(--teal);}
-
-/* Reply composer */
-.reply-composer{padding:.7rem 1rem;border-top:1px solid var(--border);flex-shrink:0;display:flex;gap:.5rem;align-items:flex-end;background:var(--warm-white);}
-.reply-input{flex:1;padding:.5rem .75rem;font-family:'Lato',sans-serif;font-size:.85rem;border:1px solid var(--border);border-radius:16px;outline:none;resize:none;line-height:1.5;max-height:100px;overflow-y:auto;background:var(--cream);color:var(--navy);}
-.reply-input:focus{border-color:var(--teal);}
-.reply-send-btn{background:var(--teal);color:var(--gold);border:none;border-radius:50%;width:34px;height:34px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:1rem;flex-shrink:0;transition:background .15s;}
-.reply-send-btn:hover{background:var(--teal-dark);}
-
-/* New post button */
-.btn-new-post{width:100%;padding:.55rem;font-family:'Lato',sans-serif;font-size:.75rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;background:var(--teal);color:var(--gold);border:none;border-radius:3px;cursor:pointer;transition:background .15s;}
-.btn-new-post:hover{background:var(--teal-dark);}
-
-/* New post form */
-.new-post-form{padding:1rem;}
-.new-post-form .form-row{margin-bottom:.7rem;}
-.new-post-form label{display:block;font-size:.62rem;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:.3rem;}
-.new-post-form input,.new-post-form select,.new-post-form textarea{width:100%;padding:.55rem .75rem;font-family:'Lato',sans-serif;font-size:.88rem;color:var(--navy);background:var(--cream);border:1px solid var(--border);border-radius:3px;outline:none;}
-.new-post-form input:focus,.new-post-form select:focus,.new-post-form textarea:focus{border-color:var(--teal);}
-.new-post-form textarea{resize:vertical;line-height:1.5;}
-
-/* Mobile notification panel (full screen) */
-@media(max-width:768px){
-  .notif-panel{position:fixed;inset:0;top:var(--header-h);width:100%;max-height:none;border-radius:0;border:none;box-shadow:none;padding-bottom:var(--mob-nav-h);}
-}
-
 /* ── RESPONSIVE ── */
 @media(max-width:768px){
   .filter-sidebar{display:none;}
@@ -583,10 +498,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
   <div class="header-right">
     <button class="hbtn hbtn-home btnToggleSettingsDesk" id="btnDeskHome">📚 Home</button>
     <button class="hbtn hbtn-upload" id="btnHeaderUpload">📤 Upload</button>
-    <button class="notif-btn btnToggleSettingsDesk" id="btnNotifBell" title="Community">
-  🔔<span class="notif-badge" id="deskNotifBadge"></span>
-</button>
-<button class="hbtn hbtn-ghost btnToggleSettingsDesk" id="btnToggleSettings">⚙</button>
+    <button class="hbtn hbtn-ghost btnToggleSettingsDesk" id="btnToggleSettings">⚙</button>
     <div class="header-user" id="headerUser">
       <div class="user-avatar-initials" id="userAvatarInitials">?</div>
       <img class="user-avatar" id="userAvatarImg" src="" alt="" style="display:none"/>
@@ -680,7 +592,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 
   <!-- MOBILE PANELS -->
   <div class="mob-panels">
-    <div class="mob-panel" id="mobPanelNotif">
+    <div class="mob-panel" id="mobPanelSearch">
       <div class="mob-lib-top">
         <div style="padding:.7rem .9rem .3rem;font-family:'Playfair Display',serif;font-size:1.1rem;color:var(--navy2)">Search</div>
         <div class="mob-search-bar"><input type="text" id="mobSearchGlobal" placeholder="Search all books…"/></div>
@@ -802,25 +714,6 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
   </div>
 </div>
 
-  <!-- Notification / Community panel -->
-<div class="notif-panel" id="notifPanel">
-  <div class="notif-panel-header">
-    <h3>💬 Community</h3>
-    <button style="background:none;border:none;font-size:1rem;cursor:pointer;color:var(--muted)" id="btnCloseNotifPanel">✕</button>
-  </div>
-  <div class="notif-tabs">
-    <button class="notif-tab active" data-ntab="all">All</button>
-    <button class="notif-tab" data-ntab="requests">Book Requests</button>
-    <button class="notif-tab" data-ntab="feature">Features</button>
-    <button class="notif-tab" data-ntab="bug">Bugs</button>
-  </div>
-  <div class="notif-panel-body" id="notifPanelBody">
-    <div class="post-list" id="postList"></div>
-  </div>
-  <div class="notif-panel-footer">
-    <button class="btn-new-post" id="btnNewPost">+ New Message</button>
-  </div>
-</div>
 <!-- Book detail drawer (desktop) -->
 <div class="book-drawer" id="bookDrawer">
   <button class="drawer-close" id="drawerClose">✕</button>
@@ -860,10 +753,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 <nav class="mob-nav">
   <div class="mob-nav-bg"></div>
   <div class="mob-nav-inner">
-    <button class="mob-tab" id="mobNavNotif" style="position:relative">
-      <span class="tab-icon">🔔</span><span>Notif</span>
-      <span class="notif-badge" id="mobNotifBadge" style="position:absolute;top:6px;right:10px"></span>
-    </button>
+    <button class="mob-tab" id="mobNavSearch"><span class="tab-icon">🔍</span><span>Search</span></button>
     <button class="mob-tab" id="mobNavPublic"><span class="tab-icon">🌐</span><span>Public</span></button>
     <button class="mob-tab-home" id="mobNavHome">
       <div class="mob-home-inner">
@@ -1122,7 +1012,6 @@ onAuthStateChanged(auth,async user=>{
     ]);
     checkUrlHash();
     showDeskHome();
-    loadPosts();
   } else {
     document.getElementById('authScreen').classList.remove('hidden');
   }
@@ -1844,7 +1733,7 @@ function mob_switchTab(tab){
   document.querySelectorAll('.mob-tab,.mob-tab-home').forEach(t=>t.classList.remove('active'));
   const tabMap={search:'mobNavSearch',public:'mobNavPublic',home:'mobNavHome',mine:'mobNavMine',settings:'mobNavSettings'};
   document.getElementById(tabMap[tab])?.classList.add('active');
-  const panelMap={notif:'mobPanelNotif',public:'mobPanelPublic',home:'mobPanelHome',mine:'mobPanelLib',settings:'mobPanelSettings'};
+  const panelMap={search:'mobPanelSearch',public:'mobPanelPublic',home:'mobPanelHome',mine:'mobPanelLib',settings:'mobPanelSettings'};
   mob_showPanel(panelMap[tab]||'mobPanelHome');
   if(tab==='search')setTimeout(()=>document.getElementById('mobSearchGlobal')?.focus(),200);
   if(tab==='home')renderMobHome();
@@ -2749,416 +2638,6 @@ function _showKoboSetupModal(device) {
     showKoboDevicePicker([...selectedIds]);
   });
 })();
-
-      // ── NOTIFICATIONS & COMMUNITY POSTS ──────────────────────────────────────────
-const ADMIN_HASH = 'a4d2d8c1b3e5f9071234567890abcdef'; // SHA-256 of '1992' — replace with real hash
-let posts = [], notifTab = 'all', currentPostId = null, notifOpen = false;
-let lastSeenAt = parseInt(localStorage.getItem('elib_notif_seen') || '0');
-
-async function sha256(str){
-  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
-  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
-}
-
-async function loadPosts(){
-  try{
-    const q = query(collection(db,'posts'), orderBy('createdAt','desc'));
-    const snap = await getDocs(q);
-    posts = snap.docs.map(d=>({id:d.id,...d.data()}));
-    updateNotifBadge();
-    if(notifOpen) renderPostList();
-  }catch(e){ console.error('Posts load error:',e); }
-}
-
-function updateNotifBadge(){
-  const unseen = posts.filter(p=>{
-    const ts = p.createdAt?.toMillis?.() ?? 0;
-    return ts > lastSeenAt;
-  }).length;
-  [document.getElementById('deskNotifBadge'), document.getElementById('mobNotifBadge')].forEach(el=>{
-    if(!el) return;
-    el.textContent = unseen > 9 ? '9+' : (unseen || '');
-    el.classList.toggle('visible', unseen > 0);
-  });
-}
-
-function markNotifSeen(){
-  lastSeenAt = Date.now();
-  localStorage.setItem('elib_notif_seen', lastSeenAt);
-  updateNotifBadge();
-}
-
-// ── Open / close ──────────────────────────────────────────────────────────────
-function openNotifPanel(){
-  notifOpen = true;
-  markNotifSeen();
-  document.getElementById('notifPanel').classList.add('open');
-  renderPostList();
-}
-function closeNotifPanel(){
-  notifOpen = false;
-  document.getElementById('notifPanel').classList.remove('open');
-}
-
-document.getElementById('btnNotifBell').addEventListener('click', e=>{
-  e.stopPropagation();
-  notifOpen ? closeNotifPanel() : openNotifPanel();
-});
-document.getElementById('btnCloseNotifPanel').addEventListener('click', closeNotifPanel);
-
-// close when clicking outside
-document.addEventListener('click', e=>{
-  const panel = document.getElementById('notifPanel');
-  if(panel.classList.contains('open') &&
-     !panel.contains(e.target) &&
-     e.target.id !== 'btnNotifBell'){
-    closeNotifPanel();
-  }
-});
-
-// mobile nav
-document.getElementById('mobNavNotif').addEventListener('click',()=>{
-  mob_switchTab('notif');
-  notifOpen = true;
-  markNotifSeen();
-  renderNotifMobile();
-});
-
-function mob_renderNotif(){
-  document.getElementById('mobPanelNotif').innerHTML = `
-    <div style="background:var(--warm-white);border-bottom:1px solid var(--border);padding:.8rem 1rem;display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
-      <div style="font-family:'Playfair Display',serif;font-size:1.1rem;color:var(--navy2)">💬 Community</div>
-    </div>
-    <div style="display:flex;border-bottom:1px solid var(--border);flex-shrink:0;background:var(--warm-white)">
-      <button class="notif-tab active" data-ntab="all" id="mobNtabAll">All</button>
-      <button class="notif-tab" data-ntab="requests" id="mobNtabReq">Requests</button>
-      <button class="notif-tab" data-ntab="feature" id="mobNtabFeat">Features</button>
-      <button class="notif-tab" data-ntab="bug" id="mobNtabBug">Bugs</button>
-    </div>
-    <div style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch">
-      <div class="post-list" id="mobPostList"></div>
-    </div>
-    <div style="padding:.7rem 1rem;border-top:1px solid var(--border);background:var(--panel)">
-      <button class="btn-new-post" id="mobBtnNewPost">+ New Message</button>
-    </div>`;
-  // bind tabs
-  document.querySelectorAll('#mobPanelNotif [data-ntab]').forEach(btn=>{
-    btn.addEventListener('click',()=>{
-      notifTab = btn.dataset.ntab;
-      document.querySelectorAll('#mobPanelNotif [data-ntab]').forEach(b=>b.classList.toggle('active', b===btn));
-      renderMobPostList();
-    });
-  });
-  document.getElementById('mobBtnNewPost').addEventListener('click',()=>showNewPostForm('mob'));
-  renderMobPostList();
-}
-
-function renderNotifMobile(){ mob_renderNotif(); }
-
-// ── Tab switching ─────────────────────────────────────────────────────────────
-document.querySelectorAll('#notifPanel [data-ntab]').forEach(btn=>{
-  btn.addEventListener('click',()=>{
-    notifTab = btn.dataset.ntab;
-    document.querySelectorAll('#notifPanel [data-ntab]').forEach(b=>b.classList.toggle('active',b===btn));
-    renderPostList();
-  });
-});
-document.getElementById('btnNewPost').addEventListener('click',()=>showNewPostForm('desk'));
-
-// ── Render post list ──────────────────────────────────────────────────────────
-function filteredPosts(){
-  if(notifTab === 'all') return posts;
-  const map = {requests:'request', feature:'feature', bug:'bug'};
-  return posts.filter(p => p.type === map[notifTab] || (notifTab==='all'&&p.type==='broadcast'));
-}
-
-function postItemHtml(p){
-  const typeLabels = {request:'Book Request', feature:'Feature', bug:'Bug', broadcast:'Announcement'};
-  const typeClass  = {request:'post-type-request', feature:'post-type-feature', bug:'post-type-bug', broadcast:'post-type-broadcast'};
-  const ts = p.createdAt?.toDate?.() ?? new Date();
-  const ago = timeAgo(ts);
-  const isUnread = (p.createdAt?.toMillis?.()??0) > lastSeenAt;
-  return `<div class="post-item ${isUnread?'unread':''}" data-postid="${p.id}">
-    <div class="post-item-top">
-      <span class="post-type-badge ${typeClass[p.type]||'post-type-request'}">${typeLabels[p.type]||p.type}</span>
-      <span class="post-item-title">${esc(p.title)}</span>
-    </div>
-    <div class="post-item-meta">
-      <span>${esc(p.authorName||'Anonymous')}</span>
-      <span>·</span><span>${ago}</span>
-      ${p.replyCount?`<span>·</span><span class="post-item-replies">💬 ${p.replyCount}</span>`:''}
-    </div>
-  </div>`;
-}
-
-function renderPostList(){
-  const el = document.getElementById('postList'); if(!el) return;
-  const fp = filteredPosts();
-  el.innerHTML = fp.length ? fp.map(postItemHtml).join('') :
-    '<div style="padding:2rem;text-align:center;color:var(--muted);font-size:.85rem">Nothing here yet</div>';
-  el.querySelectorAll('.post-item[data-postid]').forEach(item=>{
-    item.addEventListener('click',()=>openPostThread(item.dataset.postid,'desk'));
-  });
-}
-function renderMobPostList(){
-  const el = document.getElementById('mobPostList'); if(!el) return;
-  const fp = filteredPosts();
-  el.innerHTML = fp.length ? fp.map(postItemHtml).join('') :
-    '<div style="padding:2rem;text-align:center;color:var(--muted);font-size:.85rem">Nothing here yet</div>';
-  el.querySelectorAll('.post-item[data-postid]').forEach(item=>{
-    item.addEventListener('click',()=>openPostThread(item.dataset.postid,'mob'));
-  });
-}
-
-// ── Post thread ───────────────────────────────────────────────────────────────
-async function openPostThread(postId, context){
-  currentPostId = postId;
-  const post = posts.find(p=>p.id===postId); if(!post) return;
-  const isMine = post.authorId === currentUser?.uid;
-  const typeLabels = {request:'Book Request',feature:'Feature',bug:'Bug',broadcast:'Announcement'};
-  const typeClass  = {request:'post-type-request',feature:'post-type-feature',bug:'post-type-bug',broadcast:'post-type-broadcast'};
-  const ts = post.createdAt?.toDate?.()??new Date();
-
-  const html = `<div class="post-thread" id="postThread_${context}">
-    <div class="post-thread-back">
-      <button id="btnThreadBack_${context}">← Back</button>
-    </div>
-    <div class="post-thread-body" id="postThreadBody_${context}">
-      <div style="margin-bottom:.5rem">
-        <span class="post-type-badge ${typeClass[post.type]||''}">${typeLabels[post.type]||post.type}</span>
-      </div>
-      <div class="post-thread-title">${esc(post.title)}</div>
-      <div class="post-thread-author">${esc(post.authorName||'Anonymous')} · ${timeAgo(ts)}</div>
-      <div class="post-thread-content">${esc(post.body||'')}</div>
-      ${isMine ? `<div class="post-thread-actions">
-        <button class="btn-action btn-edit-cat" style="font-size:.7rem;padding:.3rem .8rem;border-radius:20px" data-action="editpost">✎ Edit</button>
-        <button class="btn-action btn-delete" style="font-size:.7rem;padding:.3rem .8rem;border-radius:20px" data-action="deletepost">✕ Delete</button>
-      </div>` : ''}
-      <div style="font-size:.68rem;letter-spacing:.15em;text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:.6rem">Replies</div>
-      <div class="reply-list" id="replyList_${context}">
-        <div style="color:var(--muted);font-size:.82rem">Loading…</div>
-      </div>
-    </div>
-    <div class="reply-composer">
-      <textarea class="reply-input" id="replyInput_${context}" placeholder="Write a reply…" rows="1"></textarea>
-      <button class="reply-send-btn" id="replySendBtn_${context}">➤</button>
-    </div>
-  </div>`;
-
-  // inject into correct container
-  const bodyEl = context==='desk'
-    ? document.getElementById('notifPanelBody')
-    : document.getElementById('mobPanelNotif');
-  bodyEl.innerHTML = html;
-
-  document.getElementById(`btnThreadBack_${context}`).addEventListener('click',()=>{
-    if(context==='desk'){ bodyEl.innerHTML='<div class="post-list" id="postList"></div>'; renderPostList(); }
-    else mob_renderNotif();
-  });
-  document.getElementById(`btnThreadBody_${context}`)?.querySelectorAll('[data-action]').forEach(btn=>{
-    btn.addEventListener('click', handlePostAction);
-  });
-  // bind edit/delete on the thread actions
-  bodyEl.querySelectorAll('[data-action]').forEach(btn=>btn.addEventListener('click', handlePostAction));
-
-  // send reply
-  const sendReply = async () => {
-    const input = document.getElementById(`replyInput_${context}`);
-    const text = input?.value.trim(); if(!text) return;
-    input.value = '';
-    try{
-      await addDoc(collection(db,'posts',postId,'replies'),{
-        body: text,
-        authorId: currentUser.uid,
-        authorName: currentUser.displayName||currentUser.email,
-        createdAt: serverTimestamp()
-      });
-      await updateDoc(doc(db,'posts',postId),{
-        replyCount: (post.replyCount||0)+1,
-        lastActivityAt: serverTimestamp()
-      });
-      post.replyCount = (post.replyCount||0)+1;
-      loadReplies(postId, context);
-    }catch(e){ showToast('Reply failed: '+e.message); }
-  };
-  document.getElementById(`replySendBtn_${context}`).addEventListener('click', sendReply);
-  document.getElementById(`replyInput_${context}`).addEventListener('keydown', e=>{
-    if(e.key==='Enter'&&!e.shiftKey){ e.preventDefault(); sendReply(); }
-  });
-
-  loadReplies(postId, context);
-}
-
-async function loadReplies(postId, context){
-  const el = document.getElementById(`replyList_${context}`); if(!el) return;
-  try{
-    const q = query(collection(db,'posts',postId,'replies'), orderBy('createdAt','asc'));
-    const snap = await getDocs(q);
-    const replies = snap.docs.map(d=>({id:d.id,...d.data()}));
-    if(!replies.length){ el.innerHTML='<div style="color:var(--muted);font-size:.82rem">No replies yet — be first!</div>'; return; }
-    el.innerHTML = replies.map(r=>{
-      const isMine = r.authorId === currentUser?.uid;
-      const ts = r.createdAt?.toDate?.()??new Date();
-      return `<div class="reply-bubble ${isMine?'mine':'theirs'}" data-replyid="${r.id}">
-        <div class="reply-bubble-meta">${esc(r.authorName||'Anonymous')} · ${timeAgo(ts)}</div>
-        <div class="reply-body">${esc(r.body)}</div>
-        ${isMine?`<div class="reply-bubble-actions">
-          <button class="reply-action-btn" data-action="editreply" data-replyid="${r.id}" data-body="${esc(r.body)}">Edit</button>
-          <button class="reply-action-btn" data-action="deletereply" data-replyid="${r.id}">Delete</button>
-        </div>`:''}
-      </div>`;
-    }).join('');
-    // scroll to bottom
-    const bodyEl = document.getElementById(`postThreadBody_${context}`);
-    if(bodyEl) bodyEl.scrollTop = bodyEl.scrollHeight;
-    // bind reply actions
-    el.querySelectorAll('[data-action]').forEach(btn=>btn.addEventListener('click', e=>handleReplyAction(e, postId, context)));
-  }catch(e){ el.innerHTML='<div style="color:var(--danger);font-size:.82rem">Error loading replies</div>'; }
-}
-
-// ── Post actions (edit/delete post) ──────────────────────────────────────────
-function handlePostAction(e){
-  const btn = e.target.closest('[data-action]'); if(!btn) return;
-  if(btn.dataset.action==='editpost')   editPost(currentPostId);
-  if(btn.dataset.action==='deletepost') deletePost(currentPostId);
-}
-async function editPost(postId){
-  const post = posts.find(p=>p.id===postId); if(!post) return;
-  const newTitle = prompt('Edit title:', post.title); if(newTitle===null) return;
-  const newBody  = prompt('Edit message:', post.body);  if(newBody===null) return;
-  try{
-    await updateDoc(doc(db,'posts',postId),{title:newTitle.trim(), body:newBody.trim(), updatedAt:serverTimestamp()});
-    post.title = newTitle.trim(); post.body = newBody.trim();
-    showToast('Post updated ✓');
-    await loadPosts();
-  }catch(e){ showToast('Edit failed: '+e.message); }
-}
-async function deletePost(postId){
-  if(!confirm('Delete this post and all replies?')) return;
-  try{
-    // delete replies subcollection first
-    const rSnap = await getDocs(collection(db,'posts',postId,'replies'));
-    for(const d of rSnap.docs) await deleteDoc(doc(db,'posts',postId,'replies',d.id));
-    await deleteDoc(doc(db,'posts',postId));
-    posts = posts.filter(p=>p.id!==postId); currentPostId=null;
-    showToast('Post deleted ✓');
-    await loadPosts();
-    // go back to list
-    const deskBody = document.getElementById('notifPanelBody');
-    if(deskBody){ deskBody.innerHTML='<div class="post-list" id="postList"></div>'; renderPostList(); }
-    mob_renderNotif();
-  }catch(e){ showToast('Delete failed: '+e.message); }
-}
-
-// ── Reply actions (edit/delete reply) ────────────────────────────────────────
-async function handleReplyAction(e, postId, context){
-  const btn = e.target.closest('[data-action]'); if(!btn) return;
-  const replyId = btn.dataset.replyid;
-  if(btn.dataset.action==='editreply'){
-    const newBody = prompt('Edit reply:', btn.dataset.body); if(newBody===null) return;
-    try{
-      await updateDoc(doc(db,'posts',postId,'replies',replyId),{body:newBody.trim(), updatedAt:serverTimestamp()});
-      showToast('Reply updated ✓');
-      loadReplies(postId, context);
-    }catch(e){ showToast('Edit failed: '+e.message); }
-  }
-  if(btn.dataset.action==='deletereply'){
-    if(!confirm('Delete this reply?')) return;
-    try{
-      await deleteDoc(doc(db,'posts',postId,'replies',replyId));
-      const post = posts.find(p=>p.id===postId);
-      if(post) { post.replyCount=Math.max(0,(post.replyCount||1)-1); await updateDoc(doc(db,'posts',postId),{replyCount:post.replyCount}); }
-      showToast('Reply deleted ✓');
-      loadReplies(postId, context);
-    }catch(e){ showToast('Delete failed: '+e.message); }
-  }
-}
-
-// ── New post form ─────────────────────────────────────────────────────────────
-let isAdmin = false;
-async function checkAdmin(){
-  const pw = prompt('Enter admin password:');
-  if(!pw) return false;
-  const hash = await sha256(pw);
-  isAdmin = (hash === await sha256('1992'));
-  return isAdmin;
-}
-
-function showNewPostForm(context){
-  const container = context==='desk'
-    ? document.getElementById('notifPanelBody')
-    : document.getElementById('mobPanelNotif');
-
-  container.innerHTML = `<div class="new-post-form">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem">
-      <div style="font-family:'Playfair Display',serif;font-size:1rem;color:var(--navy2)">New Message</div>
-      <button id="btnCancelPost_${context}" style="background:none;border:none;font-size:.75rem;font-weight:700;color:var(--muted);cursor:pointer;letter-spacing:.08em;text-transform:uppercase">✕ Cancel</button>
-    </div>
-    <div class="form-row">
-      <label>Type</label>
-      <select id="postType_${context}">
-        <option value="request">📚 Book Request</option>
-        <option value="feature">💡 Feature Request</option>
-        <option value="bug">🐛 Bug Report</option>
-      </select>
-    </div>
-    <div class="form-row">
-      <label>Title</label>
-      <input type="text" id="postTitle_${context}" placeholder="Brief summary…" maxlength="120"/>
-    </div>
-    <div class="form-row">
-      <label>Details</label>
-      <textarea id="postBody_${context}" rows="4" placeholder="Describe your request or issue…"></textarea>
-    </div>
-    <div style="display:flex;gap:.5rem;margin-top:.5rem">
-      <button class="btn-save" id="btnSubmitPost_${context}" style="flex:1">Send</button>
-      <button class="btn-save" id="btnAdminBroadcast_${context}" style="background:var(--navy2);color:var(--gold);flex-shrink:0" title="Admin broadcast">📢</button>
-    </div>
-  </div>`;
-
-  document.getElementById(`btnCancelPost_${context}`).addEventListener('click',()=>{
-    if(context==='desk'){ container.innerHTML='<div class="post-list" id="postList"></div>'; renderPostList(); }
-    else mob_renderNotif();
-  });
-
-  document.getElementById(`btnSubmitPost_${context}`).addEventListener('click',()=>submitPost(context, false));
-  document.getElementById(`btnAdminBroadcast_${context}`).addEventListener('click',()=>submitPost(context, true));
-}
-
-async function submitPost(context, asBroadcast){
-  const type  = asBroadcast ? 'broadcast' : document.getElementById(`postType_${context}`)?.value;
-  const title = document.getElementById(`postTitle_${context}`)?.value.trim();
-  const body  = document.getElementById(`postBody_${context}`)?.value.trim();
-  if(!title){ showToast('Please add a title'); return; }
-
-  if(asBroadcast){
-    const ok = await checkAdmin();
-    if(!ok){ showToast('Incorrect admin password'); return; }
-  }
-
-  try{
-    await addDoc(collection(db,'posts'),{
-      type, title, body,
-      authorId:   currentUser.uid,
-      authorName: currentUser.displayName||currentUser.email,
-      createdAt:  serverTimestamp(),
-      replyCount: 0
-    });
-    showToast('Posted ✓');
-    await loadPosts();
-    if(context==='desk'){ document.getElementById('notifPanelBody').innerHTML='<div class="post-list" id="postList"></div>'; renderPostList(); }
-    else mob_renderNotif();
-  }catch(e){ showToast('Post failed: '+e.message); }
-}
-
-// ── Utility ───────────────────────────────────────────────────────────────────
-function timeAgo(date){
-  const s = Math.floor((Date.now()-date.getTime())/1000);
-  if(s < 60)  return 'just now';
-  if(s < 3600) return Math.floor(s/60)+'m ago';
-  if(s < 86400) return Math.floor(s/3600)+'h ago';
-  return Math.floor(s/86400)+'d ago';
-}
 
 renderAll();
 </script>
