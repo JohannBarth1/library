@@ -2534,8 +2534,6 @@ const deviceListHtml = koboDevices.map(d => `
 
   // Bind remove buttons
   container.querySelectorAll('[data-delete-kobo]').forEach(btn => {
-  // Bind remove buttons
-  container.querySelectorAll('[data-delete-kobo]').forEach(btn => {
     btn.addEventListener('click', async () => {
       const id = btn.dataset.deleteKobo;
       const device = koboDevices.find(d => d.id === id);
