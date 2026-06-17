@@ -2327,21 +2327,28 @@ async function createSetupFile(device) {
 // ── DELETE SETUP FILE FROM STORAGE ───────────────────────────────────────────
 // Called when a device is removed. Cleans up the setup file — good hygiene
 // even if the Kobo has already consumed it (in which case the delete is a no-op).
+async function saveKoboDevice(name) {
+  if (!currentUser) return null;
 
-async function deleteSetupFile(device) {
-  try {
-    const { deleteObject } = await import(
-      'https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js'
-    );
-    const ref = storageRef(storage, `setup/${device.token}.txt`);
-    await deleteObject(ref);
-    console.log('eLibrary: setup file deleted from Storage');
-  } catch (e) {
-    // File may already have been consumed and deleted by the Kobo
-    if (e.code !== 'storage/object-not-found') {
-      console.warn('Could not delete setup file:', e);
-    }
-  }
+  // Generate 6-digit PIN
+  const pin = String(Math.floor(100000 + Math.random() * 900000));
+
+  // Generate token for ongoing auth
+  const token = 'elib_' + Array.from(crypto.getRandomValues(new Uint8Array(16)))
+    .map(b => b.toString(16).padStart(2, '0')).join('');
+
+  // Store pending device in kobo_pending (expires in 10 minutes)
+  const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+  const pendingRef = await addDoc(collection(db, 'kobo_pending'), {
+    pin,
+    token,
+    ownerId: currentUser.uid,
+    name: name.trim() || 'My Kobo',
+    expiresAt: Timestamp.fromDate(expiresAt),
+    createdAt: serverTimestamp(),
+  });
+
+  return { pendingId: pendingRef.id, pin, token, name: name.trim() || 'My Kobo' };
 }
 
 // ── SAVE KOBO DEVICE ─────────────────────────────────────────────────────────
@@ -2573,26 +2580,25 @@ function renderKoboSettings(container) {
   const inp = form.querySelector('.kobo-name-input');
   const btn = form.querySelector('.kobo-add-btn');
 
-  const doAdd = async () => {
-    const name = inp.value.trim() || 'My Kobo';
-    btn.disabled = true;
-    btn.textContent = 'Adding...';
-    try {
-      const device = await saveKoboDevice(name);
-      if (device) {
-        inp.value = '';
-        renderKoboSettings(container);
-        _showKoboSetupModal(device);
-      } else {
-        showToast('Failed to add device');
-      }
-    } catch (e) {
-      showToast('Failed: ' + e.message);
-      console.error(e);
+const doAdd = async () => {
+  const name = inp.value.trim() || 'My Kobo';
+  btn.disabled = true;
+  btn.textContent = 'Adding...';
+  try {
+    const pending = await saveKoboDevice(name);
+    if (pending) {
+      inp.value = '';
+      _showKoboSetupModal(pending);
+    } else {
+      showToast('Failed to add device');
     }
-    btn.disabled = false;
-    btn.textContent = '+ Add';
-  };
+  } catch (e) {
+    showToast('Failed: ' + e.message);
+    console.error(e);
+  }
+  btn.disabled = false;
+  btn.textContent = '+ Add';
+};
 
   btn.addEventListener('click', doAdd);
   inp.addEventListener('keydown', e => { if (e.key === 'Enter') doAdd(); });
@@ -2616,32 +2622,42 @@ function _showKoboSetupModal(device) {
 
   h.textContent = `📖 New device: "${device.name}"`;
   p.innerHTML = `
-    <strong>1.</strong> Copy your token (button below).<br><br>
-    <strong>2.</strong> On your computer, create a plain text file called
-    <code style="font-size:.82rem">elib_setup.txt</code> and paste the token
-    as its only content — no spaces, no extra lines.<br><br>
-    <strong>3.</strong> Copy <code style="font-size:.82rem">elib_setup.txt</code>
-    into the <code style="font-size:.82rem">.kobo/</code> folder on your Kobo.<br><br>
-    <strong>4.</strong> Safely eject and reconnect. Your Kobo will configure itself
-    and delete the setup file automatically.<br><br>
+    <strong>1.</strong> Connect your Kobo via USB.<br><br>
+    <strong>2.</strong> Create a plain text file called
+    <code style="font-size:.82rem">elib_pin.txt</code> containing only the
+    PIN below (6 digits, nothing else).<br><br>
+    <strong>3.</strong> Copy it into the
+    <code style="font-size:.82rem">.kobo/</code> folder on your Kobo.<br><br>
+    <strong>4.</strong> Safely eject. On next wifi connect the Kobo configures
+    itself automatically. The PIN expires in 10 minutes.<br><br>
     <span style="font-size:.75rem;color:var(--muted)">
-      This token is shown once. Keep this screen open until you have copied it.
+      PIN is shown once and expires in 10 minutes.
     </span>`;
 
-  box.textContent = device.token;
-  copyBtn.textContent = 'Copy Token';
+  box.textContent = device.pin;
+  box.style.fontSize = '2rem';
+  box.style.textAlign = 'center';
+  box.style.letterSpacing = '.3em';
+  box.style.fontFamily = 'monospace';
+  box.style.fontWeight = '700';
+
+  copyBtn.textContent = 'Copy PIN';
   copyBtn.onclick = () => {
-    navigator.clipboard.writeText(device.token)
-      .then(() => showToast('Token copied ✓'))
-      .catch(() => showToast('Copy failed — select the token and copy manually'));
+    navigator.clipboard.writeText(device.pin)
+      .then(() => showToast('PIN copied ✓'))
+      .catch(() => showToast('Copy failed — note the PIN manually'));
   };
 
   modal.classList.add('open');
 
-  // Restore modal to normal state when closed
   document.getElementById('btnCloseLinkModal').addEventListener('click', () => {
     h.textContent       = origH;
     p.innerHTML         = origP;
+    box.style.fontSize  = '';
+    box.style.textAlign = '';
+    box.style.letterSpacing = '';
+    box.style.fontFamily = '';
+    box.style.fontWeight = '';
     copyBtn.textContent = origBtnText;
     copyBtn.onclick     = origOnclick;
   }, { once: true });
