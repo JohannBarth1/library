@@ -2351,43 +2351,6 @@ async function saveKoboDevice(name) {
   return { pendingId: pendingRef.id, pin, token, name: name.trim() || 'My Kobo' };
 }
 
-// ── SAVE KOBO DEVICE ─────────────────────────────────────────────────────────
-
-async function saveKoboDevice(name) {
-  if (!currentUser) return null;
-
-  // Generate a cryptographically random token
-  const token = 'elib_' + Array.from(crypto.getRandomValues(new Uint8Array(16)))
-    .map(b => b.toString(16).padStart(2, '0')).join('');
-
-  // 1. Save device record to Firestore
-  const docRef = await addDoc(collection(db, 'kobo_devices'), {
-    ownerId: currentUser.uid,
-    name: name.trim() || 'My Kobo',
-    token,
-    createdAt: serverTimestamp(),
-  });
-
-  const device = {
-    id: docRef.id,
-    ownerId: currentUser.uid,
-    name: name.trim() || 'My Kobo',
-    token,
-  };
-
-  // 2. Write setup/{token}.txt to Firebase Storage so the Kobo can bootstrap
-  try {
-    await createSetupFile(device);
-  } catch (e) {
-    // Non-fatal — Storage rule may not be deployed yet, or network issue
-    console.warn('eLibrary: could not write setup file to Storage:', e);
-    showToast('Device saved — but setup file upload failed. Check Storage rules.');
-  }
-
-  koboDevices.push(device);
-  return device;
-}
-
 // ── DELETE KOBO DEVICE ────────────────────────────────────────────────────────
 
 async function deleteKoboDevice(deviceId) {
