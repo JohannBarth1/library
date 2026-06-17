@@ -2296,7 +2296,7 @@ async function saveChapterManager(){
 // State — kobo devices for the current user
 let koboDevices = [];
 
-// ── LOAD / SAVE KOBO DEVICES ──────────────────────────────────────────────────
+// ── LOAD KOBO DEVICES ────────────────────────────────────────────────────────
 
 async function loadKoboDevices() {
   if (!currentUser) return;
@@ -2311,29 +2311,87 @@ async function loadKoboDevices() {
   }
 }
 
+// ── CREATE SETUP FILE IN FIREBASE STORAGE ────────────────────────────────────
+// Writes "Firebase:DEVICE_FIRESTORE_ID:TOKEN" to Storage at setup/{token}.txt
+// udev_mount.sh on the Kobo fetches this on first connect to configure itself.
+
+async function createSetupFile(device) {
+  const configLine = `Firebase:${device.id}:${device.token}`;
+  const blob = new Blob([configLine], { type: 'text/plain' });
+  const path = `setup/${device.token}.txt`;
+  const ref = storageRef(storage, path);
+  await uploadBytes(ref, blob);
+  console.log('eLibrary: setup file written to Storage at', path);
+}
+
+// ── DELETE SETUP FILE FROM STORAGE ───────────────────────────────────────────
+// Called when a device is removed. Cleans up the setup file — good hygiene
+// even if the Kobo has already consumed it (in which case the delete is a no-op).
+
+async function deleteSetupFile(device) {
+  try {
+    const { deleteObject } = await import(
+      'https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js'
+    );
+    const ref = storageRef(storage, `setup/${device.token}.txt`);
+    await deleteObject(ref);
+    console.log('eLibrary: setup file deleted from Storage');
+  } catch (e) {
+    // File may already have been consumed and deleted by the Kobo
+    if (e.code !== 'storage/object-not-found') {
+      console.warn('Could not delete setup file:', e);
+    }
+  }
+}
+
+// ── SAVE KOBO DEVICE ─────────────────────────────────────────────────────────
+
 async function saveKoboDevice(name) {
   if (!currentUser) return null;
-  // Generate a random token — shown once, stored hashed ideally but plain here for simplicity
+
+  // Generate a cryptographically random token
   const token = 'elib_' + Array.from(crypto.getRandomValues(new Uint8Array(16)))
     .map(b => b.toString(16).padStart(2, '0')).join('');
+
+  // 1. Save device record to Firestore
   const docRef = await addDoc(collection(db, 'kobo_devices'), {
     ownerId: currentUser.uid,
     name: name.trim() || 'My Kobo',
     token,
     createdAt: serverTimestamp(),
   });
-  const device = { id: docRef.id, ownerId: currentUser.uid, name: name.trim() || 'My Kobo', token };
+
+  const device = {
+    id: docRef.id,
+    ownerId: currentUser.uid,
+    name: name.trim() || 'My Kobo',
+    token,
+  };
+
+  // 2. Write setup/{token}.txt to Firebase Storage so the Kobo can bootstrap
+  try {
+    await createSetupFile(device);
+  } catch (e) {
+    // Non-fatal — Storage rule may not be deployed yet, or network issue
+    console.warn('eLibrary: could not write setup file to Storage:', e);
+    showToast('Device saved — but setup file upload failed. Check Storage rules.');
+  }
+
   koboDevices.push(device);
   return device;
 }
 
+// ── DELETE KOBO DEVICE ────────────────────────────────────────────────────────
+
 async function deleteKoboDevice(deviceId) {
+  const device = koboDevices.find(d => d.id === deviceId);
   await deleteDoc(doc(db, 'kobo_devices', deviceId));
+  if (device) await deleteSetupFile(device);
   koboDevices = koboDevices.filter(d => d.id !== deviceId);
 }
 
-// ── SEND BOOK(S) TO KOBO ──────────────────────────────────────────────────────
-// Writes to the kobo_queue collection. The Kobo shell script polls this.
+// ── SEND BOOK(S) TO KOBO ─────────────────────────────────────────────────────
+// Writes entries to kobo_queue. getFirebaseFiles.sh on the Kobo polls this.
 
 async function sendBooksToKoboDevice(bookIds, deviceId) {
   if (!currentUser) return;
@@ -2341,28 +2399,23 @@ async function sendBooksToKoboDevice(bookIds, deviceId) {
   if (!device) { showToast('Device not found'); return; }
 
   const allBooks = [...library, ...communityLib];
-  const toSend = bookIds
-    .map(id => allBooks.find(b => b.id === id))
-    .filter(Boolean);
-
+  const toSend = bookIds.map(id => allBooks.find(b => b.id === id)).filter(Boolean);
   if (!toSend.length) { showToast('No books to send'); return; }
 
-  showLoading(`Queuing ${toSend.length} book${toSend.length !== 1 ? 's' : ''}…`);
+  showLoading(`Queuing ${toSend.length} book${toSend.length !== 1 ? 's' : ''}...`);
   let queued = 0;
+
   try {
     for (const book of toSend) {
-      // Build download URL. If we have epubUrl directly, use it.
-      // If we have storagePath + storageDownloadToken, build it.
+      // Prefer epubUrl. Fall back to building from storagePath + storageDownloadToken.
       let downloadUrl = book.epubUrl || null;
-
       if (!downloadUrl && book.storagePath && book.storageDownloadToken) {
         const bucket = 'elibrary-c0074.firebasestorage.app';
         const encoded = encodeURIComponent(book.storagePath);
         downloadUrl = `https://firebasestorage.googleapis.com/v0/b/${bucket}/o/${encoded}?alt=media&token=${book.storageDownloadToken}`;
       }
-
       if (!downloadUrl) {
-        console.warn('No download URL for book:', book.title);
+        console.warn('eLibrary: no download URL for book:', book.title);
         continue;
       }
 
@@ -2380,6 +2433,7 @@ async function sendBooksToKoboDevice(bookIds, deviceId) {
       });
       queued++;
     }
+
     hideLoading();
     if (queued > 0) {
       showToast(`${queued} book${queued !== 1 ? 's' : ''} queued for "${device.name}" ✓`);
@@ -2394,31 +2448,29 @@ async function sendBooksToKoboDevice(bookIds, deviceId) {
 }
 
 // ── DEVICE PICKER MODAL ───────────────────────────────────────────────────────
-// bookIds can be a single string or an array
 
 let _pickerBookIds = [];
 
 function showKoboDevicePicker(bookIds) {
   _pickerBookIds = Array.isArray(bookIds) ? bookIds : [bookIds];
-
   const list = document.getElementById('koboPickerList');
   if (!list) return;
 
   if (!koboDevices.length) {
-    // No devices yet — prompt to add one inline
     list.innerHTML = `<div style="padding:.9rem 1rem;font-size:.82rem;color:var(--muted);line-height:1.6">
       You have no Kobo devices set up yet.<br>
-      <span style="font-size:.75rem">Add one in Settings → Kobo Devices.</span>
+      <span style="font-size:.75rem">Add one in Settings under Kobo Devices.</span>
     </div>`;
     document.getElementById('koboPickerConfirm').style.display = 'none';
   } else {
     document.getElementById('koboPickerConfirm').style.display = '';
     list.innerHTML = koboDevices.map(d => `
-      <label style="display:flex;align-items:center;gap:.7rem;padding:.6rem 1rem;cursor:pointer;border-bottom:1px solid var(--border);font-size:.85rem">
-        <input type="radio" name="koboPicker" value="${d.id}" style="accent-color:var(--teal);width:15px;height:15px;flex-shrink:0"/>
+      <label style="display:flex;align-items:center;gap:.7rem;padding:.6rem 1rem;
+                    cursor:pointer;border-bottom:1px solid var(--border);font-size:.85rem">
+        <input type="radio" name="koboPicker" value="${d.id}"
+          style="accent-color:var(--teal);width:15px;height:15px;flex-shrink:0"/>
         <span>${esc(d.name)}</span>
       </label>`).join('');
-    // Auto-select first device
     const first = list.querySelector('input[type=radio]');
     if (first) first.checked = true;
   }
@@ -2442,33 +2494,58 @@ document.getElementById('koboPickerConfirm')?.addEventListener('click', async ()
 function renderKoboSettings(container) {
   if (!container || !currentUser) return;
 
+  const formHtml = `
+    <div class="kobo-add-form" style="display:flex;gap:.4rem;margin-top:.6rem">
+      <input class="kobo-name-input filter-search" type="text"
+        placeholder="Device name (e.g. My Kobo)"
+        style="flex:1;font-size:.8rem;padding:.38rem .6rem"/>
+      <button class="kobo-add-btn btn-save"
+        style="padding:.38rem .75rem;font-size:.75rem;border-radius:2px;white-space:nowrap">
+        + Add
+      </button>
+    </div>`;
+
+  const instructionsHtml = `
+    <div style="margin-top:.9rem;padding:.7rem .8rem;background:var(--panel);
+                border:1px solid var(--border);border-radius:4px">
+      <div style="font-size:.62rem;letter-spacing:.15em;text-transform:uppercase;
+                  color:var(--muted);font-weight:700;margin-bottom:.5rem">First-time setup</div>
+      <ol style="font-size:.75rem;color:var(--navy2);line-height:2;padding-left:1.1rem;margin:0">
+        <li>Connect your Kobo via USB.</li>
+        <li>Copy <a href="https://github.com/YOUR_REPO/releases/latest"
+              target="_blank" style="color:var(--teal)">KoboRoot.tgz</a>
+            into the <code style="font-size:.72rem">.kobo/</code> folder on the device.</li>
+        <li>Click <strong>+ Add</strong> above — a screen will show your token.</li>
+        <li>Create a plain text file named <code style="font-size:.72rem">elib_setup.txt</code>,
+            paste your token as the only content, and copy it into
+            <code style="font-size:.72rem">.kobo/</code> on the device.</li>
+        <li>Safely eject and reconnect. The Kobo configures itself automatically
+            and the setup file is deleted.</li>
+      </ol>
+    </div>`;
+
   if (!koboDevices.length) {
     container.innerHTML = `
-      <div style="font-size:.8rem;color:var(--muted);margin-bottom:.7rem;line-height:1.5">
+      <div style="font-size:.8rem;color:var(--muted);margin-bottom:.4rem;line-height:1.5">
         No devices yet. Add one to start sending books to your Kobo.
       </div>
-      ${addDeviceFormHtml()}`;
+      ${formHtml}
+      ${instructionsHtml}`;
   } else {
-    const list = koboDevices.map(d => `
-      <div style="display:flex;align-items:center;justify-content:space-between;padding:.45rem 0;border-bottom:1px solid var(--border);gap:.5rem">
+    const deviceListHtml = koboDevices.map(d => `
+      <div style="display:flex;align-items:center;justify-content:space-between;
+                  padding:.45rem 0;border-bottom:1px solid var(--border);gap:.5rem">
         <span style="font-size:.82rem;font-weight:700;color:var(--navy2)">${esc(d.name)}</span>
         <button class="btn-action btn-return" data-delete-kobo="${d.id}"
-          style="padding:.25rem .6rem;font-size:.65rem;border-radius:3px">✕ Remove</button>
+          style="padding:.25rem .6rem;font-size:.65rem;border-radius:3px">
+          ✕ Remove
+        </button>
       </div>`).join('');
 
     container.innerHTML = `
-      <div style="margin-bottom:.7rem">${list}</div>
-      ${addDeviceFormHtml()}
-      <div style="margin-top:.8rem;padding:.7rem;background:var(--panel);border:1px solid var(--border);border-radius:4px">
-        <div style="font-size:.62rem;letter-spacing:.15em;text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:.4rem">
-          Setup instructions
-        </div>
-        <ol style="font-size:.75rem;color:var(--navy2);line-height:1.8;padding-left:1.1rem;margin:0">
-          <li>Download <a href="https://github.com/YOUR_REPO/releases" target="_blank" style="color:var(--teal)">KoboRoot.tgz</a> and copy it to <code style="font-size:.72rem">.kobo/</code> on your device.</li>
-          <li>Create a file called <code style="font-size:.72rem">kobocloudrc</code> in <code style="font-size:.72rem">.kobo/</code> with the token for your device.</li>
-          <li>Safely eject and restart your Kobo.</li>
-        </ol>
-      </div>`;
+      <div style="margin-bottom:.4rem">${deviceListHtml}</div>
+      ${formHtml}
+      ${instructionsHtml}`;
   }
 
   // Bind remove buttons
@@ -2476,87 +2553,104 @@ function renderKoboSettings(container) {
     btn.addEventListener('click', async () => {
       const id = btn.dataset.deleteKobo;
       const device = koboDevices.find(d => d.id === id);
-      if (!device || !confirm(`Remove "${device.name}"?`)) return;
-      await deleteKoboDevice(id);
-      renderKoboSettings(container);
-      showToast('Device removed');
+      if (!device || !confirm(`Remove "${device.name}"?\n\nThe setup file in Storage will also be deleted.`)) return;
+      showLoading('Removing device...');
+      try {
+        await deleteKoboDevice(id);
+        hideLoading();
+        renderKoboSettings(container);
+        showToast('Device removed ✓');
+      } catch (e) {
+        hideLoading();
+        showToast('Remove failed: ' + e.message);
+      }
     });
   });
 
   // Bind add-device form
   const form = container.querySelector('.kobo-add-form');
-  if (form) {
-    const inp = form.querySelector('.kobo-name-input');
-    const btn = form.querySelector('.kobo-add-btn');
+  if (!form) return;
+  const inp = form.querySelector('.kobo-name-input');
+  const btn = form.querySelector('.kobo-add-btn');
 
-    btn.addEventListener('click', async () => {
-      const name = inp.value.trim() || 'My Kobo';
-      btn.disabled = true;
-      btn.textContent = 'Adding…';
+  const doAdd = async () => {
+    const name = inp.value.trim() || 'My Kobo';
+    btn.disabled = true;
+    btn.textContent = 'Adding...';
+    try {
       const device = await saveKoboDevice(name);
       if (device) {
-        showKoboTokenModal(device);
         inp.value = '';
         renderKoboSettings(container);
+        _showKoboSetupModal(device);
       } else {
         showToast('Failed to add device');
       }
-      btn.disabled = false;
-      btn.textContent = '+ Add';
-    });
+    } catch (e) {
+      showToast('Failed: ' + e.message);
+      console.error(e);
+    }
+    btn.disabled = false;
+    btn.textContent = '+ Add';
+  };
 
-    inp.addEventListener('keydown', e => { if (e.key === 'Enter') btn.click(); });
-  }
+  btn.addEventListener('click', doAdd);
+  inp.addEventListener('keydown', e => { if (e.key === 'Enter') doAdd(); });
 }
 
-function addDeviceFormHtml() {
-  return `<div class="kobo-add-form" style="display:flex;gap:.4rem;margin-top:.5rem">
-    <input class="kobo-name-input filter-search" type="text" placeholder="Device name (e.g. My Kobo)"
-      style="flex:1;font-size:.8rem;padding:.38rem .6rem"/>
-    <button class="kobo-add-btn btn-save" style="padding:.38rem .75rem;font-size:.75rem;border-radius:2px;white-space:nowrap">+ Add</button>
-  </div>`;
-}
+// ── SETUP MODAL ───────────────────────────────────────────────────────────────
+// Shown once after a device is added. Piggybacks on the existing linkModal
+// to avoid adding a new modal to the HTML.
 
-// ── TOKEN REVEAL MODAL ────────────────────────────────────────────────────────
-// Shows the token once after device creation.
-
-function showKoboTokenModal(device) {
-  // Re-use the generic link modal to avoid adding yet another modal
-  const box = document.getElementById('directLinkBox');
-  const modal = document.getElementById('linkModal');
-  const h = modal.querySelector('h3');
-  const p = modal.querySelector('p');
-
-  h.textContent = `📖 Device token for "${device.name}"`;
-  p.innerHTML = `Copy this token into your <code style="font-size:.82rem">kobocloudrc</code> file on the Kobo.
-    <strong>It won't be shown again.</strong>`;
-  box.textContent = device.token;
-
-  // Swap copy button label
+function _showKoboSetupModal(device) {
+  const box     = document.getElementById('directLinkBox');
+  const modal   = document.getElementById('linkModal');
+  const h       = modal.querySelector('h3');
+  const p       = modal.querySelector('p');
   const copyBtn = document.getElementById('btnCopyDirectLink');
+
+  const origH       = h.textContent;
+  const origP       = p.innerHTML;
+  const origBtnText = copyBtn.textContent;
+  const origOnclick = copyBtn.onclick;
+
+  h.textContent = `📖 New device: "${device.name}"`;
+  p.innerHTML = `
+    <strong>1.</strong> Copy your token (button below).<br><br>
+    <strong>2.</strong> On your computer, create a plain text file called
+    <code style="font-size:.82rem">elib_setup.txt</code> and paste the token
+    as its only content — no spaces, no extra lines.<br><br>
+    <strong>3.</strong> Copy <code style="font-size:.82rem">elib_setup.txt</code>
+    into the <code style="font-size:.82rem">.kobo/</code> folder on your Kobo.<br><br>
+    <strong>4.</strong> Safely eject and reconnect. Your Kobo will configure itself
+    and delete the setup file automatically.<br><br>
+    <span style="font-size:.75rem;color:var(--muted)">
+      This token is shown once. Keep this screen open until you have copied it.
+    </span>`;
+
+  box.textContent = device.token;
   copyBtn.textContent = 'Copy Token';
-  // Re-bind once (will be restored on next normal link open since we recreate via showDirectLink)
-  const orig = copyBtn.onclick;
   copyBtn.onclick = () => {
-    navigator.clipboard.writeText(device.token).then(() => showToast('Token copied ✓'));
+    navigator.clipboard.writeText(device.token)
+      .then(() => showToast('Token copied ✓'))
+      .catch(() => showToast('Copy failed — select the token and copy manually'));
   };
 
   modal.classList.add('open');
 
-  // Restore when closed
+  // Restore modal to normal state when closed
   document.getElementById('btnCloseLinkModal').addEventListener('click', () => {
-    h.textContent = '🔗 Direct Link';
-    p.innerHTML = 'Share this link. The recipient must be signed in to access the book.';
-    copyBtn.textContent = 'Copy Link';
-    copyBtn.onclick = orig;
+    h.textContent       = origH;
+    p.innerHTML         = origP;
+    copyBtn.textContent = origBtnText;
+    copyBtn.onclick     = origOnclick;
   }, { once: true });
 }
 
-// ── BULK BAR: ADD SEND TO KOBO BUTTON ─────────────────────────────────────────
-// The bulk-bar button is added via HTML (Change 7).
-// This wires up the click handler. Call after DOM is ready.
+// ── BULK BAR: SEND TO KOBO ────────────────────────────────────────────────────
+// The button is added to bulk-bar HTML in Change 7. This wires the handler.
 
-(function wireBulkKoboButton() {
+(function _wireBulkKoboButton() {
   const btn = document.getElementById('bulkBtnKobo');
   if (!btn) return;
   btn.addEventListener('click', async () => {
@@ -2565,6 +2659,7 @@ function showKoboTokenModal(device) {
     showKoboDevicePicker([...selectedIds]);
   });
 })();
+
 renderAll();
 </script>
 </body>
