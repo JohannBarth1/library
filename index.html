@@ -2570,57 +2570,49 @@ const doAdd = async () => {
 // ── SETUP MODAL ───────────────────────────────────────────────────────────────
 // Shown once after a device is added. Piggybacks on the existing linkModal
 // to avoid adding a new modal to the HTML.
-
 function _showKoboSetupModal(device) {
   const box     = document.getElementById('directLinkBox');
   const modal   = document.getElementById('linkModal');
   const h       = modal.querySelector('h3');
   const p       = modal.querySelector('p');
   const copyBtn = document.getElementById('btnCopyDirectLink');
-
+ 
   const origH       = h.textContent;
   const origP       = p.innerHTML;
   const origBtnText = copyBtn.textContent;
   const origOnclick = copyBtn.onclick;
-
+ 
+  // device.id is the Firestore document ID for this kobo_devices doc
+  const configLine = `Firebase:${device.id}:${device.token}`;
+ 
   h.textContent = `📖 New device: "${device.name}"`;
   p.innerHTML = `
-    <strong>1.</strong> Connect your Kobo via USB.<br><br>
-    <strong>2.</strong> Create a plain text file called
-    <code style="font-size:.82rem">elib_pin.txt</code> containing only the
-    PIN below (6 digits, nothing else).<br><br>
-    <strong>3.</strong> Copy it into the
-    <code style="font-size:.82rem">.kobo/</code> folder on your Kobo.<br><br>
-    <strong>4.</strong> Safely eject. On next wifi connect the Kobo configures
-    itself automatically. The PIN expires in 10 minutes.<br><br>
+    <strong>1.</strong> Copy the line below (button).<br><br>
+    <strong>2.</strong> Connect your Kobo via USB and open
+    <code style="font-size:.82rem">.add/kobocloud/kobocloudrc</code>
+    in a plain text editor (Notepad).<br><br>
+    <strong>3.</strong> Add the copied line at the bottom of the file
+    — keep any existing lines above it.<br><br>
+    <strong>4.</strong> Save, eject, and toggle WiFi off/on on the Kobo
+    to trigger a sync.<br><br>
     <span style="font-size:.75rem;color:var(--muted)">
-      PIN is shown once and expires in 10 minutes.
+      Keep this line private — it's this device's access credential.
     </span>`;
-
-  box.textContent = device.pin;
-  box.style.fontSize = '2rem';
-  box.style.textAlign = 'center';
-  box.style.letterSpacing = '.3em';
-  box.style.fontFamily = 'monospace';
-  box.style.fontWeight = '700';
-
-  copyBtn.textContent = 'Copy PIN';
+ 
+  box.textContent = configLine;
+  copyBtn.textContent = 'Copy Config Line';
   copyBtn.onclick = () => {
-    navigator.clipboard.writeText(device.pin)
-      .then(() => showToast('PIN copied ✓'))
-      .catch(() => showToast('Copy failed — note the PIN manually'));
+    navigator.clipboard.writeText(configLine)
+      .then(() => showToast('Config line copied ✓'))
+      .catch(() => showToast('Copy failed — select the text and copy manually'));
   };
-
+ 
   modal.classList.add('open');
-
+ 
+  // Restore modal to normal state when closed
   document.getElementById('btnCloseLinkModal').addEventListener('click', () => {
     h.textContent       = origH;
     p.innerHTML         = origP;
-    box.style.fontSize  = '';
-    box.style.textAlign = '';
-    box.style.letterSpacing = '';
-    box.style.fontFamily = '';
-    box.style.fontWeight = '';
     copyBtn.textContent = origBtnText;
     copyBtn.onclick     = origOnclick;
   }, { once: true });
