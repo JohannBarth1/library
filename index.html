@@ -2329,26 +2329,26 @@ async function createSetupFile(device) {
 // even if the Kobo has already consumed it (in which case the delete is a no-op).
 async function saveKoboDevice(name) {
   if (!currentUser) return null;
-
-  // Generate 6-digit PIN
-  const pin = String(Math.floor(100000 + Math.random() * 900000));
-
-  // Generate token for ongoing auth
+ 
   const token = 'elib_' + Array.from(crypto.getRandomValues(new Uint8Array(16)))
     .map(b => b.toString(16).padStart(2, '0')).join('');
-
-  // Store pending device in kobo_pending (expires in 10 minutes)
-  const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
-  const pendingRef = await addDoc(collection(db, 'kobo_pending'), {
-    pin,
-    token,
+ 
+  const docRef = await addDoc(collection(db, 'kobo_devices'), {
     ownerId: currentUser.uid,
     name: name.trim() || 'My Kobo',
-    expiresAt: Timestamp.fromDate(expiresAt),
+    token,
     createdAt: serverTimestamp(),
   });
-
-  return { pendingId: pendingRef.id, pin, token, name: name.trim() || 'My Kobo' };
+ 
+  const device = {
+    id: docRef.id,        // Firestore doc ID — this IS the deviceId used in kobo_queue
+    ownerId: currentUser.uid,
+    name: name.trim() || 'My Kobo',
+    token,
+  };
+ 
+  koboDevices.push(device);
+  return device;
 }
 
 // ── DELETE KOBO DEVICE ────────────────────────────────────────────────────────
