@@ -207,7 +207,6 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .reader-overlay.theme-day{background:#fff;color:#1a1a1a;}
 .reader-overlay.theme-sepia{background:#f4ede0;color:#3b2a1a;}
 .reader-overlay.theme-night{background:#1a1a2e;color:#c8c8d8;}
-/* PATCH 5c: toolbar now at bottom — border-top instead of border-bottom */
 .reader-toolbar{padding:0 1.2rem;height:52px;display:flex;align-items:center;justify-content:space-between;border-top:2px solid var(--gold);border-bottom:none;flex-shrink:0;gap:.8rem;}
 .reader-overlay.theme-day .reader-toolbar{background:#f0f0f0;}
 .reader-overlay.theme-sepia .reader-toolbar{background:#e8d9c5;}
@@ -268,6 +267,18 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .reader-overlay.theme-sepia .reader-content{color:#3b2a1a;}
 .reader-overlay.theme-night .reader-content{color:#c8c8d8;}
 .reader-overlay.theme-night .reader-content h1,.reader-overlay.theme-night .reader-content h2,.reader-overlay.theme-night .reader-content h3{color:#e8d8b0;}
+.reader-content.paginated{
+  flex:none;
+  overflow:hidden;
+  max-width:none;
+  margin:0;
+  padding:2rem clamp(1rem,5vw,4rem);
+  box-sizing:border-box;
+  column-gap:0;
+  column-fill:auto;
+  transition:transform .25s ease;
+  will-change:transform;
+}
 
 /* ── SKELETON ── */
 .skeleton-card{border-radius:4px;overflow:hidden;background:var(--warm-white);border:1px solid var(--border);}
@@ -991,6 +1002,8 @@ let myCheckedOutIds=new Set();
 
 // Reader state
 let readerZip=null,readerSpine=[],readerChapter=0,readerOpfBase='';
+let readerPage = 0;
+let readerPageCount = 1;
 let readerFontSize=parseInt(localStorage.getItem('elib_reader_font')||'17');
 let readerTheme=localStorage.getItem('elib_reader_theme')||'day';
 
@@ -1855,13 +1868,11 @@ document.querySelectorAll('.rs-font-btn').forEach(b=>b.addEventListener('click',
 document.querySelectorAll('.rs-theme-btn').forEach(b=>b.addEventListener('click',()=>{readerTheme=b.dataset.theme;localStorage.setItem('elib_reader_theme',readerTheme);applyReaderTheme(readerTheme);}));
 document.getElementById('btnToggleReaderSettings').addEventListener('click',()=>document.getElementById('readerSettingsBar').classList.toggle('open'));
 document.getElementById('btnToggleChapters').addEventListener('click',()=>document.getElementById('readerChapterList').classList.toggle('open'));
-document.getElementById('btnReaderPrev').addEventListener('click',()=>readerGoToChapter(readerChapter-1));
-document.getElementById('btnReaderNext').addEventListener('click',()=>readerGoToChapter(readerChapter+1));
 document.getElementById('btnCloseReader').addEventListener('click',closeReader);
 document.addEventListener('keydown',e=>{
   if(!document.getElementById('readerOverlay').classList.contains('open'))return;
-  if(e.key==='ArrowRight'||e.key==='ArrowDown')readerGoToChapter(readerChapter+1);
-  if(e.key==='ArrowLeft'||e.key==='ArrowUp')readerGoToChapter(readerChapter-1);
+   if(e.key==='ArrowRight'||e.key==='ArrowDown')goToPage(readerPage+1);
+  if(e.key==='ArrowLeft'||e.key==='ArrowUp')goToPage(readerPage-1);
   if(e.key==='Escape')closeReader();
 });
 
@@ -1914,12 +1925,14 @@ async function readerGoToChapter(idx){
     if(!html){content.innerHTML='<p>Chapter not found.</p>';return;}
     html=await inlineImagesInHtml(html,readerOpfBase,ch.href);
     const bodyMatch=html.match(/<body[^>]*>([\s\S]*)<\/body>/i);
-    let bodyHtml=bodyMatch?bodyMatch[1]:html;
-    bodyHtml=bodyHtml.replace(/<script[\s\S]*?<\/script>/gi,'');
-    bodyHtml=bodyHtml.replace(/href="([^"#]+)(#[^"]+)?"/g,(_,href)=>{const si=readerSpine.findIndex(s=>s.href===href||s.href.endsWith('/'+href));return si>=0?`href="javascript:void(0)" onclick="readerGoToChapter_global(${si})"` :`href="javascript:void(0)"`;});
-    content.innerHTML=bodyHtml;
-  }catch(e){content.innerHTML=`<p style="color:var(--danger)">Error: ${e.message}</p>`;}
-}
+        let bodyHtml=bodyMatch?bodyMatch[1]:html;
+        bodyHtml=bodyHtml.replace(/<script[\s\S]*?<\/script>/gi,'');
+        bodyHtml=bodyHtml.replace(/href="([^"#]+)(#[^"]+)?"/g,(_,href)=>{const si=readerSpine.findIndex(s=>s.href===href||s.href.endsWith('/'+href));return si>=0?`href="javascript:void(0)" onclick="readerGoToChapter_global(${si})"` :`href="javascript:void(0)"`;});
+        content.innerHTML=bodyHtml;
+        // Pagination: wait one frame for images/fonts to lay out, then init
+        requestAnimationFrame(()=>requestAnimationFrame(()=>initPagination()));
+      }catch(e){content.innerHTML=`<p style="color:var(--danger)">Error: ${e.message}</p>`;}
+    }
 window.readerGoToChapter_global=idx=>readerGoToChapter(idx);
 async function inlineImagesInHtml(html,base,chapterHref){
   const chapterDir=chapterHref&&chapterHref.includes('/')?chapterHref.replace(/\/[^/]+$/,'/'):'';
@@ -1931,6 +1944,106 @@ async function inlineImagesInHtml(html,base,chapterHref){
 }
 function closeReader(){document.getElementById('readerOverlay').classList.remove('open');document.getElementById('readerChapterList').classList.remove('open');document.getElementById('readerSettingsBar').classList.remove('open');readerZip=null;readerSpine=[];}
 
+  // ── PAGINATION ────────────────────────────────────────────────────────────────
+function initPagination(){
+  const wrap=document.getElementById('readerContent');
+  // Reset to page 0
+  readerPage=0;
+  // Measure available height (overlay minus toolbar heights)
+  const overlay=document.getElementById('readerOverlay');
+  const toolbar=overlay.querySelector('.reader-toolbar'); // adjust selector to match your HTML
+  const toolbarH=toolbar?toolbar.offsetHeight:56;
+  const availH=overlay.clientHeight-toolbarH;
+  const availW=overlay.clientWidth;
+
+  // Apply column layout
+  wrap.style.cssText=`
+    column-width:${availW}px;
+    column-gap:0px;
+    column-fill:auto;
+    height:${availH}px;
+    overflow:hidden;
+    padding:2rem 3rem;
+    box-sizing:border-box;
+    position:relative;
+    transition:transform .25s ease;
+    will-change:transform;
+  `;
+
+  // One more frame to let columns render
+  requestAnimationFrame(()=>{
+    readerPageCount=Math.max(1,Math.round(wrap.scrollWidth/availW));
+    updatePaginationUI();
+  });
+}
+
+function goToPage(page){
+  const wrap=document.getElementById('readerContent');
+  const overlay=document.getElementById('readerOverlay');
+  const availW=overlay.clientWidth;
+  if(page<0){
+    // Go to previous chapter, last page
+    if(readerChapter>0){
+      readerGoToChapter(readerChapter-1).then(()=>{
+        // After chapter loads, jump to last page
+        requestAnimationFrame(()=>requestAnimationFrame(()=>{
+          goToPage(readerPageCount-1);
+        }));
+      });
+    }
+    return;
+  }
+  if(page>=readerPageCount){
+    // Advance to next chapter
+    if(readerChapter<readerSpine.length-1)readerGoToChapter(readerChapter+1);
+    return;
+  }
+  readerPage=page;
+  wrap.style.transform=`translateX(${-page*availW}px)`;
+  updatePaginationUI();
+}
+
+function updatePaginationUI(){
+  // Reuse the existing page info element
+  document.getElementById('readerPageInfo').textContent=
+    `Ch ${readerChapter+1}/${readerSpine.length} · p ${readerPage+1}/${readerPageCount}`;
+  document.getElementById('readerProgressBar').style.width=
+    (((readerChapter+(readerPage/Math.max(readerPageCount,1)))/Math.max(readerSpine.length-1,1))*100)+'%';
+}
+
+// Override the prev/next chapter buttons to be prev/next PAGE instead
+document.getElementById('btnReaderPrev').addEventListener('click',()=>goToPage(readerPage-1));
+document.getElementById('btnReaderNext').addEventListener('click',()=>goToPage(readerPage+1));
+
+  // ── TOUCH / TAP ───────────────────────────────────────────────────────────────
+(()=>{
+  let tx0=0,ty0=0;
+  const overlay=document.getElementById('readerOverlay');
+  overlay.addEventListener('touchstart',e=>{tx0=e.touches[0].clientX;ty0=e.touches[0].clientY;},{passive:true});
+  overlay.addEventListener('touchend',e=>{
+    if(!overlay.classList.contains('open'))return;
+    const dx=e.changedTouches[0].clientX-tx0;
+    const dy=e.changedTouches[0].clientY-ty0;
+    if(Math.abs(dx)>Math.abs(dy)&&Math.abs(dx)>40){
+      // Horizontal swipe
+      if(dx<0)goToPage(readerPage+1); // swipe left → next
+      else goToPage(readerPage-1);     // swipe right → prev
+    } else if(Math.abs(dx)<10&&Math.abs(dy)<10){
+      // Tap — ignore if on toolbar/settings
+      const tgt=e.target.closest('.reader-toolbar,.readerSettingsBar,.chapter-list');
+      if(tgt)return;
+      const x=e.changedTouches[0].clientX;
+      const w=overlay.clientWidth;
+      if(x<w*0.3)goToPage(readerPage-1);
+      else if(x>w*0.7)goToPage(readerPage+1);
+    }
+  },{passive:true});
+})();
+
+  window.addEventListener('resize',()=>{
+  if(document.getElementById('readerOverlay').classList.contains('open'))initPagination();
+});
+  
 // ── EPUB META ─────────────────────────────────────────────────────────────────
 async function parseEpubMeta(file){
   try{
