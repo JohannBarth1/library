@@ -1973,24 +1973,25 @@ function initPagination(){
   content.style.width=availW+'px';
   content.style.height=availH+'px';
   content.style.overflow='hidden';
-  content.style.padding='2rem 3rem';
+  content.style.padding='0';
   content.style.boxSizing='border-box';
   content.style.transition='none';
   content.style.transform='translateX(0)';
   requestAnimationFrame(()=>content.style.transition='transform .25s ease');
   setTimeout(()=>{
-    const inner=content.firstElementChild;
-    if(inner){
-      inner.style.display='block';
-      inner.style.width=(availW-96)+'px';
-      inner.style.columnWidth=(availW-96)+'px';
-      inner.style.columnGap='0';
-      inner.style.columnFill='auto';
-      inner.style.height=(availH-64)+'px';
-      readerPageCount=Math.max(1,Math.round(inner.scrollWidth/(availW-96)));
-    }
-    updatePaginationUI();
-  },50);
+      const inner=content.firstElementChild;
+      if(inner){
+        inner.style.display='block';
+        inner.style.margin='2rem 3rem';
+        inner.style.width=(availW-96)+'px';
+        inner.style.columnWidth=(availW-96)+'px';
+        inner.style.columnGap='0';
+        inner.style.columnFill='auto';
+        inner.style.height=(availH-64)+'px';
+        readerPageCount=Math.max(1,Math.round(inner.scrollWidth/(availW-96)));
+      }
+      updatePaginationUI();
+    },50);
 }
 
 function goToPage(page){
