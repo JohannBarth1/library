@@ -1935,11 +1935,13 @@ async function readerGoToChapter(idx){
         bodyHtml=bodyHtml.replace(/<script[\s\S]*?<\/script>/gi,'');
         bodyHtml=bodyHtml.replace(/href="([^"#]+)(#[^"]+)?"/g,(_,href)=>{const si=readerSpine.findIndex(s=>s.href===href||s.href.endsWith('/'+href));return si>=0?`href="javascript:void(0)" onclick="readerGoToChapter_global(${si})"` :`href="javascript:void(0)"`;});
         content.innerHTML=bodyHtml;
-        // Unwrap single block div if it's wrapping everything
-        if(content.children.length===1 && content.firstElementChild.tagName==='DIV'){
-          const inner=content.firstElementChild;
-          inner.style.display='contents';
+        // Unwrap nested block divs
+        let el=content.firstElementChild;
+        while(el && el.tagName==='DIV' && el.children.length===1){
+          el.style.display='contents';
+          el=el.firstElementChild;
         }
+        if(el && el.tagName==='DIV') el.style.display='contents';
         await new Promise(r=>setTimeout(()=>{initPagination();r();},50));
           }catch(e){content.innerHTML=`<p style="color:var(--danger)">Error: ${e.message}</p>`;}
         }
