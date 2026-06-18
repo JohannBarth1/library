@@ -1918,13 +1918,18 @@ async function readCurrentBook(){
 }
 async function readerGoToChapter(idx){
   if(idx<0||idx>=readerSpine.length)return;
+  const direction=idx>readerChapter?1:-1;
   readerChapter=idx;
   document.querySelectorAll('.chapter-item').forEach((el,i)=>el.classList.toggle('active',i===idx));
   const ch=readerSpine[idx];
   document.getElementById('readerPageInfo').textContent=`Ch ${idx+1} / ${readerSpine.length}`;
   document.getElementById('readerProgressBar').style.width=((idx/Math.max(readerSpine.length-1,1))*100)+'%';
   const content=document.getElementById('readerContent');
-  content.style.transform='translateX(0)';
+  content.style.transition='transform .3s ease';
+  content.style.transform=`translateX(${-direction*100}%)`;
+  await new Promise(r=>setTimeout(r,300));
+  content.style.transition='none';
+  content.style.transform=`translateX(${direction*100}%)`;
   content.innerHTML='<p style="text-align:center;padding-top:3rem;opacity:.5">Loading chapter…</p>';
   content.scrollTop=0;
   if(window.innerWidth<=768)document.getElementById('readerChapterList').classList.remove('open');
@@ -1933,21 +1938,17 @@ async function readerGoToChapter(idx){
     if(!html){content.innerHTML='<p>Chapter not found.</p>';return;}
     html=await inlineImagesInHtml(html,readerOpfBase,ch.href);
     const bodyMatch=html.match(/<body[^>]*>([\s\S]*)<\/body>/i);
-        let bodyHtml=bodyMatch?bodyMatch[1]:html;
-        bodyHtml=bodyHtml.replace(/<script[\s\S]*?<\/script>/gi,'');
-        bodyHtml=bodyHtml.replace(/href="([^"#]+)(#[^"]+)?"/g,(_,href)=>{const si=readerSpine.findIndex(s=>s.href===href||s.href.endsWith('/'+href));return si>=0?`href="javascript:void(0)" onclick="readerGoToChapter_global(${si})"` :`href="javascript:void(0)"`;});
-        content.innerHTML=bodyHtml;
-        // Unwrap nested block elements that span all columns
-        let el=content.firstElementChild;
-        while(el && el.children.length===1){
-          el.style.display='contents';
-          el=el.firstElementChild;
-        }
-        if(el) el.style.display='contents';
-        if(el && el.tagName==='DIV') el.style.display='contents';
-        await new Promise(r=>setTimeout(()=>{initPagination();r();},50));
-          }catch(e){content.innerHTML=`<p style="color:var(--danger)">Error: ${e.message}</p>`;}
-        }
+    let bodyHtml=bodyMatch?bodyMatch[1]:html;
+    bodyHtml=bodyHtml.replace(/<script[\s\S]*?<\/script>/gi,'');
+    bodyHtml=bodyHtml.replace(/href="([^"#]+)(#[^"]+)?"/g,(_,href)=>{const si=readerSpine.findIndex(s=>s.href===href||s.href.endsWith('/'+href));return si>=0?`href="javascript:void(0)" onclick="readerGoToChapter_global(${si})"` :`href="javascript:void(0)"`;});
+    content.innerHTML=bodyHtml;
+    await new Promise(r=>setTimeout(()=>{initPagination();r();},50));
+    requestAnimationFrame(()=>{
+      content.style.transition='transform .3s ease';
+      content.style.transform='translateX(0)';
+    });
+  }catch(e){content.innerHTML=`<p style="color:var(--danger)">Error: ${e.message}</p>`;}
+}
 window.readerGoToChapter_global=idx=>readerGoToChapter(idx);
 async function inlineImagesInHtml(html,base,chapterHref){
   const chapterDir=chapterHref&&chapterHref.includes('/')?chapterHref.replace(/\/[^/]+$/,'/'):'';
