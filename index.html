@@ -1994,8 +1994,6 @@ function initPagination(){
 function goToPage(page){
   const wrap=document.getElementById('readerContent');
   const overlay=document.getElementById('readerOverlay');
-  const availW=overlay.clientWidth;
-  const pageW=Math.round(wrap.scrollWidth/readerPageCount);
   if(page<0){
     if(readerChapter>0)readerGoToChapter(readerChapter-1).then(()=>goToPage(readerPageCount-1));
     return;
