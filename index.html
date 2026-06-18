@@ -287,6 +287,21 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
   object-fit:contain;
 }
 
+  /* ── TTS AUDIO BAR ── */
+.tts-bar{position:fixed;bottom:0;left:0;right:0;z-index:140;background:var(--navy);border-top:2px solid var(--gold);transform:translateY(100%);transition:transform .3s ease;display:flex;flex-direction:column;padding:0;}
+.tts-bar.open{transform:translateY(0);}
+.tts-bar-main{display:flex;align-items:center;gap:.8rem;padding:.7rem 1.2rem;}
+.tts-bar-info{flex:1;min-width:0;}
+.tts-bar-title{font-family:'Playfair Display',serif;font-size:.88rem;color:var(--cream);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.tts-bar-chapter{font-size:.7rem;color:var(--muted);margin-top:1px;}
+.tts-bar-controls{display:flex;gap:.4rem;align-items:center;flex-shrink:0;}
+.tts-btn{background:transparent;border:1px solid rgba(255,255,255,.2);color:var(--cream);padding:.38rem .7rem;font-family:'Lato',sans-serif;font-size:.72rem;font-weight:700;border-radius:3px;cursor:pointer;transition:all .15s;white-space:nowrap;}
+.tts-btn:hover{background:rgba(255,255,255,.1);}
+.tts-btn.primary{background:var(--teal);border-color:var(--teal);color:var(--gold);}
+.tts-btn.stop{color:#f87171;border-color:#f87171;}
+.tts-progress{height:2px;background:rgba(255,255,255,.15);}
+.tts-progress-bar{height:2px;background:var(--gold);transition:width .5s linear;width:0%;}
+
 /* ── SKELETON ── */
 .skeleton-card{border-radius:4px;overflow:hidden;background:var(--warm-white);border:1px solid var(--border);}
 .skeleton-cover{width:100%;aspect-ratio:2/3;background:linear-gradient(90deg,var(--panel) 25%,var(--light-blue) 50%,var(--panel) 75%);background-size:200% 100%;animation:shimmer 1.4s infinite;}
@@ -968,6 +983,22 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
   </div>
 </div>
 
+  <!-- TTS Audio Bar -->
+<div class="tts-bar" id="ttsBar">
+  <div class="tts-progress"><div class="tts-progress-bar" id="ttsProgressBar"></div></div>
+  <div class="tts-bar-main">
+    <div class="tts-bar-info">
+      <div class="tts-bar-title" id="ttsBarTitle">—</div>
+      <div class="tts-bar-chapter" id="ttsBarChapter"></div>
+    </div>
+    <div class="tts-bar-controls">
+      <button class="tts-btn" id="ttsBtnPrev">⏮ Prev</button>
+      <button class="tts-btn primary" id="ttsBtnPlay">▶ Play</button>
+      <button class="tts-btn" id="ttsBtnNext">Next ⏭</button>
+      <button class="tts-btn stop" id="ttsBtnStop">✕</button>
+    </div>
+  </div>
+</div>
 <div class="loading-overlay" id="loadingOverlay">
   <div class="loading-spinner"></div>
   <div class="loading-msg" id="loadingMsg">Loading…</div>
@@ -1544,6 +1575,7 @@ function buildActions(book,isMine){
   html+=`<div class="action-group">`;
   const canRead = isMine || isSignedOut;
   if(canRead) html+=`<button class="btn-action btn-read" data-action="read"><span class="ba-icon">▶</span> Read</button>`;
+  if(canRead) html+=`<button class="btn-action btn-checkout" data-action="listen" style="color:var(--teal);border-color:var(--teal)"><span class="ba-icon">🔊</span> Listen</button>`;
   if(isMine||isSignedOut)html+=`<button class="btn-action btn-download" data-action="download"><span class="ba-icon">⬇</span> Download</button>`;
   html+=`</div>`;
   html+=`<div class="action-group">`;
@@ -1612,6 +1644,7 @@ function handleAction(e){
   const a=btn.dataset.action;
   document.querySelectorAll('.action-dropdown-menu.open').forEach(m=>m.classList.remove('open'));
   if(a==='read')         readCurrentBook();
+  if(a==='listen')       startTTS(currentId);
   if(a==='download')     downloadCurrentBook();
   if(a==='share')        shareCurrentBook();
   if(a==='unpublish')    unpublishCurrentBook();
@@ -2052,6 +2085,88 @@ document.getElementById('btnReaderNext').addEventListener('click',()=>goToPage(r
   window.addEventListener('resize',()=>{
   if(document.getElementById('readerOverlay').classList.contains('open'))initPagination();
 });
+
+  // ── TTS ───────────────────────────────────────────────────────────────────────
+let ttsBookId=null,ttsSpine=[],ttsChapter=0,ttsZip=null,ttsOpfBase='',ttsPlaying=false,ttsUtterance=null;
+
+async function startTTS(bookId){
+  const book=[...library,...communityLib].find(b=>b.id===bookId);
+  if(!book){showToast('Book not found');return;}
+  if(ttsBookId===bookId&&ttsPlaying){ttsPause();return;}
+  if(ttsBookId!==bookId){
+    window.speechSynthesis.cancel();
+    ttsBookId=bookId;ttsChapter=0;ttsSpine=[];ttsZip=null;
+    showLoading('Preparing audio…');
+    try{
+      let sp=book.storagePath;
+      if(!sp&&book.epubUrl){const m=book.epubUrl.match(/\/o\/(.+?)\?/);if(m)sp=decodeURIComponent(m[1]);}
+      if(!sp){hideLoading();showToast('EPUB not available');return;}
+      const bytes=await getBytes(storageRef(storage,sp));
+      ttsZip=await JSZip.loadAsync(bytes);
+      const container=await ttsZip.file('META-INF/container.xml')?.async('string');
+      const opfPath=container?.match(/full-path="([^"]+\.opf)"/i)?.[1];
+      if(!opfPath)throw new Error('No OPF');
+      const opfXml=await ttsZip.file(opfPath)?.async('string');
+      ttsOpfBase=opfPath.includes('/')?opfPath.replace(/\/[^/]+$/,'/'):'';
+      const manifestMap={};const mRe=/<item\s+([^>]+)>/gi;let mm;
+      while((mm=mRe.exec(opfXml))!==null){const a=mm[1];const id=a.match(/\bid="([^"]+)"/)?.[1];const href=a.match(/\bhref="([^"]+)"/)?.[1];if(id&&href)manifestMap[id]={href};}
+      const spineRe=/<itemref\s+idref="([^"]+)"/gi;let sp2;
+      while((sp2=spineRe.exec(opfXml))!==null){const item=manifestMap[sp2[1]];if(item)ttsSpine.push(item.href);}
+      hideLoading();
+    }catch(e){hideLoading();showToast('Could not load book: '+e.message);return;}
+    document.getElementById('ttsBarTitle').textContent=book.title||'';
+    document.getElementById('ttsBar').classList.add('open');
+  }
+  ttsPlaying=true;
+  document.getElementById('ttsBtnPlay').textContent='⏸ Pause';
+  ttsReadChapter(ttsChapter);
+}
+
+async function ttsReadChapter(idx){
+  if(!ttsZip||idx<0||idx>=ttsSpine.length){ttsStop();return;}
+  ttsChapter=idx;
+  document.getElementById('ttsBarChapter').textContent=`Chapter ${idx+1} of ${ttsSpine.length}`;
+  document.getElementById('ttsProgressBar').style.width=((idx/Math.max(ttsSpine.length-1,1))*100)+'%';
+  try{
+    const html=await ttsZip.file(ttsOpfBase+ttsSpine[idx])?.async('string')||'';
+    const tmp=document.createElement('div');tmp.innerHTML=html;
+    const text=tmp.textContent||tmp.innerText||'';
+    const clean=text.replace(/\s+/g,' ').trim();
+    if(!clean){ttsReadChapter(idx+1);return;}
+    window.speechSynthesis.cancel();
+    ttsUtterance=new SpeechSynthesisUtterance(clean);
+    ttsUtterance.rate=1;ttsUtterance.pitch=1;
+    ttsUtterance.onend=()=>{if(ttsPlaying)ttsReadChapter(idx+1);};
+    ttsUtterance.onerror=e=>{if(e.error!=='interrupted')ttsReadChapter(idx+1);};
+    window.speechSynthesis.speak(ttsUtterance);
+  }catch(e){ttsReadChapter(idx+1);}
+}
+
+function ttsPause(){
+  if(window.speechSynthesis.speaking&&!window.speechSynthesis.paused){
+    window.speechSynthesis.pause();ttsPlaying=false;
+    document.getElementById('ttsBtnPlay').textContent='▶ Play';
+  } else if(window.speechSynthesis.paused){
+    window.speechSynthesis.resume();ttsPlaying=true;
+    document.getElementById('ttsBtnPlay').textContent='⏸ Pause';
+  }
+}
+
+function ttsStop(){
+  window.speechSynthesis.cancel();
+  ttsPlaying=false;ttsBookId=null;ttsZip=null;ttsSpine=[];ttsChapter=0;
+  document.getElementById('ttsBar').classList.remove('open');
+  document.getElementById('ttsBtnPlay').textContent='▶ Play';
+}
+
+document.getElementById('ttsBtnPlay').addEventListener('click',()=>{
+  if(ttsBookId&&!ttsPlaying&&window.speechSynthesis.paused){ttsPause();}
+  else if(ttsBookId&&ttsPlaying){ttsPause();}
+  else if(ttsBookId){ttsPlaying=true;ttsReadChapter(ttsChapter);}
+});
+document.getElementById('ttsBtnPrev').addEventListener('click',()=>{window.speechSynthesis.cancel();ttsReadChapter(Math.max(0,ttsChapter-1));});
+document.getElementById('ttsBtnNext').addEventListener('click',()=>{window.speechSynthesis.cancel();ttsReadChapter(ttsChapter+1);});
+document.getElementById('ttsBtnStop').addEventListener('click',ttsStop);
   
 // ── EPUB META ─────────────────────────────────────────────────────────────────
 async function parseEpubMeta(file){
