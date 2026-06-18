@@ -2010,7 +2010,7 @@ function goToPage(page){
   }
   readerPage=page;
   const inner=wrap.firstElementChild;
-  const pageW=inner?inner.offsetWidth:overlay.clientWidth;
+  const pageW=inner?parseInt(inner.style.width):overlay.clientWidth;
   if(inner) inner.style.transform=`translateX(${-page*pageW}px)`;
   updatePaginationUI();
 }
