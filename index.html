@@ -1929,7 +1929,7 @@ async function readerGoToChapter(idx){
         let bodyHtml=bodyMatch?bodyMatch[1]:html;
         bodyHtml=bodyHtml.replace(/<script[\s\S]*?<\/script>/gi,'');
         bodyHtml=bodyHtml.replace(/href="([^"#]+)(#[^"]+)?"/g,(_,href)=>{const si=readerSpine.findIndex(s=>s.href===href||s.href.endsWith('/'+href));return si>=0?`href="javascript:void(0)" onclick="readerGoToChapter_global(${si})"` :`href="javascript:void(0)"`;});
-        content.innerHTML=bodyHtml;
+        content.innerHTML=`<div style="padding:2rem 3rem">${bodyHtml}</div>`;
         await new Promise(r=>setTimeout(()=>{initPagination();r();},50));
           }catch(e){content.innerHTML=`<p style="color:var(--danger)">Error: ${e.message}</p>`;}
         }
@@ -1958,7 +1958,6 @@ function initPagination(){
   content.style.width=availW+'px';
   content.style.height=availH+'px';
   content.style.columnWidth=availW+'px';
-  content.style.padding='2rem 3rem';
   content.style.transition='none';
   content.style.transform='translateX(0)';
   requestAnimationFrame(()=>content.style.transition='transform .25s ease');
