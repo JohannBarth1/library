@@ -220,6 +220,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .reader-overlay.theme-day .reader-btn{background:rgba(0,0,0,0.06);color:#1a1a1a;border-color:rgba(0,0,0,0.15);}
 .reader-overlay.theme-sepia .reader-btn{background:rgba(59,42,26,0.08);color:#3b2a1a;border-color:rgba(59,42,26,0.2);}
 .reader-overlay.theme-night .reader-btn{background:rgba(255,255,255,0.08);color:#c8c8d8;border-color:rgba(255,255,255,0.15);}
+.reader-overlay{overflow:hidden;}
 .reader-btn:hover{opacity:.8;}
 .reader-btn.close-btn{color:#cc4444!important;border-color:rgba(204,68,68,0.4)!important;}
 .reader-settings-bar{display:none;padding:.5rem 1.2rem;gap:1rem;align-items:center;flex-shrink:0;border-bottom:1px solid rgba(128,128,128,0.2);flex-wrap:wrap;}
@@ -1971,7 +1972,7 @@ function initPagination(){
   content.style.width=availW+'px';
   content.style.height=availH+'px';
   content.style.overflow='hidden';
-  content.style.padding='0';
+  content.style.padding='2rem 3rem';
   content.style.boxSizing='border-box';
   content.style.transition='none';
   content.style.transform='translateX(0)';
@@ -1980,14 +1981,12 @@ function initPagination(){
     const inner=content.firstElementChild;
     if(inner){
       inner.style.display='block';
-      inner.style.padding='2rem 3rem';
-      inner.style.boxSizing='border-box';
-      inner.style.width=availW+'px';
-      inner.style.columnWidth=availW+'px';
+      inner.style.width=(availW-96)+'px';
+      inner.style.columnWidth=(availW-96)+'px';
       inner.style.columnGap='0';
       inner.style.columnFill='auto';
-      inner.style.height=availH+'px';
-      readerPageCount=Math.max(1,Math.round(inner.scrollWidth/availW));
+      inner.style.height=(availH-64)+'px';
+      readerPageCount=Math.max(1,Math.round(inner.scrollWidth/(availW-96)));
     }
     updatePaginationUI();
   },50);
@@ -2006,7 +2005,7 @@ function goToPage(page){
   }
   readerPage=page;
   const inner=wrap.firstElementChild;
-  const pageW=overlay.clientWidth;
+  const pageW=overlay.clientWidth-96;
   if(inner) inner.style.transform=`translateX(${-page*pageW}px)`;
   updatePaginationUI();
 }
