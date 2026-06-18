@@ -1997,9 +1997,17 @@ function goToPage(page){
     if(readerChapter<readerSpine.length-1)readerGoToChapter(readerChapter+1);
     return;
   }
+  const prevPage=readerPage;
   readerPage=page;
   const availH=overlay.clientHeight-(52+3);
+  const direction=page>prevPage?1:-1;
+  wrap.style.transition='none';
+  wrap.style.transform=`translateX(${direction*100}%)`;
   wrap.scrollTop=page*availH;
+  requestAnimationFrame(()=>{
+    wrap.style.transition='transform .3s ease';
+    wrap.style.transform='translateX(0)';
+  });
   updatePaginationUI();
 }
 
