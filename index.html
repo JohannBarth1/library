@@ -1974,20 +1974,33 @@ function initPagination(){
     width:${availW}px;
     height:${availH}px;
     overflow:hidden;
-    padding:0;
-    margin:0;
-    column-width:${availW}px;
-    column-gap:0px;
-    column-fill:auto;
-    transition:none;
-    transform:translateX(0);
+    padding:2rem 3rem;
     box-sizing:border-box;
+    position:relative;
+    transition:none;
   `;
-  requestAnimationFrame(()=>content.style.transition='transform .25s ease');
   setTimeout(()=>{
-    readerPageCount=Math.max(1,Math.round(content.scrollWidth/availW));
+    const scrollH=content.scrollHeight;
+    readerPageCount=Math.max(1,Math.ceil(scrollH/availH));
     updatePaginationUI();
   },50);
+}
+
+function goToPage(page){
+  const wrap=document.getElementById('readerContent');
+  const overlay=document.getElementById('readerOverlay');
+  if(page<0){
+    if(readerChapter>0)readerGoToChapter(readerChapter-1).then(()=>goToPage(readerPageCount-1));
+    return;
+  }
+  if(page>=readerPageCount){
+    if(readerChapter<readerSpine.length-1)readerGoToChapter(readerChapter+1);
+    return;
+  }
+  readerPage=page;
+  const availH=overlay.clientHeight-(52+3);
+  wrap.scrollTop=page*availH;
+  updatePaginationUI();
 }
 
 function goToPage(page){
