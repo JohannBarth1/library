@@ -1934,7 +1934,7 @@ async function readerGoToChapter(idx){
         let bodyHtml=bodyMatch?bodyMatch[1]:html;
         bodyHtml=bodyHtml.replace(/<script[\s\S]*?<\/script>/gi,'');
         bodyHtml=bodyHtml.replace(/href="([^"#]+)(#[^"]+)?"/g,(_,href)=>{const si=readerSpine.findIndex(s=>s.href===href||s.href.endsWith('/'+href));return si>=0?`href="javascript:void(0)" onclick="readerGoToChapter_global(${si})"` :`href="javascript:void(0)"`;});
-        content.innerHTML=`<div style="padding:2rem 3rem;max-width:100%;box-sizing:border-box;display:flow-root;">${bodyHtml}</div>`;
+        content.innerHTML=bodyHtml;
         await new Promise(r=>setTimeout(()=>{initPagination();r();},50));
           }catch(e){content.innerHTML=`<p style="color:var(--danger)">Error: ${e.message}</p>`;}
         }
@@ -1959,12 +1959,14 @@ function initPagination(){
   const settingsH=(settingsBar&&settingsBar.classList.contains('open'))?settingsBar.offsetHeight:0;
   const availH=overlay.clientHeight-toolbarH-settingsH;
   const availW=overlay.clientWidth;
-  const pad=48; // 3rem at 16px
-  content.style.padding=`2rem ${pad}px`;
-  content.style.columnWidth=(availW - pad*2)+'px';
+  const padH=32;
+  const padV=48;
   content.classList.add('paginated');
   content.style.width=availW+'px';
   content.style.height=availH+'px';
+  content.style.padding=`${padH}px ${padV}px`;
+  content.style.columnWidth=(availW-padV*2)+'px';
+  content.style.columnGap='0px';
   content.style.transition='none';
   content.style.transform='translateX(0)';
   requestAnimationFrame(()=>content.style.transition='transform .25s ease');
