@@ -279,6 +279,8 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
   transition:transform .25s ease;
   will-change:transform;
 }
+.reader-content.paginated > *{padding-left:3rem;padding-right:3rem;}
+.reader-content.paginated > *:first-child{padding-top:2rem;}
 
 /* ── SKELETON ── */
 .skeleton-card{border-radius:4px;overflow:hidden;background:var(--warm-white);border:1px solid var(--border);}
@@ -1917,6 +1919,7 @@ async function readerGoToChapter(idx){
   document.getElementById('readerPageInfo').textContent=`Ch ${idx+1} / ${readerSpine.length}`;
   document.getElementById('readerProgressBar').style.width=((idx/Math.max(readerSpine.length-1,1))*100)+'%';
   const content=document.getElementById('readerContent');
+  content.style.transform='translateX(0)';
   content.innerHTML='<p style="text-align:center;padding-top:3rem;opacity:.5">Loading chapter…</p>';
   content.scrollTop=0;
   if(window.innerWidth<=768)document.getElementById('readerChapterList').classList.remove('open');
@@ -1929,7 +1932,7 @@ async function readerGoToChapter(idx){
         bodyHtml=bodyHtml.replace(/<script[\s\S]*?<\/script>/gi,'');
         bodyHtml=bodyHtml.replace(/href="([^"#]+)(#[^"]+)?"/g,(_,href)=>{const si=readerSpine.findIndex(s=>s.href===href||s.href.endsWith('/'+href));return si>=0?`href="javascript:void(0)" onclick="readerGoToChapter_global(${si})"` :`href="javascript:void(0)"`;});
         content.innerHTML=bodyHtml;
-            await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(()=>{initPagination();r();})));
+        await new Promise(r=>setTimeout(()=>{initPagination();r();},50));
           }catch(e){content.innerHTML=`<p style="color:var(--danger)">Error: ${e.message}</p>`;}
         }
 window.readerGoToChapter_global=idx=>readerGoToChapter(idx);
@@ -1945,33 +1948,25 @@ function closeReader(){document.getElementById('readerOverlay').classList.remove
 
   // ── PAGINATION ────────────────────────────────────────────────────────────────
 function initPagination(){
-  const wrap=document.getElementById('readerContent');
-  // Reset to page 0
-  readerPage=0;
-  // Measure available height (overlay minus toolbar heights)
+  const content=document.getElementById('readerContent');
   const overlay=document.getElementById('readerOverlay');
-  const toolbar=overlay.querySelector('.reader-toolbar'); // adjust selector to match your HTML
-  const toolbarH=toolbar?toolbar.offsetHeight:56;
-  const availH=overlay.clientHeight-toolbarH;
+  readerPage=0;
+
+  const toolbarH=52+3; // .reader-toolbar 52px + .reader-progress 3px
+  // Also account for settings bar if open
+  const settingsBar=document.getElementById('readerSettingsBar');
+  const settingsH=(settingsBar&&settingsBar.classList.contains('open'))?settingsBar.offsetHeight:0;
+  const availH=overlay.clientHeight-toolbarH-settingsH;
   const availW=overlay.clientWidth;
 
-  // Apply column layout
-  wrap.style.cssText=`
-    column-width:${availW}px;
-    column-gap:0px;
-    column-fill:auto;
-    height:${availH}px;
-    overflow:hidden;
-    padding:2rem 3rem;
-    box-sizing:border-box;
-    position:relative;
-    transition:transform .25s ease;
-    will-change:transform;
-  `;
+  content.classList.add('paginated');
+  content.style.width=availW+'px';
+  content.style.height=availH+'px';
+  content.style.columnWidth=availW+'px';
+  content.style.transform='translateX(0)';
 
-  // One more frame to let columns render
   requestAnimationFrame(()=>{
-    readerPageCount=Math.max(1,Math.round(wrap.scrollWidth/availW));
+    readerPageCount=Math.max(1,Math.round(content.scrollWidth/availW));
     updatePaginationUI();
   });
 }
