@@ -1959,7 +1959,9 @@ function initPagination(){
   content.style.height=availH+'px';
   content.style.columnWidth=availW+'px';
   content.style.padding='2rem 3rem';
+  content.style.transition='none';
   content.style.transform='translateX(0)';
+  requestAnimationFrame(()=>content.style.transition='transform .25s ease');
   setTimeout(()=>{
     readerPageCount=Math.max(1,Math.round(content.scrollWidth/availW));
     updatePaginationUI();
