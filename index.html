@@ -2003,23 +2003,6 @@ function goToPage(page){
   updatePaginationUI();
 }
 
-function goToPage(page){
-  const wrap=document.getElementById('readerContent');
-  const overlay=document.getElementById('readerOverlay');
-  if(page<0){
-    if(readerChapter>0)readerGoToChapter(readerChapter-1).then(()=>goToPage(readerPageCount-1));
-    return;
-  }
-  if(page>=readerPageCount){
-    if(readerChapter<readerSpine.length-1)readerGoToChapter(readerChapter+1);
-    return;
-  }
-  readerPage=page;
-  const pageW=overlay.clientWidth;
-  wrap.style.transform=`translateX(${-page*pageW}px)`;
-  updatePaginationUI();
-}
-
 function updatePaginationUI(){
   // Reuse the existing page info element
   document.getElementById('readerPageInfo').textContent=
