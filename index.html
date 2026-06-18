@@ -1970,26 +1970,22 @@ function initPagination(){
   const availH=overlay.clientHeight-toolbarH-settingsH;
   const availW=overlay.clientWidth;
   content.classList.add('paginated');
-  content.style.width=availW+'px';
-  content.style.height=availH+'px';
-  content.style.overflow='hidden';
-  content.style.padding='0';
-  content.style.transition='none';
-  content.style.transform='translateX(0)';
+  content.style.cssText=`
+    width:${availW}px;
+    height:${availH}px;
+    overflow:hidden;
+    padding:0;
+    margin:0;
+    column-width:${availW}px;
+    column-gap:0px;
+    column-fill:auto;
+    transition:none;
+    transform:translateX(0);
+    box-sizing:border-box;
+  `;
   requestAnimationFrame(()=>content.style.transition='transform .25s ease');
   setTimeout(()=>{
-    const inner=content.firstElementChild;
-    if(inner){
-      inner.style.display='block';
-      inner.style.width=availW+'px';
-      inner.style.padding='2rem 3rem';
-      inner.style.boxSizing='border-box';
-      inner.style.columnWidth=availW+'px';
-      inner.style.columnGap='0';
-      inner.style.columnFill='auto';
-      inner.style.height=availH+'px';
-      readerPageCount=Math.max(1,Math.round(inner.scrollWidth/availW));
-    }
+    readerPageCount=Math.max(1,Math.round(content.scrollWidth/availW));
     updatePaginationUI();
   },50);
 }
@@ -2006,9 +2002,8 @@ function goToPage(page){
     return;
   }
   readerPage=page;
-  const inner=wrap.firstElementChild;
   const pageW=overlay.clientWidth;
-  if(inner) inner.style.transform=`translateX(${-page*pageW}px)`;
+  wrap.style.transform=`translateX(${-page*pageW}px)`;
   updatePaginationUI();
 }
 
