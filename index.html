@@ -1971,7 +1971,7 @@ function initPagination(){
   content.style.width=availW+'px';
   content.style.height=availH+'px';
   content.style.overflow='hidden';
-  content.style.padding='2rem 3rem';
+  content.style.padding='0';
   content.style.boxSizing='border-box';
   content.style.transition='none';
   content.style.transform='translateX(0)';
@@ -1980,12 +1980,14 @@ function initPagination(){
     const inner=content.firstElementChild;
     if(inner){
       inner.style.display='block';
-      inner.style.width=(availW-96)+'px'; // minus padding
-      inner.style.columnWidth=(availW-96)+'px';
+      inner.style.padding='2rem 3rem';
+      inner.style.boxSizing='border-box';
+      inner.style.width=availW+'px';
+      inner.style.columnWidth=availW+'px';
       inner.style.columnGap='0';
       inner.style.columnFill='auto';
-      inner.style.height=(availH-64)+'px'; // minus padding
-      readerPageCount=Math.max(1,Math.round(inner.scrollWidth/(availW-96)));
+      inner.style.height=availH+'px';
+      readerPageCount=Math.max(1,Math.round(inner.scrollWidth/availW));
     }
     updatePaginationUI();
   },50);
@@ -2004,7 +2006,7 @@ function goToPage(page){
   }
   readerPage=page;
   const inner=wrap.firstElementChild;
-  const pageW=overlay.clientWidth-96;
+  const pageW=overlay.clientWidth;
   if(inner) inner.style.transform=`translateX(${-page*pageW}px)`;
   updatePaginationUI();
 }
