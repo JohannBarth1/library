@@ -1929,10 +1929,9 @@ async function readerGoToChapter(idx){
         bodyHtml=bodyHtml.replace(/<script[\s\S]*?<\/script>/gi,'');
         bodyHtml=bodyHtml.replace(/href="([^"#]+)(#[^"]+)?"/g,(_,href)=>{const si=readerSpine.findIndex(s=>s.href===href||s.href.endsWith('/'+href));return si>=0?`href="javascript:void(0)" onclick="readerGoToChapter_global(${si})"` :`href="javascript:void(0)"`;});
         content.innerHTML=bodyHtml;
-        // Pagination: wait one frame for images/fonts to lay out, then init
-        requestAnimationFrame(()=>requestAnimationFrame(()=>initPagination()));
-      }catch(e){content.innerHTML=`<p style="color:var(--danger)">Error: ${e.message}</p>`;}
-    }
+            await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(()=>{initPagination();r();})));
+          }catch(e){content.innerHTML=`<p style="color:var(--danger)">Error: ${e.message}</p>`;}
+        }
 window.readerGoToChapter_global=idx=>readerGoToChapter(idx);
 async function inlineImagesInHtml(html,base,chapterHref){
   const chapterDir=chapterHref&&chapterHref.includes('/')?chapterHref.replace(/\/[^/]+$/,'/'):'';
@@ -1982,17 +1981,9 @@ function goToPage(page){
   const overlay=document.getElementById('readerOverlay');
   const availW=overlay.clientWidth;
   if(page<0){
-    // Go to previous chapter, last page
-    if(readerChapter>0){
-      readerGoToChapter(readerChapter-1).then(()=>{
-        // After chapter loads, jump to last page
-        requestAnimationFrame(()=>requestAnimationFrame(()=>{
-          goToPage(readerPageCount-1);
-        }));
-      });
+      if(readerChapter>0)readerGoToChapter(readerChapter-1).then(()=>goToPage(readerPageCount-1));
+      return;
     }
-    return;
-  }
   if(page>=readerPageCount){
     // Advance to next chapter
     if(readerChapter<readerSpine.length-1)readerGoToChapter(readerChapter+1);
