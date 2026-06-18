@@ -1988,7 +1988,7 @@ function initPagination(){
         inner.style.columnGap='0';
         inner.style.columnFill='auto';
         inner.style.height=(availH-64)+'px';
-        readerPageCount=Math.max(1,Math.round(inner.scrollWidth/(availW-96)));
+        readerPageCount=Math.max(1,Math.round((inner.scrollWidth+96)/availW));
       }
       updatePaginationUI();
     },50);
@@ -2007,7 +2007,7 @@ function goToPage(page){
   }
   readerPage=page;
   const inner=wrap.firstElementChild;
-  const pageW=overlay.clientWidth-96;
+  const pageW=overlay.clientWidth;
   if(inner) inner.style.transform=`translateX(${-page*pageW}px)`;
   updatePaginationUI();
 }
