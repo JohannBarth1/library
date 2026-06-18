@@ -1534,6 +1534,11 @@ function buildActions(book,isMine){
   }
   html+=`<button class="btn-action btn-return" data-action="history"><span class="ba-icon">📖</span> History</button>`;
   html+=`</div>`;
+  if(isMine||isSignedOut){
+    html+=`<div class="action-group">`;
+    html+=`<button class="btn-action btn-kobo" data-action="sendtokobo"><span class="ba-icon">📖</span> Send to Kobo</button>`;
+    html+=`</div>`;
+  }
   if(isMine){
     html+=`<div class="action-group">
       <button class="btn-action btn-kobo" data-action="sendtokobo">
