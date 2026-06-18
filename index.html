@@ -1970,17 +1970,17 @@ function goToPage(page){
   const wrap=document.getElementById('readerContent');
   const overlay=document.getElementById('readerOverlay');
   const availW=overlay.clientWidth;
+  const pageW=Math.round(wrap.scrollWidth/readerPageCount);
   if(page<0){
-      if(readerChapter>0)readerGoToChapter(readerChapter-1).then(()=>goToPage(readerPageCount-1));
-      return;
-    }
+    if(readerChapter>0)readerGoToChapter(readerChapter-1).then(()=>goToPage(readerPageCount-1));
+    return;
+  }
   if(page>=readerPageCount){
-    // Advance to next chapter
     if(readerChapter<readerSpine.length-1)readerGoToChapter(readerChapter+1);
     return;
   }
   readerPage=page;
-  wrap.style.transform=`translateX(${-page*availW}px)`;
+  wrap.style.transform=`translateX(${-page*pageW}px)`;
   updatePaginationUI();
 }
 
