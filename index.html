@@ -1620,6 +1620,7 @@ function buildActions(book,isMine){
   if(canRead) html+=`<button class="btn-action btn-read" data-action="read"><span class="ba-icon">▶</span> Read</button>`;
   if(canRead) html+=`<button class="btn-action btn-checkout" data-action="listen" style="color:var(--teal);border-color:var(--teal)"><span class="ba-icon">🔊</span> Listen</button>`;
   if(isMine||isSignedOut)html+=`<button class="btn-action btn-download" data-action="download"><span class="ba-icon">⬇</span> Download</button>`;
+  if(isMine||isSignedOut) html+=`<button class="btn-action btn-kobo" data-action="sendtokobo"><span class="ba-icon">📖</span> Send to Kobo</button>`;
   html+=`</div>`;
   html+=`<div class="action-group">`;
   if(!isSignedOut){
@@ -1630,11 +1631,6 @@ function buildActions(book,isMine){
   html+=`<button class="btn-action btn-return" data-action="history"><span class="ba-icon">📖</span> History</button>`;
   html+=`</div>`;
   if(isMine){
-    html+=`<div class="action-group">
-      <button class="btn-action btn-kobo" data-action="sendtokobo">
-        <span class="ba-icon">📖</span> Send to Kobo
-      </button>
-    </div>`;
     html+=`<div class="action-group">`;
     html+=`<div class="action-dropdown" id="ddShare">`;
     html+=`<button class="action-dropdown-btn share-btn" data-dd="ddShare"><span class="ba-icon">⇧</span> Share ▾</button>`;
