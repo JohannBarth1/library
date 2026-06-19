@@ -260,30 +260,18 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .reader-overlay.theme-night .chapter-item{color:#c8c8d8;}
 .chapter-item:hover{background:rgba(42,124,138,0.15);}
 .chapter-item.active{background:rgba(42,124,138,0.2);color:var(--teal);font-weight:700;}
-.reader-content{flex:1;overflow-y:auto;padding:2rem clamp(1rem,6vw,5rem);max-width:72ch;margin:0 auto;width:100%;line-height:1.9;-webkit-overflow-scrolling:touch;transition:font-size .15s;}
-.reader-content img{max-width:100%;height:auto;}
-.reader-content p{margin-bottom:1.1em;}
-.reader-content h1,.reader-content h2,.reader-content h3{font-family:'Playfair Display',serif;margin:1.5em 0 .5em;}
-.reader-overlay.theme-day .reader-content{color:#1a1a1a;}
-.reader-overlay.theme-sepia .reader-content{color:#3b2a1a;}
-.reader-overlay.theme-night .reader-content{color:#c8c8d8;}
-.reader-overlay.theme-night .reader-content h1,.reader-overlay.theme-night .reader-content h2,.reader-overlay.theme-night .reader-content h3{color:#e8d8b0;}
-.reader-content.paginated{
-  flex:none;
+.reader-stage{
+  flex:1;
   overflow:hidden;
-  max-width:none;
-  margin:0;
-  box-sizing:border-box;
-  column-gap:0;
-  column-fill:auto;
-  transition:transform .25s ease;
-  will-change:transform;
-  padding: 3rem clamp(1rem,5vw,4rem); /* keep your padding, just here not on a wrapper */
+  position:relative;
 }
-.reader-content.paginated img{
-  max-height:100%;
-  max-width:100%;
-  object-fit:contain;
+.reader-frame{
+  position:absolute;
+  top:0; left:0;
+  width:100%;
+  height:100%;
+  border:none;
+  transition:transform .3s ease;
 }
 
   /* ── TTS AUDIO BAR ── */
@@ -1016,8 +1004,8 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
     <h3>Contents</h3>
     <div id="readerChapterItems"></div>
   </div>
-  <div class="reader-content" id="readerContent" style="font-size:17px">
-    <p style="text-align:center;padding-top:3rem;opacity:.5">Loading book…</p>
+  <div class="reader-stage" id="readerStage">
+  <iframe id="readerFrame" class="reader-frame" frameborder="0" scrolling="no"></iframe>
   </div>
   <!-- Toolbar at bottom for thumb-friendly nav -->
   <div class="reader-toolbar">
@@ -2009,9 +1997,19 @@ function bookCardHtml(b,isComm){
 
 // ── EPUB READER ───────────────────────────────────────────────────────────────
 function applyReaderTheme(theme){const o=document.getElementById('readerOverlay');o.classList.remove('theme-day','theme-sepia','theme-night');o.classList.add('theme-'+theme);document.querySelectorAll('.rs-theme-btn').forEach(b=>b.classList.toggle('active',b.dataset.theme===theme));}
-function setReaderFont(size){readerFontSize=size;localStorage.setItem('elib_reader_font',size);document.getElementById('readerContent').style.fontSize=size+'px';document.querySelectorAll('.rs-font-btn').forEach(b=>b.classList.toggle('active',parseInt(b.dataset.size)===size));}
-document.querySelectorAll('.rs-font-btn').forEach(b=>b.addEventListener('click',()=>setReaderFont(parseInt(b.dataset.size))));
-document.querySelectorAll('.rs-theme-btn').forEach(b=>b.addEventListener('click',()=>{readerTheme=b.dataset.theme;localStorage.setItem('elib_reader_theme',readerTheme);applyReaderTheme(readerTheme);}));
+function setReaderFont(size){
+  readerFontSize=size;
+  localStorage.setItem('elib_reader_font',size);
+  document.querySelectorAll('.rs-font-btn[data-size]').forEach(b=>b.classList.toggle('active',parseInt(b.dataset.size)===size));
+  readerGoToChapter(readerChapter, readerPage); // re-render at new size, same page
+}
+  document.querySelectorAll('.rs-theme-btn').forEach(b=>b.addEventListener('click',()=>{
+  readerTheme=b.dataset.theme;
+  localStorage.setItem('elib_reader_theme',readerTheme);
+  applyReaderTheme(readerTheme); // still updates the toolbar/chrome colors
+  readerGoToChapter(readerChapter, readerPage); // re-render frame with new theme colors
+}));
+  
 document.getElementById('btnToggleReaderSettings').addEventListener('click',()=>document.getElementById('readerSettingsBar').classList.toggle('open'));
 document.getElementById('btnToggleChapters').addEventListener('click',()=>document.getElementById('readerChapterList').classList.toggle('open'));
 document.getElementById('btnCloseReader').addEventListener('click',closeReader);
@@ -2049,54 +2047,39 @@ async function readCurrentBook(){
     document.getElementById('readerTitle').textContent=book.title||'Reading…';
     document.getElementById('readerChapterItems').innerHTML=readerSpine.map((ch,i)=>`<div class="chapter-item" id="chItem_${i}" data-idx="${i}">${esc(ch.label)}</div>`).join('');
     document.getElementById('readerChapterItems').addEventListener('click',e=>{const item=e.target.closest('.chapter-item[data-idx]');if(item)readerGoToChapter(parseInt(item.dataset.idx));});
-    hideLoading();applyReaderTheme(readerTheme);setReaderFont(readerFontSize);
+    hideLoading();applyReaderTheme(readerTheme);
     document.getElementById('readerSettingsBar').classList.remove('open');
     document.getElementById('readerOverlay').classList.add('open');
     readerGoToChapter(0);
   }catch(e){hideLoading();showToast('Could not open EPUB: '+e.message);console.error(e);}
 }
-async function readerGoToChapter(idx){
+async function readerGoToChapter(idx, startPage=0){
   if(idx<0||idx>=readerSpine.length)return;
-  const direction=idx>readerChapter?1:-1;
   readerChapter=idx;
   document.querySelectorAll('.chapter-item').forEach((el,i)=>el.classList.toggle('active',i===idx));
   const ch=readerSpine[idx];
-  document.getElementById('readerPageInfo').textContent=`Ch ${idx+1} / ${readerSpine.length}`;
-  document.getElementById('readerProgressBar').style.width=((idx/Math.max(readerSpine.length-1,1))*100)+'%';
-  const content=document.getElementById('readerContent'); // declared ONCE, here
-  content.style.transition='transform .3s ease';
-  content.style.transform=`translateX(${-direction*100}%)`;
-  await new Promise(r=>setTimeout(r,300));
-  content.style.transition='none';
-  content.style.transform=`translateX(${direction*100}%)`;
-  content.innerHTML='<p style="text-align:center;padding-top:3rem;opacity:.5">Loading chapter…</p>';
-  content.scrollTop=0;
-  if(window.innerWidth<=768)document.getElementById('readerChapterList').classList.remove('open');
+
   try{
     let html=await readerZip.file(readerOpfBase+ch.href)?.async('string');
-    if(!html){content.innerHTML='<p>Chapter not found.</p>';return;}
+    if(!html){showToast('Chapter not found');return;}
     html=await inlineImagesInHtml(html,readerOpfBase,ch.href);
     const bodyMatch=html.match(/<body[^>]*>([\s\S]*)<\/body>/i);
     let bodyHtml=bodyMatch?bodyMatch[1]:html;
     bodyHtml=bodyHtml.replace(/<script[\s\S]*?<\/script>/gi,'');
-    bodyHtml=bodyHtml.replace(/href="([^"#]+)(#[^"]+)?"/g,(_,href)=>{const si=readerSpine.findIndex(s=>s.href===href||s.href.endsWith('/'+href));return si>=0?`href="javascript:void(0)" onclick="readerGoToChapter_global(${si})"` :`href="javascript:void(0)"`;});
-    content.innerHTML=bodyHtml;
-
-    // reset pagination state — NO second "const content" here, reuse the one above
-    content.style.transition = 'none';
-    content.style.transform = 'translateX(0)';
-    content.style.width = '';
-    content.style.columnWidth = '';
-
-    await initPagination(); // now properly awaited — see Promise-returning version below
-
-    requestAnimationFrame(()=>{
-      content.style.transition='transform .3s ease';
-      content.style.transform='translateX(0)';
+    bodyHtml=bodyHtml.replace(/href="([^"#]+)(#[^"]+)?"/g,(_,href)=>{
+      const si=readerSpine.findIndex(s=>s.href===href||s.href.endsWith('/'+href));
+      return si>=0?`href="javascript:void(0)" onclick="readerGoToChapterGlobal(${si})"`:`href="javascript:void(0)"`;
     });
-  }catch(e){content.innerHTML=`<p style="color:var(--danger)">Error: ${e.message}</p>`;}
+
+    await renderChapterToFrame(bodyHtml, readerFontSize, readerTheme);
+
+    const target = startPage==='last' ? Math.max(0, readerPageCount-1) : (startPage||0);
+    goToPage(target, { animate:false });
+  }catch(e){
+    showToast('Error loading chapter: '+e.message);
+  }
 }
-window.readerGoToChapter_global=idx=>readerGoToChapter(idx);
+window.readerGoToChapterGlobal = idx => readerGoToChapter(idx, 0);
 async function inlineImagesInHtml(html,base,chapterHref){
   const chapterDir=chapterHref&&chapterHref.includes('/')?chapterHref.replace(/\/[^/]+$/,'/'):'';
   html=html.replace(/(<img[^>]+)src="([^"]+)"/gi,(match,pre,src)=>`${pre}data-src="${src}"`);
@@ -2107,73 +2090,6 @@ async function inlineImagesInHtml(html,base,chapterHref){
 }
 function closeReader(){document.getElementById('readerOverlay').classList.remove('open');document.getElementById('readerChapterList').classList.remove('open');document.getElementById('readerSettingsBar').classList.remove('open');readerZip=null;readerSpine=[];}
 
-  // ── PAGINATION ────────────────────────────────────────────────────────────────
-function initPagination(){
-  return new Promise(resolve=>{
-    const content=document.getElementById('readerContent');
-    const overlay=document.getElementById('readerOverlay');
-    readerPage=0;
-    content.style.transition='none';
-    content.style.transform='translateX(0)';
-    content.style.columnWidth='';
-    content.style.width='';
-    content.style.height='';
-    const toolbarH=52+3;
-    const settingsBar=document.getElementById('readerSettingsBar');
-    const settingsH=(settingsBar&&settingsBar.classList.contains('open'))?settingsBar.offsetHeight:0;
-    const rawAvailH=overlay.clientHeight-toolbarH-settingsH;
-    const availW=overlay.clientWidth;
-    const lineHeight = readerFontSize * 1.9;
-    const padding = 48;
-    const usableH = rawAvailH - padding;
-    const linesPerPage = Math.floor(usableH / lineHeight);
-    const availH = (linesPerPage * lineHeight) + padding;
-    content.classList.add('paginated');
-    content.style.columnWidth = availW + 'px';
-    content.style.height = availH + 'px';
-    content.style.width = availW + 'px';
-
-    // NEW: wait for all images to finish loading before measuring
-    const imgs = Array.from(content.querySelectorAll('img'));
-    const imgPromises = imgs.map(img => {
-      if (img.complete) return Promise.resolve();
-      return new Promise(res => {
-        img.addEventListener('load', res, { once:true });
-        img.addEventListener('error', res, { once:true }); // don't hang forever on broken images
-      });
-    });
-
-    Promise.all(imgPromises).then(()=>{
-      requestAnimationFrame(()=>{
-        requestAnimationFrame(()=>{
-          const scrollW = content.scrollWidth;
-          readerPageCount = Math.max(1, Math.round(scrollW / availW));
-          content.style.width = (readerPageCount * availW) + 'px';
-          updatePaginationUI();
-          resolve();
-        });
-      });
-    });
-  });
-}
-
-function goToPage(page){
-  const wrap=document.getElementById('readerContent');
-  const overlay=document.getElementById('readerOverlay');
-  if(page<0){
-    if(readerChapter>0)readerGoToChapter(readerChapter-1).then(()=>goToPage(readerPageCount-1));
-    return;
-  }
-  if(page>=readerPageCount){
-    if(readerChapter<readerSpine.length-1)readerGoToChapter(readerChapter+1);
-    return;
-  }
-  readerPage=page;
-  const availW=overlay.clientWidth;
-  wrap.style.transition='transform .3s ease';
-  wrap.style.transform=`translateX(${-page*availW}px)`;
-  updatePaginationUI();
-}
 
 function updatePaginationUI(){
   // Reuse the existing page info element
