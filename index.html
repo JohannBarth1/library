@@ -1718,7 +1718,8 @@ function showBookById(id){
     </button>`;
 
   let html = '';
-  if(isMine){
+  const isMyBook = book.ownerId === currentUser?.uid;
+  if(isMyBook){
     html += `<div style="font-size:.6rem;letter-spacing:.15em;text-transform:uppercase;color:var(--muted);font-weight:700;padding:.5rem 1rem .2rem">Share</div>`;
     if(book.visibility!=='public') html += item('⇧','Publish to Library','share');
     else html += item('↓','Unpublish','unpublish');
@@ -1950,6 +1951,7 @@ function mob_showBook(id){
 }
 
   function showBottomSheet(book, isMine){
+  console.log('isMine:', isMine, 'ownerId:', book.ownerId, 'currentUid:', currentUser?.uid);
   const isSignedOut = myCheckedOutIds.has(book.id);
   const canRead = isMine || isSignedOut;
 
@@ -1977,10 +1979,13 @@ function mob_showBook(id){
   if(!isSignedOut) html += row('📋','Sign Out Book','checkout');
   else             html += row('↩','Return Book','returnbook');
   html += row('📖','Checkout History','history');
+
+    
   if(isMine||isSignedOut) html += row('📖','Send to Kobo','sendtokobo');
 
   // Manage (owner only)
-  if(isMine){
+const isMyBook = book.ownerId === currentUser?.uid;
+if(isMyBook){
     html += `<div class="bs-group-label">Manage</div>`;
     if(book.visibility!=='public') html += row('⇧','Publish to Library','share');
     else html += row('↓','Unpublish','unpublish');
