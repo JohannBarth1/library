@@ -2020,6 +2020,121 @@ document.addEventListener('keydown',e=>{
   if(e.key==='Escape')closeReader();
 });
 
+  // ══════════════════════════════════════════════════════════════════
+// IFRAME-BASED PAGINATION ENGINE
+// Replaces initPagination() + goToPage() + the pagination section
+// of readerGoToChapter(). Chapter HTML is written into an iframe's
+// own document, where CSS columns lay out cleanly without fighting
+// the parent page's box model, fonts, or other DOM siblings.
+// ══════════════════════════════════════════════════════════════════
+
+let readerPage = 0;
+let readerPageCount = 1;
+
+// Builds the full standalone HTML document injected into the iframe.
+// Columns + theme + font-size all live INSIDE this document, so they
+// never interact with the parent page's CSS at all.
+function buildFrameDoc(bodyHtml, fontSize, theme){
+  const themeColors = {
+    day:   { bg:'#fff',    fg:'#1a1a1a', h:'#1a1a1a' },
+    sepia: { bg:'#f4ede0', fg:'#3b2a1a', h:'#3b2a1a' },
+    night: { bg:'#1a1a2e', fg:'#c8c8d8', h:'#e8d8b0' }
+  }[theme] || { bg:'#fff', fg:'#1a1a1a', h:'#1a1a1a' };
+
+  return `<!DOCTYPE html><html><head><meta charset="utf-8">
+<style>
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;background:${themeColors.bg};color:${themeColors.fg};}
+  body{
+    font-family:'Lato',sans-serif;
+    font-size:${fontSize}px;
+    line-height:1.9;
+    column-width:100vw;
+    column-gap:0;
+    height:100vh;
+    overflow:hidden;
+    padding:1.8rem clamp(1rem,5vw,3.5rem);
+    -webkit-column-width:100vw;
+  }
+  img{max-width:100%;height:auto;display:block;margin:0 auto;}
+  p{margin:0 0 1.1em;}
+  h1,h2,h3{font-family:'Playfair Display',serif;color:${themeColors.h};margin:1.5em 0 .5em;break-after:avoid;break-inside:avoid;}
+</style></head>
+<body>${bodyHtml}</body></html>`;
+}
+
+// Renders a chapter's HTML into the iframe and resolves once
+// pagination is measured. Returns { pageCount }.
+function renderChapterToFrame(bodyHtml, fontSize, theme){
+  return new Promise(resolve=>{
+    const frame = document.getElementById('readerFrame');
+    frame.style.transition = 'none';
+    frame.style.transform = 'translateX(0)';
+
+    const doc = buildFrameDoc(bodyHtml, fontSize, theme);
+
+    frame.onload = () => {
+      // Wait for images inside the iframe's own document to finish
+      // loading before measuring column width — this is safe and
+      // fast because it's scoped to the iframe's own doc, not ours.
+      const fdoc = frame.contentDocument;
+      const imgs = Array.from(fdoc.images);
+      const imgPromises = imgs.map(img=>{
+        if(img.complete) return Promise.resolve();
+        return new Promise(res=>{
+          img.addEventListener('load', res, { once:true });
+          img.addEventListener('error', res, { once:true });
+        });
+      });
+      Promise.all(imgPromises).then(()=>{
+        requestAnimationFrame(()=>{
+          requestAnimationFrame(()=>{
+            const stageW = document.getElementById('readerStage').clientWidth;
+            const body = fdoc.body;
+            const scrollW = body.scrollWidth;
+            readerPageCount = Math.max(1, Math.round(scrollW / stageW));
+            readerPage = 0;
+            resolve({ pageCount: readerPageCount });
+          });
+        });
+      });
+    };
+
+    frame.srcdoc = doc;
+  });
+}
+
+// Moves to a given page index within the current chapter.
+// Handles chapter boundary crossing automatically.
+function goToPage(page, opts={}){
+  const frame = document.getElementById('readerFrame');
+  const stage = document.getElementById('readerStage');
+
+  if(page < 0){
+    if(readerChapter > 0) readerGoToChapter(readerChapter-1, 'last');
+    return;
+  }
+  if(page >= readerPageCount){
+    if(readerChapter < readerSpine.length-1) readerGoToChapter(readerChapter+1, 0);
+    else showToast('End of book 📖');
+    return;
+  }
+
+  readerPage = page;
+  const stageW = stage.clientWidth;
+  frame.style.transition = opts.animate===false ? 'none' : 'transform .3s ease';
+  frame.style.transform = `translateX(${-page*stageW}px)`;
+  updatePaginationUI();
+  if(readerBookId) saveReadingProgress(readerBookId, readerChapter, readerPage, readerSpine.length);
+}
+
+function updatePaginationUI(){
+  document.getElementById('readerPageInfo').textContent = `${readerPage+1}/${readerPageCount}`;
+  document.querySelectorAll('.chapter-item').forEach((el,i)=>el.classList.toggle('active', i===readerChapter));
+  const prog = (readerChapter + (readerPage/Math.max(readerPageCount,1))) / Math.max(readerSpine.length,1);
+  document.getElementById('readerProgressBar').style.width = (Math.min(prog,1)*100)+'%';
+}
+
 async function readCurrentBook(){
   if(!currentId)return;
   const book=[...library,...communityLib].find(b=>b.id===currentId);if(!book)return;
