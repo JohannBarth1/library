@@ -1974,6 +1974,11 @@ async function readerGoToChapter(idx){
     bodyHtml=bodyHtml.replace(/<script[\s\S]*?<\/script>/gi,'');
     bodyHtml=bodyHtml.replace(/href="([^"#]+)(#[^"]+)?"/g,(_,href)=>{const si=readerSpine.findIndex(s=>s.href===href||s.href.endsWith('/'+href));return si>=0?`href="javascript:void(0)" onclick="readerGoToChapter_global(${si})"` :`href="javascript:void(0)"`;});
     content.innerHTML=bodyHtml;
+    const content = document.getElementById('readerContent');
+    content.style.transition = 'none';
+    content.style.transform = 'translateX(0)';
+    content.style.width = '';
+    content.style.columnWidth = '';
     await new Promise(r=>setTimeout(()=>{initPagination();r();},50));
     requestAnimationFrame(()=>{
       content.style.transition='transform .3s ease';
@@ -1997,6 +2002,13 @@ function initPagination(){
   const content=document.getElementById('readerContent');
   const overlay=document.getElementById('readerOverlay');
   readerPage=0;
+
+  // FULL RESET — clear everything from any previous pagination pass
+  content.style.transition='none';
+  content.style.transform='translateX(0)';
+  content.style.columnWidth='';
+  content.style.width='';
+
   const toolbarH=52+3;
   const settingsBar=document.getElementById('readerSettingsBar');
   const settingsH=(settingsBar&&settingsBar.classList.contains('open'))?settingsBar.offsetHeight:0;
@@ -2006,10 +2018,8 @@ function initPagination(){
   content.classList.add('paginated');
   content.style.columnWidth = availW + 'px';
   content.style.height = availH + 'px';
-  content.style.width = availW + 'px'; // temporary, will expand once measured
-  content.style.transform = 'translateX(0)';
+  content.style.width = availW + 'px';
 
-  // Let layout settle, then measure how many columns the content actually produced
   requestAnimationFrame(()=>{
     requestAnimationFrame(()=>{
       const scrollW = content.scrollWidth;
