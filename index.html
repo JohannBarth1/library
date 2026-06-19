@@ -818,14 +818,11 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 <nav class="mob-nav">
   <div class="mob-nav-bg"></div>
   <div class="mob-nav-inner">
+    <button class="mob-tab-home" id="mobNavHome">
+      <span class="tab-icon">🏠</span><span>Home</span>
+    </button>
     <button class="mob-tab active" id="mobNavLibrary">
       <span class="tab-icon">📚</span><span>Library</span>
-    </button>
-    <button class="mob-tab-home" id="mobNavHome">
-      <div class="mob-home-inner">
-        <div class="mob-home-icon">🏠</div>
-        <span class="mob-home-label">Home</span>
-      </div>
     </button>
     <button class="mob-tab" id="mobNavCommunity">
       <span class="tab-icon">💬</span><span>Community</span>
@@ -2122,6 +2119,8 @@ function goToPage(page, opts={}){
   frame.style.transition = opts.animate===false ? 'none' : 'transform .3s ease';
   frame.style.transform = `translateX(${-page*stageW}px)`;
   updatePaginationUI();
+  if(readerBookId) saveReadingProgress(readerBookId, readerChapter, readerPage, readerSpine.length);
+}
 
 
 
