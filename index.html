@@ -19,7 +19,7 @@
   --gold:#c8952a; --gold2:#e8b84b; --teal:#2a7c8a; --teal-light:#e1f2f5;
   --teal-dark:#1e5f6a; --rust:#b84c1a; --light-blue:#d8e8f0; --border:#c8d8e4;
   --muted:#7a8a9a; --panel:#f0f5f8; --danger:#a02828;
-  --header-h:60px; --mob-nav-h:34px; --filter-w:220px;
+  --header-h:60px; --mob-nav-h:24px; --filter-w:220px;
 }
 *{box-sizing:border-box;margin:0;padding:0;}
 html,body{height:100%;max-width:100vw;overflow-x:hidden;}
@@ -519,6 +519,57 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 }
 .community-placeholder p { font-size: .85rem; line-height: 1.6; max-width: 260px; }
 
+  /* ── BOTTOM SHEET ── */
+.bottom-sheet-overlay{position:fixed;inset:0;background:rgba(15,26,46,.5);z-index:120;opacity:0;pointer-events:none;transition:opacity .25s;}
+.bottom-sheet-overlay.open{opacity:1;pointer-events:all;}
+.bottom-sheet{position:fixed;bottom:0;left:0;right:0;background:var(--warm-white);border-radius:16px 16px 0 0;z-index:121;transform:translateY(100%);transition:transform .3s cubic-bezier(.32,.72,0,1);padding-bottom:env(safe-area-inset-bottom);}
+.bottom-sheet.open{transform:translateY(0);}
+.bottom-sheet-handle{width:36px;height:4px;background:var(--border);border-radius:2px;margin:.75rem auto .5rem;}
+.bottom-sheet-title{font-family:'Playfair Display',serif;font-size:1rem;color:var(--navy2);padding:.25rem 1.2rem .75rem;border-bottom:1px solid var(--border);}
+.bottom-sheet-body{overflow-y:auto;max-height:60vh;padding:.5rem 0;}
+.bs-group-label{font-size:.6rem;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);font-weight:700;padding:.7rem 1.2rem .3rem;}
+.bs-action{display:flex;align-items:center;gap:.9rem;padding:.85rem 1.2rem;font-size:.92rem;font-family:'Lato',sans-serif;font-weight:700;color:var(--navy2);cursor:pointer;transition:background .12s;border:none;background:none;width:100%;text-align:left;-webkit-tap-highlight-color:transparent;}
+.bs-action:hover{background:var(--teal-light);}
+.bs-action .bs-icon{font-size:1.2rem;width:28px;text-align:center;flex-shrink:0;}
+.bs-action.danger{color:var(--danger);}
+.bs-action.danger:hover{background:#fbeaea;}
+.bs-action.highlight{color:var(--teal);}
+
+/* ── DESKTOP DRAWER — NEW LAYOUT ── */
+.drawer-hero{display:flex;gap:1.1rem;padding:1.2rem 1.5rem 1rem;}
+.drawer-hero-cover{position:relative;flex-shrink:0;cursor:pointer;}
+.drawer-hero-cover img,.drawer-hero-cover-ph{width:100px;height:148px;border-radius:4px;border:1px solid var(--border);display:block;object-fit:cover;}
+.drawer-hero-cover-ph{background:linear-gradient(145deg,var(--navy2),#2a3d5a);display:flex;align-items:center;justify-content:center;font-size:2.2rem;}
+.drawer-cover-read-hint{position:absolute;inset:0;background:rgba(15,26,46,.55);border-radius:4px;display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .2s;border:none;cursor:pointer;width:100%;}
+.drawer-hero-cover:hover .drawer-cover-read-hint{opacity:1;}
+.drawer-cover-read-hint span{color:#fff;font-size:.72rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;}
+.drawer-hero-meta{flex:1;min-width:0;display:flex;flex-direction:column;justify-content:flex-start;padding-top:.2rem;}
+.drawer-hero-cat{font-size:.6rem;letter-spacing:.2em;text-transform:uppercase;color:var(--teal);font-weight:700;margin-bottom:.3rem;}
+.drawer-hero-title{font-family:'Playfair Display',serif;font-size:1.15rem;line-height:1.2;color:var(--navy2);margin-bottom:.2rem;}
+.drawer-hero-author{font-size:.85rem;color:var(--muted);font-style:italic;margin-bottom:.6rem;}
+.drawer-hero-badges{display:flex;flex-wrap:wrap;gap:.3rem;margin-bottom:.6rem;}
+.drawer-hero-stars{margin-bottom:.4rem;}
+.drawer-hero-sharedby{font-size:.72rem;color:var(--teal);font-weight:700;margin-bottom:.4rem;}
+
+/* Icon toolbar */
+.drawer-icon-bar{display:flex;gap:.3rem;padding:.5rem 1.5rem .8rem;border-bottom:1px solid var(--border);}
+.drawer-icon-btn{display:flex;flex-direction:column;align-items:center;gap:3px;padding:.45rem .6rem;border-radius:6px;border:1px solid var(--border);background:var(--warm-white);cursor:pointer;transition:all .15s;min-width:52px;}
+.drawer-icon-btn:hover{background:var(--teal-light);border-color:var(--teal);}
+.drawer-icon-btn .di-icon{font-size:1.1rem;line-height:1;}
+.drawer-icon-btn .di-label{font-size:.58rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--navy2);white-space:nowrap;}
+.drawer-icon-btn:hover .di-label{color:var(--teal);}
+.drawer-icon-btn.di-danger:hover{background:#fbeaea;border-color:#e0b0b0;}
+.drawer-icon-btn.di-danger:hover .di-label{color:var(--danger);}
+
+/* More button in icon bar */
+.drawer-more-btn{margin-left:auto;display:flex;flex-direction:column;align-items:center;gap:3px;padding:.45rem .6rem;border-radius:6px;border:1px solid var(--border);background:var(--warm-white);cursor:pointer;transition:all .15s;min-width:52px;}
+.drawer-more-btn:hover{background:var(--light-blue);}
+.drawer-more-btn .di-icon{font-size:1.1rem;line-height:1;}
+.drawer-more-btn .di-label{font-size:.58rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--navy2);}
+
+/* Drawer description area */
+.drawer-desc-area{padding:.9rem 1.5rem 1rem;flex:1;overflow-y:auto;}
+
 /* ── RESPONSIVE ── */
 @media(max-width:768px){
   .filter-sidebar{display:none;}
@@ -782,21 +833,41 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 <!-- Book detail drawer (desktop) -->
 <div class="book-drawer" id="bookDrawer">
   <button class="drawer-close" id="drawerClose">✕</button>
-  <div class="drawer-scroll">
-    <img class="drawer-cover" id="drawerCoverImg" src="" alt="" style="display:none"/>
-    <div class="drawer-cover-ph" id="drawerCoverPh">📖</div>
-    <div class="drawer-cat" id="drawerCat"></div>
-    <div class="drawer-title" id="drawerTitle"></div>
-    <div class="drawer-author" id="drawerAuthor"></div>
-    <div class="drawer-badges" id="drawerBadges"></div>
-    <div class="drawer-stars star-rating" id="deskStarRating" style="display:none">
-      <div class="stars" id="deskStars"></div>
-      <span class="rating-count" id="deskRatingCount"></span>
+  <!-- Hero: cover + meta -->
+  <div class="drawer-hero">
+    <div class="drawer-hero-cover" id="drawerHeroCover">
+      <img id="drawerCoverImg" src="" alt="" style="display:none"/>
+      <div class="drawer-hero-cover-ph" id="drawerCoverPh">📖</div>
+      <button class="drawer-cover-read-hint" id="drawerCoverReadBtn">
+        <span>▶ Read</span>
+      </button>
     </div>
-    <div class="drawer-sharedby" id="drawerSharedBy" style="display:none"></div>
+    <div class="drawer-hero-meta">
+      <div class="drawer-hero-cat" id="drawerCat"></div>
+      <div class="drawer-hero-title" id="drawerTitle"></div>
+      <div class="drawer-hero-author" id="drawerAuthor"></div>
+      <div class="drawer-hero-badges" id="drawerBadges"></div>
+      <div class="drawer-hero-stars star-rating" id="deskStarRating" style="display:none">
+        <div class="stars" id="deskStars"></div>
+        <span class="rating-count" id="deskRatingCount"></span>
+      </div>
+      <div class="drawer-hero-sharedby" id="drawerSharedBy" style="display:none"></div>
+    </div>
+  </div>
+  <!-- Icon toolbar -->
+  <div class="drawer-icon-bar" id="drawerIconBar"></div>
+  <!-- Description -->
+  <div class="drawer-desc-area">
     <p class="drawer-desc" id="drawerDesc"></p>
   </div>
-  <div class="drawer-actions" id="drawerActions"></div>
+</div>
+
+<!-- Bottom sheet (mobile) -->
+<div class="bottom-sheet-overlay" id="bsOverlay"></div>
+<div class="bottom-sheet" id="bottomSheet">
+  <div class="bottom-sheet-handle"></div>
+  <div class="bottom-sheet-title" id="bsTitle"></div>
+  <div class="bottom-sheet-body" id="bsBody"></div>
 </div>
 
 <!-- Desktop settings popover -->
@@ -1541,94 +1612,152 @@ function showBookById(id){
   if(book.allowedUsers?.length>0) loadAllUsers();
   const isMine=book.ownerId===currentUser?.uid;
   const isComm=communityLib.some(b=>b.id===id);
-  const img=document.getElementById('drawerCoverImg'),ph=document.getElementById('drawerCoverPh');
+
+  // Cover
+  const img=document.getElementById('drawerCoverImg');
+  const ph=document.getElementById('drawerCoverPh');
   const coverSrc=getCoverSrc(book);
   if(coverSrc){img.src=coverSrc;img.style.display='block';ph.style.display='none';}
   else{img.style.display='none';ph.style.display='flex';}
+
+  // Cover read button
+  document.getElementById('drawerCoverReadBtn').onclick=()=>readCurrentBook();
+
+  // Meta
   document.getElementById('drawerCat').textContent=book.category||'';
   document.getElementById('drawerTitle').textContent=book.title||'';
   document.getElementById('drawerAuthor').textContent=book.author||'';
   document.getElementById('drawerDesc').textContent=stripHtml(book.description||'');
+
+  // Shared by
   const sharedByEl=document.getElementById('drawerSharedBy');
   const isPrivatelyShared=book.allowedUsers?.includes(currentUser?.uid)&&book.visibility!=='public';
   if(!isMine&&isPrivatelyShared){
     sharedByEl.textContent='Shared with you by '+(book.ownerName||'Anonymous');
     sharedByEl.style.display='block';
   } else if(isMine&&book.allowedUsers?.length>0){
-    const names=book.allowedUsers.map(uid=>{
-      const u=allUsers.find(x=>x.uid===uid);
-      return u?(u.displayName||u.email||uid):uid;
+    loadAllUsers().then(()=>{
+      const names=book.allowedUsers.map(uid=>{
+        const u=allUsers.find(x=>x.uid===uid);
+        return u?(u.displayName||u.email||uid):uid;
+      });
+      sharedByEl.textContent='Shared with: '+names.join(', ');
+      sharedByEl.style.display='block';
     });
-    sharedByEl.textContent='Shared with: '+names.join(', ');
-    sharedByEl.style.display='block';
   } else {
     sharedByEl.style.display='none';
   }
+
+  // Badges
   let badges='';
   if(book.category)badges+=`<span class="dbadge dbadge-cat">${esc(book.category)}</span>`;
   if(book.language)badges+=`<span class="dbadge dbadge-lang">${esc(book.language.toUpperCase())}</span>`;
-  if(book.visibility==='public')badges+=`<span class="dbadge dbadge-shared">Public Library</span>`;
+  if(book.visibility==='public')badges+=`<span class="dbadge dbadge-shared">Public</span>`;
+  if(book.recommended)badges+=`<span class="dbadge" style="background:#fff8ec;color:var(--gold)">⭐ Pick</span>`;
   document.getElementById('drawerBadges').innerHTML=badges;
+
+  // Stars
   if(isComm)renderStars('deskStars','deskRatingCount',id,true);
   else document.getElementById('deskStarRating').style.display='none';
-  document.getElementById('drawerActions').innerHTML=buildActions(book,isMine);
+
+  // Icon toolbar
+  buildDrawerIconBar(book, isMine);
+
   document.querySelectorAll('.book-card').forEach(c=>c.classList.toggle('active',c.dataset.bookid===id));
   document.getElementById('bookDrawer').classList.add('open');
-  bindActionDropdowns(document.getElementById('drawerActions'));
 }
+
+  function buildDrawerIconBar(book, isMine){
+  const isSignedOut = myCheckedOutIds.has(book.id);
+  const canRead = isMine || isSignedOut;
+  const bar = document.getElementById('drawerIconBar');
+
+  const btn = (icon, label, action, extraClass='') =>
+    `<button class="drawer-icon-btn ${extraClass}" data-action="${action}">
+      <span class="di-icon">${icon}</span>
+      <span class="di-label">${label}</span>
+    </button>`;
+
+  let html = '';
+  if(canRead) html += btn('⬇','Download','download');
+  if(!isSignedOut) html += btn('📋','Sign Out','checkout');
+  else             html += btn('↩','Return','returnbook');
+  html += btn('📖','History','history');
+  if(isMine || isSignedOut) html += btn('📖','Kobo','sendtokobo');
+
+  // More button — opens desktop dropdown
+  html += `<button class="drawer-more-btn" id="drawerMoreBtn">
+    <span class="di-icon">⋯</span>
+    <span class="di-label">More</span>
+  </button>`;
+
+  bar.innerHTML = html;
+  bar.querySelectorAll('[data-action]').forEach(b=>b.addEventListener('click', handleAction));
+
+  // More dropdown
+  document.getElementById('drawerMoreBtn').addEventListener('click', e=>{
+    e.stopPropagation();
+    showDrawerMoreMenu(book, isMine);
+  });
+}
+
+  function showDrawerMoreMenu(book, isMine){
+  // Reuse the existing action-dropdown pattern as a simple popover
+  const existing = document.getElementById('drawerMoreMenu');
+  if(existing){ existing.remove(); return; }
+
+  const menu = document.createElement('div');
+  menu.id = 'drawerMoreMenu';
+  menu.style.cssText = `position:absolute;bottom:calc(100% + 6px);right:1.5rem;
+    background:var(--warm-white);border:1px solid var(--border);border-radius:6px;
+    padding:.4rem 0;min-width:200px;z-index:200;box-shadow:0 4px 16px rgba(0,0,0,0.15)`;
+
+  const item = (icon, label, action, danger=false) =>
+    `<button class="action-dropdown-item ${danger?'danger':''}" data-action="${action}">
+      ${icon} ${label}
+    </button>`;
+
+  let html = '';
+  if(isMine){
+    html += `<div style="font-size:.6rem;letter-spacing:.15em;text-transform:uppercase;color:var(--muted);font-weight:700;padding:.5rem 1rem .2rem">Share</div>`;
+    if(book.visibility!=='public') html += item('⇧','Publish to Library','share');
+    else html += item('↓','Unpublish','unpublish');
+    html += item('🔒','Share Privately','shareprivate');
+    html += item('🔗','Copy Link','link');
+    html += `<div style="height:1px;background:var(--border);margin:.3rem 0"></div>`;
+    html += `<div style="font-size:.6rem;letter-spacing:.15em;text-transform:uppercase;color:var(--muted);font-weight:700;padding:.5rem 1rem .2rem">Manage</div>`;
+    html += item('✎','Edit Details','editmeta');
+    html += item('🏷','Tags','tags');
+    html += item('📑','Chapters','chapters');
+    html += item('⭐', book.recommended?'Remove Recommendation':'Recommend','recommend');
+    html += `<div style="height:1px;background:var(--border);margin:.3rem 0"></div>`;
+    html += item('✕','Delete','delete',true);
+  }
+
+  menu.innerHTML = html;
+  menu.querySelectorAll('[data-action]').forEach(b=>{
+    b.addEventListener('click', e=>{
+      menu.remove();
+      handleAction(e);
+    });
+  });
+
+  // Position relative to drawer icon bar
+  const bar = document.getElementById('drawerIconBar');
+  bar.style.position = 'relative';
+  bar.appendChild(menu);
+
+  // Close on outside click
+  setTimeout(()=>{
+    document.addEventListener('click', function close(){
+      menu.remove();
+      document.removeEventListener('click', close);
+    });
+  }, 0);
+}
+  
 function closeDrawer(){document.getElementById('bookDrawer').classList.remove('open');document.querySelectorAll('.book-card').forEach(c=>c.classList.remove('active'));currentId=null;}
 document.getElementById('drawerClose').addEventListener('click',closeDrawer);
-document.getElementById('drawerActions').addEventListener('click', e => {
-  if(e.target.closest('.action-dropdown-menu')) return; // handled by bindActionDropdowns
-  handleAction(e);
-});
-
-function buildActions(book,isMine){
-  const isComm=communityLib.some(b=>b.id===book.id);
-  const isSignedOut=myCheckedOutIds.has(book.id);
-  const isPublicOnly=isComm&&!isMine;
-  let html='';
-  html+=`<div class="action-group">`;
-  const canRead = isMine || isSignedOut;
-  if(canRead) html+=`<button class="btn-action btn-read" data-action="read"><span class="ba-icon">▶</span> Read</button>`;
-  if(canRead) html+=`<button class="btn-action btn-checkout" data-action="listen" style="color:var(--teal);border-color:var(--teal)"><span class="ba-icon">🔊</span> Listen</button>`;
-  if(isMine||isSignedOut)html+=`<button class="btn-action btn-download" data-action="download"><span class="ba-icon">⬇</span> Download</button>`;
-  if(isMine||isSignedOut) html+=`<button class="btn-action btn-kobo" data-action="sendtokobo"><span class="ba-icon">📖</span> Send to Kobo</button>`;
-  html+=`</div>`;
-  html+=`<div class="action-group">`;
-  if(!isSignedOut){
-    html+=`<button class="btn-action btn-checkout" data-action="checkout"><span class="ba-icon">📋</span> Sign Out</button>`;
-  } else {
-    html+=`<button class="btn-action btn-return" data-action="returnbook"><span class="ba-icon">↩</span> Return</button>`;
-  }
-  html+=`<button class="btn-action btn-return" data-action="history"><span class="ba-icon">📖</span> History</button>`;
-  html+=`</div>`;
-  if(isMine){
-    html+=`<div class="action-group">`;
-    html+=`<div class="action-dropdown" id="ddShare">`;
-    html+=`<button class="action-dropdown-btn share-btn" data-dd="ddShare"><span class="ba-icon">⇧</span> Share ▾</button>`;
-    html+=`<div class="action-dropdown-menu" id="ddShareMenu">`;
-    if(book.visibility!=='public'){
-      html+=`<button class="action-dropdown-item" data-action="share">⇧ Publish to Library</button>`;
-    } else {
-      html+=`<button class="action-dropdown-item" data-action="unpublish">↓ Unpublish</button>`;
-    }
-    html+=`<button class="action-dropdown-item" data-action="shareprivate">🔒 Share Privately</button>`;
-    html+=`<button class="action-dropdown-item" data-action="link">🔗 Copy Link</button>`;
-    html+=`</div></div>`;
-    html+=`<div class="action-dropdown" id="ddEdit">`;
-    html+=`<button class="action-dropdown-btn edit-btn" data-dd="ddEdit"><span class="ba-icon">✎</span> Edit ▾</button>`;
-    html+=`<div class="action-dropdown-menu" id="ddEditMenu">`;
-    html+=`<button class="action-dropdown-item" data-action="editmeta">✎ Edit Details</button>`;
-    html+=`<button class="action-dropdown-item" data-action="tags">🏷 Tags</button>`;
-    html+=`<button class="action-dropdown-item" data-action="chapters">📑 Chapters</button>`;
-    html+=`<button class="action-dropdown-item" data-action="recommend">${book.recommended?'☆ Remove Recommendation':'⭐ Recommend'}</button>`;
-    html+=`<button class="action-dropdown-item danger" data-action="delete">✕ Delete</button>`;
-    html+=`</div></div>`;
-    html+=`</div>`;
-  }
-  return html;
-}
 
 function bindActionDropdowns(container){
   container.querySelectorAll('[data-dd]').forEach(btn=>{
@@ -1783,27 +1912,107 @@ document.getElementById('btnSaveEditMeta').addEventListener('click',async()=>{
 function mob_showBook(id){
   const book=[...library,...communityLib].find(b=>b.id===id);if(!book)return;
   currentId=id;
-  const isMine=book.ownerId===currentUser?.uid,isComm=communityLib.some(b=>b.id===id);
-  const img=document.getElementById('mobDetailCoverImg'),ph=document.getElementById('mobDetailCoverPh');
+  const isMine=book.ownerId===currentUser?.uid;
+  const isComm=communityLib.some(b=>b.id===id);
+
+  // Cover
+  const img=document.getElementById('mobDetailCoverImg');
+  const ph=document.getElementById('mobDetailCoverPh');
   const coverSrc=getCoverSrc(book);
   if(coverSrc){img.src=coverSrc;img.style.display='block';ph.style.display='none';}
   else{img.style.display='none';ph.style.display='flex';}
+
+  // Cover tap = read
+  const coverEl = coverSrc ? img : ph;
+  coverEl.style.cursor='pointer';
+  coverEl.onclick=()=>{ const b=[...library,...communityLib].find(x=>x.id===currentId); if(b&&(b.ownerId===currentUser?.uid||myCheckedOutIds.has(b.id))) readCurrentBook(); else showToast('Sign out this book to read it'); };
+
   document.getElementById('mobDetailCat').textContent=book.category||'';
   document.getElementById('mobDetailTitle').textContent=book.title||'';
   document.getElementById('mobDetailAuthor').textContent=book.author||'';
+
   const mobSharedByEl=document.getElementById('mobDetailSharedBy');
   const mobIsPrivatelyShared=book.allowedUsers?.includes(currentUser?.uid)&&book.visibility!=='public';
   if(!isMine&&mobIsPrivatelyShared){mobSharedByEl.textContent='Shared with you by '+(book.ownerName||'Anonymous');mobSharedByEl.style.display='block';}
   else mobSharedByEl.style.display='none';
+
   document.getElementById('mobDetailDesc').textContent=stripHtml(book.description||'');
+
+  // Replace action buttons with single Actions button
   const actEl=document.getElementById('mobDetailActions');
-  actEl.innerHTML=buildActions(book,isMine);
-  actEl.onclick=handleAction;
-  bindActionDropdowns(actEl);
+  actEl.innerHTML=`<button class="btn-action" style="background:var(--navy2);color:var(--gold);border-color:var(--navy2);padding:.5rem 1.2rem" id="btnMobActions">⋯ Actions</button>`;
+  document.getElementById('btnMobActions').addEventListener('click',()=>showBottomSheet(book, isMine));
+
   if(isComm)renderStars('mobStars','mobRatingCount',id,true);
   else document.getElementById('mobStarRating').style.display='none';
+
   mob_showPanel('mobPanelDetail');
 }
+
+  function showBottomSheet(book, isMine){
+  const isSignedOut = myCheckedOutIds.has(book.id);
+  const canRead = isMine || isSignedOut;
+
+  document.getElementById('bsTitle').textContent = book.title||'';
+
+  const row = (icon, label, action, danger=false, highlight=false) =>
+    `<button class="bs-action ${danger?'danger':''} ${highlight?'highlight':''}" data-action="${action}">
+      <span class="bs-icon">${icon}</span>${label}
+    </button>`;
+
+  let html = '';
+
+  // Read / Listen
+  html += `<div class="bs-group-label">Read</div>`;
+  if(canRead){
+    html += row('▶','Read Book','read', false, true);
+    html += row('🔊','Listen','listen', false, true);
+  } else {
+    html += `<div style="padding:.5rem 1.2rem;font-size:.82rem;color:var(--muted)">Sign out this book to read or listen</div>`;
+  }
+
+  // Actions
+  html += `<div class="bs-group-label">Actions</div>`;
+  if(canRead) html += row('⬇','Download','download');
+  if(!isSignedOut) html += row('📋','Sign Out Book','checkout');
+  else             html += row('↩','Return Book','returnbook');
+  html += row('📖','Checkout History','history');
+  if(isMine||isSignedOut) html += row('📖','Send to Kobo','sendtokobo');
+
+  // Manage (owner only)
+  if(isMine){
+    html += `<div class="bs-group-label">Manage</div>`;
+    if(book.visibility!=='public') html += row('⇧','Publish to Library','share');
+    else html += row('↓','Unpublish','unpublish');
+    html += row('🔒','Share Privately','shareprivate');
+    html += row('🔗','Copy Link','link');
+    html += row('✎','Edit Details','editmeta');
+    html += row('🏷','Tags','tags');
+    html += row('📑','Chapters','chapters');
+    html += row('⭐', book.recommended?'Remove Recommendation':'Recommend','recommend');
+    html += `<div style="height:1px;background:var(--border);margin:.3rem 0"></div>`;
+    html += row('✕','Delete Book','delete',true);
+  }
+
+  const bsBody = document.getElementById('bsBody');
+  bsBody.innerHTML = html;
+  bsBody.querySelectorAll('[data-action]').forEach(b=>{
+    b.addEventListener('click', e=>{
+      closeBottomSheet();
+      handleAction(e);
+    });
+  });
+
+  document.getElementById('bsOverlay').classList.add('open');
+  document.getElementById('bottomSheet').classList.add('open');
+}
+
+function closeBottomSheet(){
+  document.getElementById('bsOverlay').classList.remove('open');
+  document.getElementById('bottomSheet').classList.remove('open');
+}
+
+document.getElementById('bsOverlay').addEventListener('click', closeBottomSheet);
 document.getElementById('btnMobBack').addEventListener('click',()=>mob_showPanel(mobPrevPanel||'mobPanelHome'));
 function mob_showPanel(id){document.querySelectorAll('.mob-panel').forEach(p=>p.classList.remove('active'));document.getElementById(id)?.classList.add('active');}
 
