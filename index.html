@@ -1956,7 +1956,7 @@ async function readerGoToChapter(idx){
   const ch=readerSpine[idx];
   document.getElementById('readerPageInfo').textContent=`Ch ${idx+1} / ${readerSpine.length}`;
   document.getElementById('readerProgressBar').style.width=((idx/Math.max(readerSpine.length-1,1))*100)+'%';
-  const content=document.getElementById('readerContent');
+  const content=document.getElementById('readerContent'); // declared ONCE, here
   content.style.transition='transform .3s ease';
   content.style.transform=`translateX(${-direction*100}%)`;
   await new Promise(r=>setTimeout(r,300));
@@ -1974,12 +1974,15 @@ async function readerGoToChapter(idx){
     bodyHtml=bodyHtml.replace(/<script[\s\S]*?<\/script>/gi,'');
     bodyHtml=bodyHtml.replace(/href="([^"#]+)(#[^"]+)?"/g,(_,href)=>{const si=readerSpine.findIndex(s=>s.href===href||s.href.endsWith('/'+href));return si>=0?`href="javascript:void(0)" onclick="readerGoToChapter_global(${si})"` :`href="javascript:void(0)"`;});
     content.innerHTML=bodyHtml;
-    const content = document.getElementById('readerContent');
+
+    // reset pagination state — NO second "const content" here, reuse the one above
     content.style.transition = 'none';
     content.style.transform = 'translateX(0)';
     content.style.width = '';
     content.style.columnWidth = '';
-    await new Promise(r=>setTimeout(()=>{initPagination();r();},50));
+
+    await initPagination(); // now properly awaited — see Promise-returning version below
+
     requestAnimationFrame(()=>{
       content.style.transition='transform .3s ease';
       content.style.transform='translateX(0)';
@@ -1999,33 +2002,41 @@ function closeReader(){document.getElementById('readerOverlay').classList.remove
 
   // ── PAGINATION ────────────────────────────────────────────────────────────────
 function initPagination(){
-  const content=document.getElementById('readerContent');
-  const overlay=document.getElementById('readerOverlay');
-  readerPage=0;
+  return new Promise(resolve=>{
+    const content=document.getElementById('readerContent');
+    const overlay=document.getElementById('readerOverlay');
+    readerPage=0;
 
-  // FULL RESET — clear everything from any previous pagination pass
-  content.style.transition='none';
-  content.style.transform='translateX(0)';
-  content.style.columnWidth='';
-  content.style.width='';
+    content.style.transition='none';
+    content.style.transform='translateX(0)';
+    content.style.columnWidth='';
+    content.style.width='';
+    content.style.height='';
 
-  const toolbarH=52+3;
-  const settingsBar=document.getElementById('readerSettingsBar');
-  const settingsH=(settingsBar&&settingsBar.classList.contains('open'))?settingsBar.offsetHeight:0;
-  const availH=overlay.clientHeight-toolbarH-settingsH;
-  const availW=overlay.clientWidth;
+    const toolbarH=52+3;
+    const settingsBar=document.getElementById('readerSettingsBar');
+    const settingsH=(settingsBar&&settingsBar.classList.contains('open'))?settingsBar.offsetHeight:0;
+    const rawAvailH=overlay.clientHeight-toolbarH-settingsH;
+    const availW=overlay.clientWidth;
+    const lineHeight = readerFontSize * 1.9;
+    const padding = 48;
+    const usableH = rawAvailH - padding;
+    const linesPerPage = Math.floor(usableH / lineHeight);
+    const availH = (linesPerPage * lineHeight) + padding;
 
-  content.classList.add('paginated');
-  content.style.columnWidth = availW + 'px';
-  content.style.height = availH + 'px';
-  content.style.width = availW + 'px';
+    content.classList.add('paginated');
+    content.style.columnWidth = availW + 'px';
+    content.style.height = availH + 'px';
+    content.style.width = availW + 'px';
 
-  requestAnimationFrame(()=>{
     requestAnimationFrame(()=>{
-      const scrollW = content.scrollWidth;
-      readerPageCount = Math.max(1, Math.round(scrollW / availW));
-      content.style.width = (readerPageCount * availW) + 'px';
-      updatePaginationUI();
+      requestAnimationFrame(()=>{
+        const scrollW = content.scrollWidth;
+        readerPageCount = Math.max(1, Math.round(scrollW / availW));
+        content.style.width = (readerPageCount * availW) + 'px';
+        updatePaginationUI();
+        resolve(); // ← resolves only after readerPageCount is correct
+      });
     });
   });
 }
