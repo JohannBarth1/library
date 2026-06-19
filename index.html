@@ -2122,8 +2122,6 @@ function goToPage(page, opts={}){
   frame.style.transition = opts.animate===false ? 'none' : 'transform .3s ease';
   frame.style.transform = `translateX(${-page*stageW}px)`;
   updatePaginationUI();
-  if(readerBookId) saveReadingProgress(readerBookId, readerChapter, readerPage, readerSpine.length);
-}
 
 
 
