@@ -1668,7 +1668,7 @@ function handleAction(e){
   if(a==='sendtokobo') { loadKoboDevices().then(()=>showKoboDevicePicker(currentId)); }
 }
 
-// ── UNPUBLISH ─────────────────────────────────────────────────────────────────
+// ── UNPUBLISH and DELETE functions ─────────────────────────────────────────────────────────────────
 async function unpublishCurrentBook() {
   if (!currentId) return;
   const book = library.find(b => b.id === currentId);
@@ -1688,6 +1688,27 @@ async function unpublishCurrentBook() {
   } catch (e) {
     hideLoading();
     showToast('Unpublish failed: ' + e.message);
+  }
+}
+
+  async function deleteCurrentBook(){
+  if(!currentId)return;
+  const book=library.find(b=>b.id===currentId)||communityLib.find(b=>b.id===currentId);
+  if(!book||!confirm(`Delete "${book.title}" permanently?`))return;
+  showLoading('Deleting…');
+  try{
+    await deleteDoc(doc(db,'books',currentId));
+    library=library.filter(b=>b.id!==currentId);
+    communityLib=communityLib.filter(b=>b.id!==currentId);
+    currentId=null;
+    closeDrawer();
+    hideLoading();
+    renderAll();
+    showToast('Book deleted');
+  }catch(e){
+    hideLoading();
+    showToast('Delete failed: '+e.message);
+    console.error('Delete error code:',e.code,'message:',e.message);
   }
 }
 
