@@ -2125,12 +2125,7 @@ function goToPage(page, opts={}){
   if(readerBookId) saveReadingProgress(readerBookId, readerChapter, readerPage, readerSpine.length);
 }
 
-function updatePaginationUI(){
-  document.getElementById('readerPageInfo').textContent = `${readerPage+1}/${readerPageCount}`;
-  document.querySelectorAll('.chapter-item').forEach((el,i)=>el.classList.toggle('active', i===readerChapter));
-  const prog = (readerChapter + (readerPage/Math.max(readerPageCount,1))) / Math.max(readerSpine.length,1);
-  document.getElementById('readerProgressBar').style.width = (Math.min(prog,1)*100)+'%';
-}
+
 
 async function readCurrentBook(){
   if(!currentId)return;
@@ -2204,7 +2199,6 @@ function closeReader(){document.getElementById('readerOverlay').classList.remove
 
 
 function updatePaginationUI(){
-  // Reuse the existing page info element
   document.getElementById('readerPageInfo').textContent=
     `Ch ${readerChapter+1}/${readerSpine.length} · p ${readerPage+1}/${readerPageCount}`;
   document.getElementById('readerProgressBar').style.width=
