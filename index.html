@@ -346,15 +346,15 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .mob-nav{display:none;position:fixed;bottom:0;left:0;right:0;z-index:50;height:var(--mob-nav-h);}
 .mob-nav-bg{position:absolute;inset:0;background:var(--navy);border-top:2px solid rgba(42,124,138,0.5);z-index:0;}
 .mob-nav-inner{display:flex;height:100%;align-items:stretch;position:relative;z-index:1;}
-.mob-tab{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;cursor:pointer;color:var(--gold);font-size:.55rem;letter-spacing:.06em;text-transform:uppercase;font-weight:700;border:none;background:none;transition:color .15s;-webkit-tap-highlight-color:transparent;padding-bottom:6px;opacity:.55;}
+.mob-tab{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;cursor:pointer;color:var(--gold);font-size:.55rem;letter-spacing:.06em;text-transform:uppercase;font-weight:700;border:none;background:none;transition:opacity .15s;-webkit-tap-highlight-color:transparent;padding-bottom:6px;opacity:.55;}
 .mob-tab .tab-icon{font-size:1.15rem;line-height:1;}
-.mob-tab.active{color:var(--gold);opacity:1;}
+.mob-tab.active{opacity:1;}
 .mob-tab-home{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;cursor:pointer;border:none;background:none;-webkit-tap-highlight-color:transparent;padding-bottom:6px;color:var(--gold);}
 .mob-home-inner{display:flex;flex-direction:column;align-items:center;gap:3px;}
 .mob-home-icon{font-size:1.8rem;line-height:1;}
 .mob-tab-home:active .mob-home-icon{opacity:.7;}
-.mob-home-label{font-size:.55rem;letter-spacing:.06em;text-transform:uppercase;font-weight:700;color:var(--gold);opacity:.55;}
-.mob-tab-home.active .mob-home-label{color:var(--gold);opacity:1;}
+.mob-home-label{font-size:.55rem;letter-spacing:.06em;text-transform:uppercase;font-weight:700;color:inherit;opacity:.55;}
+.mob-tab-home.active .mob-home-label{opacity:1;}
 
 /* mobile panels */
 .mob-panels{display:none;flex-direction:column;flex:1;overflow:hidden;}
