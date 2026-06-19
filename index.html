@@ -843,6 +843,9 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
     <button class="mob-tab" id="mobNavCommunity">
       <span class="tab-icon">💬</span><span>Community</span>
     </button>
+    <button class="mob-tab" id="mobNavSettings">
+      <span class="tab-icon">⚙</span><span>Settings</span>
+    </button>
   </div>
 </nav>
 
@@ -1105,7 +1108,7 @@ onAuthStateChanged(auth,async user=>{
     document.getElementById('authScreen').classList.add('hidden');
     updateUserUI(user);
     renderSkeleton('deskBookGrid',16);
-    renderSkeleton('mobBookGrid',12);
+    renderSkeleton('mobGridLibrary',12);
     renderSkeleton('deskHomeRecentGrid',8);
     try{await setDoc(doc(db,'users',user.uid),{displayName:user.displayName||'',email:user.email,uid:user.uid,lastSeen:serverTimestamp()},{merge:true});}catch(e){console.warn(e);}
     await Promise.all([
@@ -1406,7 +1409,7 @@ function renderSkeleton(gridId,count=12){
 function renderAll(){
   renderFilterCats();
   document.getElementById('deskBookGrid').classList.toggle('select-mode',selectMode);
-  renderGrid('deskBookGrid');renderGrid('mobBookGrid');
+  renderGrid('deskBookGrid');renderMobLibrary();
   renderMobLibrary();renderMobHome();renderDeskHome();
   const books=filteredBooks();
   document.getElementById('deskGridCount').textContent=`${books.length} book${books.length!==1?'s':''}`;
@@ -1473,7 +1476,7 @@ document.getElementById('mobSortBtns').addEventListener('click', e => {
   if(!btn) return;
   document.querySelectorAll('#mobSortBtns .sort-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
-  document.getElementById('mobSortSelect').value = btn.dataset.sort;
+  document.getElementById('mobLibSortSelect').value = btn.dataset.sort;
   document.getElementById('deskSortSelect').value = btn.dataset.sort;
   document.querySelectorAll('#deskSortBtns .sort-btn').forEach(b => b.classList.toggle('active', b.dataset.sort === btn.dataset.sort));
   renderAll();
@@ -1487,7 +1490,7 @@ function switchShelf(mode){
   activeCat='All';
   searchQ='';
   document.getElementById('deskSearch').value='';
-  document.getElementById('mobSearch').value='';
+  document.getElementById('mobSearchLibrary').value=''; mobLibSearch='';
   document.getElementById('tabMineDesk').classList.toggle('active',mode==='mine');
   document.getElementById('tabCommDesk').classList.toggle('active',mode==='community');
   renderAll();
@@ -1626,11 +1629,6 @@ function buildActions(book,isMine){
   }
   html+=`<button class="btn-action btn-return" data-action="history"><span class="ba-icon">📖</span> History</button>`;
   html+=`</div>`;
-  if(isMine||isSignedOut){
-    html+=`<div class="action-group">`;
-    html+=`<button class="btn-action btn-kobo" data-action="sendtokobo"><span class="ba-icon">📖</span> Send to Kobo</button>`;
-    html+=`</div>`;
-  }
   if(isMine){
     html+=`<div class="action-group">
       <button class="btn-action btn-kobo" data-action="sendtokobo">
@@ -1823,15 +1821,17 @@ function mob_showPanel(id){document.querySelectorAll('.mob-panel').forEach(p=>p.
 document.getElementById('mobNavLibrary').addEventListener('click',  () => mob_switchTab('library'));
 document.getElementById('mobNavHome').addEventListener('click',     () => mob_switchTab('home'));
 document.getElementById('mobNavCommunity').addEventListener('click',() => mob_switchTab('community'));
+document.getElementById('mobNavSettings').addEventListener('click', () => mob_switchTab('settings'));
 
 function mob_switchTab(tab) {
   document.querySelectorAll('.mob-tab, .mob-tab-home').forEach(t => t.classList.remove('active'));
-  const tabMap = { library:'mobNavLibrary', home:'mobNavHome', community:'mobNavCommunity' };
+  const tabMap = { library:'mobNavLibrary', home:'mobNavHome', community:'mobNavCommunity', settings:'mobNavSettings' };
   document.getElementById(tabMap[tab])?.classList.add('active');
-  const panelMap = { library:'mobPanelLibrary', home:'mobPanelHome', community:'mobPanelCommunity' };
+  const panelMap = { library:'mobPanelLibrary', home:'mobPanelHome', community:'mobPanelCommunity', settings:'mobPanelSettings' };
   mob_showPanel(panelMap[tab] || 'mobPanelHome');
   if (tab === 'home')      renderMobHome();
   if (tab === 'library')   renderMobLibrary();
+  if (tab === 'settings')  renderKoboSettings(document.getElementById('mobKoboSettings'));
 }
 document.getElementById('mobNavLibrary').classList.add('active');
 
