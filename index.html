@@ -1089,6 +1089,7 @@ let currentUser=null,library=[],allUsers=[],userRatings={},currentId=null,commun
 let shelfMode='mine',activeCat='All',activeCatPublic='All',searchQ='';
 let selectMode=false,selectedIds=new Set(),deskView='library';
 let myCheckedOutIds=new Set();
+let koboDevices = [];
 
 // Reader state
 let readerZip=null,readerSpine=[],readerChapter=0,readerOpfBase='';
@@ -1458,7 +1459,6 @@ document.getElementById('deskBookGrid').addEventListener('click',e=>{
 });
 document.getElementById('mobBookGrid').addEventListener('click',e=>{const card=e.target.closest('.book-card[data-bookid]');if(!card)return;mobPrevPanel='mobPanelLibrary';mob_showBook(card.dataset.bookid);});
 document.getElementById('deskSearch').addEventListener('input',e=>{searchQ=e.target.value.toLowerCase().trim();renderAll();});
-document.getElementById('mobSearch').addEventListener('input',e=>{searchQ=e.target.value.toLowerCase().trim();renderAll();});
 document.getElementById('deskSortSelect').addEventListener('change',()=>renderAll());
 document.getElementById('deskSortBtns').addEventListener('click', e => {
   const btn = e.target.closest('.sort-btn[data-sort]');
@@ -2672,11 +2672,6 @@ async function saveChapterManager(){
 }
 
   // ── KOBO INTEGRATION ─────────────────────────────────────────────────────────
-
-  // ─────────────────────────────────────────────────────────────────────────────
-
-// State — kobo devices for the current user
-let koboDevices = [];
 
 // ── LOAD KOBO DEVICES ────────────────────────────────────────────────────────
 
