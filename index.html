@@ -87,9 +87,9 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .filter-sort label{font-size:.62rem;letter-spacing:.15em;text-transform:uppercase;color:var(--muted);font-weight:700;display:block;margin-bottom:.4rem;}
 .filter-sort select{width:100%;padding:.4rem .6rem;font-family:'Lato',sans-serif;font-size:.8rem;border:1px solid var(--border);border-radius:3px;background:var(--warm-white);color:var(--navy);outline:none;cursor:pointer;}
 .sort-btn-group{display:flex;gap:.3rem;flex-wrap:wrap;padding:.5rem 1rem;border-top:1px solid var(--border);}
-.sort-btn{padding:.3rem .65rem;font-size:.68rem;font-family:'Lato',sans-serif;font-weight:700;border-radius:20px;cursor:pointer;border:1px solid var(--border);background:var(--warm-white);color:var(--navy2);transition:all .15s;}
-.sort-btn.active{background:var(--teal);color:#fff;border-color:var(--teal);}
-.sort-btn:hover:not(.active){background:var(--light-blue);}
+.sort-btn{padding:.3rem .65rem;font-size:.68rem;font-family:'Lato',sans-serif;font-weight:700;border-radius:20px;cursor:pointer;border:1px solid rgba(200,149,42,.35);background:transparent;color:var(--gold);transition:all .15s;}
+.sort-btn.active{background:var(--gold);color:var(--navy);border-color:var(--gold);}
+.sort-btn:hover:not(.active){background:rgba(200,149,42,.12);}
 .filter-footer{padding:.7rem;border-top:1px solid var(--border);display:flex;gap:.4rem;}
 .filter-footer button{flex:1;padding:.48rem .3rem;font-size:.68rem;font-family:'Lato',sans-serif;font-weight:700;letter-spacing:.05em;text-transform:uppercase;border-radius:2px;cursor:pointer;transition:all .15s;border:1px solid var(--border);}
 /* PATCH 6b: gold text */
@@ -346,16 +346,15 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .mob-nav{display:none;position:fixed;bottom:0;left:0;right:0;z-index:50;height:var(--mob-nav-h);}
 .mob-nav-bg{position:absolute;inset:0;background:var(--navy);border-top:2px solid rgba(42,124,138,0.5);z-index:0;}
 .mob-nav-inner{display:flex;height:100%;align-items:stretch;position:relative;z-index:1;}
-.mob-tab{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;cursor:pointer;color:var(--muted);font-size:.55rem;letter-spacing:.06em;text-transform:uppercase;font-weight:700;border:none;background:none;transition:color .15s;-webkit-tap-highlight-color:transparent;padding-bottom:6px;}
+.mob-tab{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;cursor:pointer;color:var(--gold);font-size:.55rem;letter-spacing:.06em;text-transform:uppercase;font-weight:700;border:none;background:none;transition:color .15s;-webkit-tap-highlight-color:transparent;padding-bottom:6px;opacity:.55;}
 .mob-tab .tab-icon{font-size:1.15rem;line-height:1;}
-.mob-tab.active{color:var(--teal-light);}
+.mob-tab.active{color:var(--gold);opacity:1;}
 .mob-tab-home{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;cursor:pointer;border:none;background:none;-webkit-tap-highlight-color:transparent;padding-bottom:6px;}
 .mob-home-inner{display:flex;flex-direction:column;align-items:center;gap:3px;}
-.mob-home-icon{width:44px;height:44px;border-radius:12px;background:none;display:flex;align-items:center;justify-content:center;font-size:1.4rem;border:1px solid rgba(42,124,138,0.5);box-shadow:0 2px 8px rgba(0,0,0,0.3);transition:transform .15s;}
-.mob-tab-home:active .mob-home-icon{transform:scale(.92);}
-.mob-tab-home.active .mob-home-icon{background:none;border-color:var(--teal);box-shadow:0 2px 12px rgba(42,124,138,0.5);}
-.mob-home-label{font-size:.55rem;letter-spacing:.06em;text-transform:uppercase;font-weight:700;color:var(--muted);}
-.mob-tab-home.active .mob-home-label{color:var(--teal-light);}
+.mob-home-icon{font-size:1.15rem;line-height:1;}
+.mob-tab-home:active .mob-home-icon{opacity:.7;}
+.mob-home-label{font-size:.55rem;letter-spacing:.06em;text-transform:uppercase;font-weight:700;color:var(--gold);opacity:.55;}
+.mob-tab-home.active .mob-home-label{color:var(--gold);opacity:1;}
 
 /* mobile panels */
 .mob-panels{display:none;flex-direction:column;flex:1;overflow:hidden;}
@@ -2028,8 +2027,6 @@ document.addEventListener('keydown',e=>{
 // the parent page's box model, fonts, or other DOM siblings.
 // ══════════════════════════════════════════════════════════════════
 
-let readerPage = 0;
-let readerPageCount = 1;
 
 // Builds the full standalone HTML document injected into the iframe.
 // Columns + theme + font-size all live INSIDE this document, so they
