@@ -2113,13 +2113,11 @@ function initPagination(){
     const content=document.getElementById('readerContent');
     const overlay=document.getElementById('readerOverlay');
     readerPage=0;
-
     content.style.transition='none';
     content.style.transform='translateX(0)';
     content.style.columnWidth='';
     content.style.width='';
     content.style.height='';
-
     const toolbarH=52+3;
     const settingsBar=document.getElementById('readerSettingsBar');
     const settingsH=(settingsBar&&settingsBar.classList.contains('open'))?settingsBar.offsetHeight:0;
@@ -2130,19 +2128,30 @@ function initPagination(){
     const usableH = rawAvailH - padding;
     const linesPerPage = Math.floor(usableH / lineHeight);
     const availH = (linesPerPage * lineHeight) + padding;
-
     content.classList.add('paginated');
     content.style.columnWidth = availW + 'px';
     content.style.height = availH + 'px';
     content.style.width = availW + 'px';
 
-    requestAnimationFrame(()=>{
+    // NEW: wait for all images to finish loading before measuring
+    const imgs = Array.from(content.querySelectorAll('img'));
+    const imgPromises = imgs.map(img => {
+      if (img.complete) return Promise.resolve();
+      return new Promise(res => {
+        img.addEventListener('load', res, { once:true });
+        img.addEventListener('error', res, { once:true }); // don't hang forever on broken images
+      });
+    });
+
+    Promise.all(imgPromises).then(()=>{
       requestAnimationFrame(()=>{
-        const scrollW = content.scrollWidth;
-        readerPageCount = Math.max(1, Math.round(scrollW / availW));
-        content.style.width = (readerPageCount * availW) + 'px';
-        updatePaginationUI();
-        resolve(); // ← resolves only after readerPageCount is correct
+        requestAnimationFrame(()=>{
+          const scrollW = content.scrollWidth;
+          readerPageCount = Math.max(1, Math.round(scrollW / availW));
+          content.style.width = (readerPageCount * availW) + 'px';
+          updatePaginationUI();
+          resolve();
+        });
       });
     });
   });
