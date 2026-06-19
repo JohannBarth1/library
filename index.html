@@ -1470,16 +1470,6 @@ document.getElementById('deskSortBtns').addEventListener('click', e => {
   document.getElementById('deskSortSelect').value = btn.dataset.sort;
   renderAll();
 });
-document.getElementById('mobSortBtns').addEventListener('click', e => {
-  const btn = e.target.closest('.sort-btn[data-sort]');
-  if(!btn) return;
-  document.querySelectorAll('#mobSortBtns .sort-btn').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-  document.getElementById('mobLibSortSelect').value = btn.dataset.sort;
-  document.getElementById('deskSortSelect').value = btn.dataset.sort;
-  document.querySelectorAll('#deskSortBtns .sort-btn').forEach(b => b.classList.toggle('active', b.dataset.sort === btn.dataset.sort));
-  renderAll();
-});
 
 document.getElementById('tabMineDesk').addEventListener('click',()=>switchShelf('mine'));
 document.getElementById('tabCommDesk').addEventListener('click',()=>switchShelf('community'));
