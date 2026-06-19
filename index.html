@@ -269,17 +269,16 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .reader-overlay.theme-night .reader-content{color:#c8c8d8;}
 .reader-overlay.theme-night .reader-content h1,.reader-overlay.theme-night .reader-content h2,.reader-overlay.theme-night .reader-content h3{color:#e8d8b0;}
 .reader-content.paginated{
-  clip-path: inset(0);
   flex:none;
   overflow:hidden;
   max-width:none;
   margin:0;
-  padding:0;
   box-sizing:border-box;
   column-gap:0;
   column-fill:auto;
   transition:transform .25s ease;
   will-change:transform;
+  padding: 3rem clamp(1rem,5vw,4rem); /* keep your padding, just here not on a wrapper */
 }
 .reader-content.paginated img{
   max-height:100%;
@@ -2003,21 +2002,22 @@ function initPagination(){
   const settingsH=(settingsBar&&settingsBar.classList.contains('open'))?settingsBar.offsetHeight:0;
   const availH=overlay.clientHeight-toolbarH-settingsH;
   const availW=overlay.clientWidth;
+
   content.classList.add('paginated');
-  content.style.cssText=`
-    width:${availW}px;
-    height:${availH}px;
-    overflow:hidden;
-    padding:3rem 3rem;
-    box-sizing:border-box;
-    position:relative;
-    transition:none;
-  `;
-  setTimeout(()=>{
-    const scrollH=content.scrollHeight;
-    readerPageCount=Math.max(1,Math.ceil(scrollH/availH));
-    updatePaginationUI();
-  },50);
+  content.style.columnWidth = availW + 'px';
+  content.style.height = availH + 'px';
+  content.style.width = availW + 'px'; // temporary, will expand once measured
+  content.style.transform = 'translateX(0)';
+
+  // Let layout settle, then measure how many columns the content actually produced
+  requestAnimationFrame(()=>{
+    requestAnimationFrame(()=>{
+      const scrollW = content.scrollWidth;
+      readerPageCount = Math.max(1, Math.round(scrollW / availW));
+      content.style.width = (readerPageCount * availW) + 'px';
+      updatePaginationUI();
+    });
+  });
 }
 
 function goToPage(page){
@@ -2031,17 +2031,10 @@ function goToPage(page){
     if(readerChapter<readerSpine.length-1)readerGoToChapter(readerChapter+1);
     return;
   }
-  const prevPage=readerPage;
   readerPage=page;
-  const availH=overlay.clientHeight-(52+3);
-  const direction=page>prevPage?1:-1;
-  wrap.style.transition='none';
-  wrap.style.transform=`translateX(${direction*100}%)`;
-  wrap.scrollTop=page*availH;
-  requestAnimationFrame(()=>{
-    wrap.style.transition='transform .3s ease';
-    wrap.style.transform='translateX(0)';
-  });
+  const availW=overlay.clientWidth;
+  wrap.style.transition='transform .3s ease';
+  wrap.style.transform=`translateX(${-page*availW}px)`;
   updatePaginationUI();
 }
 
