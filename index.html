@@ -1456,7 +1456,7 @@ document.getElementById('deskBookGrid').addEventListener('click',e=>{
   if(selectMode){const id=card.dataset.bookid;if(selectedIds.has(id)){selectedIds.delete(id);card.classList.remove('selected');}else{selectedIds.add(id);card.classList.add('selected');}updateBulkBar();return;}
   showBookById(card.dataset.bookid);
 });
-document.getElementById('mobBookGrid').addEventListener('click',e=>{const card=e.target.closest('.book-card[data-bookid]');if(!card)return;mobPrevPanel='mobPanelLib';mob_showBook(card.dataset.bookid);});
+document.getElementById('mobBookGrid').addEventListener('click',e=>{const card=e.target.closest('.book-card[data-bookid]');if(!card)return;mobPrevPanel='mobPanelLibrary';mob_showBook(card.dataset.bookid);});
 document.getElementById('deskSearch').addEventListener('input',e=>{searchQ=e.target.value.toLowerCase().trim();renderAll();});
 document.getElementById('mobSearch').addEventListener('input',e=>{searchQ=e.target.value.toLowerCase().trim();renderAll();});
 document.getElementById('deskSortSelect').addEventListener('change',()=>renderAll());
