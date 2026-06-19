@@ -482,6 +482,56 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .checkout-row-name{font-weight:700;color:var(--navy2);}
 .checkout-row-date{font-size:.7rem;color:var(--muted);}
 
+  /* ── MOBILE 3-TAB NAV ── */
+/* Override mob-nav to only have 3 tabs + home */
+.mob-nav-inner { justify-content: space-around; }
+
+/* Library filter pills (All / Private / Public / Shared) */
+.lib-filter-pills {
+  overflow-x: auto;
+  padding: .35rem .9rem .5rem;
+  display: flex;
+  gap: .4rem;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  flex-shrink: 0;
+}
+.lib-filter-pills::-webkit-scrollbar { display: none; }
+.lib-filter-pill {
+  padding: .26rem .7rem;
+  font-size: .7rem;
+  font-weight: 700;
+  border-radius: 20px;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  background: var(--warm-white);
+  color: var(--navy2);
+  white-space: nowrap;
+  transition: all .15s;
+  -webkit-tap-highlight-color: transparent;
+}
+.lib-filter-pill.active { background: var(--teal); color: #fff; border-color: var(--teal); }
+
+/* Community panel placeholder */
+.community-placeholder {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  text-align: center;
+  color: var(--muted);
+}
+.community-placeholder .cp-icon { font-size: 3rem; opacity: .2; margin-bottom: 1rem; }
+.community-placeholder h3 {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.2rem;
+  color: var(--navy2);
+  margin-bottom: .5rem;
+}
+.community-placeholder p { font-size: .85rem; line-height: 1.6; max-width: 260px; }
+
 /* ── RESPONSIVE ── */
 @media(max-width:768px){
   .filter-sidebar{display:none;}
@@ -623,127 +673,123 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
   </div>
 
   <!-- MOBILE PANELS -->
-  <div class="mob-panels">
-    <div class="mob-panel" id="mobPanelSearch">
-      <div class="mob-lib-top">
-        <div style="padding:.7rem .9rem .3rem;font-family:'Playfair Display',serif;font-size:1.1rem;color:var(--navy2)">Search</div>
-        <div class="mob-search-bar"><input type="text" id="mobSearchGlobal" placeholder="Search all books…"/></div>
-        <div class="mob-filter-scroll" id="mobSearchFilters">
-          <div class="mob-chip active" data-sfilter="all">All</div>
-          <div class="mob-chip" data-sfilter="mine">My Books</div>
-          <div class="mob-chip" data-sfilter="public">Public</div>
-        </div>
-      </div>
-      <div class="mob-grid-scroll"><div class="mob-book-grid" id="mobGridSearch"></div></div>
-    </div>
+<div class="mob-panels">
 
-    <div class="mob-panel" id="mobPanelPublic">
-      <div class="mob-lib-top">
-        <div style="padding:.6rem .9rem .2rem;font-family:'Playfair Display',serif;font-size:1rem;color:var(--navy2)">Public Library</div>
-        <div class="mob-search-bar"><input type="text" id="mobSearchPublic" placeholder="Search Public Library…"/></div>
-        <div class="mob-filter-scroll" id="mobChipsPublic"></div>
-        <div class="sort-btn-group" id="mobSortPublicBtns">
-          <button class="sort-btn active" data-sort="recent">Recent</button>
-          <button class="sort-btn" data-sort="title">Title</button>
-          <button class="sort-btn" data-sort="author">Author</button>
-          <button class="sort-btn" data-sort="rating">Rating</button>
-        </div>
-        <select id="mobSortPublic" style="display:none">
-          <option value="recent">Most Recent</option>
-          <option value="title">Title A–Z</option>
-          <option value="author">Author A–Z</option>
-          <option value="rating">Top Rated</option>
-        </select>
+  <!-- ── LIBRARY PANEL (all books: private + public + shared) ── -->
+  <div class="mob-panel active" id="mobPanelLibrary">
+    <div class="mob-lib-top">
+      <div class="mob-search-bar">
+        <input type="text" id="mobSearchLibrary" placeholder="Search books…"/>
       </div>
-      <div class="mob-grid-scroll"><div class="mob-book-grid" id="mobGridPublic"></div></div>
+      <!-- Source filter: All / Private / Public / Shared with me -->
+      <div class="lib-filter-pills" id="mobLibFilterPills">
+        <div class="lib-filter-pill active" data-libfilter="all">All</div>
+        <div class="lib-filter-pill" data-libfilter="private">Private</div>
+        <div class="lib-filter-pill" data-libfilter="public">Public</div>
+        <div class="lib-filter-pill" data-libfilter="shared">Shared with Me</div>
+      </div>
+      <!-- Category chips (populated by JS) -->
+      <div class="mob-filter-scroll" id="mobLibCatChips"></div>
+      <!-- Sort -->
+      <div class="sort-btn-group" id="mobLibSortBtns">
+        <button class="sort-btn active" data-sort="recent">Recent</button>
+        <button class="sort-btn" data-sort="title">Title</button>
+        <button class="sort-btn" data-sort="author">Author</button>
+        <button class="sort-btn" data-sort="rating">Rating</button>
+      </div>
+      <select id="mobLibSortSelect" style="display:none">
+        <option value="recent">Most Recent</option>
+        <option value="title">Title A–Z</option>
+        <option value="author">Author A–Z</option>
+        <option value="rating">Top Rated</option>
+      </select>
     </div>
-
-    <div class="mob-panel active" id="mobPanelHome">
-      <div class="mob-grid-scroll" style="padding:1rem">
-        <div style="font-family:'Playfair Display',serif;font-size:1.3rem;color:var(--navy2);margin-bottom:.2rem" id="mobHomeGreeting">Welcome</div>
-        <div style="font-size:.8rem;color:var(--muted);margin-bottom:1.2rem">Your reading at a glance</div>
-        <div id="mobHomeContent"><div style="text-align:center;padding:2rem;color:var(--muted);font-size:.88rem">Loading…</div></div>
-      </div>
+    <div class="mob-grid-scroll">
+      <div class="mob-book-grid" id="mobGridLibrary"></div>
     </div>
+  </div>
 
-    <div class="mob-panel" id="mobPanelLib">
-      <div class="mob-lib-top">
-        <div class="mob-search-bar"><input type="text" id="mobSearch" placeholder="Search my books…"/></div>
-        <div class="mob-filter-scroll" id="mobFilterChips"></div>
-        <div class="sort-btn-group" id="mobSortBtns">
-          <button class="sort-btn active" data-sort="recent">Recent</button>
-          <button class="sort-btn" data-sort="title">Title</button>
-          <button class="sort-btn" data-sort="author">Author</button>
-          <button class="sort-btn" data-sort="rating">Rating</button>
-        </div>
-        <select id="mobSortSelect" style="display:none">
-          <option value="recent">Most Recent</option>
-          <option value="title">Title A–Z</option>
-          <option value="author">Author A–Z</option>
-          <option value="rating">Top Rated</option>
-        </select>
-      </div>
-      <div class="mob-grid-scroll"><div class="mob-book-grid" id="mobBookGrid"></div></div>
-    </div>
-
-    <div class="mob-panel" id="mobPanelDetail">
-      <div class="mob-detail-header">
-        <button class="mob-back-btn" id="btnMobBack">← Back</button>
-      </div>
-      <div class="mob-detail-scroll">
-        <div class="mob-detail-top">
-          <div>
-            <img class="mob-detail-cover" id="mobDetailCoverImg" src="" style="display:none"/>
-            <div class="mob-detail-cover-ph" id="mobDetailCoverPh">📖</div>
-          </div>
-          <div class="mob-detail-text">
-            <div class="mob-detail-cat" id="mobDetailCat"></div>
-            <div class="mob-detail-title" id="mobDetailTitle"></div>
-            <div class="mob-detail-author" id="mobDetailAuthor"></div>
-            <div id="mobDetailSharedBy" style="display:none;font-size:.72rem;color:var(--teal);font-weight:700;margin-top:.2rem"></div>
-            <div class="star-rating" id="mobStarRating" style="display:none;margin-top:.4rem">
-              <div class="stars" id="mobStars"></div>
-              <span class="rating-count" id="mobRatingCount"></span>
-            </div>
-          </div>
-        </div>
-        <div class="mob-detail-actions" id="mobDetailActions"></div>
-        <hr style="border:none;border-top:1px solid var(--border);margin:.5rem 0 1rem"/>
-        <p class="mob-detail-desc" id="mobDetailDesc"></p>
-      </div>
-    </div>
-
-    <div class="mob-panel" id="mobPanelSettings">
-      <div class="mob-settings-scroll">
-        <h2>Settings</h2>
-        <div class="settings-group">
-          <div class="settings-group-label">Account</div>
-          <div style="display:flex;align-items:center;gap:.8rem;padding:.8rem;background:var(--warm-white);border:1px solid var(--border);border-radius:4px;margin-bottom:.7rem">
-            <div id="mobUserAvatar" style="width:40px;height:40px;border-radius:50%;background:var(--gold);display:flex;align-items:center;justify-content:center;color:var(--navy);font-weight:700;font-size:.9rem;flex-shrink:0"></div>
-            <div>
-              <div id="mobUserName" style="font-weight:700;font-size:.92rem"></div>
-              <div id="mobUserEmail" style="font-size:.78rem;color:var(--muted)"></div>
-            </div>
-          </div>
-          <button class="settings-btn danger-s" id="btnMobSignOut"><span class="s-icon">🚪</span><div><div>Sign Out</div></div></button>
-        </div>
-        <div class="settings-group">
-          <div class="settings-group-label">Library</div>
-          <button class="settings-btn upload-s" id="btnMobUpload"><span class="s-icon">📤</span><div><div>Upload EPUB Files</div><div class="settings-note" style="color:rgba(200,149,42,.85)">Add new books to your library</div></div></button>
-          <button class="settings-btn neutral" id="btnMobRefresh"><span class="s-icon">↻</span><div><div>Refresh Library</div><div class="settings-note">Reload books from Firestore</div></div></button>
-        </div>
-        <div class="settings-group">
-          <div class="settings-group-label">📖 Kobo Devices</div>
-          <div id="mobKoboSettings"></div>
-        </div>
-        <div class="settings-group">
-          <div class="settings-group-label">Install App</div>
-          <button class="settings-btn neutral" id="mobInstallBtn" style="display:none"><span class="s-icon">📲</span><div><div>Add to Home Screen</div><div class="settings-note">Install eLibrary as an app</div></div></button>
-          <p class="settings-note" id="mobInstallNote">Open in your browser's menu and choose "Add to Home Screen" to install.</p>
-        </div>
+  <!-- ── HOME PANEL ── -->
+  <div class="mob-panel" id="mobPanelHome">
+    <div class="mob-grid-scroll" style="padding:1rem">
+      <div style="font-family:'Playfair Display',serif;font-size:1.3rem;color:var(--navy2);margin-bottom:.2rem" id="mobHomeGreeting">Welcome</div>
+      <div style="font-size:.8rem;color:var(--muted);margin-bottom:1.2rem">Your reading at a glance</div>
+      <div id="mobHomeContent">
+        <div style="text-align:center;padding:2rem;color:var(--muted);font-size:.88rem">Loading…</div>
       </div>
     </div>
   </div>
+
+  <!-- ── COMMUNITY PANEL (stub — content coming) ── -->
+  <div class="mob-panel" id="mobPanelCommunity">
+    <div class="community-placeholder">
+      <div class="cp-icon">💬</div>
+      <h3>Community</h3>
+      <p>Book requests, announcements, and broadcasts will appear here.</p>
+    </div>
+  </div>
+
+  <!-- ── BOOK DETAIL PANEL ── -->
+  <div class="mob-panel" id="mobPanelDetail">
+    <div class="mob-detail-header">
+      <button class="mob-back-btn" id="btnMobBack">← Back</button>
+    </div>
+    <div class="mob-detail-scroll">
+      <div class="mob-detail-top">
+        <div>
+          <img class="mob-detail-cover" id="mobDetailCoverImg" src="" style="display:none"/>
+          <div class="mob-detail-cover-ph" id="mobDetailCoverPh">📖</div>
+        </div>
+        <div class="mob-detail-text">
+          <div class="mob-detail-cat" id="mobDetailCat"></div>
+          <div class="mob-detail-title" id="mobDetailTitle"></div>
+          <div class="mob-detail-author" id="mobDetailAuthor"></div>
+          <div id="mobDetailSharedBy" style="display:none;font-size:.72rem;color:var(--teal);font-weight:700;margin-top:.2rem"></div>
+          <div class="star-rating" id="mobStarRating" style="display:none;margin-top:.4rem">
+            <div class="stars" id="mobStars"></div>
+            <span class="rating-count" id="mobRatingCount"></span>
+          </div>
+        </div>
+      </div>
+      <div class="mob-detail-actions" id="mobDetailActions"></div>
+      <hr style="border:none;border-top:1px solid var(--border);margin:.5rem 0 1rem"/>
+      <p class="mob-detail-desc" id="mobDetailDesc"></p>
+    </div>
+  </div>
+
+  <!-- ── SETTINGS PANEL ── -->
+  <div class="mob-panel" id="mobPanelSettings">
+    <div class="mob-settings-scroll">
+      <h2>Settings</h2>
+      <div class="settings-group">
+        <div class="settings-group-label">Account</div>
+        <div style="display:flex;align-items:center;gap:.8rem;padding:.8rem;background:var(--warm-white);border:1px solid var(--border);border-radius:4px;margin-bottom:.7rem">
+          <div id="mobUserAvatar" style="width:40px;height:40px;border-radius:50%;background:var(--gold);display:flex;align-items:center;justify-content:center;color:var(--navy);font-weight:700;font-size:.9rem;flex-shrink:0"></div>
+          <div>
+            <div id="mobUserName" style="font-weight:700;font-size:.92rem"></div>
+            <div id="mobUserEmail" style="font-size:.78rem;color:var(--muted)"></div>
+          </div>
+        </div>
+        <button class="settings-btn danger-s" id="btnMobSignOut"><span class="s-icon">🚪</span><div><div>Sign Out</div></div></button>
+      </div>
+      <div class="settings-group">
+        <div class="settings-group-label">Library</div>
+        <button class="settings-btn upload-s" id="btnMobUpload"><span class="s-icon">📤</span><div><div>Upload EPUB Files</div><div class="settings-note" style="color:rgba(200,149,42,.85)">Add new books to your library</div></div></button>
+        <button class="settings-btn neutral" id="btnMobRefresh"><span class="s-icon">↻</span><div><div>Refresh Library</div><div class="settings-note">Reload books from Firestore</div></div></button>
+      </div>
+      <div class="settings-group">
+        <div class="settings-group-label">📖 Kobo Devices</div>
+        <div id="mobKoboSettings"></div>
+      </div>
+      <div class="settings-group">
+        <div class="settings-group-label">Install App</div>
+        <button class="settings-btn neutral" id="mobInstallBtn" style="display:none"><span class="s-icon">📲</span><div><div>Add to Home Screen</div><div class="settings-note">Install eLibrary as an app</div></div></button>
+        <p class="settings-note" id="mobInstallNote">Open in your browser's menu and choose "Add to Home Screen" to install.</p>
+      </div>
+    </div>
+  </div>
+
+</div>
 </div>
 
 <!-- Book detail drawer (desktop) -->
@@ -785,16 +831,18 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 <nav class="mob-nav">
   <div class="mob-nav-bg"></div>
   <div class="mob-nav-inner">
-    <button class="mob-tab" id="mobNavSearch"><span class="tab-icon">🔍</span><span>Search</span></button>
-    <button class="mob-tab" id="mobNavPublic"><span class="tab-icon">🌐</span><span>Public</span></button>
+    <button class="mob-tab active" id="mobNavLibrary">
+      <span class="tab-icon">📚</span><span>Library</span>
+    </button>
     <button class="mob-tab-home" id="mobNavHome">
       <div class="mob-home-inner">
-        <div class="mob-home-icon">📚</div>
+        <div class="mob-home-icon">🏠</div>
         <span class="mob-home-label">Home</span>
       </div>
     </button>
-    <button class="mob-tab" id="mobNavMine"><span class="tab-icon">📖</span><span>My Books</span></button>
-    <button class="mob-tab" id="mobNavSettings"><span class="tab-icon">⚙️</span><span>Settings</span></button>
+    <button class="mob-tab" id="mobNavCommunity">
+      <span class="tab-icon">💬</span><span>Community</span>
+    </button>
   </div>
 </nav>
 
@@ -1032,8 +1080,13 @@ const app=initializeApp({apiKey:'AIzaSyA1hCS7-C_W0VS7_JVcPIPdJ4aluDuL_-Q',authDo
 const auth=getAuth(app),db=getFirestore(app),storage=getStorage(app),gprovider=new GoogleAuthProvider();
 
 // ── STATE ─────────────────────────────────────────────────────────────────────
+let mobLibFilter = 'all';
+let mobLibCat    = 'All';
+let mobLibSearch = '';
+let mobLibSort   = 'recent';
+let mobPrevPanel = 'mobPanelLibrary';
 let currentUser=null,library=[],allUsers=[],userRatings={},currentId=null,communityLib = [];
-let shelfMode='mine',activeCat='All',activeCatPublic='All',searchQ='',mobPrevPanel='mobPanelLib';
+let shelfMode='mine',activeCat='All',activeCatPublic='All',searchQ='';
 let selectMode=false,selectedIds=new Set(),deskView='library';
 let myCheckedOutIds=new Set();
 
@@ -1350,10 +1403,10 @@ function renderSkeleton(gridId,count=12){
   grid.innerHTML=Array.from({length:count},()=>`<div class="skeleton-card"><div class="skeleton-cover"></div><div class="skeleton-body"><div class="skeleton-line"></div><div class="skeleton-line short"></div></div></div>`).join('');
 }
 function renderAll(){
-  renderFilterCats();renderMobChips();
+  renderFilterCats();
   document.getElementById('deskBookGrid').classList.toggle('select-mode',selectMode);
   renderGrid('deskBookGrid');renderGrid('mobBookGrid');
-  renderMobPublic();renderMobHome();renderDeskHome();
+  renderMobLibrary();renderMobHome();renderDeskHome();
   const books=filteredBooks();
   document.getElementById('deskGridCount').textContent=`${books.length} book${books.length!==1?'s':''}`;
   document.getElementById('deskGridTitle').textContent=shelfMode==='mine'?'My Library':'Public Library';
@@ -1363,10 +1416,6 @@ function renderFilterCats(){
   const el=document.getElementById('deskFilterCats');
   const currentCat = shelfMode==='community' ? activeCatPublic : activeCat;
   el.innerHTML=`<div class="filter-cat-item ${currentCat==='All'?'active':''}" data-cat="All"><span>All</span><span class="filter-cat-count">${total}</span></div>`+cats.map(([cat,cnt])=>`<div class="filter-cat-item ${currentCat===cat?'active':''}" data-cat="${encodeURIComponent(cat)}"><span>${esc(cat)}</span><span class="filter-cat-count">${cnt}</span></div>`).join('');
-}
-function renderMobChips(){
-  const cats=getCats();
-  document.getElementById('mobFilterChips').innerHTML=[['All',activeBooks().length],...cats].map(([cat,cnt])=>`<div class="mob-chip ${activeCat===cat?'active':''}" data-cat="${encodeURIComponent(cat)}">${esc(cat)} <span style="opacity:.7">${cnt}</span></div>`).join('');
 }
 function renderGrid(gridId){
   const grid=document.getElementById(gridId);if(!grid)return;
@@ -1401,7 +1450,7 @@ document.getElementById('deskFilterCats').addEventListener('click',e=>{
     else activeCat=decodeURIComponent(item.dataset.cat);
   renderAll();
 });
-document.getElementById('mobFilterChips').addEventListener('click',e=>{const chip=e.target.closest('.mob-chip[data-cat]');if(!chip)return;activeCat=decodeURIComponent(chip.dataset.cat);renderAll();});
+
 document.getElementById('deskBookGrid').addEventListener('click',e=>{
   const card=e.target.closest('.book-card[data-bookid]');if(!card)return;
   if(selectMode){const id=card.dataset.bookid;if(selectedIds.has(id)){selectedIds.delete(id);card.classList.remove('selected');}else{selectedIds.add(id);card.classList.add('selected');}updateBulkBar();return;}
@@ -1430,14 +1479,6 @@ document.getElementById('mobSortBtns').addEventListener('click', e => {
   renderAll();
 });
 
-document.getElementById('mobSortPublicBtns').addEventListener('click', e => {
-  const btn = e.target.closest('.sort-btn[data-sort]');
-  if(!btn) return;
-  document.querySelectorAll('#mobSortPublicBtns .sort-btn').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-  document.getElementById('mobSortPublic').value = btn.dataset.sort;
-  renderMobPublic();
-});
 document.getElementById('tabMineDesk').addEventListener('click',()=>switchShelf('mine'));
 document.getElementById('tabCommDesk').addEventListener('click',()=>switchShelf('community'));
 function switchShelf(mode){
@@ -1778,56 +1819,137 @@ function mob_showBook(id){
 document.getElementById('btnMobBack').addEventListener('click',()=>mob_showPanel(mobPrevPanel||'mobPanelHome'));
 function mob_showPanel(id){document.querySelectorAll('.mob-panel').forEach(p=>p.classList.remove('active'));document.getElementById(id)?.classList.add('active');}
 
-// mob nav
-let searchFilter='all';
-document.getElementById('mobNavSearch').addEventListener('click',()=>mob_switchTab('search'));
-document.getElementById('mobNavPublic').addEventListener('click',()=>mob_switchTab('public'));
-document.getElementById('mobNavHome').addEventListener('click',()=>mob_switchTab('home'));
-document.getElementById('mobNavMine').addEventListener('click',()=>mob_switchTab('mine'));
-document.getElementById('mobNavSettings').addEventListener('click',()=>mob_switchTab('settings'));
+// ── MOBILE NAV ───────────────────────────────────────────────────────────────
+document.getElementById('mobNavLibrary').addEventListener('click',  () => mob_switchTab('library'));
+document.getElementById('mobNavHome').addEventListener('click',     () => mob_switchTab('home'));
+document.getElementById('mobNavCommunity').addEventListener('click',() => mob_switchTab('community'));
 
-function mob_switchTab(tab){
-  document.querySelectorAll('.mob-tab,.mob-tab-home').forEach(t=>t.classList.remove('active'));
-  const tabMap={search:'mobNavSearch',public:'mobNavPublic',home:'mobNavHome',mine:'mobNavMine',settings:'mobNavSettings'};
+function mob_switchTab(tab) {
+  document.querySelectorAll('.mob-tab, .mob-tab-home').forEach(t => t.classList.remove('active'));
+  const tabMap = { library:'mobNavLibrary', home:'mobNavHome', community:'mobNavCommunity' };
   document.getElementById(tabMap[tab])?.classList.add('active');
-  const panelMap={search:'mobPanelSearch',public:'mobPanelPublic',home:'mobPanelHome',mine:'mobPanelLib',settings:'mobPanelSettings'};
-  mob_showPanel(panelMap[tab]||'mobPanelHome');
-  if(tab==='search')setTimeout(()=>document.getElementById('mobSearchGlobal')?.focus(),200);
-  if(tab==='home')renderMobHome();
-  if(tab==='public')renderMobPublic();
-  if(tab==='settings')renderKoboSettings(document.getElementById('mobKoboSettings'));
+  const panelMap = { library:'mobPanelLibrary', home:'mobPanelHome', community:'mobPanelCommunity' };
+  mob_showPanel(panelMap[tab] || 'mobPanelHome');
+  if (tab === 'home')      renderMobHome();
+  if (tab === 'library')   renderMobLibrary();
 }
-document.getElementById('mobNavHome').classList.add('active');
+document.getElementById('mobNavLibrary').classList.add('active');
+
+// ── MOBILE LIBRARY PANEL ─────────────────────────────────────────────────────
+// Source filter pills
+document.getElementById('mobLibFilterPills').addEventListener('click', e => {
+  const pill = e.target.closest('.lib-filter-pill[data-libfilter]');
+  if (!pill) return;
+  mobLibFilter = pill.dataset.libfilter;
+  document.querySelectorAll('#mobLibFilterPills .lib-filter-pill')
+    .forEach(p => p.classList.toggle('active', p === pill));
+  mobLibCat = 'All'; // reset category when source changes
+  renderMobLibrary();
+});
+
+// Category chips
+document.getElementById('mobLibCatChips').addEventListener('click', e => {
+  const chip = e.target.closest('.mob-chip[data-cat]');
+  if (!chip) return;
+  mobLibCat = decodeURIComponent(chip.dataset.cat);
+  renderMobLibrary();
+});
+
+// Search
+document.getElementById('mobSearchLibrary').addEventListener('input', e => {
+  mobLibSearch = e.target.value.toLowerCase().trim();
+  renderMobLibrary();
+});
+
+// Sort
+document.getElementById('mobLibSortBtns').addEventListener('click', e => {
+  const btn = e.target.closest('.sort-btn[data-sort]');
+  if (!btn) return;
+  document.querySelectorAll('#mobLibSortBtns .sort-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  mobLibSort = btn.dataset.sort;
+  renderMobLibrary();
+});
+
+function getMobLibBooks() {
+  // Build the combined source based on filter
+  let src = [];
+  if (mobLibFilter === 'all') {
+    // All books the user can see: their own + public + shared with them
+    src = dedupe([...library, ...communityLib]);
+  } else if (mobLibFilter === 'private') {
+    src = library.filter(b => b.visibility !== 'public' && !(b.allowedUsers?.length));
+  } else if (mobLibFilter === 'public') {
+    src = communityLib.filter(b => b.visibility === 'public');
+  } else if (mobLibFilter === 'shared') {
+    // Books shared with me privately (not mine, not public)
+    src = communityLib.filter(b =>
+      b.ownerId !== currentUser?.uid &&
+      b.allowedUsers?.includes(currentUser?.uid)
+    );
+  }
+  // Category filter
+  if (mobLibCat !== 'All') src = src.filter(b => (b.category || 'Uncategorised') === mobLibCat);
+  // Search
+  if (mobLibSearch) src = src.filter(b => matchesQ(b, mobLibSearch));
+  // Sort
+  return sortBooks(src, mobLibSort);
+}
+
+function renderMobLibrary() {
+  // Category chips
+  const allSrc = mobLibFilter === 'all'
+    ? dedupe([...library, ...communityLib])
+    : getMobLibBooks(); // a bit redundant but fine for chip counts
+  const catMap = {};
+  dedupe([...library, ...communityLib]).forEach(b => {
+    if (mobLibFilter !== 'all') return; // only count from filtered source for chips
+    const c = b.category || 'Uncategorised';
+    catMap[c] = (catMap[c] || 0) + 1;
+  });
+  // Simpler: just count from whatever source applies
+  const srcForCats = mobLibFilter === 'all'
+    ? dedupe([...library, ...communityLib])
+    : (() => {
+        if (mobLibFilter === 'private')  return library.filter(b => b.visibility !== 'public' && !(b.allowedUsers?.length));
+        if (mobLibFilter === 'public')   return communityLib.filter(b => b.visibility === 'public');
+        if (mobLibFilter === 'shared')   return communityLib.filter(b => b.ownerId !== currentUser?.uid && b.allowedUsers?.includes(currentUser?.uid));
+        return [];
+      })();
+  const cats = {};
+  srcForCats.forEach(b => { const c = b.category || 'Uncategorised'; cats[c] = (cats[c] || 0) + 1; });
+  document.getElementById('mobLibCatChips').innerHTML =
+    [['All', srcForCats.length], ...Object.entries(cats).sort()]
+      .map(([cat, cnt]) => `<div class="mob-chip ${mobLibCat === cat ? 'active' : ''}" data-cat="${encodeURIComponent(cat)}">${esc(cat)} <span style="opacity:.65">${cnt}</span></div>`)
+      .join('');
+
+  // Grid
+  const books = getMobLibBooks();
+  const grid = document.getElementById('mobGridLibrary');
+  if (!books.length) {
+    grid.innerHTML = `<div style="grid-column:1/-1;padding:3rem 1rem;text-align:center;color:var(--muted)">
+      <div style="font-size:2.5rem;opacity:.2;margin-bottom:.8rem">📚</div>
+      <div style="font-size:.88rem">${mobLibSearch ? 'No books match your search' : 'No books here yet'}</div>
+    </div>`;
+    return;
+  }
+  grid.innerHTML = books.map(b => {
+    const isComm = communityLib.some(x => x.id === b.id);
+    return bookCardHtml(b, isComm);
+  }).join('');
+}
+
+document.getElementById('mobGridLibrary').addEventListener('click', e => {
+  const card = e.target.closest('.book-card[data-bookid]');
+  if (!card) return;
+  mobPrevPanel = 'mobPanelLibrary';
+  mob_showBook(card.dataset.bookid);
+});
 
 // Search panel
-document.getElementById('mobSearchGlobal').addEventListener('input',e=>{renderMobSearch(e.target.value.toLowerCase().trim());});
-document.getElementById('mobSearchFilters').addEventListener('click',e=>{const c=e.target.closest('.mob-chip[data-sfilter]');if(!c)return;searchFilter=c.dataset.sfilter;document.querySelectorAll('#mobSearchFilters .mob-chip').forEach(x=>x.classList.toggle('active',x.dataset.sfilter===searchFilter));renderMobSearch(document.getElementById('mobSearchGlobal').value.toLowerCase().trim());});
-function renderMobSearch(q){
-  const grid=document.getElementById('mobGridSearch');
-  if(!q){grid.innerHTML='<div style="padding:2rem;text-align:center;color:var(--muted);font-size:.88rem">Start typing to search…</div>';return;}
-  let books=[];
-  if(searchFilter==='all'||searchFilter==='mine')books.push(...library.filter(b=>matchesQ(b,q)));
-  if(searchFilter==='all'||searchFilter==='public')books.push(...communityLib.filter(b=>matchesQ(b,q)&&!books.find(x=>x.id===b.id)));
-  grid.innerHTML=books.length?books.map(b=>bookCardHtml(b,communityLib.some(x=>x.id===b.id))).join(''):'<div style="padding:2rem;text-align:center;color:var(--muted);font-size:.88rem">No results</div>';
-}
-function matchesQ(b,q){return(b.title||'').toLowerCase().includes(q)||(b.author||'').toLowerCase().includes(q)||(b.category||'').toLowerCase().includes(q);}
-document.getElementById('mobGridSearch').addEventListener('click',e=>{const c=e.target.closest('.book-card[data-bookid]');if(c){mobPrevPanel='mobPanelSearch';mob_showBook(c.dataset.bookid);}});
 
-// Public Library panel
-document.getElementById('mobSearchPublic').addEventListener('input',renderMobPublic);
-document.getElementById('mobGridPublic').addEventListener('click',e=>{const c=e.target.closest('.book-card[data-bookid]');if(c){mobPrevPanel='mobPanelPublic';mob_showBook(c.dataset.bookid);}});
-document.getElementById('mobChipsPublic').addEventListener('click',e=>{const c=e.target.closest('.mob-chip[data-cat]');if(!c)return;activeCatPublic=decodeURIComponent(c.dataset.cat);renderMobPublic();});
-function renderMobPublic(){
-  const q=document.getElementById('mobSearchPublic').value.toLowerCase().trim();
-  const sort=document.getElementById('mobSortPublic').value;
-  let books=communityLib;
-  if(activeCatPublic!=='All')books=books.filter(b=>(b.category||'Uncategorised')===activeCatPublic);
-  if(q)books=books.filter(b=>matchesQ(b,q));
-  books=sortBooks(books,sort);
-  const cats={};communityLib.forEach(b=>{const c=b.category||'Uncategorised';cats[c]=(cats[c]||0)+1;});
-  document.getElementById('mobChipsPublic').innerHTML=[['All',communityLib.length],...Object.entries(cats).sort()].map(([cat,cnt])=>`<div class="mob-chip ${activeCatPublic===cat?'active':''}" data-cat="${encodeURIComponent(cat)}">${esc(cat)} <span style="opacity:.65">${cnt}</span></div>`).join('');
-  document.getElementById('mobGridPublic').innerHTML=books.length?books.map(b=>bookCardHtml(b,true)).join(''):'<div style="padding:2rem;text-align:center;color:var(--muted);font-size:.88rem">No books yet</div>';
-}
+function matchesQ(b,q){return(b.title||'').toLowerCase().includes(q)||(b.author||'').toLowerCase().includes(q)||(b.category||'').toLowerCase().includes(q);}
+
 
 // ── HOME PANEL (mobile) ───────────────────────────────────────────────────────
 async function renderMobHome(){
