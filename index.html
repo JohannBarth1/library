@@ -269,6 +269,8 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
   line-height:1.9;
   scroll-behavior:auto;
   will-change:opacity, transform;
+  overflow-y: hidden;
+  overflow-x: visible;
 }
 .reader-content img{max-width:100%;height:auto;display:block;margin:0 auto;}
 .reader-content p{margin:0 0 1.1em;}
@@ -2369,21 +2371,22 @@ function getLineBoundaries(container){
     const rects = range.getClientRects();
     for(const r of rects){
       if(r.height === 0) continue;
-      const bottom = (r.bottom - containerTop) + container.scrollTop;
-      boundaries.add(Math.ceil(bottom));
+      // Use floor on top, ceil on bottom, add 2px buffer
+      const bottom = Math.ceil(r.bottom - containerTop) + container.scrollTop + 2;
+      boundaries.add(bottom);
     }
   }
   container.querySelectorAll('img, hr, table').forEach(el=>{
     const r = el.getBoundingClientRect();
-    if(r.height===0) return;
-    const bottom = (r.bottom - containerTop) + container.scrollTop;
-    boundaries.add(Math.ceil(bottom));
+    if(r.height === 0) return;
+    const bottom = Math.ceil(r.bottom - containerTop) + container.scrollTop + 2;
+    boundaries.add(bottom);
   });
   return [...boundaries].sort((a,b)=>a-b);
 }
 
 function computePageBreaks(container){
-  const SAFETY_MARGIN = Math.ceil(readerFontSize * 0.5);
+  const SAFETY_MARGIN = Math.ceil(readerFontSize * 1.5); // increased margin
   const realViewportH = container.clientHeight;
   const fitViewportH = realViewportH - SAFETY_MARGIN;
   const boundaries = getLineBoundaries(container);
@@ -2401,7 +2404,7 @@ function computePageBreaks(container){
       }
     }
     if(pageEnd <= pageStart) pageEnd = pageStart + realViewportH;
-    const nextStart = pageEnd + 1;
+    const nextStart = pageEnd;
     breaks.push(nextStart);
     pageStart = nextStart;
   }
@@ -2488,36 +2491,39 @@ function goToPage(page, opts={}){
   readerPage = page;
   const target = readerPageBreaks[page];
 
+  // Clear any leftover styles from previous animations
+  container.style.transition = 'none';
+  container.style.transform = 'none';
+  container.style.opacity = '1';
+
   if(opts.animate === false || readerTransition === 'none'){
-    container.style.transition = 'none';
-    container.style.transform = 'none';
-    container.style.opacity = '1';
     container.scrollTop = target;
   } else if(readerTransition === 'slide'){
-    container.style.transition = 'none';
+    // Move content off-screen, scroll, then slide in
     container.style.transform = `translateX(${direction * 100}%)`;
-    container.style.opacity = '1';
-    container.scrollTop = target;
     requestAnimationFrame(()=>{
+      container.scrollTop = target;
       requestAnimationFrame(()=>{
         container.style.transition = 'transform .22s cubic-bezier(.4,0,.2,1)';
         container.style.transform = 'translateX(0)';
+        setTimeout(()=>{
+          container.style.transition = 'none';
+        }, 230);
       });
     });
   } else {
-    container.style.transition = 'opacity .14s ease-out';
+    // bounce
     container.style.opacity = '0';
-    setTimeout(()=>{
-      container.style.scrollBehavior = 'auto';
-      container.scrollTop = target;
-      container.style.transition = 'none';
-      container.style.transform = `translateX(${direction * 10}px)`;
-      requestAnimationFrame(()=>{
-        container.style.transition = 'opacity .16s ease-in, transform .16s ease-out';
-        container.style.opacity = '1';
-        container.style.transform = 'translateX(0)';
-      });
-    }, 140);
+    container.style.transform = `translateX(${direction * 10}px)`;
+    container.scrollTop = target;
+    requestAnimationFrame(()=>{
+      container.style.transition = 'opacity .16s ease-in, transform .16s ease-out';
+      container.style.opacity = '1';
+      container.style.transform = 'translateX(0)';
+      setTimeout(()=>{
+        container.style.transition = 'none';
+      }, 180);
+    });
   }
 
   updatePaginationUI();
