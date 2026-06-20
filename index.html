@@ -2342,14 +2342,14 @@ function getLineBoundaries(container){
     for(const r of rects){
       if(r.height === 0) continue;
       const bottom = (r.bottom - containerTop) + container.scrollTop;
-      boundaries.add(Math.round(bottom));
+      boundaries.add(Math.ceil(bottom));
     }
   }
   container.querySelectorAll('img, hr, table').forEach(el=>{
     const r = el.getBoundingClientRect();
     if(r.height===0) return;
     const bottom = (r.bottom - containerTop) + container.scrollTop;
-    boundaries.add(Math.round(bottom));
+    boundaries.add(Math.ceil(bottom));
   });
   return [...boundaries].sort((a,b)=>a-b);
 }
@@ -2364,7 +2364,8 @@ function computePageBreaks(container){
     let pageEnd = pageStart;
     for(const b of boundaries){
       if(b <= pageStart) continue;
-      if(b - pageStart <= viewportH){
+      const SAFETY_MARGIN = 2;
+      if(b - pageStart <= viewportH - SAFETY_MARGIN){
         pageEnd = b;
       } else {
         break;
