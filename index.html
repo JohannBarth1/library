@@ -2290,7 +2290,6 @@ async function readCurrentBook(){
   }catch(e){hideLoading();showToast('Could not open EPUB: '+e.message);console.error(e);}
 }
 
-  let readerPage = 0;
 let readerPageBreaks = [0];
 let readerPageCount = 1;
 
