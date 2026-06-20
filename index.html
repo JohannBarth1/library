@@ -135,7 +135,9 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .bcs.filled{color:var(--gold);}
 .book-card .community-badge{position:absolute;top:.4rem;right:.4rem;background:var(--gold);color:var(--navy);font-size:.55rem;font-weight:700;padding:2px 5px;border-radius:2px;letter-spacing:.04em;text-transform:uppercase;}
 .rec-badge{position:absolute;top:.4rem;left:.4rem;background:var(--teal);color:#fff;font-size:.55rem;font-weight:700;padding:2px 5px;border-radius:2px;letter-spacing:.04em;text-transform:uppercase;}
-
+.book-card-progress{height:3px;background:var(--border);border-radius:0 0 2px 2px;overflow:hidden;}
+.book-card-progress-bar{height:3px;background:var(--teal);transition:width .3s;}
+  
 /* ── BOOK DETAIL DRAWER (desktop) ── */
 .book-drawer{position:fixed;top:var(--header-h);right:0;bottom:0;width:360px;background:var(--warm-white);border-left:1px solid var(--border);box-shadow:-4px 0 20px rgba(0,0,0,0.1);z-index:30;display:flex;flex-direction:column;transform:translateX(100%);transition:transform .25s ease;}
 .book-drawer.open{transform:translateX(0);}
@@ -1140,7 +1142,7 @@ let myCheckedOutIds=new Set();
 let koboDevices = [];
 
 // Reader state
-let readerZip=null,readerSpine=[],readerChapter=0,readerOpfBase='';
+let readerZip=null,readerSpine=[],readerChapter=0,readerOpfBase='',readerBookId = null;
 let readerPage = 0;
 let readerPageCount = 1;
 let readerFontSize=parseInt(localStorage.getItem('elib_reader_font')||'17');
@@ -1558,7 +1560,7 @@ async function renderDeskHome(){
   const checkedOutBooks=[...myCheckedOutIds].map(id=>[...library,...communityLib].find(b=>b.id===id)).filter(Boolean);
   if(checkedOutBooks.length){
     checkoutSection.style.display='';
-    checkoutGrid.innerHTML=checkedOutBooks.map(b=>bookCardHtml(b,communityLib.some(x=>x.id===b.id))).join('');
+    checkoutGrid.innerHTML = checkedOutBooks.map(b=>bookCardHtml(b, communityLib.some(x=>x.id===b.id), true)).join('');
     checkoutGrid.querySelectorAll('.book-card[data-bookid]').forEach(c=>c.addEventListener('click',()=>{hideDeskHome();showBookById(c.dataset.bookid);}));
   } else checkoutSection.style.display='none';
 
@@ -2177,8 +2179,8 @@ async function renderMobHome(){
   }
 
   if(checkedOutBooks.length){
-    html+=`<div style="font-size:.68rem;letter-spacing:.18em;text-transform:uppercase;color:var(--teal);font-weight:700;margin-bottom:.6rem;margin-top:.5rem">📋 Currently Signed Out</div>
-    <div class="mob-book-grid" style="margin-bottom:1.5rem;grid-template-columns:repeat(auto-fill,minmax(140px,1fr))">${checkedOutBooks.map(b=>bookCardHtml(b,communityLib.some(x=>x.id===b.id))).join('')}</div>`;
+  html+=`<div style="font-size:.68rem;letter-spacing:.18em;text-transform:uppercase;color:var(--teal);font-weight:700;margin-bottom:.6rem;margin-top:.5rem">📋 Currently Signed Out</div>
+  <div class="mob-book-grid" style="margin-bottom:1.5rem;grid-template-columns:repeat(auto-fill,minmax(140px,1fr))">${checkedOutBooks.map(b=>bookCardHtml(b,communityLib.some(x=>x.id===b.id),true)).join('')}</div>`;
   }
 
   if(sharedByMe.length){
@@ -2202,18 +2204,32 @@ async function renderMobHome(){
   });
 }
 
-function bookCardHtml(b,isComm){
-  const avg=isComm?getAvgRating(b):0;
-  const starsHtml=isComm?[1,2,3,4,5].map(n=>`<span class="bcs ${n<=Math.round(avg)?'filled':''}">★</span>`).join(''):'';
-  const coverSrc=getCoverSrc(b);
-  const coverHtml=coverSrc?`<img class="book-card-cover" src="${coverSrc}" alt="" loading="lazy"/>`:`<div class="book-card-cover-ph"><div class="ph-icon">📖</div><div class="ph-title">${esc(b.title)}</div><div class="ph-author">${esc(b.author)}</div></div>`;const tagsHtml=(b.tags||[]).slice(0,2).map(t=>`<span class="tag-pill" style="font-size:.55rem;padding:1px 5px">${esc(t)}</span>`).join('');
-  const isMyPublicBook=b.ownerId===currentUser?.uid&&b.visibility==='public';
+function bookCardHtml(b, isComm, showProgress=false){
+  const avg = isComm ? getAvgRating(b) : 0;
+  const starsHtml = isComm
+    ? [1,2,3,4,5].map(n=>`<span class="bcs ${n<=Math.round(avg)?'filled':''}">★</span>`).join('')
+    : '';
+  const coverSrc = getCoverSrc(b);
+  const coverHtml = coverSrc
+    ? `<img class="book-card-cover" src="${coverSrc}" alt="" loading="lazy"/>`
+    : `<div class="book-card-cover-ph"><div class="ph-icon">📖</div><div class="ph-title">${esc(b.title)}</div><div class="ph-author">${esc(b.author)}</div></div>`;
+  const tagsHtml = (b.tags||[]).slice(0,2).map(t=>`<span class="tag-pill" style="font-size:.55rem;padding:1px 5px">${esc(t)}</span>`).join('');
+  const isMyPublicBook = b.ownerId===currentUser?.uid && b.visibility==='public';
+
+  let progBar = '';
+  if(showProgress){
+    const prog = getReadingProgress(b.id);
+    if(prog > 0){
+      progBar = `<div class="book-card-progress"><div class="book-card-progress-bar" style="width:${Math.round(prog*100)}%"></div></div>`;
+    }
+  }
+
   return `<div class="book-card" data-bookid="${b.id}">${coverHtml}${b.recommended?'<span class="rec-badge">⭐ Pick</span>':''}${isMyPublicBook?'<span class="community-badge">Shared</span>':''}
     <div class="book-card-body">
     <div class="book-card-title">${esc(b.title)}</div>
     <div class="book-card-author">${esc(b.author)}</div>
   ${isComm&&b.ownerId!==currentUser?.uid&&b.allowedUsers?.includes(currentUser?.uid)?`<div class="book-card-shared-by">Shared by ${esc(b.ownerName||'')}</div>`:''}
-  ${isComm?`<div class="book-card-stars">${starsHtml}</div>`:''}${tagsHtml}</div></div>`;
+  ${isComm?`<div class="book-card-stars">${starsHtml}</div>`:''}${tagsHtml}</div>${progBar}</div>`;
 }
 
 // ── EPUB READER ───────────────────────────────────────────────────────────────
@@ -2263,6 +2279,7 @@ async function readCurrentBook(){
   try{
     const bytes=await getBytes(storageRef(storage,storagePath));
     readerZip=await JSZip.loadAsync(bytes);readerSpine=[];readerChapter=0;
+    readerBookId = book.id;
     const container=await readerZip.file('META-INF/container.xml')?.async('string');
     const opfPath=container?.match(/full-path="([^"]+\.opf)"/i)?.[1];
     if(!opfPath)throw new Error('No OPF found');
@@ -2283,7 +2300,16 @@ async function readCurrentBook(){
     hideLoading();applyReaderTheme(readerTheme);
     document.getElementById('readerSettingsBar').classList.remove('open');
     document.getElementById('readerOverlay').classList.add('open');
-    readerGoToChapter(0);
+    const saved = loadReadingProgress(book.id);
+    if(saved && saved.chapterIdx < readerSpine.length && saved.chapterIdx > 0){
+      if(confirm(`Resume at ${readerSpine[saved.chapterIdx]?.label || 'last position'}?`)){
+        readerGoToChapter(saved.chapterIdx, saved.pageIdx);
+      } else {
+        readerGoToChapter(0);
+      }
+    } else {
+      readerGoToChapter(0);
+    }
   }catch(e){hideLoading();showToast('Could not open EPUB: '+e.message);console.error(e);}
 }
 
@@ -2362,6 +2388,34 @@ function renderChapterPaged(bodyHtml){
       });
     });
   });
+}
+
+// ── READING PROGRESS ──────────────────────────────────────────────
+function progressKey(bookId){ return `elib_progress_${bookId}`; }
+
+function saveReadingProgress(bookId, chapterIdx, pageIdx, totalChapters){
+  if(!bookId) return;
+  const progress = (chapterIdx + (pageIdx / Math.max(readerPageCount,1))) / Math.max(totalChapters,1);
+  localStorage.setItem(progressKey(bookId), JSON.stringify({
+    chapterIdx, pageIdx, totalChapters, progress, ts: Date.now()
+  }));
+  // Live-update any progress bars currently shown on book cards
+  document.querySelectorAll(`.book-card[data-bookid="${bookId}"] .book-card-progress-bar`)
+    .forEach(el => { el.style.width = Math.round(progress*100) + '%'; });
+}
+
+function loadReadingProgress(bookId){
+  try{
+    const v = localStorage.getItem(progressKey(bookId));
+    return v ? JSON.parse(v) : null;
+  }catch{
+    return null;
+  }
+}
+
+function getReadingProgress(bookId){
+  const p = loadReadingProgress(bookId);
+  return p ? p.progress : 0;
 }
 
 function goToPage(page, opts={}){
