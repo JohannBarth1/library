@@ -268,18 +268,11 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
   padding:1.8rem clamp(1rem,5vw,4rem);
   line-height:1.9;
   scroll-behavior:auto;
+  will-change:opacity, transform;
 }
 .reader-content img{max-width:100%;height:auto;display:block;margin:0 auto;}
 .reader-content p{margin:0 0 1.1em;}
 .reader-content h1,.reader-content h2,.reader-content h3{font-family:'Playfair Display',serif;margin:1.5em 0 .5em;}
-.reader-content{
-  flex:1;
-  overflow:hidden;
-  padding:1.8rem clamp(1rem,5vw,4rem);
-  line-height:1.9;
-  scroll-behavior:auto;
-  will-change:opacity, transform;
-}
 
   /* ── TTS AUDIO BAR ── */
 .tts-bar{position:fixed;bottom:0;left:0;right:0;z-index:140;background:var(--navy);border-top:2px solid var(--gold);transform:translateY(100%);transition:transform .3s ease;display:flex;flex-direction:column;padding:0;}
