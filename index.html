@@ -2273,9 +2273,19 @@ document.getElementById('btnToggleReaderSettings').addEventListener('click',()=>
 document.getElementById('btnToggleChapters').addEventListener('click',()=>document.getElementById('readerChapterList').classList.toggle('open'));
 document.getElementById('readerOverlay').addEventListener('click', e => {
   const list = document.getElementById('readerChapterList');
-  if(!list.classList.contains('open')) return;
-  if(e.target.closest('#readerChapterList') || e.target.closest('#btnToggleChapters')) return;
-  list.classList.remove('open');
+  const settingsBar = document.getElementById('readerSettingsBar');
+
+  if(list.classList.contains('open') &&
+     !e.target.closest('#readerChapterList') &&
+     !e.target.closest('#btnToggleChapters')){
+    list.classList.remove('open');
+  }
+
+  if(settingsBar.classList.contains('open') &&
+     !e.target.closest('#readerSettingsBar') &&
+     !e.target.closest('#btnToggleReaderSettings')){
+    settingsBar.classList.remove('open');
+  }
 });
 document.getElementById('btnCloseReader').addEventListener('click',closeReader);
 document.addEventListener('keydown',e=>{
