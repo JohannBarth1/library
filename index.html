@@ -2421,37 +2421,36 @@ function computePageBreaks(inner){
   const fitViewportH = realViewportH - SAFETY_MARGIN;
   const boundaries = getLineBoundaries(inner);
   const totalH = inner.scrollHeight;
-  
-  console.log('viewport:', realViewportH, 'scrollHeight:', totalH, 'boundaries sample:', boundaries.slice(0,10));
-  
   const breaks = [0];
   let pageStart = 0;
-  let prev = 0;
 
   while(pageStart < totalH - realViewportH){
-    let lastFittingBottom = pageStart;
-    prev = pageStart;
+    let secondToLastFitting = pageStart;
+    let lastFitting = pageStart;
 
     for(const b of boundaries){
       if(b <= pageStart) continue;
       if(b - pageStart <= fitViewportH){
-        lastFittingBottom = b;
+        secondToLastFitting = lastFitting;
+        lastFitting = b;
       } else {
         break;
       }
-      prev = b;
     }
 
-    if(lastFittingBottom <= pageStart){
+    if(lastFitting <= pageStart){
       breaks.push(pageStart + realViewportH);
       pageStart = pageStart + realViewportH;
-    } else {
-      breaks.push(lastFittingBottom);
-      pageStart = lastFittingBottom;
+      continue;
     }
+
+    // Use secondToLastFitting as the break point:
+    // page ends BEFORE the last line, which becomes the first line of the next page
+    const nextStart = secondToLastFitting > pageStart ? secondToLastFitting : lastFitting;
+    breaks.push(nextStart);
+    pageStart = nextStart;
   }
-  
-  console.log('page breaks:', breaks);
+
   return breaks;
 }
 
