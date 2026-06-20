@@ -2427,12 +2427,7 @@ async function inlineImagesInHtml(html,base,chapterHref){
 function closeReader(){document.getElementById('readerOverlay').classList.remove('open');document.getElementById('readerChapterList').classList.remove('open');document.getElementById('readerSettingsBar').classList.remove('open');readerZip=null;readerSpine=[];}
 
 
-function updatePaginationUI(){
-  document.getElementById('readerPageInfo').textContent=
-    `Ch ${readerChapter+1}/${readerSpine.length} · p ${readerPage+1}/${readerPageCount}`;
-  document.getElementById('readerProgressBar').style.width=
-    (((readerChapter+(readerPage/Math.max(readerPageCount,1)))/Math.max(readerSpine.length-1,1))*100)+'%';
-}
+
 
 // Override the prev/next chapter buttons to be prev/next PAGE instead
 document.getElementById('btnReaderPrev').addEventListener('click',()=>goToPage(readerPage-1));
