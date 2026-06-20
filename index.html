@@ -2484,7 +2484,6 @@ function goToPage(page, opts={}){
     container.style.opacity = '1';
     container.scrollTop = target;
   } else if(readerTransition === 'slide'){
-    // Slide: outgoing page exits to left/right, incoming enters from opposite side
     container.style.transition = 'none';
     container.style.transform = `translateX(${direction * 100}%)`;
     container.style.opacity = '1';
@@ -2496,7 +2495,6 @@ function goToPage(page, opts={}){
       });
     });
   } else {
-    // bounce (original)
     container.style.transition = 'opacity .14s ease-out';
     container.style.opacity = '0';
     setTimeout(()=>{
