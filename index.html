@@ -1109,7 +1109,7 @@ import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/fireba
 import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut }
   from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
 import { getFirestore, collection, addDoc, getDocs, getDoc, doc,
-         query, where, orderBy, updateDoc, deleteDoc, serverTimestamp, setDoc, Timestamp }
+         query, where, orderBy, updateDoc, deleteDoc, serverTimestamp, setDoc, Timestamp, limit }
   from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 import { getStorage, ref as storageRef, uploadBytes, getDownloadURL, getBytes }
   from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js';
@@ -1158,14 +1158,18 @@ onAuthStateChanged(auth,async user=>{
     renderSkeleton('mobGridLibrary',12);
     renderSkeleton('deskHomeRecentGrid',8);
     try{await setDoc(doc(db,'users',user.uid),{displayName:user.displayName||'',email:user.email,uid:user.uid,lastSeen:serverTimestamp()},{merge:true});}catch(e){console.warn(e);}
-    await Promise.all([
-      loadLibrary(),
+    await loadLibrary();
+    checkUrlHash();
+    showDeskHome();
+    // Load secondary data in background — doesn't block UI
+    Promise.all([
       loadUserRatings(),
       loadMyCheckouts(),
       loadKoboDevices(),
-    ]);
-    checkUrlHash();
-    showDeskHome();
+    ]).then(()=>{
+      renderMobHome();
+      renderDeskHome();
+    });
   } else {
     document.getElementById('authScreen').classList.remove('hidden');
   }
@@ -1213,7 +1217,8 @@ async function loadLibrary() {
     const pubQ = query(
       collection(db, 'books'),
       where('visibility', '==', 'public'),
-      orderBy('createdAt', 'desc')
+      orderBy('createdAt', 'desc'),
+      limit(50)
     );
     const sharedQ = query(
       collection(db, 'books'),
