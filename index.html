@@ -2042,7 +2042,7 @@ function mob_switchTab(tab) {
   if (tab === 'library')   renderMobLibrary();
   if (tab === 'settings')  renderKoboSettings(document.getElementById('mobKoboSettings'));
 }
-document.getElementById('mobNavLibrary').classList.add('active');
+mob_switchTab('home');
 
 // ── MOBILE LIBRARY PANEL ─────────────────────────────────────────────────────
 // Source filter pills
