@@ -260,19 +260,16 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .reader-overlay.theme-night .chapter-item{color:#c8c8d8;}
 .chapter-item:hover{background:rgba(42,124,138,0.15);}
 .chapter-item.active{background:rgba(42,124,138,0.2);color:var(--teal);font-weight:700;}
-.reader-stage{
+.reader-content{
   flex:1;
   overflow:hidden;
-  position:relative;
+  padding:1.8rem clamp(1rem,5vw,4rem);
+  line-height:1.9;
+  scroll-behavior:auto;
 }
-.reader-frame{
-  position:absolute;
-  top:0; left:0;
-  width:100%;
-  height:100%;
-  border:none;
-  transition:transform .3s ease;
-}
+.reader-content img{max-width:100%;height:auto;display:block;margin:0 auto;}
+.reader-content p{margin:0 0 1.1em;}
+.reader-content h1,.reader-content h2,.reader-content h3{font-family:'Playfair Display',serif;margin:1.5em 0 .5em;}
 
   /* ── TTS AUDIO BAR ── */
 .tts-bar{position:fixed;bottom:0;left:0;right:0;z-index:140;background:var(--navy);border-top:2px solid var(--gold);transform:translateY(100%);transition:transform .3s ease;display:flex;flex-direction:column;padding:0;}
@@ -1068,9 +1065,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
   <div class="reader-chapter-list" id="readerChapterList">
     <h3>Contents</h3>
     <div id="readerChapterItems"></div>
-  </div>
-  <div class="reader-stage" id="readerStage">
-  <iframe id="readerFrame" class="reader-frame" frameborder="0" scrolling="no"></iframe>
+  <div class="reader-content" id="readerContent" style="font-size:17px"></div>
   </div>
   <!-- Toolbar at bottom for thumb-friendly nav -->
   <div class="reader-toolbar">
@@ -2230,13 +2225,14 @@ function setReaderFont(size){
   readerFontSize=size;
   localStorage.setItem('elib_reader_font',size);
   document.querySelectorAll('.rs-font-btn[data-size]').forEach(b=>b.classList.toggle('active',parseInt(b.dataset.size)===size));
-  readerGoToChapter(readerChapter, readerPage); // re-render at new size, same page
+  document.getElementById('readerContent').style.fontSize = size+'px';
+  readerGoToChapter(readerChapter, readerPage);
 }
-  document.querySelectorAll('.rs-theme-btn').forEach(b=>b.addEventListener('click',()=>{
+ document.querySelectorAll('.rs-theme-btn').forEach(b=>b.addEventListener('click',()=>{
   readerTheme=b.dataset.theme;
   localStorage.setItem('elib_reader_theme',readerTheme);
-  applyReaderTheme(readerTheme); // still updates the toolbar/chrome colors
-  readerGoToChapter(readerChapter, readerPage); // re-render frame with new theme colors
+  applyReaderTheme(readerTheme);
+  readerGoToChapter(readerChapter, readerPage);
 }));
   
 document.getElementById('btnToggleReaderSettings').addEventListener('click',()=>document.getElementById('readerSettingsBar').classList.toggle('open'));
@@ -2257,102 +2253,6 @@ document.addEventListener('keydown',e=>{
 // the parent page's box model, fonts, or other DOM siblings.
 // ══════════════════════════════════════════════════════════════════
 
-
-// Builds the full standalone HTML document injected into the iframe.
-// Columns + theme + font-size all live INSIDE this document, so they
-// never interact with the parent page's CSS at all.
-function buildFrameDoc(bodyHtml, fontSize, theme){
-  const themeColors = {
-    day:   { bg:'#fff',    fg:'#1a1a1a', h:'#1a1a1a' },
-    sepia: { bg:'#f4ede0', fg:'#3b2a1a', h:'#3b2a1a' },
-    night: { bg:'#1a1a2e', fg:'#c8c8d8', h:'#e8d8b0' }
-  }[theme] || { bg:'#fff', fg:'#1a1a1a', h:'#1a1a1a' };
-
-  return `<!DOCTYPE html><html><head><meta charset="utf-8">
-<style>
-  *{box-sizing:border-box;}
-  html,body{margin:0;padding:0;background:${themeColors.bg};color:${themeColors.fg};}
-  body{
-    font-family:'Lato',sans-serif;
-    font-size:${fontSize}px;
-    line-height:1.9;
-    column-width:100vw;
-    column-gap:0;
-    height:100vh;
-    overflow:hidden;
-    padding:1.8rem clamp(1rem,5vw,3.5rem);
-    -webkit-column-width:100vw;
-  }
-  img{max-width:100%;height:auto;display:block;margin:0 auto;}
-  p{margin:0 0 1.1em;}
-  h1,h2,h3{font-family:'Playfair Display',serif;color:${themeColors.h};margin:1.5em 0 .5em;break-after:avoid;break-inside:avoid;}
-</style></head>
-<body>${bodyHtml}</body></html>`;
-}
-
-// Renders a chapter's HTML into the iframe and resolves once
-// pagination is measured. Returns { pageCount }.
-function renderChapterToFrame(bodyHtml, fontSize, theme){
-  return new Promise(resolve=>{
-    const frame = document.getElementById('readerFrame');
-    frame.style.transition = 'none';
-    frame.style.transform = 'translateX(0)';
-
-    const doc = buildFrameDoc(bodyHtml, fontSize, theme);
-
-    frame.onload = () => {
-      // Wait for images inside the iframe's own document to finish
-      // loading before measuring column width — this is safe and
-      // fast because it's scoped to the iframe's own doc, not ours.
-      const fdoc = frame.contentDocument;
-      const imgs = Array.from(fdoc.images);
-      const imgPromises = imgs.map(img=>{
-        if(img.complete) return Promise.resolve();
-        return new Promise(res=>{
-          img.addEventListener('load', res, { once:true });
-          img.addEventListener('error', res, { once:true });
-        });
-      });
-      Promise.all(imgPromises).then(()=>{
-        requestAnimationFrame(()=>{
-          requestAnimationFrame(()=>{
-            const stageW = document.getElementById('readerStage').clientWidth;
-            const body = fdoc.body;
-            const scrollW = body.scrollWidth;
-            readerPageCount = Math.max(1, Math.round(scrollW / stageW));
-            readerPage = 0;
-            resolve({ pageCount: readerPageCount });
-          });
-        });
-      });
-    };
-
-    frame.srcdoc = doc;
-  });
-}
-
-// Moves to a given page index within the current chapter.
-// Handles chapter boundary crossing automatically.
-function goToPage(page, opts={}){
-  const frame = document.getElementById('readerFrame');
-  const stage = document.getElementById('readerStage');
-
-  if(page < 0){
-    if(readerChapter > 0) readerGoToChapter(readerChapter-1, 'last');
-    return;
-  }
-  if(page >= readerPageCount){
-    if(readerChapter < readerSpine.length-1) readerGoToChapter(readerChapter+1, 0);
-    else showToast('End of book 📖');
-    return;
-  }
-
-  readerPage = page;
-  const stageW = stage.clientWidth;
-  frame.style.transition = opts.animate===false ? 'none' : 'transform .3s ease';
-  frame.style.transform = `translateX(${-page*stageW}px)`;
-  updatePaginationUI();
-}
 
 
 
@@ -2389,6 +2289,112 @@ async function readCurrentBook(){
     readerGoToChapter(0);
   }catch(e){hideLoading();showToast('Could not open EPUB: '+e.message);console.error(e);}
 }
+
+  let readerPage = 0;
+let readerPageBreaks = [0];
+let readerPageCount = 1;
+
+function getLineBoundaries(container){
+  const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT, {
+    acceptNode(node){
+      return node.textContent.trim().length ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_SKIP;
+    }
+  });
+  const boundaries = new Set();
+  const containerTop = container.getBoundingClientRect().top;
+  let node;
+  while(node = walker.nextNode()){
+    const range = document.createRange();
+    range.selectNodeContents(node);
+    const rects = range.getClientRects();
+    for(const r of rects){
+      if(r.height === 0) continue;
+      const bottom = (r.bottom - containerTop) + container.scrollTop;
+      boundaries.add(Math.round(bottom));
+    }
+  }
+  container.querySelectorAll('img, hr, table').forEach(el=>{
+    const r = el.getBoundingClientRect();
+    if(r.height===0) return;
+    const bottom = (r.bottom - containerTop) + container.scrollTop;
+    boundaries.add(Math.round(bottom));
+  });
+  return [...boundaries].sort((a,b)=>a-b);
+}
+
+function computePageBreaks(container){
+  const viewportH = container.clientHeight;
+  const boundaries = getLineBoundaries(container);
+  const totalH = container.scrollHeight;
+  const breaks = [0];
+  let pageStart = 0;
+  while(pageStart < totalH - viewportH){
+    let pageEnd = pageStart;
+    for(const b of boundaries){
+      if(b <= pageStart) continue;
+      if(b - pageStart <= viewportH){
+        pageEnd = b;
+      } else {
+        break;
+      }
+    }
+    if(pageEnd <= pageStart) pageEnd = pageStart + viewportH;
+    breaks.push(pageEnd);
+    pageStart = pageEnd;
+  }
+  return breaks;
+}
+
+function renderChapterPaged(bodyHtml){
+  return new Promise(resolve=>{
+    const container = document.getElementById('readerContent');
+    container.scrollTop = 0;
+    container.innerHTML = bodyHtml;
+    const imgs = Array.from(container.querySelectorAll('img'));
+    const imgPromises = imgs.map(img=>{
+      if(img.complete) return Promise.resolve();
+      return new Promise(res=>{
+        img.addEventListener('load', res, { once:true });
+        img.addEventListener('error', res, { once:true });
+      });
+    });
+    Promise.all(imgPromises).then(()=>{
+      requestAnimationFrame(()=>{
+        readerPageBreaks = computePageBreaks(container);
+        readerPageCount = readerPageBreaks.length;
+        readerPage = 0;
+        resolve();
+      });
+    });
+  });
+}
+
+function goToPage(page, opts={}){
+  const container = document.getElementById('readerContent');
+  if(page < 0){
+    if(readerChapter > 0) readerGoToChapter(readerChapter-1, 'last');
+    return;
+  }
+  if(page >= readerPageCount){
+    if(readerChapter < readerSpine.length-1) readerGoToChapter(readerChapter+1, 0);
+    else showToast('End of book 📖');
+    return;
+  }
+  readerPage = page;
+  const target = readerPageBreaks[page];
+  container.style.scrollBehavior = opts.animate===false ? 'auto' : 'smooth';
+  container.scrollTop = target;
+  updatePaginationUI();
+  if(readerBookId) saveReadingProgress(readerBookId, readerChapter, readerPage, readerSpine.length);
+}
+
+function updatePaginationUI(){
+  document.getElementById('readerPageInfo').textContent = `${readerPage+1}/${readerPageCount}`;
+  document.querySelectorAll('.chapter-item').forEach((el,i)=>el.classList.toggle('active', i===readerChapter));
+  const prog = (readerChapter + (readerPage/Math.max(readerPageCount,1))) / Math.max(readerSpine.length,1);
+  document.getElementById('readerProgressBar').style.width = (Math.min(prog,1)*100)+'%';
+}
+  
 async function readerGoToChapter(idx, startPage=0){
   if(idx<0||idx>=readerSpine.length)return;
   readerChapter=idx;
@@ -2406,8 +2412,7 @@ async function readerGoToChapter(idx, startPage=0){
       const si=readerSpine.findIndex(s=>s.href===href||s.href.endsWith('/'+href));
       return si>=0?`href="javascript:void(0)" onclick="readerGoToChapterGlobal(${si})"`:`href="javascript:void(0)"`;
     });
-
-    await renderChapterToFrame(bodyHtml, readerFontSize, readerTheme);
+    await renderChapterPaged(bodyHtml);
 
     const target = startPage==='last' ? Math.max(0, readerPageCount-1) : (startPage||0);
     goToPage(target, { animate:false });
@@ -2463,8 +2468,11 @@ document.getElementById('btnReaderNext').addEventListener('click',()=>goToPage(r
   },{passive:true});
 })();
 
-  window.addEventListener('resize',()=>{
-  if(document.getElementById('readerOverlay').classList.contains('open'))initPagination();
+window.addEventListener('resize',()=>{
+  const overlay=document.getElementById('readerOverlay');
+  if(overlay.classList.contains('open')){
+    renderChapterPaged(document.getElementById('readerContent').innerHTML).then(()=>goToPage(0,{animate:false}));
+  }
 });
 
   // ── TTS ───────────────────────────────────────────────────────────────────────
