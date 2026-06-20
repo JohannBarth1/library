@@ -1060,6 +1060,12 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
       <button class="rs-theme-btn sepia" data-theme="sepia">Sepia</button>
       <button class="rs-theme-btn night" data-theme="night">Night</button>
     </div>
+    <span class="rs-label" style="margin-left:.5rem">Turn</span>
+    <div class="rs-font-btns" id="rsTransitionBtns">
+      <button class="rs-font-btn" data-transition="none">None</button>
+      <button class="rs-font-btn" data-transition="bounce">Bounce</button>
+      <button class="rs-font-btn" data-transition="slide">Slide</button>
+    </div>
   </div>
   <div class="reader-progress"><div class="reader-progress-bar" id="readerProgressBar" style="width:0%"></div></div>
   <div class="reader-chapter-list" id="readerChapterList">
@@ -1148,6 +1154,7 @@ let readerPage = 0;
 let readerPageCount = 1;
 let readerFontSize=parseInt(localStorage.getItem('elib_reader_font')||'17');
 let readerTheme=localStorage.getItem('elib_reader_theme')||'day';
+let readerTransition = localStorage.getItem('elib_reader_transition') || 'bounce';
 
 // ── AUTH ──────────────────────────────────────────────────────────────────────
 onAuthStateChanged(auth,async user=>{
@@ -2244,6 +2251,14 @@ function setReaderFont(size){
   readerFontSize=size;
   localStorage.setItem('elib_reader_font',size);
   document.querySelectorAll('.rs-font-btn[data-size]').forEach(b=>b.classList.toggle('active',parseInt(b.dataset.size)===size));
+  document.getElementById('rsTransitionBtns').addEventListener('click', e => {
+    const btn = e.target.closest('[data-transition]');
+    if(!btn) return;
+    readerTransition = btn.dataset.transition;
+    localStorage.setItem('elib_reader_transition', readerTransition);
+    document.querySelectorAll('#rsTransitionBtns .rs-font-btn')
+      .forEach(b => b.classList.toggle('active', b.dataset.transition === readerTransition));
+  });
   document.getElementById('readerContent').style.fontSize = size+'px';
   readerGoToChapter(readerChapter, readerPage);
 }
@@ -2310,6 +2325,8 @@ async function readCurrentBook(){
     document.getElementById('readerChapterItems').innerHTML=readerSpine.map((ch,i)=>`<div class="chapter-item" id="chItem_${i}" data-idx="${i}">${esc(ch.label)}</div>`).join('');
     document.getElementById('readerChapterItems').addEventListener('click',e=>{const item=e.target.closest('.chapter-item[data-idx]');if(item)readerGoToChapter(parseInt(item.dataset.idx));});
     hideLoading();applyReaderTheme(readerTheme);
+    document.querySelectorAll('#rsTransitionBtns .rs-font-btn')
+      .forEach(b => b.classList.toggle('active', b.dataset.transition === readerTransition));
     document.getElementById('readerSettingsBar').classList.remove('open');
     document.getElementById('readerOverlay').classList.add('open');
     const saved = loadReadingProgress(book.id);
@@ -2461,17 +2478,32 @@ function goToPage(page, opts={}){
   readerPage = page;
   const target = readerPageBreaks[page];
 
-  if(opts.animate===false){
-    container.style.scrollBehavior = 'auto';
+  if(opts.animate === false || readerTransition === 'none'){
+    container.style.transition = 'none';
+    container.style.transform = 'none';
+    container.style.opacity = '1';
     container.scrollTop = target;
+  } else if(readerTransition === 'slide'){
+    // Slide: outgoing page exits to left/right, incoming enters from opposite side
+    container.style.transition = 'none';
+    container.style.transform = `translateX(${direction * 100}%)`;
+    container.style.opacity = '1';
+    container.scrollTop = target;
+    requestAnimationFrame(()=>{
+      requestAnimationFrame(()=>{
+        container.style.transition = 'transform .22s cubic-bezier(.4,0,.2,1)';
+        container.style.transform = 'translateX(0)';
+      });
+    });
   } else {
+    // bounce (original)
     container.style.transition = 'opacity .14s ease-out';
     container.style.opacity = '0';
     setTimeout(()=>{
       container.style.scrollBehavior = 'auto';
       container.scrollTop = target;
       container.style.transition = 'none';
-      container.style.transform = `translateX(${direction*10}px)`;
+      container.style.transform = `translateX(${direction * 10}px)`;
       requestAnimationFrame(()=>{
         container.style.transition = 'opacity .16s ease-in, transform .16s ease-out';
         container.style.opacity = '1';
