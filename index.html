@@ -345,10 +345,10 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .mob-nav{display:none;position:fixed;bottom:0;left:0;right:0;z-index:50;height:var(--mob-nav-h);overflow:visible;}
 .mob-nav-bg{position:absolute;inset:0;background:var(--navy);border-top:2px solid rgba(42,124,138,0.5);z-index:0;}
 .mob-nav-inner{display:flex;height:100%;align-items:flex-end;position:relative;z-index:1;overflow:visible;padding-bottom:4px;}
-.mob-tab{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;cursor:pointer;color:var(--gold);font-size:.55rem;letter-spacing:.06em;text-transform:uppercase;font-weight:700;border:none;background:none;transition:transform .2s,opacity .2s;-webkit-tap-highlight-color:transparent;padding-bottom:2px;opacity:.5;transform:translateY(0);}
-.mob-tab .tab-icon{font-size:1.4rem;line-height:1;transition:font-size .2s;}
-.mob-tab.active{opacity:1;transform:translateY(-12px);}
-.mob-tab.active .tab-icon{font-size:1.9rem;}
+.mob-tab{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;cursor:pointer;color:var(--gold);font-size:.55rem;letter-spacing:.06em;text-transform:uppercase;font-weight:700;border:none;background:none;transition:opacity .2s;-webkit-tap-highlight-color:transparent;padding-bottom:2px;opacity:.5;}
+.mob-tab .tab-icon{font-size:1.4rem;line-height:1;transition:font-size .2s,transform .2s;transform-origin:bottom center;display:block;}
+.mob-tab.active{opacity:1;}
+.mob-tab.active .tab-icon{font-size:1.9rem;transform:translateY(-6px);}
 
 /* mobile panels */
 .mob-panels{display:none;flex-direction:column;flex:1;overflow:hidden;}
@@ -2250,6 +2250,12 @@ function setReaderFont(size){
   
 document.getElementById('btnToggleReaderSettings').addEventListener('click',()=>document.getElementById('readerSettingsBar').classList.toggle('open'));
 document.getElementById('btnToggleChapters').addEventListener('click',()=>document.getElementById('readerChapterList').classList.toggle('open'));
+document.getElementById('readerOverlay').addEventListener('click', e => {
+  const list = document.getElementById('readerChapterList');
+  if(!list.classList.contains('open')) return;
+  if(e.target.closest('#readerChapterList') || e.target.closest('#btnToggleChapters')) return;
+  list.classList.remove('open');
+});
 document.getElementById('btnCloseReader').addEventListener('click',closeReader);
 document.addEventListener('keydown',e=>{
   if(!document.getElementById('readerOverlay').classList.contains('open'))return;
@@ -2369,8 +2375,18 @@ function computePageBreaks(container){
 function renderChapterPaged(bodyHtml){
   return new Promise(resolve=>{
     const container = document.getElementById('readerContent');
+    const overlay = document.getElementById('readerOverlay');
+
+    // Force an explicit pixel height — toolbar(52) + progress bar(3) + any open settings bar
+    const toolbarH = 52 + 3;
+    const settingsBar = document.getElementById('readerSettingsBar');
+    const settingsH = (settingsBar && settingsBar.classList.contains('open')) ? settingsBar.offsetHeight : 0;
+    const fixedH = overlay.clientHeight - toolbarH - settingsH;
+    container.style.height = fixedH + 'px';
+
     container.scrollTop = 0;
     container.innerHTML = bodyHtml;
+
     const imgs = Array.from(container.querySelectorAll('img'));
     const imgPromises = imgs.map(img=>{
       if(img.complete) return Promise.resolve();
@@ -2379,6 +2395,7 @@ function renderChapterPaged(bodyHtml){
         img.addEventListener('error', res, { once:true });
       });
     });
+
     Promise.all(imgPromises).then(()=>{
       requestAnimationFrame(()=>{
         readerPageBreaks = computePageBreaks(container);
