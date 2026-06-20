@@ -225,7 +225,18 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .reader-overlay{overflow:hidden;}
 .reader-btn:hover{opacity:.8;}
 .reader-btn.close-btn{color:#cc4444!important;border-color:rgba(204,68,68,0.4)!important;}
-.reader-settings-bar{display:none;padding:.5rem 1.2rem;gap:1rem;align-items:center;flex-shrink:0;border-bottom:1px solid rgba(128,128,128,0.2);flex-wrap:wrap;}
+.reader-settings-bar{
+  display:none;
+  padding:.5rem 1.2rem;
+  gap:.6rem;
+  align-items:center;
+  flex-shrink:0;
+  border-bottom:1px solid rgba(128,128,128,0.2);
+  flex-wrap:nowrap;
+  overflow-x:auto;
+  scrollbar-width:none;
+  white-space:nowrap;
+}
 .reader-settings-bar.open{display:flex;}
 .reader-overlay.theme-day .reader-settings-bar{background:#f8f8f8;}
 .reader-overlay.theme-sepia .reader-settings-bar{background:#ede0cc;}
@@ -1056,13 +1067,13 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
       <button class="rs-font-btn" data-size="20" style="font-size:1.15rem">A</button>
       <button class="rs-font-btn" data-size="24" style="font-size:1.3rem">A</button>
     </div>
-    <span class="rs-label" style="margin-left:.5rem">Theme</span>
+    <span class="rs-label">Theme</span>
     <div class="rs-theme-btns">
       <button class="rs-theme-btn day active" data-theme="day">Day</button>
       <button class="rs-theme-btn sepia" data-theme="sepia">Sepia</button>
       <button class="rs-theme-btn night" data-theme="night">Night</button>
     </div>
-    <span class="rs-label" style="margin-left:.5rem">Turn</span>
+    <span class="rs-label">Turn</span>
     <div class="rs-font-btns" id="rsTransitionBtns">
       <button class="rs-font-btn" data-transition="none">None</button>
       <button class="rs-font-btn" data-transition="bounce">Bounce</button>
