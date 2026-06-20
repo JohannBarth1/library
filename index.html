@@ -2496,6 +2496,8 @@ function renderChapterPaged(bodyHtml){
 
 function goToPage(page, opts={}){
   const inner = document.getElementById('readerContentInner');
+console.log('goToPage called, transition=', readerTransition, 'inner=', inner, 'inner overflow=', inner ? getComputedStyle(inner).overflow : 'N/A');
+  const inner = document.getElementById('readerContentInner');
 
   if(page < 0){
     if(readerChapter > 0) readerGoToChapter(readerChapter-1, 'last');
