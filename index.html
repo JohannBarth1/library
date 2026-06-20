@@ -225,18 +225,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .reader-overlay{overflow:hidden;}
 .reader-btn:hover{opacity:.8;}
 .reader-btn.close-btn{color:#cc4444!important;border-color:rgba(204,68,68,0.4)!important;}
-.reader-settings-bar{
-  display:none;
-  padding:.5rem 1.2rem;
-  gap:.6rem;
-  align-items:center;
-  flex-shrink:0;
-  border-bottom:1px solid rgba(128,128,128,0.2);
-  flex-wrap:nowrap;
-  overflow-x:auto;
-  scrollbar-width:none;
-  white-space:nowrap;
-}
+.reader-settings-bar{display:none;padding:.5rem 1rem;gap:.5rem .8rem;align-items:center;flex-shrink:0;border-bottom:1px solid rgba(128,128,128,0.2);flex-wrap:wrap;}
 .reader-settings-bar.open{display:flex;}
 .reader-overlay.theme-day .reader-settings-bar{background:#f8f8f8;}
 .reader-overlay.theme-sepia .reader-settings-bar{background:#ede0cc;}
@@ -276,16 +265,19 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .reader-content{
   flex:1;
   overflow:hidden;
+  position:relative;
+}
+.reader-content-inner{
+  position:absolute;
+  inset:0;
+  overflow-y:auto;
   padding:1.8rem clamp(1rem,5vw,4rem);
   line-height:1.9;
-  scroll-behavior:auto;
-  will-change:opacity, transform;
-  overflow-y: hidden;
-  overflow-x: visible;
+  will-change:transform,opacity;
 }
-.reader-content img{max-width:100%;height:auto;display:block;margin:0 auto;}
-.reader-content p{margin:0 0 1.1em;}
-.reader-content h1,.reader-content h2,.reader-content h3{font-family:'Playfair Display',serif;margin:1.5em 0 .5em;}
+.reader-content-inner img{max-width:100%;height:auto;display:block;margin:0 auto;}
+.reader-content-inner p{margin:0 0 1.1em;}
+.reader-content-inner h1,.reader-content-inner h2,.reader-content-inner h3{font-family:'Playfair Display',serif;margin:1.5em 0 .5em;}
 
   /* ── TTS AUDIO BAR ── */
 .tts-bar{position:fixed;bottom:0;left:0;right:0;z-index:140;background:var(--navy);border-top:2px solid var(--gold);transform:translateY(100%);transition:transform .3s ease;display:flex;flex-direction:column;padding:0;}
@@ -1059,7 +1051,8 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 
 <!-- EPUB Reader — PATCH 5: toolbar moved to bottom -->
 <div class="reader-overlay theme-day" id="readerOverlay">
-  <div class="reader-settings-bar" id="readerSettingsBar">
+<div class="reader-settings-bar" id="readerSettingsBar">
+  <div style="display:flex;align-items:center;gap:.4rem;flex-shrink:0">
     <span class="rs-label">Text</span>
     <div class="rs-font-btns">
       <button class="rs-font-btn" data-size="14">A</button>
@@ -1067,12 +1060,16 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
       <button class="rs-font-btn" data-size="20" style="font-size:1.15rem">A</button>
       <button class="rs-font-btn" data-size="24" style="font-size:1.3rem">A</button>
     </div>
+  </div>
+  <div style="display:flex;align-items:center;gap:.4rem;flex-shrink:0">
     <span class="rs-label">Theme</span>
     <div class="rs-theme-btns">
       <button class="rs-theme-btn day active" data-theme="day">Day</button>
       <button class="rs-theme-btn sepia" data-theme="sepia">Sepia</button>
       <button class="rs-theme-btn night" data-theme="night">Night</button>
     </div>
+  </div>
+  <div style="display:flex;align-items:center;gap:.4rem;flex-shrink:0">
     <span class="rs-label">Turn</span>
     <div class="rs-font-btns" id="rsTransitionBtns">
       <button class="rs-font-btn" data-transition="none">None</button>
@@ -1080,12 +1077,13 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
       <button class="rs-font-btn" data-transition="slide">Slide</button>
     </div>
   </div>
+</div>
   <div class="reader-progress"><div class="reader-progress-bar" id="readerProgressBar" style="width:0%"></div></div>
   <div class="reader-chapter-list" id="readerChapterList">
     <h3>Contents</h3>
     <div id="readerChapterItems"></div>
   </div>
-  <div class="reader-content" id="readerContent" style="font-size:17px"></div>
+  <div class="reader-content" id="readerContent"><div class="reader-content-inner" id="readerContentInner"></div></div>
   <!-- Toolbar at bottom for thumb-friendly nav -->
   <div class="reader-toolbar">
     <button class="reader-btn" id="btnToggleChapters">☰</button>
@@ -2264,15 +2262,7 @@ function setReaderFont(size){
   readerFontSize=size;
   localStorage.setItem('elib_reader_font',size);
   document.querySelectorAll('.rs-font-btn[data-size]').forEach(b=>b.classList.toggle('active',parseInt(b.dataset.size)===size));
-  document.getElementById('rsTransitionBtns').addEventListener('click', e => {
-    const btn = e.target.closest('[data-transition]');
-    if(!btn) return;
-    readerTransition = btn.dataset.transition;
-    localStorage.setItem('elib_reader_transition', readerTransition);
-    document.querySelectorAll('#rsTransitionBtns .rs-font-btn')
-      .forEach(b => b.classList.toggle('active', b.dataset.transition === readerTransition));
-  });
-  document.getElementById('readerContent').style.fontSize = size+'px';
+  document.getElementById('readerContentInner').style.fontSize = size+'px';
   readerGoToChapter(readerChapter, readerPage);
 }
  document.querySelectorAll('.rs-theme-btn').forEach(b=>b.addEventListener('click',()=>{
@@ -2367,95 +2357,7 @@ async function readCurrentBook(){
 
 let readerPageBreaks = [0];
 
-function getLineBoundaries(container){
-  const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT, {
-    acceptNode(node){
-      return node.textContent.trim().length ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_SKIP;
-    }
-  });
-  const boundaries = new Set();
-  const containerTop = container.getBoundingClientRect().top;
-  let node;
-  while(node = walker.nextNode()){
-    const range = document.createRange();
-    range.selectNodeContents(node);
-    const rects = range.getClientRects();
-    for(const r of rects){
-      if(r.height === 0) continue;
-      // Use floor on top, ceil on bottom, add 2px buffer
-      const bottom = Math.ceil(r.bottom - containerTop) + container.scrollTop + 2;
-      boundaries.add(bottom);
-    }
-  }
-  container.querySelectorAll('img, hr, table').forEach(el=>{
-    const r = el.getBoundingClientRect();
-    if(r.height === 0) return;
-    const bottom = Math.ceil(r.bottom - containerTop) + container.scrollTop + 2;
-    boundaries.add(bottom);
-  });
-  return [...boundaries].sort((a,b)=>a-b);
-}
 
-function computePageBreaks(container){
-  const SAFETY_MARGIN = Math.ceil(readerFontSize * 1.5); // increased margin
-  const realViewportH = container.clientHeight;
-  const fitViewportH = realViewportH - SAFETY_MARGIN;
-  const boundaries = getLineBoundaries(container);
-  const totalH = container.scrollHeight;
-  const breaks = [0];
-  let pageStart = 0;
-  while(pageStart < totalH - realViewportH){
-    let pageEnd = pageStart;
-    for(const b of boundaries){
-      if(b <= pageStart) continue;
-      if(b - pageStart <= fitViewportH){
-        pageEnd = b;
-      } else {
-        break;
-      }
-    }
-    if(pageEnd <= pageStart) pageEnd = pageStart + realViewportH;
-    const nextStart = pageEnd;
-    breaks.push(nextStart);
-    pageStart = nextStart;
-  }
-  return breaks;
-}
-
-function renderChapterPaged(bodyHtml){
-  return new Promise(resolve=>{
-    const container = document.getElementById('readerContent');
-    const overlay = document.getElementById('readerOverlay');
-
-    // Force an explicit pixel height — toolbar(52) + progress bar(3) + any open settings bar
-    const toolbarH = 52 + 3;
-    const settingsBar = document.getElementById('readerSettingsBar');
-    const settingsH = (settingsBar && settingsBar.classList.contains('open')) ? settingsBar.offsetHeight : 0;
-    const fixedH = overlay.clientHeight - toolbarH - settingsH;
-    container.style.height = fixedH + 'px';
-
-    container.scrollTop = 0;
-    container.innerHTML = bodyHtml;
-
-    const imgs = Array.from(container.querySelectorAll('img'));
-    const imgPromises = imgs.map(img=>{
-      if(img.complete) return Promise.resolve();
-      return new Promise(res=>{
-        img.addEventListener('load', res, { once:true });
-        img.addEventListener('error', res, { once:true });
-      });
-    });
-
-    Promise.all(imgPromises).then(()=>{
-      requestAnimationFrame(()=>{
-        readerPageBreaks = computePageBreaks(container);
-        readerPageCount = readerPageBreaks.length;
-        readerPage = 0;
-        resolve();
-      });
-    });
-  });
-}
 
 // ── READING PROGRESS ──────────────────────────────────────────────
 function progressKey(bookId){ return `elib_progress_${bookId}`; }
@@ -2485,8 +2387,101 @@ function getReadingProgress(bookId){
   return p ? p.progress : 0;
 }
 
+function getLineBoundaries(inner){
+  const walker = document.createTreeWalker(inner, NodeFilter.SHOW_TEXT, {
+    acceptNode(node){
+      return node.textContent.trim().length ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_SKIP;
+    }
+  });
+  const boundaries = new Set();
+  const containerTop = inner.getBoundingClientRect().top;
+  let node;
+  while(node = walker.nextNode()){
+    const range = document.createRange();
+    range.selectNodeContents(node);
+    const rects = range.getClientRects();
+    for(const r of rects){
+      if(r.height === 0) continue;
+      const bottom = Math.ceil(r.bottom - containerTop) + inner.scrollTop + 2;
+      boundaries.add(bottom);
+    }
+  }
+  inner.querySelectorAll('img, hr, table').forEach(el=>{
+    const r = el.getBoundingClientRect();
+    if(r.height === 0) return;
+    const bottom = Math.ceil(r.bottom - containerTop) + inner.scrollTop + 2;
+    boundaries.add(bottom);
+  });
+  return [...boundaries].sort((a,b)=>a-b);
+}
+
+function computePageBreaks(inner){
+  const SAFETY_MARGIN = Math.ceil(readerFontSize * 1.5);
+  const realViewportH = inner.clientHeight;
+  const fitViewportH = realViewportH - SAFETY_MARGIN;
+  const boundaries = getLineBoundaries(inner);
+  const totalH = inner.scrollHeight;
+  const breaks = [0];
+  let pageStart = 0;
+  while(pageStart < totalH - realViewportH){
+    let pageEnd = pageStart;
+    for(const b of boundaries){
+      if(b <= pageStart) continue;
+      if(b - pageStart <= fitViewportH){
+        pageEnd = b;
+      } else {
+        break;
+      }
+    }
+    if(pageEnd <= pageStart) pageEnd = pageStart + realViewportH;
+    breaks.push(pageEnd);
+    pageStart = pageEnd;
+  }
+  return breaks;
+}
+
+function renderChapterPaged(bodyHtml){
+  return new Promise(resolve=>{
+    const outer = document.getElementById('readerContent');
+    const inner = document.getElementById('readerContentInner');
+    const overlay = document.getElementById('readerOverlay');
+
+    const toolbarH = 52 + 3;
+    const settingsBar = document.getElementById('readerSettingsBar');
+    const settingsH = settingsBar.classList.contains('open') ? settingsBar.offsetHeight : 0;
+    const fixedH = overlay.clientHeight - toolbarH - settingsH;
+    outer.style.height = fixedH + 'px';
+    inner.style.height = fixedH + 'px';
+
+    inner.style.transition = 'none';
+    inner.style.transform = 'none';
+    inner.style.opacity = '1';
+    inner.scrollTop = 0;
+    inner.innerHTML = bodyHtml;
+    inner.style.fontSize = readerFontSize + 'px';
+
+    const imgs = Array.from(inner.querySelectorAll('img'));
+    const imgPromises = imgs.map(img=>{
+      if(img.complete) return Promise.resolve();
+      return new Promise(res=>{
+        img.addEventListener('load', res, {once:true});
+        img.addEventListener('error', res, {once:true});
+      });
+    });
+
+    Promise.all(imgPromises).then(()=>{
+      requestAnimationFrame(()=>{
+        readerPageBreaks = computePageBreaks(inner);
+        readerPageCount = readerPageBreaks.length;
+        readerPage = 0;
+        resolve();
+      });
+    });
+  });
+}
+
 function goToPage(page, opts={}){
-  const container = document.getElementById('readerContent');
+  const inner = document.getElementById('readerContentInner');
 
   if(page < 0){
     if(readerChapter > 0) readerGoToChapter(readerChapter-1, 'last');
@@ -2502,38 +2497,33 @@ function goToPage(page, opts={}){
   readerPage = page;
   const target = readerPageBreaks[page];
 
-  // Clear any leftover styles from previous animations
-  container.style.transition = 'none';
-  container.style.transform = 'none';
-  container.style.opacity = '1';
+  // Always clear previous animation state first
+  inner.style.transition = 'none';
+  inner.style.transform = 'none';
+  inner.style.opacity = '1';
+  inner.scrollTop = target;
 
   if(opts.animate === false || readerTransition === 'none'){
-    container.scrollTop = target;
+    // already done above
   } else if(readerTransition === 'slide'){
-    // Move content off-screen, scroll, then slide in
-    container.style.transform = `translateX(${direction * 100}%)`;
+    inner.style.transform = `translateX(${direction * 100}%)`;
     requestAnimationFrame(()=>{
-      container.scrollTop = target;
+      inner.scrollTop = target;
       requestAnimationFrame(()=>{
-        container.style.transition = 'transform .22s cubic-bezier(.4,0,.2,1)';
-        container.style.transform = 'translateX(0)';
-        setTimeout(()=>{
-          container.style.transition = 'none';
-        }, 230);
+        inner.style.transition = 'transform .22s cubic-bezier(.4,0,.2,1)';
+        inner.style.transform = 'translateX(0)';
+        setTimeout(()=>{ inner.style.transition = 'none'; }, 250);
       });
     });
   } else {
     // bounce
-    container.style.opacity = '0';
-    container.style.transform = `translateX(${direction * 10}px)`;
-    container.scrollTop = target;
+    inner.style.opacity = '0';
+    inner.style.transform = `translateX(${direction * 10}px)`;
     requestAnimationFrame(()=>{
-      container.style.transition = 'opacity .16s ease-in, transform .16s ease-out';
-      container.style.opacity = '1';
-      container.style.transform = 'translateX(0)';
-      setTimeout(()=>{
-        container.style.transition = 'none';
-      }, 180);
+      inner.style.transition = 'opacity .16s ease-in, transform .16s ease-out';
+      inner.style.opacity = '1';
+      inner.style.transform = 'translateX(0)';
+      setTimeout(()=>{ inner.style.transition = 'none'; }, 200);
     });
   }
 
@@ -2619,7 +2609,8 @@ document.getElementById('btnReaderNext').addEventListener('click',()=>goToPage(r
 window.addEventListener('resize',()=>{
   const overlay=document.getElementById('readerOverlay');
   if(overlay.classList.contains('open')){
-    renderChapterPaged(document.getElementById('readerContent').innerHTML).then(()=>goToPage(0,{animate:false}));
+    renderChapterPaged(document.getElementById('readerContentInner').innerHTML)
+      .then(()=>goToPage(0,{animate:false}));
   }
 });
 
