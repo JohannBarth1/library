@@ -2419,22 +2419,22 @@ function computePageBreaks(inner){
   const SAFETY_MARGIN = Math.ceil(readerFontSize * 0.5);
   const realViewportH = inner.clientHeight;
   const fitViewportH = realViewportH - SAFETY_MARGIN;
-  const boundaries = getLineBoundaries(inner); // these are line bottoms
-
-  // Build top/bottom pairs from boundaries
+  const boundaries = getLineBoundaries(inner);
   const totalH = inner.scrollHeight;
+  
+  console.log('viewport:', realViewportH, 'scrollHeight:', totalH, 'boundaries sample:', boundaries.slice(0,10));
+  
   const breaks = [0];
   let pageStart = 0;
+  let prev = 0;
 
   while(pageStart < totalH - realViewportH){
     let lastFittingBottom = pageStart;
-    let lastFittingTop = pageStart;
-    let prev = pageStart;
+    prev = pageStart;
 
     for(const b of boundaries){
       if(b <= pageStart) continue;
       if(b - pageStart <= fitViewportH){
-        lastFittingTop = prev;   // top of this line = bottom of previous boundary
         lastFittingBottom = b;
       } else {
         break;
@@ -2446,13 +2446,12 @@ function computePageBreaks(inner){
       breaks.push(pageStart + realViewportH);
       pageStart = pageStart + realViewportH;
     } else {
-      // Next page starts at the TOP of the first line that didn't fit,
-      // which is the BOTTOM of the last line that did fit
       breaks.push(lastFittingBottom);
       pageStart = lastFittingBottom;
     }
   }
-
+  
+  console.log('page breaks:', breaks);
   return breaks;
 }
 
