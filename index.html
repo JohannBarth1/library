@@ -2356,7 +2356,8 @@ function getLineBoundaries(container){
 }
 
 function computePageBreaks(container){
-  const viewportH = container.clientHeight;
+  const SAFETY_MARGIN = Math.ceil(readerFontSize * 0.5);
+  const viewportH = container.clientHeight - SAFETY_MARGIN;
   const boundaries = getLineBoundaries(container);
   const totalH = container.scrollHeight;
   const breaks = [0];
@@ -2365,8 +2366,7 @@ function computePageBreaks(container){
     let pageEnd = pageStart;
     for(const b of boundaries){
       if(b <= pageStart) continue;
-      const SAFETY_MARGIN = 2;
-      if(b - pageStart <= viewportH - SAFETY_MARGIN){
+      if(b - pageStart <= viewportH){
         pageEnd = b;
       } else {
         break;
@@ -2463,19 +2463,19 @@ function goToPage(page, opts={}){
     container.style.scrollBehavior = 'auto';
     container.scrollTop = target;
   } else {
-    container.style.transition = 'opacity .12s ease, transform .12s ease';
+    container.style.transition = 'opacity .14s ease-out';
     container.style.opacity = '0';
-    container.style.transform = `translateX(${-direction*16}px)`;
     setTimeout(()=>{
       container.style.scrollBehavior = 'auto';
       container.scrollTop = target;
-      container.style.transform = `translateX(${direction*16}px)`;
+      container.style.transition = 'none';
+      container.style.transform = `translateX(${direction*10}px)`;
       requestAnimationFrame(()=>{
-        container.style.transition = 'opacity .15s ease, transform .15s ease';
+        container.style.transition = 'opacity .16s ease-in, transform .16s ease-out';
         container.style.opacity = '1';
         container.style.transform = 'translateX(0)';
       });
-    }, 120);
+    }, 140);
   }
 
   updatePaginationUI();
