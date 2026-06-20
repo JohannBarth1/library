@@ -2357,22 +2357,23 @@ function getLineBoundaries(container){
 
 function computePageBreaks(container){
   const SAFETY_MARGIN = Math.ceil(readerFontSize * 0.5);
-  const viewportH = container.clientHeight - SAFETY_MARGIN;
+  const realViewportH = container.clientHeight;       // actual visible height — use this for scrolling
+  const fitViewportH = realViewportH - SAFETY_MARGIN;   // slightly smaller — only used to pick safe boundaries
   const boundaries = getLineBoundaries(container);
   const totalH = container.scrollHeight;
   const breaks = [0];
   let pageStart = 0;
-  while(pageStart < totalH - viewportH){
+  while(pageStart < totalH - realViewportH){
     let pageEnd = pageStart;
     for(const b of boundaries){
       if(b <= pageStart) continue;
-      if(b - pageStart <= viewportH){
+      if(b - pageStart <= fitViewportH){
         pageEnd = b;
       } else {
         break;
       }
     }
-    if(pageEnd <= pageStart) pageEnd = pageStart + viewportH;
+    if(pageEnd <= pageStart) pageEnd = pageStart + realViewportH;
     breaks.push(pageEnd);
     pageStart = pageEnd;
   }
