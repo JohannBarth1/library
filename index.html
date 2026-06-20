@@ -2357,8 +2357,8 @@ function getLineBoundaries(container){
 
 function computePageBreaks(container){
   const SAFETY_MARGIN = Math.ceil(readerFontSize * 0.5);
-  const realViewportH = container.clientHeight;       // actual visible height — use this for scrolling
-  const fitViewportH = realViewportH - SAFETY_MARGIN;   // slightly smaller — only used to pick safe boundaries
+  const realViewportH = container.clientHeight;
+  const fitViewportH = realViewportH - SAFETY_MARGIN;
   const boundaries = getLineBoundaries(container);
   const totalH = container.scrollHeight;
   const breaks = [0];
@@ -2374,8 +2374,9 @@ function computePageBreaks(container){
       }
     }
     if(pageEnd <= pageStart) pageEnd = pageStart + realViewportH;
-    breaks.push(pageEnd);
-    pageStart = pageEnd;
+    const nextStart = pageEnd + 1;
+    breaks.push(nextStart);
+    pageStart = nextStart;
   }
   return breaks;
 }
