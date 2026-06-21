@@ -2325,6 +2325,7 @@ document.getElementById('readerOverlay').addEventListener('click', e => {
      !e.target.closest('#readerSettingsBar') &&
      !e.target.closest('#btnToggleReaderSettings')){
     settingsBar.classList.remove('open');
+    recalcReaderHeight();
   }
 });
 document.getElementById('btnCloseReader').addEventListener('click',closeReader);
