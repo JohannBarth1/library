@@ -2294,14 +2294,18 @@ document.getElementById('readerSettingsBar').addEventListener('click', e => {
   }
 
   // Transition buttons
-const transBtn = e.target.closest('[data-transition]');
-if(transBtn){
-  readerTransition = transBtn.dataset.transition;
-  localStorage.setItem('elib_reader_transition', readerTransition);
-  document.querySelectorAll('#readerSettingsBar [data-transition]')
-    .forEach(b => b.classList.toggle('active', b.dataset.transition === readerTransition));
-  recalcReaderHeight(); // re-applies paged class and recomputes
-}
+// Transition buttons
+  const transBtn = e.target.closest('[data-transition]');
+  if(transBtn){
+    readerTransition = transBtn.dataset.transition;
+    localStorage.setItem('elib_reader_transition', readerTransition);
+    document.querySelectorAll('#readerSettingsBar [data-transition]')
+      .forEach(b => b.classList.toggle('active', b.dataset.transition === readerTransition));
+    recalcReaderHeight();
+  }
+});  // ← closes the readerSettingsBar click listener
+
+document.getElementById('btnToggleReaderSettings').addEventListener('click', e => {
     
 document.getElementById('btnToggleReaderSettings').addEventListener('click', e => {
   e.stopPropagation();
