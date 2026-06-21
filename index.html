@@ -273,6 +273,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
   line-height:1.9;
   will-change:transform,opacity;
 }
+.reader-content-inner.paged { overflow-y: hidden; }
 .reader-content-inner img{max-width:100%;height:auto;display:block;margin:0 auto;}
 .reader-content-inner p{margin:0 0 1.1em;}
 .reader-content-inner h1,.reader-content-inner h2,.reader-content-inner h3{font-family:'Playfair Display',serif;margin:1.5em 0 .5em;}
@@ -1068,6 +1069,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
     <button class="rs-btn" data-transition="none">None</button>
     <button class="rs-btn active" data-transition="bounce">Bounce</button>
     <button class="rs-btn" data-transition="slide">Slide</button>
+    <button class="rs-btn" data-transition="scroll">Scroll</button>
   </div>
 </div>
   <div class="reader-progress"><div class="reader-progress-bar" id="readerProgressBar" style="width:0%"></div></div>
@@ -2292,15 +2294,15 @@ document.getElementById('readerSettingsBar').addEventListener('click', e => {
   }
 
   // Transition buttons
-  const transBtn = e.target.closest('[data-transition]');
-  if(transBtn){
-    readerTransition = transBtn.dataset.transition;
-    localStorage.setItem('elib_reader_transition', readerTransition);
-    document.querySelectorAll('#readerSettingsBar [data-transition]')
-      .forEach(b => b.classList.toggle('active', b.dataset.transition === readerTransition));
-  }
-});
-  
+const transBtn = e.target.closest('[data-transition]');
+if(transBtn){
+  readerTransition = transBtn.dataset.transition;
+  localStorage.setItem('elib_reader_transition', readerTransition);
+  document.querySelectorAll('#readerSettingsBar [data-transition]')
+    .forEach(b => b.classList.toggle('active', b.dataset.transition === readerTransition));
+  recalcReaderHeight(); // re-applies paged class and recomputes
+}
+    
 document.getElementById('btnToggleReaderSettings').addEventListener('click', e => {
   e.stopPropagation();
   document.getElementById('readerSettingsBar').classList.toggle('open');
@@ -2520,6 +2522,7 @@ function renderChapterPaged(bodyHtml){
     inner.style.opacity = '1';
     inner.scrollTop = 0;
     inner.innerHTML = bodyHtml;
+    inner.classList.toggle('paged', readerTransition !== 'scroll');
     inner.style.fontSize = readerFontSize + 'px';
 
     const imgs = Array.from(inner.querySelectorAll('img'));
@@ -2546,6 +2549,15 @@ function goToPage(page, opts={}){
   const inner = document.getElementById('readerContentInner');
   if(!inner) return;
 
+  // Scroll mode — free scrolling, no pagination
+  if(readerTransition === 'scroll'){
+    inner.classList.remove('paged');
+    updatePaginationUI();
+    return;
+  }
+
+  inner.classList.add('paged');
+
   if(page < 0){
     if(readerChapter > 0) readerGoToChapter(readerChapter-1, 'last');
     return;
@@ -2560,25 +2572,22 @@ function goToPage(page, opts={}){
   readerPage = page;
   const target = readerPageBreaks[page];
 
-  // Reset all animation state cleanly
   inner.style.transition = 'none';
   inner.style.transform = 'translateX(0)';
   inner.style.opacity = '1';
   inner.scrollTop = target;
 
   if(opts.animate === false || readerTransition === 'none'){
-    // nothing more to do
+    // already done
   } else if(readerTransition === 'slide'){
-    // Start off-screen, then slide in
     inner.style.transform = `translateX(${direction * 100}%)`;
-    // Double rAF: first paints the off-screen position, second starts the transition
     requestAnimationFrame(()=>requestAnimationFrame(()=>{
       inner.style.transition = 'transform .25s cubic-bezier(.4,0,.2,1)';
       inner.style.transform = 'translateX(0)';
       setTimeout(()=>{ inner.style.transition = 'none'; }, 280);
     }));
   } else {
-    // bounce: fade + nudge
+    // bounce
     inner.style.opacity = '0';
     inner.style.transform = `translateX(${direction * 12}px)`;
     requestAnimationFrame(()=>requestAnimationFrame(()=>{
@@ -2611,6 +2620,7 @@ function updatePaginationUI(){
   const fixedH = overlay.clientHeight - toolbarH - settingsH;
   outer.style.height = fixedH + 'px';
   inner.style.height = fixedH + 'px';
+  inner.classList.toggle('paged', readerTransition !== 'scroll');
   // Recompute page breaks for the new height, stay on current page
   readerPageBreaks = computePageBreaks(inner);
   readerPageCount = readerPageBreaks.length;
