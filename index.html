@@ -2425,6 +2425,9 @@ function getLineBoundaries(inner){
     }
   });
   const boundaries = new Set();
+  // Must be scrolled to top for getBoundingClientRect to be meaningful
+  const savedScroll = inner.scrollTop;
+  inner.scrollTop = 0;
   const containerTop = inner.getBoundingClientRect().top;
   let node;
   while(node = walker.nextNode()){
@@ -2433,51 +2436,49 @@ function getLineBoundaries(inner){
     const rects = range.getClientRects();
     for(const r of rects){
       if(r.height === 0) continue;
-      const bottom = Math.ceil(r.bottom - containerTop) + inner.scrollTop + 2;
-      boundaries.add(bottom);
+      boundaries.add(Math.round(r.bottom - containerTop));
     }
   }
   inner.querySelectorAll('img, hr, table').forEach(el=>{
     const r = el.getBoundingClientRect();
     if(r.height === 0) return;
-    const bottom = Math.ceil(r.bottom - containerTop) + inner.scrollTop + 2;
-    boundaries.add(bottom);
+    boundaries.add(Math.round(r.bottom - containerTop));
   });
+  inner.scrollTop = savedScroll;
   return [...boundaries].sort((a,b)=>a-b);
 }
 
 function computePageBreaks(inner){
-  const SAFETY_MARGIN = Math.ceil(readerFontSize * 0.5);
-  const realViewportH = inner.clientHeight;
-  const fitViewportH = realViewportH - SAFETY_MARGIN;
+  const viewportH = inner.clientHeight;
+  // One full line of safety so the last line isn't clipped
+  const lineH = Math.round(readerFontSize * 1.9);
+  const fitH = viewportH - lineH;
   const boundaries = getLineBoundaries(inner);
   const totalH = inner.scrollHeight;
   const breaks = [0];
   let pageStart = 0;
 
-  while(pageStart < totalH - realViewportH){
-    let secondToLastFitting = pageStart;
-    let lastFitting = pageStart;
-
-    for(const b of boundaries){
+  while(pageStart < totalH - viewportH){
+    // Find the last boundary that fits fully on this page
+    let lastFit = -1;
+    for(let i = 0; i < boundaries.length; i++){
+      const b = boundaries[i];
       if(b <= pageStart) continue;
-      if(b - pageStart <= fitViewportH){
-        secondToLastFitting = lastFitting;
-        lastFitting = b;
-      } else {
-        break;
-      }
+      if(b - pageStart <= fitH) lastFit = i;
+      else break;
     }
 
-    if(lastFitting <= pageStart){
-      breaks.push(pageStart + realViewportH);
-      pageStart = pageStart + realViewportH;
+    if(lastFit < 0){
+      // No boundary fits — advance by one viewport
+      pageStart += viewportH;
+      breaks.push(pageStart);
       continue;
     }
 
-    // Use secondToLastFitting as the break point:
-    // page ends BEFORE the last line, which becomes the first line of the next page
-    const nextStart = secondToLastFitting > pageStart ? secondToLastFitting : lastFitting;
+    // The next page starts at the bottom of the last fitting line.
+    // That value is also the top of the next line (since boundaries
+    // are line bottoms and lines are contiguous).
+    const nextStart = boundaries[lastFit];
     breaks.push(nextStart);
     pageStart = nextStart;
   }
