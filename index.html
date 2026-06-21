@@ -2599,6 +2599,25 @@ function updatePaginationUI(){
   const prog = (readerChapter + (readerPage/Math.max(readerPageCount,1))) / Math.max(readerSpine.length,1);
   document.getElementById('readerProgressBar').style.width = (Math.min(prog,1)*100)+'%';
 }
+
+  function recalcReaderHeight(){
+  const overlay = document.getElementById('readerOverlay');
+  if(!overlay.classList.contains('open')) return;
+  const outer = document.getElementById('readerContent');
+  const inner = document.getElementById('readerContentInner');
+  const settingsBar = document.getElementById('readerSettingsBar');
+  const toolbarH = 52 + 3;
+  const settingsH = settingsBar.classList.contains('open') ? settingsBar.offsetHeight : 0;
+  const fixedH = overlay.clientHeight - toolbarH - settingsH;
+  outer.style.height = fixedH + 'px';
+  inner.style.height = fixedH + 'px';
+  // Recompute page breaks for the new height, stay on current page
+  readerPageBreaks = computePageBreaks(inner);
+  readerPageCount = readerPageBreaks.length;
+  readerPage = Math.min(readerPage, readerPageCount - 1);
+  inner.scrollTop = readerPageBreaks[readerPage] || 0;
+  updatePaginationUI();
+}
   
 async function readerGoToChapter(idx, startPage=0){
   if(idx<0||idx>=readerSpine.length)return;
