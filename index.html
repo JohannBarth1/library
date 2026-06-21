@@ -2335,6 +2335,19 @@ document.addEventListener('keydown',e=>{
   if(e.key==='Escape')closeReader();
 });
 
+const isAndroidChrome = /Android/.test(navigator.userAgent) && /Chrome/.test(navigator.userAgent) && !/Edg|OPR|Samsung/.test(navigator.userAgent);
+
+if(isAndroidChrome){
+  document.addEventListener('keydown', e => {
+    if(!document.getElementById('readerOverlay').classList.contains('open')) return;
+    if(e.key === 'AudioVolumeUp' || e.key === 'AudioVolumeDown'){
+      e.preventDefault();
+      if(e.key === 'AudioVolumeUp') goToPage(readerPage - 1);
+      else goToPage(readerPage + 1);
+    }
+  });
+}
+
   // ══════════════════════════════════════════════════════════════════
 // IFRAME-BASED PAGINATION ENGINE
 // Replaces initPagination() + goToPage() + the pagination section
