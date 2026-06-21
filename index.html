@@ -663,6 +663,10 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
         <div class="desk-home-greeting" id="deskHomeGreeting">Welcome</div>
         <div class="desk-home-sub">Your reading at a glance</div>
       </div>
+      <div class="desk-home-section" id="deskHomeCheckoutSection" style="display:none">
+        <div class="desk-home-section-label teal">📋 Currently Signed Out</div>
+        <div class="desk-home-grid" id="deskHomeCheckoutGrid"></div>
+      </div>
       <div class="desk-home-section" id="deskHomeRecSection" style="display:none">
         <div class="desk-home-section-label gold">⭐ Recommended Picks</div>
         <div class="desk-home-grid" id="deskHomeRecGrid"></div>
@@ -675,10 +679,6 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
         <div class="desk-home-section-label" style="color:#5a48b0">🔒 Shared with Me</div>
         <div class="desk-home-grid" id="deskHomeSharedWithMeGrid"></div>
       </div>     
-      <div class="desk-home-section" id="deskHomeCheckoutSection" style="display:none">
-        <div class="desk-home-section-label teal">📋 Currently Signed Out</div>
-        <div class="desk-home-grid" id="deskHomeCheckoutGrid"></div>
-      </div>
       <div class="desk-home-section">
         <div class="desk-home-section-label">Recently Added to My Library</div>
         <div class="desk-home-grid" id="deskHomeRecentGrid"></div>
@@ -2191,15 +2191,15 @@ async function renderMobHome(){
 
   const recent=library.slice(0,6);
   let html='';
-
-  if(recommended.length){
-    html+=`<div style="font-size:.68rem;letter-spacing:.18em;text-transform:uppercase;color:var(--gold);font-weight:700;margin-bottom:.6rem">⭐ Recommended</div>
-    <div class="mob-book-grid" style="margin-bottom:1.5rem;grid-template-columns:repeat(auto-fill,minmax(140px,1fr))">${recommended.map(b=>bookCardHtml(b,communityLib.some(x=>x.id===b.id))).join('')}</div>`;
-  }
-
+  
   if(checkedOutBooks.length){
   html+=`<div style="font-size:.68rem;letter-spacing:.18em;text-transform:uppercase;color:var(--teal);font-weight:700;margin-bottom:.6rem;margin-top:.5rem">📋 Currently Signed Out</div>
   <div class="mob-book-grid" style="margin-bottom:1.5rem;grid-template-columns:repeat(auto-fill,minmax(140px,1fr))">${checkedOutBooks.map(b=>bookCardHtml(b,communityLib.some(x=>x.id===b.id),true)).join('')}</div>`;
+  }
+  
+  if(recommended.length){
+    html+=`<div style="font-size:.68rem;letter-spacing:.18em;text-transform:uppercase;color:var(--gold);font-weight:700;margin-bottom:.6rem">⭐ Recommended</div>
+    <div class="mob-book-grid" style="margin-bottom:1.5rem;grid-template-columns:repeat(auto-fill,minmax(140px,1fr))">${recommended.map(b=>bookCardHtml(b,communityLib.some(x=>x.id===b.id))).join('')}</div>`;
   }
 
   if(sharedByMe.length){
