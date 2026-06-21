@@ -2442,35 +2442,73 @@ function getReadingProgress(bookId){
 }
 
 function getLineBoundaries(inner){
-  const walker = document.createTreeWalker(inner, NodeFilter.SHOW_TEXT, {
-    acceptNode(node){
-      return node.textContent.trim().length ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_SKIP;
-    }
-  });
+  const containerTop = inner.getBoundingClientRect().top;
   const tops = [];
   const bottoms = [];
-  const containerTop = inner.getBoundingClientRect().top;
-  let node;
-  while(node = walker.nextNode()){
+
+  // Walk block-level elements (paragraphs, headings) for accurate
+  // top/bottom including margin-driven gaps between them.
+  const blockSelector = 'p, h1, h2, h3, h4, h5, h6, blockquote, li, div';
+  const blocks = inner.querySelectorAll(blockSelector);
+
+  blocks.forEach(block => {
+    // Skip blocks that themselves contain block-level children —
+    // we only want leaf-ish blocks to avoid double-counting nested ranges.
+    if(block.querySelector(blockSelector)) return;
+
+    const text = block.textContent.trim();
+    if(!text && block.tagName !== 'IMG') return; // skip empty spacer blocks except real content
+
+    // Use a Range over this block's contents to get per-LINE rects
+    // (a paragraph can wrap across several visual lines).
     const range = document.createRange();
-    range.selectNodeContents(node);
+    range.selectNodeContents(block);
     const rects = range.getClientRects();
+
+    if(rects.length === 0){
+      // Fallback: use the block's own box (covers images, empty-but-sized blocks)
+      const r = block.getBoundingClientRect();
+      if(r.height < 2) return;
+      tops.push(Math.floor(r.top - containerTop));
+      bottoms.push(Math.ceil(r.bottom - containerTop));
+      return;
+    }
+
     for(const r of rects){
       if(r.height < 2) continue;
       tops.push(Math.floor(r.top - containerTop));
       bottoms.push(Math.ceil(r.bottom - containerTop));
     }
-  }
+
+    // Crucially: also record the BLOCK's own bottom edge (includes
+    // margin-bottom's effect on where the next block starts), so a
+    // page break can land after the margin, not just after the last
+    // glyph.
+    const blockRect = block.getBoundingClientRect();
+    tops.push(Math.floor(blockRect.top - containerTop));
+    bottoms.push(Math.ceil(blockRect.bottom - containerTop));
+  });
+
+  // Images and other replaced elements outside text flow
   inner.querySelectorAll('img, hr, table').forEach(el=>{
     const r = el.getBoundingClientRect();
     if(r.height < 2) return;
     tops.push(Math.floor(r.top - containerTop));
     bottoms.push(Math.ceil(r.bottom - containerTop));
   });
-  // Pair tops and bottoms, dedupe, sort
+
   const pairs = tops.map((t,i) => ({top: t, bottom: bottoms[i]}));
-  pairs.sort((a,b) => a.top - b.top);
-  return pairs;
+  pairs.sort((a,b) => a.top - b.top || a.bottom - b.bottom);
+
+  // Dedupe near-identical pairs (block-level + line-level can overlap)
+  const deduped = [];
+  for(const p of pairs){
+    const last = deduped[deduped.length-1];
+    if(last && Math.abs(last.top - p.top) < 2 && Math.abs(last.bottom - p.bottom) < 2) continue;
+    deduped.push(p);
+  }
+
+  return deduped;
 }
 
 function computePageBreaks(inner){
