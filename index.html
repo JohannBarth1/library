@@ -242,6 +242,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .rs-theme-btn.night{border-color:rgba(200,200,255,.2);color:#8888aa;}
 .rs-theme-btn.night.active{background:#1a1a2e;color:#c8c8d8;border-color:#4444aa;outline:2px solid var(--gold);outline-offset:1px;}
 .reader-page-info{font-size:.75rem;opacity:.6;white-space:nowrap;}
+.reader-page-spacer{ height: 100vh; visibility: hidden; }
 .reader-progress{height:3px;flex-shrink:0;}
 .reader-overlay.theme-day .reader-progress{background:#ddd;}
 .reader-overlay.theme-sepia .reader-progress{background:#d4c4a8;}
@@ -2529,24 +2530,15 @@ function renderChapterPaged(bodyHtml){
     const toolbarH = 52 + 3;
     const settingsBar = document.getElementById('readerSettingsBar');
     const settingsH = settingsBar.classList.contains('open') ? settingsBar.offsetHeight : 0;
-    const rawH = overlay.clientHeight - toolbarH - settingsH;
-    
-    // Snap height to a whole number of lines so no half-lines show at bottom
-    const lineH = readerFontSize * 1.9; // must match line-height in CSS
-    const paddingV = 1.8 * 16 * 2;     // top + bottom padding from .reader-content-inner (1.8rem each)
-    const usableH = rawH - paddingV;
-    const wholeLines = Math.floor(usableH / lineH);
-    const snappedH = Math.round(wholeLines * lineH) + paddingV;
-    
-    outer.style.height = snappedH + 'px';
-    inner.style.height = snappedH + 'px';
-    inner.style.overflow = 'hidden';
+    const fixedH = overlay.clientHeight - toolbarH - settingsH;
+    outer.style.height = fixedH + 'px';
+    inner.style.height = fixedH + 'px';
 
     inner.style.transition = 'none';
     inner.style.transform = 'none';
     inner.style.opacity = '1';
     inner.scrollTop = 0;
-    inner.innerHTML = bodyHtml;
+    inner.innerHTML = bodyHtml + '<div class="reader-page-spacer"></div>';
     inner.classList.toggle('paged', readerTransition !== 'scroll');
     inner.style.fontSize = readerFontSize + 'px';
 
@@ -2634,7 +2626,7 @@ function updatePaginationUI(){
   document.getElementById('readerProgressBar').style.width = (Math.min(prog,1)*100)+'%';
 }
 
-  function recalcReaderHeight(){
+function recalcReaderHeight(){
   const overlay = document.getElementById('readerOverlay');
   if(!overlay.classList.contains('open')) return;
   const outer = document.getElementById('readerContent');
@@ -2642,17 +2634,10 @@ function updatePaginationUI(){
   const settingsBar = document.getElementById('readerSettingsBar');
   const toolbarH = 52 + 3;
   const settingsH = settingsBar.classList.contains('open') ? settingsBar.offsetHeight : 0;
-  const rawH = overlay.clientHeight - toolbarH - settingsH;
-  const lineH = readerFontSize * 1.9;
-  const paddingV = 1.8 * 16 * 2;
-  const usableH = rawH - paddingV;
-  const wholeLines = Math.floor(usableH / lineH);
-  const snappedH = Math.round(wholeLines * lineH) + paddingV;
-  outer.style.height = snappedH + 'px';
-  inner.style.height = snappedH + 'px';
-  inner.style.overflow = 'hidden';
+  const fixedH = overlay.clientHeight - toolbarH - settingsH;
+  outer.style.height = fixedH + 'px';
+  inner.style.height = fixedH + 'px';
   inner.classList.toggle('paged', readerTransition !== 'scroll');
-  // Recompute page breaks for the new height, stay on current page
   readerPageBreaks = computePageBreaks(inner);
   readerPageCount = readerPageBreaks.length;
   readerPage = Math.min(readerPage, readerPageCount - 1);
