@@ -2301,7 +2301,11 @@ document.getElementById('readerSettingsBar').addEventListener('click', e => {
   }
 });
   
-document.getElementById('btnToggleReaderSettings').addEventListener('click',()=>document.getElementById('readerSettingsBar').classList.toggle('open'));
+document.getElementById('btnToggleReaderSettings').addEventListener('click', e => {
+  e.stopPropagation();
+  document.getElementById('readerSettingsBar').classList.toggle('open');
+  recalcReaderHeight();
+});
 document.getElementById('btnToggleChapters').addEventListener('click',()=>document.getElementById('readerChapterList').classList.toggle('open'));
 document.getElementById('readerOverlay').addEventListener('click', e => {
   const list = document.getElementById('readerChapterList');
