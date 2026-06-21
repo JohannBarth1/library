@@ -225,24 +225,22 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .reader-overlay{overflow:hidden;}
 .reader-btn:hover{opacity:.8;}
 .reader-btn.close-btn{color:#cc4444!important;border-color:rgba(204,68,68,0.4)!important;}
-.reader-settings-bar{display:none;padding:.5rem 1rem;gap:.5rem .8rem;align-items:center;flex-shrink:0;border-bottom:1px solid rgba(128,128,128,0.2);flex-wrap:wrap;}
+.reader-settings-bar{display:none;padding:.5rem 1rem;gap:.5rem .6rem;align-items:center;flex-shrink:0;border-bottom:1px solid rgba(128,128,128,0.2);flex-wrap:wrap;}
 .reader-settings-bar.open{display:flex;}
-.reader-overlay.theme-day .reader-settings-bar{background:#f8f8f8;}
-.reader-overlay.theme-sepia .reader-settings-bar{background:#ede0cc;}
-.reader-overlay.theme-night .reader-settings-bar{background:#16162a;}
-.rs-label{font-size:.68rem;letter-spacing:.1em;text-transform:uppercase;font-weight:700;opacity:.6;white-space:nowrap;}
-.rs-font-btns{display:flex;gap:.3rem;}
-.rs-font-btn{padding:.3rem .6rem;font-size:.8rem;border-radius:3px;cursor:pointer;border:1px solid rgba(128,128,128,0.3);background:transparent;font-weight:700;transition:all .15s;}
-.reader-overlay.theme-day .rs-font-btn{color:#1a1a1a;}
-.reader-overlay.theme-sepia .rs-font-btn{color:#3b2a1a;}
-.reader-overlay.theme-night .rs-font-btn{color:#c8c8d8;}
-.rs-font-btn:hover,.rs-font-btn.active{background:var(--teal);color:#fff;border-color:var(--teal);}
-.rs-theme-btns{display:flex;gap:.3rem;}
-.rs-theme-btn{padding:.3rem .65rem;font-size:.75rem;border-radius:3px;cursor:pointer;border:1px solid rgba(128,128,128,0.3);font-weight:700;transition:all .12s;}
-.rs-theme-btn.day{background:#fff;color:#333;}
-.rs-theme-btn.sepia{background:#f4ede0;color:#3b2a1a;}
-.rs-theme-btn.night{background:#1a1a2e;color:#c8c8d8;}
-.rs-theme-btn.active{outline:2px solid var(--gold);outline-offset:1px;}
+.reader-overlay.theme-day .reader-settings-bar{background:#f0f0f0;}
+.reader-overlay.theme-sepia .reader-settings-bar{background:#e8d9c5;}
+.reader-overlay.theme-night .reader-settings-bar{background:#12122a;}
+.rs-label{font-size:.6rem;letter-spacing:.15em;text-transform:uppercase;font-weight:700;color:var(--muted);white-space:nowrap;}
+.rs-group{display:flex;align-items:center;gap:.35rem;flex-shrink:0;}
+.rs-btn{padding:.28rem .65rem;font-size:.7rem;font-family:'Lato',sans-serif;font-weight:700;border-radius:20px;cursor:pointer;border:1px solid rgba(200,149,42,.35);background:transparent;color:var(--gold);transition:all .15s;white-space:nowrap;-webkit-tap-highlight-color:transparent;}
+.rs-btn:hover:not(.active){background:rgba(200,149,42,.12);}
+.rs-btn.active{background:var(--gold);color:var(--navy);border-color:var(--gold);}
+.rs-theme-btn.day{border-color:rgba(100,100,100,.3);color:#555;}
+.rs-theme-btn.day.active{background:#fff;color:#333;border-color:#aaa;outline:2px solid var(--gold);outline-offset:1px;}
+.rs-theme-btn.sepia{border-color:rgba(100,100,100,.3);color:#7a5c3a;}
+.rs-theme-btn.sepia.active{background:#f4ede0;color:#3b2a1a;border-color:#b8a080;outline:2px solid var(--gold);outline-offset:1px;}
+.rs-theme-btn.night{border-color:rgba(200,200,255,.2);color:#8888aa;}
+.rs-theme-btn.night.active{background:#1a1a2e;color:#c8c8d8;border-color:#4444aa;outline:2px solid var(--gold);outline-offset:1px;}
 .reader-page-info{font-size:.75rem;opacity:.6;white-space:nowrap;}
 .reader-progress{height:3px;flex-shrink:0;}
 .reader-overlay.theme-day .reader-progress{background:#ddd;}
@@ -1052,30 +1050,24 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 <!-- EPUB Reader — PATCH 5: toolbar moved to bottom -->
 <div class="reader-overlay theme-day" id="readerOverlay">
 <div class="reader-settings-bar" id="readerSettingsBar">
-  <div style="display:flex;align-items:center;gap:.4rem;flex-shrink:0">
+  <div class="rs-group">
     <span class="rs-label">Text</span>
-    <div class="rs-font-btns">
-      <button class="rs-font-btn" data-size="14">A</button>
-      <button class="rs-font-btn active" data-size="17" style="font-size:1rem">A</button>
-      <button class="rs-font-btn" data-size="20" style="font-size:1.15rem">A</button>
-      <button class="rs-font-btn" data-size="24" style="font-size:1.3rem">A</button>
-    </div>
+    <button class="rs-btn" data-size="14">A<span style="font-size:.6em">A</span></button>
+    <button class="rs-btn active" data-size="17">A</button>
+    <button class="rs-btn" data-size="20"><span style="font-size:1.1em">A</span></button>
+    <button class="rs-btn" data-size="24"><span style="font-size:1.25em">A</span></button>
   </div>
-  <div style="display:flex;align-items:center;gap:.4rem;flex-shrink:0">
+  <div class="rs-group">
     <span class="rs-label">Theme</span>
-    <div class="rs-theme-btns">
-      <button class="rs-theme-btn day active" data-theme="day">Day</button>
-      <button class="rs-theme-btn sepia" data-theme="sepia">Sepia</button>
-      <button class="rs-theme-btn night" data-theme="night">Night</button>
-    </div>
+    <button class="rs-btn rs-theme-btn day active" data-theme="day">Day</button>
+    <button class="rs-btn rs-theme-btn sepia" data-theme="sepia">Sepia</button>
+    <button class="rs-btn rs-theme-btn night" data-theme="night">Night</button>
   </div>
-  <div style="display:flex;align-items:center;gap:.4rem;flex-shrink:0">
+  <div class="rs-group">
     <span class="rs-label">Turn</span>
-    <div class="rs-font-btns" id="rsTransitionBtns">
-      <button class="rs-font-btn" data-transition="none">None</button>
-      <button class="rs-font-btn" data-transition="bounce">Bounce</button>
-      <button class="rs-font-btn" data-transition="slide">Slide</button>
-    </div>
+    <button class="rs-btn" data-transition="none">None</button>
+    <button class="rs-btn active" data-transition="bounce">Bounce</button>
+    <button class="rs-btn" data-transition="slide">Slide</button>
   </div>
 </div>
   <div class="reader-progress"><div class="reader-progress-bar" id="readerProgressBar" style="width:0%"></div></div>
@@ -2257,20 +2249,57 @@ function bookCardHtml(b, isComm, showProgress=false){
 }
 
 // ── EPUB READER ───────────────────────────────────────────────────────────────
-function applyReaderTheme(theme){const o=document.getElementById('readerOverlay');o.classList.remove('theme-day','theme-sepia','theme-night');o.classList.add('theme-'+theme);document.querySelectorAll('.rs-theme-btn').forEach(b=>b.classList.toggle('active',b.dataset.theme===theme));}
+function applyReaderTheme(theme){
+  const o = document.getElementById('readerOverlay');
+  o.classList.remove('theme-day','theme-sepia','theme-night');
+  o.classList.add('theme-'+theme);
+  document.querySelectorAll('#readerSettingsBar [data-theme]')
+    .forEach(b => b.classList.toggle('active', b.dataset.theme === theme));
+}
+  
 function setReaderFont(size){
-  readerFontSize=size;
-  localStorage.setItem('elib_reader_font',size);
-  document.querySelectorAll('.rs-font-btn[data-size]').forEach(b=>b.classList.toggle('active',parseInt(b.dataset.size)===size));
-  document.getElementById('readerContentInner').style.fontSize = size+'px';
+  readerFontSize = size;
+  localStorage.setItem('elib_reader_font', size);
+  document.querySelectorAll('#readerSettingsBar [data-size]')
+    .forEach(b => b.classList.toggle('active', parseInt(b.dataset.size) === size));
+  const inner = document.getElementById('readerContentInner');
+  if(inner) inner.style.fontSize = size + 'px';
   readerGoToChapter(readerChapter, readerPage);
 }
- document.querySelectorAll('.rs-theme-btn').forEach(b=>b.addEventListener('click',()=>{
-  readerTheme=b.dataset.theme;
-  localStorage.setItem('elib_reader_theme',readerTheme);
-  applyReaderTheme(readerTheme);
-  readerGoToChapter(readerChapter, readerPage);
-}));
+// Font size buttons
+document.getElementById('readerSettingsBar').addEventListener('click', e => {
+  const sizeBtn = e.target.closest('[data-size]');
+  if(sizeBtn){
+    const size = parseInt(sizeBtn.dataset.size);
+    readerFontSize = size;
+    localStorage.setItem('elib_reader_font', size);
+    document.querySelectorAll('#readerSettingsBar [data-size]')
+      .forEach(b => b.classList.toggle('active', parseInt(b.dataset.size) === size));
+    if(document.getElementById('readerContentInner'))
+      document.getElementById('readerContentInner').style.fontSize = size + 'px';
+    readerGoToChapter(readerChapter, readerPage);
+    return;
+  }
+
+  // Theme buttons
+  const themeBtn = e.target.closest('[data-theme]');
+  if(themeBtn){
+    readerTheme = themeBtn.dataset.theme;
+    localStorage.setItem('elib_reader_theme', readerTheme);
+    applyReaderTheme(readerTheme);
+    readerGoToChapter(readerChapter, readerPage);
+    return;
+  }
+
+  // Transition buttons
+  const transBtn = e.target.closest('[data-transition]');
+  if(transBtn){
+    readerTransition = transBtn.dataset.transition;
+    localStorage.setItem('elib_reader_transition', readerTransition);
+    document.querySelectorAll('#readerSettingsBar [data-transition]')
+      .forEach(b => b.classList.toggle('active', b.dataset.transition === readerTransition));
+  }
+});
   
 document.getElementById('btnToggleReaderSettings').addEventListener('click',()=>document.getElementById('readerSettingsBar').classList.toggle('open'));
 document.getElementById('btnToggleChapters').addEventListener('click',()=>document.getElementById('readerChapterList').classList.toggle('open'));
@@ -2338,8 +2367,10 @@ async function readCurrentBook(){
     document.getElementById('readerChapterItems').innerHTML=readerSpine.map((ch,i)=>`<div class="chapter-item" id="chItem_${i}" data-idx="${i}">${esc(ch.label)}</div>`).join('');
     document.getElementById('readerChapterItems').addEventListener('click',e=>{const item=e.target.closest('.chapter-item[data-idx]');if(item)readerGoToChapter(parseInt(item.dataset.idx));});
     hideLoading();applyReaderTheme(readerTheme);
-    document.querySelectorAll('#rsTransitionBtns .rs-font-btn')
+    document.querySelectorAll('#readerSettingsBar [data-transition]')
       .forEach(b => b.classList.toggle('active', b.dataset.transition === readerTransition));
+    document.querySelectorAll('#readerSettingsBar [data-size]')
+      .forEach(b => b.classList.toggle('active', parseInt(b.dataset.size) === readerFontSize));
     document.getElementById('readerSettingsBar').classList.remove('open');
     document.getElementById('readerOverlay').classList.add('open');
     const saved = loadReadingProgress(book.id);
@@ -2496,7 +2527,7 @@ function renderChapterPaged(bodyHtml){
 
 function goToPage(page, opts={}){
   const inner = document.getElementById('readerContentInner');
-console.log('goToPage called, transition=', readerTransition, 'inner=', inner, 'inner overflow=', inner ? getComputedStyle(inner).overflow : 'N/A');
+  if(!inner) return;
 
   if(page < 0){
     if(readerChapter > 0) readerGoToChapter(readerChapter-1, 'last');
@@ -2512,34 +2543,33 @@ console.log('goToPage called, transition=', readerTransition, 'inner=', inner, '
   readerPage = page;
   const target = readerPageBreaks[page];
 
-  // Always clear previous animation state first
+  // Reset all animation state cleanly
   inner.style.transition = 'none';
-  inner.style.transform = 'none';
+  inner.style.transform = 'translateX(0)';
   inner.style.opacity = '1';
   inner.scrollTop = target;
 
   if(opts.animate === false || readerTransition === 'none'){
-    // already done above
+    // nothing more to do
   } else if(readerTransition === 'slide'){
+    // Start off-screen, then slide in
     inner.style.transform = `translateX(${direction * 100}%)`;
-    requestAnimationFrame(()=>{
-      inner.scrollTop = target;
-      requestAnimationFrame(()=>{
-        inner.style.transition = 'transform .22s cubic-bezier(.4,0,.2,1)';
-        inner.style.transform = 'translateX(0)';
-        setTimeout(()=>{ inner.style.transition = 'none'; }, 250);
-      });
-    });
+    // Double rAF: first paints the off-screen position, second starts the transition
+    requestAnimationFrame(()=>requestAnimationFrame(()=>{
+      inner.style.transition = 'transform .25s cubic-bezier(.4,0,.2,1)';
+      inner.style.transform = 'translateX(0)';
+      setTimeout(()=>{ inner.style.transition = 'none'; }, 280);
+    }));
   } else {
-    // bounce
+    // bounce: fade + nudge
     inner.style.opacity = '0';
-    inner.style.transform = `translateX(${direction * 10}px)`;
-    requestAnimationFrame(()=>{
-      inner.style.transition = 'opacity .16s ease-in, transform .16s ease-out';
+    inner.style.transform = `translateX(${direction * 12}px)`;
+    requestAnimationFrame(()=>requestAnimationFrame(()=>{
+      inner.style.transition = 'opacity .18s ease-in, transform .18s ease-out';
       inner.style.opacity = '1';
       inner.style.transform = 'translateX(0)';
       setTimeout(()=>{ inner.style.transition = 'none'; }, 200);
-    });
+    }));
   }
 
   updatePaginationUI();
