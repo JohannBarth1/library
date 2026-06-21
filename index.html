@@ -2424,10 +2424,8 @@ function getLineBoundaries(inner){
       return node.textContent.trim().length ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_SKIP;
     }
   });
-  const boundaries = new Set();
-  // Must be scrolled to top for getBoundingClientRect to be meaningful
-  const savedScroll = inner.scrollTop;
-  inner.scrollTop = 0;
+  const tops = [];
+  const bottoms = [];
   const containerTop = inner.getBoundingClientRect().top;
   let node;
   while(node = walker.nextNode()){
@@ -2435,50 +2433,64 @@ function getLineBoundaries(inner){
     range.selectNodeContents(node);
     const rects = range.getClientRects();
     for(const r of rects){
-      if(r.height === 0) continue;
-      boundaries.add(Math.round(r.bottom - containerTop));
+      if(r.height < 2) continue;
+      tops.push(Math.floor(r.top - containerTop));
+      bottoms.push(Math.ceil(r.bottom - containerTop));
     }
   }
   inner.querySelectorAll('img, hr, table').forEach(el=>{
     const r = el.getBoundingClientRect();
-    if(r.height === 0) return;
-    boundaries.add(Math.round(r.bottom - containerTop));
+    if(r.height < 2) return;
+    tops.push(Math.floor(r.top - containerTop));
+    bottoms.push(Math.ceil(r.bottom - containerTop));
   });
-  inner.scrollTop = savedScroll;
-  return [...boundaries].sort((a,b)=>a-b);
+  // Pair tops and bottoms, dedupe, sort
+  const pairs = tops.map((t,i) => ({top: t, bottom: bottoms[i]}));
+  pairs.sort((a,b) => a.top - b.top);
+  return pairs;
 }
 
 function computePageBreaks(inner){
   const viewportH = inner.clientHeight;
-  // One full line of safety so the last line isn't clipped
-  const lineH = Math.round(readerFontSize * 1.9);
-  const fitH = viewportH - lineH;
-  const boundaries = getLineBoundaries(inner);
+  const pairs = getLineBoundaries(inner);
   const totalH = inner.scrollHeight;
   const breaks = [0];
   let pageStart = 0;
 
-  while(pageStart < totalH - viewportH){
-    // Find the last boundary that fits fully on this page
-    let lastFit = -1;
-    for(let i = 0; i < boundaries.length; i++){
-      const b = boundaries[i];
-      if(b <= pageStart) continue;
-      if(b - pageStart <= fitH) lastFit = i;
-      else break;
+  while(pageStart < totalH - viewportH + 1){
+    // Find all lines whose BOTTOM fits within this page
+    let lastFittingIdx = -1;
+    for(let i = 0; i < pairs.length; i++){
+      const {top, bottom} = pairs[i];
+      if(top < pageStart) continue;           // above current page start
+      if(bottom - pageStart <= viewportH){     // fits completely
+        lastFittingIdx = i;
+      } else {
+        break;
+      }
     }
 
-    if(lastFit < 0){
-      // No boundary fits — advance by one viewport
+    if(lastFittingIdx < 0){
       pageStart += viewportH;
       breaks.push(pageStart);
       continue;
     }
 
-    // The next page starts at the bottom of the last fitting line.
-    // That value is also the top of the next line (since boundaries
-    // are line bottoms and lines are contiguous).
-    const nextStart = boundaries[lastFit];
+    // Next page starts at the TOP of the line after the last fitting one
+    const nextLineIdx = lastFittingIdx + 1;
+    if(nextLineIdx >= pairs.length){
+      // No more lines — we're done
+      break;
+    }
+
+    const nextStart = pairs[nextLineIdx].top;
+    if(nextStart <= pageStart){
+      // Safety: avoid infinite loop
+      pageStart += viewportH;
+      breaks.push(pageStart);
+      continue;
+    }
+
     breaks.push(nextStart);
     pageStart = nextStart;
   }
