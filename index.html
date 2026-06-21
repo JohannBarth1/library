@@ -2512,19 +2512,19 @@ function getLineBoundaries(inner){
 }
 
 function computePageBreaks(inner){
-  const viewportH = inner.clientHeight;
+  const SAFETY_MARGIN = Math.max(6, Math.ceil(readerFontSize * 0.4)); // px buffer, scales with text size
+  const viewportH = inner.clientHeight - SAFETY_MARGIN;
   const pairs = getLineBoundaries(inner);
   const totalH = inner.scrollHeight;
   const breaks = [0];
   let pageStart = 0;
 
   while(pageStart < totalH - viewportH + 1){
-    // Find all lines whose BOTTOM fits within this page
     let lastFittingIdx = -1;
     for(let i = 0; i < pairs.length; i++){
       const {top, bottom} = pairs[i];
-      if(top < pageStart) continue;           // above current page start
-      if(bottom - pageStart <= viewportH){     // fits completely
+      if(top < pageStart) continue;
+      if(bottom - pageStart <= viewportH){
         lastFittingIdx = i;
       } else {
         break;
