@@ -2529,9 +2529,18 @@ function renderChapterPaged(bodyHtml){
     const toolbarH = 52 + 3;
     const settingsBar = document.getElementById('readerSettingsBar');
     const settingsH = settingsBar.classList.contains('open') ? settingsBar.offsetHeight : 0;
-    const fixedH = overlay.clientHeight - toolbarH - settingsH;
-    outer.style.height = fixedH + 'px';
-    inner.style.height = fixedH + 'px';
+    const rawH = overlay.clientHeight - toolbarH - settingsH;
+    
+    // Snap height to a whole number of lines so no half-lines show at bottom
+    const lineH = readerFontSize * 1.9; // must match line-height in CSS
+    const paddingV = 1.8 * 16 * 2;     // top + bottom padding from .reader-content-inner (1.8rem each)
+    const usableH = rawH - paddingV;
+    const wholeLines = Math.floor(usableH / lineH);
+    const snappedH = Math.round(wholeLines * lineH) + paddingV;
+    
+    outer.style.height = snappedH + 'px';
+    inner.style.height = snappedH + 'px';
+    inner.style.overflow = 'hidden';
 
     inner.style.transition = 'none';
     inner.style.transform = 'none';
@@ -2633,9 +2642,15 @@ function updatePaginationUI(){
   const settingsBar = document.getElementById('readerSettingsBar');
   const toolbarH = 52 + 3;
   const settingsH = settingsBar.classList.contains('open') ? settingsBar.offsetHeight : 0;
-  const fixedH = overlay.clientHeight - toolbarH - settingsH;
-  outer.style.height = fixedH + 'px';
-  inner.style.height = fixedH + 'px';
+  const rawH = overlay.clientHeight - toolbarH - settingsH;
+  const lineH = readerFontSize * 1.9;
+  const paddingV = 1.8 * 16 * 2;
+  const usableH = rawH - paddingV;
+  const wholeLines = Math.floor(usableH / lineH);
+  const snappedH = Math.round(wholeLines * lineH) + paddingV;
+  outer.style.height = snappedH + 'px';
+  inner.style.height = snappedH + 'px';
+  inner.style.overflow = 'hidden';
   inner.classList.toggle('paged', readerTransition !== 'scroll');
   // Recompute page breaks for the new height, stay on current page
   readerPageBreaks = computePageBreaks(inner);
