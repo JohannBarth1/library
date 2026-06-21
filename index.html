@@ -2512,8 +2512,7 @@ function getLineBoundaries(inner){
 }
 
 function computePageBreaks(inner){
-  const SAFETY_MARGIN = Math.max(6, Math.ceil(readerFontSize * 0.4)); // px buffer, scales with text size
-  const viewportH = inner.clientHeight - SAFETY_MARGIN;
+  const viewportH = inner.clientHeight;
   const pairs = getLineBoundaries(inner);
   const totalH = inner.scrollHeight;
   const breaks = [0];
@@ -2568,7 +2567,8 @@ function renderChapterPaged(bodyHtml){
     const toolbarH = 52 + 3;
     const settingsBar = document.getElementById('readerSettingsBar');
     const settingsH = settingsBar.classList.contains('open') ? settingsBar.offsetHeight : 0;
-    const fixedH = overlay.clientHeight - toolbarH - settingsH;
+    const SAFETY_MARGIN = Math.max(4, Math.ceil(readerFontSize * 0.25));
+    const fixedH = overlay.clientHeight - toolbarH - settingsH - SAFETY_MARGIN;
     outer.style.height = fixedH + 'px';
     inner.style.height = fixedH + 'px';
 
@@ -2672,7 +2672,8 @@ function recalcReaderHeight(){
   const settingsBar = document.getElementById('readerSettingsBar');
   const toolbarH = 52 + 3;
   const settingsH = settingsBar.classList.contains('open') ? settingsBar.offsetHeight : 0;
-  const fixedH = overlay.clientHeight - toolbarH - settingsH;
+  const SAFETY_MARGIN = Math.max(4, Math.ceil(readerFontSize * 0.25));
+  const fixedH = overlay.clientHeight - toolbarH - settingsH - SAFETY_MARGIN;
   outer.style.height = fixedH + 'px';
   inner.style.height = fixedH + 'px';
   inner.classList.toggle('paged', readerTransition !== 'scroll');
