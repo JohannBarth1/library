@@ -243,6 +243,40 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .rs-theme-btn.night.active{background:#1a1a2e;color:#c8c8d8;border-color:#4444aa;outline:2px solid var(--gold);outline-offset:1px;}
 .reader-page-info{font-size:.75rem;opacity:.6;white-space:nowrap;}
 .reader-page-spacer{ height: 100vh; visibility: hidden; }
+.reader-page-slice {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  padding: 1.8rem clamp(1rem,5vw,4rem);
+  line-height: 1.9;
+  font-family: 'Lato', sans-serif;
+  will-change: opacity, transform;
+}
+.reader-page-slice img { max-width:100%; height:auto; display:block; margin:0 auto; }
+.reader-page-slice p { margin: 0 0 1.1em; }
+.reader-page-slice h1,.reader-page-slice h2,.reader-page-slice h3 {
+  font-family: 'Playfair Display', serif;
+  margin: 1.5em 0 .5em;
+}
+.reader-overlay.theme-day .reader-page-slice { color: #1a1a1a; background: #fff; }
+.reader-overlay.theme-sepia .reader-page-slice { color: #3b2a1a; background: #f4ede0; }
+.reader-overlay.theme-night .reader-page-slice { color: #c8c8d8; background: #1a1a2e; }
+.reader-overlay.theme-night .reader-page-slice h1,
+.reader-overlay.theme-night .reader-page-slice h2,
+.reader-overlay.theme-night .reader-page-slice h3 { color: #e8d8b0; }
+#readerStagingContainer {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  visibility: hidden;
+  pointer-events: none;
+  overflow: hidden;
+  padding: 1.8rem clamp(1rem,5vw,4rem);
+  line-height: 1.9;
+  font-family: 'Lato', sans-serif;
+  box-sizing: border-box;
+}
+  
 .reader-progress{height:3px;flex-shrink:0;}
 .reader-overlay.theme-day .reader-progress{background:#ddd;}
 .reader-overlay.theme-sepia .reader-progress{background:#d4c4a8;}
@@ -274,7 +308,6 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
   line-height:1.9;
   will-change:transform,opacity;
 }
-.reader-content-inner.paged { overflow-y: hidden; }
 .reader-content-inner img{max-width:100%;height:auto;display:block;margin:0 auto;}
 .reader-content-inner p{margin:0 0 1.1em;}
 .reader-content-inner h1,.reader-content-inner h2,.reader-content-inner h3{font-family:'Playfair Display',serif;margin:1.5em 0 .5em;}
@@ -1099,7 +1132,10 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
     <h3>Contents</h3>
     <div id="readerChapterItems"></div>
   </div>
-  <div class="reader-content" id="readerContent"><div class="reader-content-inner" id="readerContentInner"></div></div>
+  <div class="reader-content" id="readerContent">
+    <div class="reader-page-slice" id="readerPageA"></div>
+    <div class="reader-page-slice" id="readerPageB"></div>
+  </div>
   <!-- Toolbar at bottom for thumb-friendly nav -->
   <div class="reader-toolbar">
     <button class="reader-btn" id="btnToggleChapters">☰</button>
@@ -2531,9 +2567,11 @@ function setReaderFont(size){
   localStorage.setItem('elib_reader_font', size);
   document.querySelectorAll('#readerSettingsBar [data-size]')
     .forEach(b => b.classList.toggle('active', parseInt(b.dataset.size) === size));
-  const inner = document.getElementById('readerContentInner');
-  if(inner) inner.style.fontSize = size + 'px';
-  readerGoToChapter(readerChapter, readerPage);
+  const staging = document.getElementById('readerStagingContainer');
+  if(staging) staging.style.fontSize = size + 'px';
+  if(document.getElementById('readerOverlay').classList.contains('open')){
+    recalcReaderHeight(); // re-paginate at new font size without full chapter reload
+  }
 }
 // Font size buttons
 document.getElementById('readerSettingsBar').addEventListener('click', e => {
@@ -2662,6 +2700,14 @@ async function readCurrentBook(){
       .forEach(b => b.classList.toggle('active', parseInt(b.dataset.size) === readerFontSize));
     document.getElementById('readerSettingsBar').classList.remove('open');
     document.getElementById('readerOverlay').classList.add('open');
+    // Create hidden staging container used for pagination measurement
+    let staging = document.getElementById('readerStagingContainer');
+    if(!staging){
+      staging = document.createElement('div');
+      staging.id = 'readerStagingContainer';
+      staging.style.cssText = 'position:absolute;left:-9999px;top:0;visibility:hidden;pointer-events:none;';
+      document.getElementById('readerOverlay').appendChild(staging);
+    }
     const saved = loadReadingProgress(book.id);
     if(saved && saved.chapterIdx < readerSpine.length && saved.chapterIdx > 0){
       if(confirm(`Resume at ${readerSpine[saved.chapterIdx]?.label || 'last position'}?`)){
@@ -2707,145 +2753,189 @@ function getReadingProgress(bookId){
   return p ? p.progress : 0;
 }
 
-function getLineBoundaries(inner){
-  const containerTop = inner.getBoundingClientRect().top;
-  const tops = [];
-  const bottoms = [];
+// ── BINARY-SEARCH PAGINATION ──────────────────────────────────────────────────
 
-  // Walk block-level elements (paragraphs, headings) for accurate
-  // top/bottom including margin-driven gaps between them.
-  const blockSelector = 'p, h1, h2, h3, h4, h5, h6, blockquote, li, div';
-  const blocks = inner.querySelectorAll(blockSelector);
-
-  blocks.forEach(block => {
-    // Skip blocks that themselves contain block-level children —
-    // we only want leaf-ish blocks to avoid double-counting nested ranges.
-    if(block.querySelector(blockSelector)) return;
-
-    const text = block.textContent.trim();
-    if(!text && block.tagName !== 'IMG') return; // skip empty spacer blocks except real content
-
-    // Use a Range over this block's contents to get per-LINE rects
-    // (a paragraph can wrap across several visual lines).
-    const range = document.createRange();
-    range.selectNodeContents(block);
-    const rects = range.getClientRects();
-
-    if(rects.length === 0){
-      // Fallback: use the block's own box (covers images, empty-but-sized blocks)
-      const r = block.getBoundingClientRect();
-      if(r.height < 2) return;
-      tops.push(Math.floor(r.top - containerTop));
-      bottoms.push(Math.ceil(r.bottom - containerTop));
-      return;
+function getTextNodeSequence(container){
+  const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT, {
+    acceptNode(node){
+      return node.textContent.length ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_SKIP;
     }
-
-    for(const r of rects){
-      if(r.height < 2) continue;
-      tops.push(Math.floor(r.top - containerTop));
-      bottoms.push(Math.ceil(r.bottom - containerTop));
-    }
-
-    // Crucially: also record the BLOCK's own bottom edge (includes
-    // margin-bottom's effect on where the next block starts), so a
-    // page break can land after the margin, not just after the last
-    // glyph.
-    const blockRect = block.getBoundingClientRect();
-    tops.push(Math.floor(blockRect.top - containerTop));
-    bottoms.push(Math.ceil(blockRect.bottom - containerTop));
   });
-
-  // Images and other replaced elements outside text flow
-  inner.querySelectorAll('img, hr, table').forEach(el=>{
-    const r = el.getBoundingClientRect();
-    if(r.height < 2) return;
-    tops.push(Math.floor(r.top - containerTop));
-    bottoms.push(Math.ceil(r.bottom - containerTop));
-  });
-
-  const pairs = tops.map((t,i) => ({top: t, bottom: bottoms[i]}));
-  pairs.sort((a,b) => a.top - b.top || a.bottom - b.bottom);
-
-  // Dedupe near-identical pairs (block-level + line-level can overlap)
-  const deduped = [];
-  for(const p of pairs){
-    const last = deduped[deduped.length-1];
-    if(last && Math.abs(last.top - p.top) < 2 && Math.abs(last.bottom - p.bottom) < 2) continue;
-    deduped.push(p);
-  }
-
-  return deduped;
+  const nodes = [];
+  let node;
+  while(node = walker.nextNode()) nodes.push(node);
+  return nodes;
 }
 
-function computePageBreaks(inner){
-  const viewportH = inner.clientHeight;
-  const pairs = getLineBoundaries(inner);
-  const totalH = inner.scrollHeight;
-  const breaks = [0];
-  let pageStart = 0;
+// Given a start position in the text-node sequence, binary-searches
+// for the furthest character offset whose rendered bottom edge still
+// sits within viewportH pixels below pageTopPx.
+function findPageEnd(textNodes, startNodeIdx, startOffset, containerTop, viewportH, pageTopPx){
+  let lastGoodNodeIdx = startNodeIdx;
+  let lastGoodOffset = startOffset;
 
-  while(pageStart < totalH - viewportH + 1){
-    let lastFittingIdx = -1;
-    for(let i = 0; i < pairs.length; i++){
-      const {top, bottom} = pairs[i];
-      if(top < pageStart) continue;
-      if(bottom - pageStart <= viewportH){
-        lastFittingIdx = i;
+  for(let i = startNodeIdx; i < textNodes.length; i++){
+    const node = textNodes[i];
+    const len = node.textContent.length;
+    const testFrom = (i === startNodeIdx) ? startOffset : 0;
+
+    // Quick check: does the END of this whole node fit on the page?
+    const range = document.createRange();
+    range.setStart(textNodes[startNodeIdx], startOffset);
+    range.setEnd(node, len);
+    const rects = range.getClientRects();
+    if(!rects.length) continue;
+    const bottom = rects[rects.length-1].bottom - containerTop;
+
+    if(bottom - pageTopPx <= viewportH){
+      // Whole node fits — record it and keep going
+      lastGoodNodeIdx = i;
+      lastGoodOffset = len;
+      continue;
+    }
+
+    // This node overflows partway through — binary search the exact offset
+    let lo = testFrom, hi = len;
+    while(lo < hi){
+      const mid = Math.ceil((lo + hi) / 2);
+      const r = document.createRange();
+      r.setStart(textNodes[startNodeIdx], startOffset);
+      r.setEnd(node, mid);
+      const rs = r.getClientRects();
+      if(!rs.length){ lo = mid; continue; }
+      const b = rs[rs.length-1].bottom - containerTop;
+
+      if(b - pageTopPx <= viewportH){
+        lo = mid;
       } else {
-        break;
+        hi = mid - 1;
       }
     }
 
-    if(lastFittingIdx < 0){
-      pageStart += viewportH;
-      breaks.push(pageStart);
+    lastGoodNodeIdx = i;
+    lastGoodOffset = Math.max(lo, testFrom);
+    return { nodeIdx: lastGoodNodeIdx, offset: lastGoodOffset, exhausted: false };
+  }
+
+  return { nodeIdx: lastGoodNodeIdx, offset: lastGoodOffset, exhausted: true };
+}
+
+// Walks the chapter content page by page, building an array of
+// {nodeIdx, offset} break positions using binary-search.
+function computePageBreaksV2(container){
+  const containerTop = container.getBoundingClientRect().top;
+  const viewportH = container.clientHeight;
+  const textNodes = getTextNodeSequence(container);
+
+  if(!textNodes.length) return [{nodeIdx:0, offset:0}];
+
+  const breaks = [{nodeIdx:0, offset:0}];
+  let curNodeIdx = 0;
+  let curOffset = 0;
+
+  while(true){
+    // Find the top pixel of the current page's starting text
+    let pageTopPx = 0;
+    try{
+      const topRange = document.createRange();
+      topRange.setStart(textNodes[curNodeIdx], curOffset);
+      topRange.setEnd(textNodes[curNodeIdx],
+        Math.min(curOffset+1, textNodes[curNodeIdx].textContent.length));
+      const topRects = topRange.getClientRects();
+      if(topRects.length) pageTopPx = topRects[0].top - containerTop;
+    }catch(e){ /* node may be empty, pageTopPx stays 0 */ }
+
+    const result = findPageEnd(
+      textNodes, curNodeIdx, curOffset,
+      containerTop, viewportH, pageTopPx
+    );
+
+    if(result.exhausted) break;
+
+    // Safety: if we didn't advance at all, force forward by one character
+    if(result.nodeIdx === curNodeIdx && result.offset <= curOffset){
+      curOffset++;
+      if(curOffset > textNodes[curNodeIdx].textContent.length){
+        curNodeIdx++;
+        curOffset = 0;
+      }
+      if(curNodeIdx >= textNodes.length) break;
       continue;
     }
 
-    // Next page starts at the TOP of the line after the last fitting one
-    const nextLineIdx = lastFittingIdx + 1;
-    if(nextLineIdx >= pairs.length){
-      // No more lines — we're done
-      break;
-    }
-
-    const nextStart = pairs[nextLineIdx].top;
-    if(nextStart <= pageStart){
-      // Safety: avoid infinite loop
-      pageStart += viewportH;
-      breaks.push(pageStart);
-      continue;
-    }
-
-    breaks.push(nextStart);
-    pageStart = nextStart;
+    breaks.push({nodeIdx: result.nodeIdx, offset: result.offset});
+    curNodeIdx = result.nodeIdx;
+    curOffset = result.offset;
   }
 
   return breaks;
 }
 
+// Given two break positions, extracts the HTML content between them
+// from the ORIGINAL full chapter HTML (held in a hidden container),
+// preserving proper block structure.
+function extractPageHtml(fullContainer, breaks, pageIdx){
+  const textNodes = getTextNodeSequence(fullContainer);
+  if(!textNodes.length) return fullContainer.innerHTML;
+
+  const startBreak = breaks[pageIdx];
+  const endBreak = breaks[pageIdx + 1];
+
+  if(!endBreak){
+    // Last page — take everything from start break to end
+    const range = document.createRange();
+    const startNode = textNodes[startBreak.nodeIdx];
+    if(!startNode) return '';
+    range.setStart(startNode, startBreak.offset);
+    range.setEnd(fullContainer, fullContainer.childNodes.length);
+    return rangeToHtml(range);
+  }
+
+  const range = document.createRange();
+  const startNode = textNodes[startBreak.nodeIdx];
+  const endNode = textNodes[endBreak.nodeIdx];
+  if(!startNode || !endNode) return '';
+  range.setStart(startNode, startBreak.offset);
+  range.setEnd(endNode, endBreak.offset);
+  return rangeToHtml(range);
+}
+
+// Converts a Range to an HTML string, preserving block structure.
+function rangeToHtml(range){
+  const frag = range.cloneContents();
+  const div = document.createElement('div');
+  div.appendChild(frag);
+  return div.innerHTML;
+}
+
 function renderChapterPaged(bodyHtml){
   return new Promise(resolve=>{
-    const outer = document.getElementById('readerContent');
-    const inner = document.getElementById('readerContentInner');
     const overlay = document.getElementById('readerOverlay');
-
-    const toolbarH = 52 + 3;
+    const outer = document.getElementById('readerContent');
     const settingsBar = document.getElementById('readerSettingsBar');
+    const toolbarH = 52 + 3;
     const settingsH = settingsBar.classList.contains('open') ? settingsBar.offsetHeight : 0;
     const fixedH = overlay.clientHeight - toolbarH - settingsH;
     outer.style.height = fixedH + 'px';
-    inner.style.height = fixedH + 'px';
 
-    inner.style.transition = 'none';
-    inner.style.transform = 'none';
-    inner.style.opacity = '1';
-    inner.scrollTop = 0;
-    inner.innerHTML = bodyHtml + '<div class="reader-page-spacer"></div>';
-    inner.classList.toggle('paged', readerTransition !== 'scroll');
-    inner.style.fontSize = readerFontSize + 'px';
+    // Size the staging container to match the page slice exactly
+    const staging = document.getElementById('readerStagingContainer');
+    staging.style.width = outer.clientWidth + 'px';
+    staging.style.height = fixedH + 'px';
+    staging.style.fontSize = readerFontSize + 'px';
+    staging.innerHTML = bodyHtml;
 
-    const imgs = Array.from(inner.querySelectorAll('img'));
+    // Apply current theme colors to staging container text
+    // so measurement matches visible rendering
+    const themeColors = {
+      day:   '#1a1a1a',
+      sepia: '#3b2a1a',
+      night: '#c8c8d8'
+    };
+    staging.style.color = themeColors[readerTheme] || '#1a1a1a';
+
+    // Wait for images in staging area to load before measuring
+    const imgs = Array.from(staging.querySelectorAll('img'));
     const imgPromises = imgs.map(img=>{
       if(img.complete) return Promise.resolve();
       return new Promise(res=>{
@@ -2856,9 +2946,23 @@ function renderChapterPaged(bodyHtml){
 
     Promise.all(imgPromises).then(()=>{
       requestAnimationFrame(()=>{
-        readerPageBreaks = computePageBreaks(inner);
+        readerPageBreaks = computePageBreaksV2(staging);
         readerPageCount = readerPageBreaks.length;
         readerPage = 0;
+
+        // Render page 0 into the visible page slice
+        const pageA = document.getElementById('readerPageA');
+        pageA.style.fontSize = readerFontSize + 'px';
+        pageA.innerHTML = extractPageHtml(staging, readerPageBreaks, 0);
+        pageA.style.opacity = '1';
+        pageA.style.transform = 'translateX(0)';
+        pageA.style.transition = 'none';
+        pageA.style.zIndex = '2';
+
+        const pageB = document.getElementById('readerPageB');
+        pageB.style.opacity = '0';
+        pageB.style.zIndex = '1';
+
         resolve();
       });
     });
@@ -2866,17 +2970,15 @@ function renderChapterPaged(bodyHtml){
 }
 
 function goToPage(page, opts={}){
-  const inner = document.getElementById('readerContentInner');
-  if(!inner) return;
-
-  // Scroll mode — free scrolling, no pagination
   if(readerTransition === 'scroll'){
-    inner.classList.remove('paged');
+    // Scroll mode: revert to free-scrolling the staging content
+    const pageA = document.getElementById('readerPageA');
+    pageA.style.overflow = 'auto';
+    pageA.innerHTML = document.getElementById('readerStagingContainer').innerHTML;
+    pageA.style.fontSize = readerFontSize + 'px';
     updatePaginationUI();
     return;
   }
-
-  inner.classList.add('paged');
 
   if(page < 0){
     if(readerChapter > 0) readerGoToChapter(readerChapter-1, 'last');
@@ -2890,31 +2992,57 @@ function goToPage(page, opts={}){
 
   const direction = page > readerPage ? 1 : -1;
   readerPage = page;
-  const target = readerPageBreaks[page];
 
-  inner.style.transition = 'none';
-  inner.style.transform = 'translateX(0)';
-  inner.style.opacity = '1';
-  inner.scrollTop = target;
+  const staging = document.getElementById('readerStagingContainer');
+  const pageA = document.getElementById('readerPageA');
+  const pageB = document.getElementById('readerPageB');
+
+  // Prepare the new page content in the background (B) div
+  pageB.innerHTML = extractPageHtml(staging, readerPageBreaks, page);
+  pageB.style.fontSize = readerFontSize + 'px';
+  pageB.style.opacity = '0';
+  pageB.style.transform = `translateX(${direction * 100}%)`;
+  pageB.style.transition = 'none';
+  pageB.style.zIndex = '2';
+  pageA.style.zIndex = '1';
 
   if(opts.animate === false || readerTransition === 'none'){
-    // already done
+    pageB.style.opacity = '1';
+    pageB.style.transform = 'translateX(0)';
+    // Swap: A becomes the new background, B becomes the new foreground
+    pageA.style.opacity = '0';
+    // Swap IDs so future calls keep using A as "current"
+    pageA.id = 'readerPageB';
+    pageB.id = 'readerPageA';
   } else if(readerTransition === 'slide'){
-    inner.style.transform = `translateX(${direction * 100}%)`;
     requestAnimationFrame(()=>requestAnimationFrame(()=>{
-      inner.style.transition = 'transform .25s cubic-bezier(.4,0,.2,1)';
-      inner.style.transform = 'translateX(0)';
-      setTimeout(()=>{ inner.style.transition = 'none'; }, 280);
+      pageB.style.transition = 'transform .25s cubic-bezier(.4,0,.2,1), opacity .25s';
+      pageB.style.transform = 'translateX(0)';
+      pageB.style.opacity = '1';
+      pageA.style.transition = 'transform .25s cubic-bezier(.4,0,.2,1), opacity .25s';
+      pageA.style.transform = `translateX(${-direction * 100}%)`;
+      pageA.style.opacity = '0';
+      setTimeout(()=>{
+        pageA.style.transition = 'none';
+        pageB.style.transition = 'none';
+        pageA.id = 'readerPageB';
+        pageB.id = 'readerPageA';
+      }, 270);
     }));
   } else {
-    // bounce
-    inner.style.opacity = '0';
-    inner.style.transform = `translateX(${direction * 12}px)`;
+    // bounce (default)
     requestAnimationFrame(()=>requestAnimationFrame(()=>{
-      inner.style.transition = 'opacity .18s ease-in, transform .18s ease-out';
-      inner.style.opacity = '1';
-      inner.style.transform = 'translateX(0)';
-      setTimeout(()=>{ inner.style.transition = 'none'; }, 200);
+      pageB.style.transition = 'opacity .16s ease-in';
+      pageB.style.opacity = '1';
+      pageB.style.transform = 'translateX(0)';
+      pageA.style.transition = 'opacity .14s ease-out';
+      pageA.style.opacity = '0';
+      setTimeout(()=>{
+        pageA.style.transition = 'none';
+        pageB.style.transition = 'none';
+        pageA.id = 'readerPageB';
+        pageB.id = 'readerPageA';
+      }, 180);
     }));
   }
 
@@ -2933,18 +3061,27 @@ function recalcReaderHeight(){
   const overlay = document.getElementById('readerOverlay');
   if(!overlay.classList.contains('open')) return;
   const outer = document.getElementById('readerContent');
-  const inner = document.getElementById('readerContentInner');
   const settingsBar = document.getElementById('readerSettingsBar');
   const toolbarH = 52 + 3;
   const settingsH = settingsBar.classList.contains('open') ? settingsBar.offsetHeight : 0;
   const fixedH = overlay.clientHeight - toolbarH - settingsH;
   outer.style.height = fixedH + 'px';
-  inner.style.height = fixedH + 'px';
-  inner.classList.toggle('paged', readerTransition !== 'scroll');
-  readerPageBreaks = computePageBreaks(inner);
+
+  // Re-measure with the new height
+  const staging = document.getElementById('readerStagingContainer');
+  if(!staging || !staging.innerHTML) return;
+  staging.style.height = fixedH + 'px';
+  staging.style.width = outer.clientWidth + 'px';
+
+  readerPageBreaks = computePageBreaksV2(staging);
   readerPageCount = readerPageBreaks.length;
   readerPage = Math.min(readerPage, readerPageCount - 1);
-  inner.scrollTop = readerPageBreaks[readerPage] || 0;
+
+  const pageA = document.getElementById('readerPageA');
+  pageA.innerHTML = extractPageHtml(staging, readerPageBreaks, readerPage);
+  pageA.style.fontSize = readerFontSize + 'px';
+  pageA.style.opacity = '1';
+  pageA.style.transform = 'translateX(0)';
   updatePaginationUI();
 }
   
@@ -2982,8 +3119,20 @@ async function inlineImagesInHtml(html,base,chapterHref){
   for(const p of found){try{let blob=null;for(const path of p.candidates){const f=readerZip.file(path);if(f){blob=await f.async('blob');break;}}html=html.replace(new RegExp(`data-src="${p.orig.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')}"`, 'g'),blob?`src="${await blobToDataUrl(blob)}"` :`src=""`);} catch(e){/* skip */}}
   return html;
 }
-function closeReader(){document.getElementById('readerOverlay').classList.remove('open');document.getElementById('readerChapterList').classList.remove('open');document.getElementById('readerSettingsBar').classList.remove('open');readerZip=null;readerSpine=[];}
 
+function closeReader(){
+  document.getElementById('readerOverlay').classList.remove('open');
+  document.getElementById('readerChapterList').classList.remove('open');
+  document.getElementById('readerSettingsBar').classList.remove('open');
+  const staging = document.getElementById('readerStagingContainer');
+  if(staging) staging.innerHTML = '';
+  const pageA = document.getElementById('readerPageA');
+  const pageB = document.getElementById('readerPageB');
+  if(pageA){ pageA.innerHTML = ''; pageA.id = 'readerPageA'; }
+  if(pageB){ pageB.innerHTML = ''; pageB.id = 'readerPageB'; }
+  readerZip = null;
+  readerSpine = [];
+}
 
 
 
@@ -3017,10 +3166,8 @@ document.getElementById('btnReaderNext').addEventListener('click',()=>goToPage(r
 })();
 
 window.addEventListener('resize',()=>{
-  const overlay=document.getElementById('readerOverlay');
-  if(overlay.classList.contains('open')){
-    renderChapterPaged(document.getElementById('readerContentInner').innerHTML)
-      .then(()=>goToPage(0,{animate:false}));
+  if(document.getElementById('readerOverlay').classList.contains('open')){
+    recalcReaderHeight();
   }
 });
 
