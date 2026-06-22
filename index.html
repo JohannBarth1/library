@@ -2919,11 +2919,21 @@ function renderChapterPaged(bodyHtml){
 
     // Size the staging container to match the page slice exactly
     const staging = document.getElementById('readerStagingContainer');
-    staging.style.width = outer.clientWidth + 'px';
+    // Force a layout flush before reading width, to ensure overlay is fully painted
+    const outerW = outer.getBoundingClientRect().width;
+    staging.style.width = outerW + 'px';
     staging.style.height = fixedH + 'px';
     staging._usableHeight = fixedH;
     staging.style.fontSize = readerFontSize + 'px';
     staging.innerHTML = bodyHtml;
+
+    console.log('overlay:', overlay.clientHeight, 
+            'toolbar:', actualToolbarH || toolbarH,
+            'settings:', settingsH,
+            'fixedH:', fixedH,
+            'staging width:', staging.style.width,
+            'outer width:', outer.clientWidth,
+            'pageA width:', document.getElementById('readerPageA').clientWidth);
     // Apply current theme colors to staging container text
     // so measurement matches visible rendering
     const themeColors = {
