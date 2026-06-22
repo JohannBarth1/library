@@ -2911,7 +2911,10 @@ function renderChapterPaged(bodyHtml){
     const settingsBar = document.getElementById('readerSettingsBar');
     const toolbarH = 52 + 3;
     const settingsH = settingsBar.classList.contains('open') ? settingsBar.offsetHeight : 0;
-    const fixedH = overlay.clientHeight - toolbarH - settingsH;
+    const toolbarEl = document.querySelector('.reader-toolbar');
+    const progressEl = document.querySelector('.reader-progress');
+    const actualToolbarH = (toolbarEl?.offsetHeight || 52) + (progressEl?.offsetHeight || 3);
+    const fixedH = overlay.clientHeight - actualToolbarH - settingsH;
     outer.style.height = fixedH + 'px';
 
     // Size the staging container to match the page slice exactly
@@ -3058,9 +3061,11 @@ function recalcReaderHeight(){
   if(!overlay.classList.contains('open')) return;
   const outer = document.getElementById('readerContent');
   const settingsBar = document.getElementById('readerSettingsBar');
-  const toolbarH = 52 + 3;
+  const toolbarEl = document.querySelector('.reader-toolbar');
+  const progressEl = document.querySelector('.reader-progress');
+  const actualToolbarH = (toolbarEl?.offsetHeight || 52) + (progressEl?.offsetHeight || 3);
   const settingsH = settingsBar.classList.contains('open') ? settingsBar.offsetHeight : 0;
-  const fixedH = overlay.clientHeight - toolbarH - settingsH;
+  const fixedH = overlay.clientHeight - actualToolbarH - settingsH;
   outer.style.height = fixedH + 'px';
 
   const staging = document.getElementById('readerStagingContainer');
