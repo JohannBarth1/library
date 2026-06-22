@@ -2576,7 +2576,6 @@ function setReaderFont(size){
 // Font size buttons
 document.getElementById('readerSettingsBar').addEventListener('click', e => {
   const sizeBtn = e.target.closest('[data-size]');
-  const sizeBtn = e.target.closest('[data-size]');
   if(sizeBtn){
     setReaderFont(parseInt(sizeBtn.dataset.size));
     return;
