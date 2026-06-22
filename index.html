@@ -2225,16 +2225,16 @@ document.getElementById('mobGridLibrary').addEventListener('click', e => {
   let longPressBookId = null;
   let didLongPress = false;
 
-  function startLongPress(bookId){
-    longPressBookId = bookId;
-    didLongPress = false;
-    longPressTimer = setTimeout(()=>{
-      didLongPress = true;
-      // Trigger haptic feedback if available
-      if(navigator.vibrate) navigator.vibrate(40);
-      enterMobSelectMode(bookId);
-    }, 500);
-  }
+function startLongPress(bookId){
+  longPressBookId = bookId;
+  didLongPress = false;
+  longPressTimer = setTimeout(()=>{
+    didLongPress = true;
+    console.log('LONG PRESS FIRED on:', bookId); // temp test
+    if(navigator.vibrate) navigator.vibrate(40);
+    enterMobSelectMode(bookId);
+  }, 500);
+}
 
   function cancelLongPress(){
     clearTimeout(longPressTimer);
