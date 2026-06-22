@@ -271,7 +271,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
   visibility: hidden;
   pointer-events: none;
   overflow: hidden;
-  padding: 1.8rem clamp(1rem,5vw,4rem);
+  padding: 0;
   line-height: 1.9;
   font-family: 'Lato', sans-serif;
   box-sizing: border-box;
@@ -2822,10 +2822,9 @@ function findPageEnd(textNodes, startNodeIdx, startOffset, containerTop, viewpor
 
 // Walks the chapter content page by page, building an array of
 // {nodeIdx, offset} break positions using binary-search.
-  
 function computePageBreaksV2(container){
   const containerTop = container.getBoundingClientRect().top;
-  const viewportH = container.clientHeight;
+  const viewportH = container._usableHeight || container.clientHeight;
   const textNodes = getTextNodeSequence(container);
 
   if(!textNodes.length) return [{nodeIdx:0, offset:0}];
@@ -2838,15 +2837,7 @@ function computePageBreaksV2(container){
   while(true){
     let pageTopPx;
     if(isFirstPage){
-      // First page: top is the top of the first text node's first rect,
-      // relative to the container — this accounts for the padding correctly.
-      try{
-        const topRange = document.createRange();
-        topRange.setStart(textNodes[0], 0);
-        topRange.setEnd(textNodes[0], Math.min(1, textNodes[0].textContent.length));
-        const topRects = topRange.getClientRects();
-        pageTopPx = topRects.length ? (topRects[0].top - containerTop) : 0;
-      }catch(e){ pageTopPx = 0; }
+      pageTopPx = 0;
       isFirstPage = false;
     } else {
       try{
@@ -2937,7 +2928,10 @@ function renderChapterPaged(bodyHtml){
     staging.style.height = fixedH + 'px';
     staging.style.fontSize = readerFontSize + 'px';
     staging.innerHTML = bodyHtml;
-
+    
+    const paddingV = parseFloat(getComputedStyle(document.getElementById('readerPageA')).paddingTop)
+               + parseFloat(getComputedStyle(document.getElementById('readerPageA')).paddingBottom);
+    staging._usableHeight = fixedH - paddingV;
     // Apply current theme colors to staging container text
     // so measurement matches visible rendering
     const themeColors = {
@@ -3080,11 +3074,14 @@ function recalcReaderHeight(){
   const fixedH = overlay.clientHeight - toolbarH - settingsH;
   outer.style.height = fixedH + 'px';
 
-  // Re-measure with the new height
   const staging = document.getElementById('readerStagingContainer');
   if(!staging || !staging.innerHTML) return;
   staging.style.height = fixedH + 'px';
   staging.style.width = outer.clientWidth + 'px';
+
+  const paddingV = parseFloat(getComputedStyle(document.getElementById('readerPageA')).paddingTop)
+                 + parseFloat(getComputedStyle(document.getElementById('readerPageA')).paddingBottom);
+  staging._usableHeight = fixedH - paddingV;
 
   readerPageBreaks = computePageBreaksV2(staging);
   readerPageCount = readerPageBreaks.length;
