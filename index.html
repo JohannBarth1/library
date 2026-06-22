@@ -2576,15 +2576,9 @@ function setReaderFont(size){
 // Font size buttons
 document.getElementById('readerSettingsBar').addEventListener('click', e => {
   const sizeBtn = e.target.closest('[data-size]');
+  const sizeBtn = e.target.closest('[data-size]');
   if(sizeBtn){
-    const size = parseInt(sizeBtn.dataset.size);
-    readerFontSize = size;
-    localStorage.setItem('elib_reader_font', size);
-    document.querySelectorAll('#readerSettingsBar [data-size]')
-      .forEach(b => b.classList.toggle('active', parseInt(b.dataset.size) === size));
-    if(document.getElementById('readerContentInner'))
-      document.getElementById('readerContentInner').style.fontSize = size + 'px';
-    readerGoToChapter(readerChapter, readerPage);
+    setReaderFont(parseInt(sizeBtn.dataset.size));
     return;
   }
 
@@ -2594,7 +2588,6 @@ document.getElementById('readerSettingsBar').addEventListener('click', e => {
     readerTheme = themeBtn.dataset.theme;
     localStorage.setItem('elib_reader_theme', readerTheme);
     applyReaderTheme(readerTheme);
-    readerGoToChapter(readerChapter, readerPage);
     return;
   }
 
@@ -2924,14 +2917,14 @@ function renderChapterPaged(bodyHtml){
 
     // Size the staging container to match the page slice exactly
     const staging = document.getElementById('readerStagingContainer');
+    const paddingV = parseFloat(getComputedStyle(document.getElementById('readerPageA')).paddingTop)
+                   + parseFloat(getComputedStyle(document.getElementById('readerPageA')).paddingBottom);
+    staging._usableHeight = fixedH - paddingV;
+    
     staging.style.width = outer.clientWidth + 'px';
-    staging.style.height = fixedH + 'px';
+    staging.style.height = staging._usableHeight + 'px';  // ← key change
     staging.style.fontSize = readerFontSize + 'px';
     staging.innerHTML = bodyHtml;
-    
-    const paddingV = parseFloat(getComputedStyle(document.getElementById('readerPageA')).paddingTop)
-               + parseFloat(getComputedStyle(document.getElementById('readerPageA')).paddingBottom);
-    staging._usableHeight = fixedH - paddingV;
     // Apply current theme colors to staging container text
     // so measurement matches visible rendering
     const themeColors = {
@@ -3076,12 +3069,11 @@ function recalcReaderHeight(){
 
   const staging = document.getElementById('readerStagingContainer');
   if(!staging || !staging.innerHTML) return;
-  staging.style.height = fixedH + 'px';
-  staging.style.width = outer.clientWidth + 'px';
-
   const paddingV = parseFloat(getComputedStyle(document.getElementById('readerPageA')).paddingTop)
                  + parseFloat(getComputedStyle(document.getElementById('readerPageA')).paddingBottom);
   staging._usableHeight = fixedH - paddingV;
+  staging.style.height = staging._usableHeight + 'px';  // ← key change
+  staging.style.width = outer.clientWidth + 'px';
 
   readerPageBreaks = computePageBreaksV2(staging);
   readerPageCount = readerPageBreaks.length;
