@@ -271,7 +271,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
   visibility: hidden;
   pointer-events: none;
   overflow: hidden;
-  padding: 0;
+  padding: 1.8rem clamp(1rem,5vw,4rem);
   line-height: 1.9;
   font-family: 'Lato', sans-serif;
   box-sizing: border-box;
@@ -2916,12 +2916,9 @@ function renderChapterPaged(bodyHtml){
 
     // Size the staging container to match the page slice exactly
     const staging = document.getElementById('readerStagingContainer');
-    const paddingV = parseFloat(getComputedStyle(document.getElementById('readerPageA')).paddingTop)
-                   + parseFloat(getComputedStyle(document.getElementById('readerPageA')).paddingBottom);
-    staging._usableHeight = fixedH - paddingV;
-    
     staging.style.width = outer.clientWidth + 'px';
-    staging.style.height = staging._usableHeight + 'px';  // ← key change
+    staging.style.height = fixedH + 'px';
+    staging._usableHeight = fixedH;
     staging.style.fontSize = readerFontSize + 'px';
     staging.innerHTML = bodyHtml;
     // Apply current theme colors to staging container text
@@ -3068,11 +3065,9 @@ function recalcReaderHeight(){
 
   const staging = document.getElementById('readerStagingContainer');
   if(!staging || !staging.innerHTML) return;
-  const paddingV = parseFloat(getComputedStyle(document.getElementById('readerPageA')).paddingTop)
-                 + parseFloat(getComputedStyle(document.getElementById('readerPageA')).paddingBottom);
-  staging._usableHeight = fixedH - paddingV;
-  staging.style.height = staging._usableHeight + 'px';  // ← key change
   staging.style.width = outer.clientWidth + 'px';
+  staging.style.height = fixedH + 'px';
+  staging._usableHeight = fixedH;
 
   readerPageBreaks = computePageBreaksV2(staging);
   readerPageCount = readerPageBreaks.length;
