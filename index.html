@@ -383,7 +383,18 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
   -webkit-touch-callout: none;
   pointer-events: none;
 }
-
+.mob-book-grid {
+  -webkit-touch-callout: none;
+  user-select: none;
+}
+.mob-book-grid * {
+  -webkit-touch-callout: none;
+  user-select: none;
+}
+.mob-book-grid img {
+  pointer-events: none;
+  -webkit-user-drag: none;
+}
 /* mobile book detail */
 .mob-detail-header{padding:.65rem 1rem;border-bottom:1px solid var(--border);background:var(--warm-white);display:flex;align-items:center;gap:.6rem;flex-shrink:0;}
 .mob-back-btn{background:none;border:none;font-size:.78rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--teal);cursor:pointer;-webkit-tap-highlight-color:transparent;display:flex;align-items:center;gap:.3rem;padding:0;}
@@ -2120,14 +2131,6 @@ function getMobLibBooks() {
   // Sort
   return sortBooks(src, mobLibSort);
 }
-
-document.getElementById('mobGridLibrary').addEventListener('touchstart', e => {
-  const card = e.target.closest('.book-card[data-bookid]');
-  if(!card) return;
-  e.preventDefault(); // stops iOS callout and scroll during long press detection
-  startLongPress(card.dataset.bookid);
-}, {passive: false}); // must be false to allow preventDefault
-
 
 function renderMobLibrary() {
   document.getElementById('mobGridLibrary').classList.remove('select-mode');
