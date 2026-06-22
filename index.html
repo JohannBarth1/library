@@ -3525,6 +3525,35 @@ document.getElementById('bulkBtnPublish').addEventListener('click', async () => 
   }
 });
 
+document.getElementById('bulkBtnUnpublish').addEventListener('click', async () => {
+  const ids = [...selectedIds].filter(id => {
+    const b = library.find(x => x.id === id);
+    return b && b.visibility === 'public';
+  });
+  if (!ids.length) return;
+  if (!confirm(`Unpublish ${ids.length} book${ids.length !== 1 ? 's' : ''} from Public Library?`)) return;
+  showLoading('Unpublishing…');
+  try {
+    for (const id of ids) {
+      const book = library.find(b => b.id === id);
+      if (!book) continue;
+      await updateDoc(doc(db, 'books', id), {
+        visibility: 'private',
+        updatedAt: serverTimestamp()
+      });
+      book.visibility = 'private';
+      communityLib = communityLib.filter(b => b.id !== id);
+    }
+    hideLoading();
+    toggleSelectMode();
+    renderAll();
+    showToast(`${ids.length} book${ids.length !== 1 ? 's' : ''} unpublished ✓`);
+  } catch (e) {
+    hideLoading();
+    showToast('Unpublish failed: ' + e.message);
+  }
+});
+
 document.getElementById('bulkBtnCheckout').addEventListener('click',async()=>{
   if(!selectedIds.size)return;if(!confirm(`Sign out ${selectedIds.size} book${selectedIds.size!==1?'s':''}? Each gets a 2-week loan period.`))return;
   showLoading('Signing out…');
