@@ -2822,6 +2822,7 @@ function findPageEnd(textNodes, startNodeIdx, startOffset, containerTop, viewpor
 
 // Walks the chapter content page by page, building an array of
 // {nodeIdx, offset} break positions using binary-search.
+  
 function computePageBreaksV2(container){
   const containerTop = container.getBoundingClientRect().top;
   const viewportH = container.clientHeight;
@@ -2832,18 +2833,31 @@ function computePageBreaksV2(container){
   const breaks = [{nodeIdx:0, offset:0}];
   let curNodeIdx = 0;
   let curOffset = 0;
+  let isFirstPage = true;
 
   while(true){
-    // Find the top pixel of the current page's starting text
-    let pageTopPx = 0;
-    try{
-      const topRange = document.createRange();
-      topRange.setStart(textNodes[curNodeIdx], curOffset);
-      topRange.setEnd(textNodes[curNodeIdx],
-        Math.min(curOffset+1, textNodes[curNodeIdx].textContent.length));
-      const topRects = topRange.getClientRects();
-      if(topRects.length) pageTopPx = topRects[0].top - containerTop;
-    }catch(e){ /* node may be empty, pageTopPx stays 0 */ }
+    let pageTopPx;
+    if(isFirstPage){
+      // First page: top is the top of the first text node's first rect,
+      // relative to the container — this accounts for the padding correctly.
+      try{
+        const topRange = document.createRange();
+        topRange.setStart(textNodes[0], 0);
+        topRange.setEnd(textNodes[0], Math.min(1, textNodes[0].textContent.length));
+        const topRects = topRange.getClientRects();
+        pageTopPx = topRects.length ? (topRects[0].top - containerTop) : 0;
+      }catch(e){ pageTopPx = 0; }
+      isFirstPage = false;
+    } else {
+      try{
+        const topRange = document.createRange();
+        topRange.setStart(textNodes[curNodeIdx], curOffset);
+        topRange.setEnd(textNodes[curNodeIdx],
+          Math.min(curOffset+1, textNodes[curNodeIdx].textContent.length));
+        const topRects = topRange.getClientRects();
+        pageTopPx = topRects.length ? (topRects[0].top - containerTop) : 0;
+      }catch(e){ pageTopPx = 0; }
+    }
 
     const result = findPageEnd(
       textNodes, curNodeIdx, curOffset,
@@ -2852,7 +2866,6 @@ function computePageBreaksV2(container){
 
     if(result.exhausted) break;
 
-    // Safety: if we didn't advance at all, force forward by one character
     if(result.nodeIdx === curNodeIdx && result.offset <= curOffset){
       curOffset++;
       if(curOffset > textNodes[curNodeIdx].textContent.length){
@@ -3113,7 +3126,10 @@ async function readerGoToChapter(idx, startPage=0){
 window.readerGoToChapterGlobal = idx => readerGoToChapter(idx, 0);
 async function inlineImagesInHtml(html,base,chapterHref){
   const chapterDir=chapterHref&&chapterHref.includes('/')?chapterHref.replace(/\/[^/]+$/,'/'):'';
-  html=html.replace(/(<img[^>]+)src="([^"]+)"/gi,(match,pre,src)=>`${pre}data-src="${src}"`);
+  html=html.replace(/(<img[^>]+)src="([^"#"javascript][^"]+)"/gi,(match,pre,src)=>{
+    if(src.startsWith('data:')||src.startsWith('javascript')) return match;
+    return `${pre}data-src="${src}"`;
+  });
   const imgRe=/data-src="([^"]+)"/gi;const found=[];let m;
   while((m=imgRe.exec(html))!==null){const src=m[1];if(src.startsWith('data:')||src.startsWith('http'))continue;found.push({orig:src,candidates:[base+chapterDir+src,base+src,chapterDir+src,src]});}
   for(const p of found){try{let blob=null;for(const path of p.candidates){const f=readerZip.file(path);if(f){blob=await f.async('blob');break;}}html=html.replace(new RegExp(`data-src="${p.orig.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')}"`, 'g'),blob?`src="${await blobToDataUrl(blob)}"` :`src=""`);} catch(e){/* skip */}}
