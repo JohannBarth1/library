@@ -2114,6 +2114,7 @@ function getMobLibBooks() {
 }
 
 function renderMobLibrary() {
+  document.getElementById('mobGridLibrary').classList.remove('select-mode');
   // Category chips
   const allSrc = mobLibFilter === 'all'
     ? dedupe([...library, ...communityLib])
@@ -2162,6 +2163,250 @@ document.getElementById('mobGridLibrary').addEventListener('click', e => {
   mobPrevPanel = 'mobPanelLibrary';
   mob_showBook(card.dataset.bookid);
 });
+
+// ── MOBILE LONG PRESS → MULTI SELECT ─────────────────────────────────────────
+(()=>{
+  let longPressTimer = null;
+  let longPressBookId = null;
+  let didLongPress = false;
+
+  function startLongPress(bookId){
+    longPressBookId = bookId;
+    didLongPress = false;
+    longPressTimer = setTimeout(()=>{
+      didLongPress = true;
+      // Trigger haptic feedback if available
+      if(navigator.vibrate) navigator.vibrate(40);
+      enterMobSelectMode(bookId);
+    }, 500);
+  }
+
+  function cancelLongPress(){
+    clearTimeout(longPressTimer);
+    longPressTimer = null;
+  }
+
+  document.getElementById('mobGridLibrary').addEventListener('touchstart', e => {
+    const card = e.target.closest('.book-card[data-bookid]');
+    if(!card) return;
+    startLongPress(card.dataset.bookid);
+  }, {passive: true});
+
+  document.getElementById('mobGridLibrary').addEventListener('touchend', e => {
+    cancelLongPress();
+  }, {passive: true});
+
+  document.getElementById('mobGridLibrary').addEventListener('touchmove', e => {
+    cancelLongPress();
+  }, {passive: true});
+
+  // Prevent normal click from firing after a long press
+  document.getElementById('mobGridLibrary').addEventListener('click', e => {
+    if(didLongPress){ didLongPress = false; e.stopImmediatePropagation(); }
+  }, true);
+})();
+
+let mobSelectMode = false;
+let mobSelectedIds = new Set();
+
+function enterMobSelectMode(firstBookId){
+  mobSelectMode = true;
+  mobSelectedIds = new Set([firstBookId]);
+  renderMobLibrarySelectMode();
+  showMobBulkBar();
+}
+
+function exitMobSelectMode(){
+  mobSelectMode = false;
+  mobSelectedIds.clear();
+  renderMobLibrary();
+  hideMobBulkBar();
+}
+
+function renderMobLibrarySelectMode(){
+  grid.classList.add('select-mode');
+  const books = getMobLibBooks();
+  const grid = document.getElementById('mobGridLibrary');
+  grid.innerHTML = books.map(b => {
+    const isComm = communityLib.some(x => x.id === b.id);
+    const isSelected = mobSelectedIds.has(b.id);
+    const coverSrc = getCoverSrc(b);
+    const coverHtml = coverSrc
+      ? `<img class="book-card-cover" src="${coverSrc}" alt="" loading="lazy"/>`
+      : `<div class="book-card-cover-ph"><div class="ph-icon">📖</div><div class="ph-title">${esc(b.title)}</div><div class="ph-author">${esc(b.author)}</div></div>`;
+    return `<div class="book-card ${isSelected?'selected':''}" data-bookid="${b.id}" style="user-select:none">
+      ${coverHtml}
+      <div class="select-check" style="display:flex">${isSelected?'✓':''}</div>
+      <div class="book-card-body">
+        <div class="book-card-title">${esc(b.title)}</div>
+        <div class="book-card-author">${esc(b.author)}</div>
+      </div>
+    </div>`;
+  }).join('');
+
+  // Tap to toggle selection in select mode
+  grid.querySelectorAll('.book-card[data-bookid]').forEach(card => {
+    card.addEventListener('click', () => {
+      const id = card.dataset.bookid;
+      if(mobSelectedIds.has(id)){ mobSelectedIds.delete(id); }
+      else { mobSelectedIds.add(id); }
+      if(mobSelectedIds.size === 0){ exitMobSelectMode(); return; }
+      renderMobLibrarySelectMode();
+      updateMobBulkBar();
+    });
+  });
+}
+
+function showMobBulkBar(){
+  // Reuse bsOverlay + bottomSheet for the bulk action bar
+  const bsBody = document.getElementById('bsBody');
+  document.getElementById('bsTitle').textContent = '0 selected';
+  bsBody.innerHTML = ''; // populated by updateMobBulkBar
+  updateMobBulkBar();
+  // Show as a persistent bottom bar rather than a sheet — inject a fixed bar
+  let bar = document.getElementById('mobBulkBar');
+  if(!bar){
+    bar = document.createElement('div');
+    bar.id = 'mobBulkBar';
+    bar.style.cssText = `position:fixed;bottom:var(--mob-nav-h);left:0;right:0;
+      background:var(--navy2);color:var(--cream);z-index:60;
+      display:flex;align-items:center;gap:.4rem;padding:.5rem .8rem;
+      flex-wrap:wrap;border-top:2px solid var(--gold);`;
+    document.body.appendChild(bar);
+  }
+  bar.style.display = 'flex';
+  updateMobBulkBar();
+}
+
+function hideMobBulkBar(){
+  const bar = document.getElementById('mobBulkBar');
+  if(bar) bar.style.display = 'none';
+}
+
+function updateMobBulkBar(){
+  const bar = document.getElementById('mobBulkBar');
+  if(!bar) return;
+  const n = mobSelectedIds.size;
+  const myBooks = [...mobSelectedIds].map(id => library.find(b => b.id === id)).filter(Boolean);
+  const hasPublished = myBooks.some(b => b.visibility === 'public');
+  const hasUnpublished = myBooks.some(b => b.visibility !== 'public');
+  const hasRecommended = myBooks.some(b => b.recommended);
+  const hasUnrecommended = myBooks.some(b => !b.recommended);
+
+  const btn = (label, action, color='var(--cream)') =>
+    `<button data-mob-bulk="${action}" style="padding:.3rem .6rem;font-size:.65rem;
+      font-family:'Lato',sans-serif;font-weight:700;border-radius:2px;cursor:pointer;
+      border:1px solid rgba(255,255,255,.25);background:transparent;
+      color:${color};white-space:nowrap">${label}</button>`;
+
+  let html = `<span style="font-size:.78rem;font-weight:700;flex-shrink:0">${n} selected</span>`;
+  if(hasUnpublished) html += btn('⇧ Publish','publish');
+  if(hasPublished)   html += btn('↓ Unpublish','unpublish');
+  if(hasUnrecommended) html += btn('★ Rec','recommend');
+  if(hasRecommended)   html += btn('☆ Unrec','unrecommend');
+  html += btn('📋 Sign Out','checkout');
+  html += btn('📖 Kobo','kobo');
+  html += btn('✕ Delete','delete','#f87171');
+  html += btn('✕ Done','done');
+
+  bar.innerHTML = html;
+  bar.querySelectorAll('[data-mob-bulk]').forEach(b => {
+    b.addEventListener('click', () => handleMobBulkAction(b.dataset.mobBulk));
+  });
+}
+
+async function handleMobBulkAction(action){
+  if(action === 'done'){ exitMobSelectMode(); return; }
+
+  if(action === 'delete'){
+    if(!confirm(`Delete ${mobSelectedIds.size} book${mobSelectedIds.size!==1?'s':''}?`)) return;
+    showLoading('Deleting…');
+    try{
+      for(const id of mobSelectedIds){
+        await deleteDoc(doc(db,'books',id));
+        library = library.filter(b => b.id !== id);
+        communityLib = communityLib.filter(b => b.id !== id);
+      }
+      hideLoading(); exitMobSelectMode(); renderAll();
+      showToast(`Deleted ✓`);
+    }catch(e){ hideLoading(); showToast('Failed: '+e.message); }
+    return;
+  }
+
+  if(action === 'publish'){
+    const ids = [...mobSelectedIds].filter(id => { const b=library.find(x=>x.id===id); return b&&b.visibility!=='public'; });
+    if(!ids.length) return;
+    showLoading('Publishing…');
+    try{
+      for(const id of ids){
+        const book = library.find(b=>b.id===id); if(!book) continue;
+        await updateDoc(doc(db,'books',id),{visibility:'public',updatedAt:serverTimestamp()});
+        book.visibility='public';
+        if(!communityLib.find(b=>b.id===id)) communityLib.push(book);
+      }
+      hideLoading(); exitMobSelectMode(); renderAll(); showToast('Published ✓');
+    }catch(e){ hideLoading(); showToast('Failed: '+e.message); }
+    return;
+  }
+
+  if(action === 'unpublish'){
+    const ids = [...mobSelectedIds].filter(id => { const b=library.find(x=>x.id===id); return b&&b.visibility==='public'; });
+    if(!ids.length) return;
+    showLoading('Unpublishing…');
+    try{
+      for(const id of ids){
+        const book = library.find(b=>b.id===id); if(!book) continue;
+        await updateDoc(doc(db,'books',id),{visibility:'private',updatedAt:serverTimestamp()});
+        book.visibility='private';
+        communityLib = communityLib.filter(b=>b.id!==id);
+      }
+      hideLoading(); exitMobSelectMode(); renderAll(); showToast('Unpublished ✓');
+    }catch(e){ hideLoading(); showToast('Failed: '+e.message); }
+    return;
+  }
+
+  if(action === 'recommend'){
+    const ids = [...mobSelectedIds].filter(id => { const b=library.find(x=>x.id===id); return b&&!b.recommended; });
+    showLoading('Updating…');
+    try{
+      for(const id of ids){ await updateDoc(doc(db,'books',id),{recommended:true,updatedAt:serverTimestamp()}); const b=library.find(x=>x.id===id); if(b) b.recommended=true; }
+      hideLoading(); exitMobSelectMode(); renderAll(); showToast('Marked recommended ✓');
+    }catch(e){ hideLoading(); showToast('Failed: '+e.message); }
+    return;
+  }
+
+  if(action === 'unrecommend'){
+    const ids = [...mobSelectedIds].filter(id => { const b=library.find(x=>x.id===id); return b&&b.recommended; });
+    showLoading('Updating…');
+    try{
+      for(const id of ids){ await updateDoc(doc(db,'books',id),{recommended:false,updatedAt:serverTimestamp()}); const b=library.find(x=>x.id===id); if(b) b.recommended=false; }
+      hideLoading(); exitMobSelectMode(); renderAll(); showToast('Unrecommended ✓');
+    }catch(e){ hideLoading(); showToast('Failed: '+e.message); }
+    return;
+  }
+
+  if(action === 'checkout'){
+    if(!confirm(`Sign out ${mobSelectedIds.size} book${mobSelectedIds.size!==1?'s':''}?`)) return;
+    showLoading('Signing out…');
+    try{
+      const due=new Date(); due.setDate(due.getDate()+14);
+      for(const id of mobSelectedIds){
+        const book=[...library,...communityLib].find(b=>b.id===id); if(!book) continue;
+        await addDoc(collection(db,'checkouts'),{bookId:id,bookTitle:book.title,userId:currentUser.uid,userName:currentUser.displayName||currentUser.email,checkedOutAt:serverTimestamp(),dueDate:Timestamp.fromDate(due),returnedAt:null});
+        myCheckedOutIds.add(id);
+      }
+      hideLoading(); exitMobSelectMode(); showToast('Signed out ✓');
+    }catch(e){ hideLoading(); showToast('Failed: '+e.message); }
+    return;
+  }
+
+  if(action === 'kobo'){
+    await loadKoboDevices();
+    showKoboDevicePicker([...mobSelectedIds]);
+    exitMobSelectMode();
+    return;
+  }
+}
 
 // Search panel
 
