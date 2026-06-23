@@ -2699,6 +2699,18 @@ async function readCurrentBook(){
       staging.id = 'readerStagingContainer';
       document.getElementById('readerOverlay').appendChild(staging);
     }
+    // Size staging to match the visible reader content area exactly
+    const outerEl = document.getElementById('readerContent');
+    const toolbarEl = document.querySelector('.reader-toolbar');
+    const progressEl = document.querySelector('.reader-progress');
+    const settingsBar = document.getElementById('readerSettingsBar');
+    const settingsH = settingsBar.classList.contains('open') ? settingsBar.offsetHeight : 0;
+    const actualToolbarH = (toolbarEl?.offsetHeight || 52) + (progressEl?.offsetHeight || 3);
+    const usableH = document.getElementById('readerOverlay').clientHeight - actualToolbarH - settingsH;
+    staging.style.width = outerEl.clientWidth + 'px';
+    staging.style.height = usableH + 'px';
+    staging.style.fontSize = readerFontSize + 'px';
+    staging._usableHeight = usableH;
     const saved = loadReadingProgress(book.id);
     if(saved && saved.chapterIdx < readerSpine.length && saved.chapterIdx > 0){
       if(confirm(`Resume at ${readerSpine[saved.chapterIdx]?.label || 'last position'}?`)){
@@ -2930,8 +2942,14 @@ function renderChapterPaged(bodyHtml){
       sepia: '#3b2a1a',
       night: '#c8c8d8'
     };
-    staging.style.color = themeColors[readerTheme] || '#1a1a1a';
-
+    const staging = document.getElementById('readerStagingContainer');
+    if(!staging){ resolve(); return; }
+    // Re-sync staging dimensions before measuring
+    const outerEl = document.getElementById('readerContent');
+    staging.style.width = outerEl.clientWidth + 'px';
+    staging.style.height = fixedH + 'px';
+    staging.style.fontSize = readerFontSize + 'px';
+    staging._usableHeight = fixedH;
     // Wait for images in staging area to load before measuring
     const imgs = Array.from(staging.querySelectorAll('img'));
     const imgPromises = imgs.map(img=>{
@@ -3058,6 +3076,8 @@ function updatePaginationUI(){
 function recalcReaderHeight(){
   const overlay = document.getElementById('readerOverlay');
   if(!overlay.classList.contains('open')) return;
+  const staging = document.getElementById('readerStagingContainer');
+  if(!staging) return;
   const outer = document.getElementById('readerContent');
   const settingsBar = document.getElementById('readerSettingsBar');
   const toolbarEl = document.querySelector('.reader-toolbar');
