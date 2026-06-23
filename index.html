@@ -2782,15 +2782,21 @@ function findPageEnd(textNodes, startNodeIdx, startOffset, containerTop, viewpor
     const len = node.textContent.length;
     const testFrom = (i === startNodeIdx) ? startOffset : 0;
 
-    // Quick check: does the END of this whole node fit on the page?
-    const range = document.createRange();
+const range = document.createRange();
     range.setStart(textNodes[startNodeIdx], startOffset);
     range.setEnd(node, len);
     const rects = range.getClientRects();
     if(!rects.length) continue;
-    const bottom = rects[rects.length-1].bottom - containerTop;
+    // Use the parent element's bottom if it's a block — captures margin-bottom
+    const parentEl = node.parentElement;
+    const parentBottom = parentEl
+      ? parentEl.getBoundingClientRect().bottom - containerTop
+      : null;
+    const bottom = (parentBottom && parentBottom > rects[rects.length-1].bottom - containerTop)
+      ? parentBottom
+      : rects[rects.length-1].bottom - containerTop;
 
-    const lineH = readerFontSize * 1.9; // matches line-height: 1.9
+    const lineH = readerFontSize * 1.9 + readerFontSize * 1.1; // line + max paragraph margin
         if(bottom - pageTopPx <= viewportH - lineH){
           // Whole node fits — record it and keep going
           lastGoodNodeIdx = i;
