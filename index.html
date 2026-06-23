@@ -2782,12 +2782,22 @@ function findPageEnd(textNodes, startNodeIdx, startOffset, containerTop, viewpor
     const len = node.textContent.length;
     const testFrom = (i === startNodeIdx) ? startOffset : 0;
 
-    const range = document.createRange();
+const range = document.createRange();
     range.setStart(textNodes[startNodeIdx], startOffset);
     range.setEnd(node, len);
     const rects = range.getClientRects();
     if(!rects.length) continue;
-    const bottom = rects[rects.length-1].bottom - containerTop;
+    // Walk up to nearest block element to capture margins
+    let blockEl = node.parentElement;
+    while(blockEl && getComputedStyle(blockEl).display === 'inline'){
+      blockEl = blockEl.parentElement;
+    }
+    const blockBottom = blockEl
+      ? blockEl.getBoundingClientRect().bottom - containerTop
+      : null;
+    const bottom = (blockBottom && blockBottom > rects[rects.length-1].bottom - containerTop)
+      ? blockBottom
+      : rects[rects.length-1].bottom - containerTop;
 
     const lineH = readerFontSize * 1.9;
 
