@@ -2932,7 +2932,12 @@ function renderChapterPaged(bodyHtml){
     staging.style.width = outer.clientWidth + 'px';
     staging.style.height = fixedH + 'px';
     staging.style.fontSize = readerFontSize + 'px';
-    staging._usableHeight = fixedH;
+    staging.style.lineHeight = '1.9';
+    staging.style.padding = '1.8rem clamp(1rem,5vw,4rem)';
+    staging.style.boxSizing = 'border-box';
+    const stagingPadV = parseFloat(getComputedStyle(staging).paddingTop)
+                      + parseFloat(getComputedStyle(staging).paddingBottom);
+    staging._usableHeight = fixedH - stagingPadV;
     staging.innerHTML = bodyHtml;
 
     console.log('overlay:', overlay.clientHeight,
