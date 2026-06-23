@@ -2796,7 +2796,7 @@ const range = document.createRange();
       ? parentBottom
       : rects[rects.length-1].bottom - containerTop;
 
-    const lineH = readerFontSize * 1.9 + readerFontSize * 1.1; // line + max paragraph margin
+    const lineH = readerFontSize * 1.9;
         if(bottom - pageTopPx <= viewportH - lineH){
           // Whole node fits — record it and keep going
           lastGoodNodeIdx = i;
