@@ -276,6 +276,13 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
   font-family: 'Lato', sans-serif;
   box-sizing: border-box;
 }
+#readerStagingContainer p,
+#readerStagingContainer h1,
+#readerStagingContainer h2,
+#readerStagingContainer h3 {
+  margin-top: 0;
+  margin-bottom: 0;
+}
   
 .reader-progress{height:3px;flex-shrink:0;}
 .reader-overlay.theme-day .reader-progress{background:#ddd;}
@@ -2787,17 +2794,7 @@ const range = document.createRange();
     range.setEnd(node, len);
     const rects = range.getClientRects();
     if(!rects.length) continue;
-    // Walk up to nearest block element to capture margins
-    let blockEl = node.parentElement;
-    while(blockEl && getComputedStyle(blockEl).display === 'inline'){
-      blockEl = blockEl.parentElement;
-    }
-    const blockBottom = blockEl
-      ? blockEl.getBoundingClientRect().bottom - containerTop
-      : null;
-    const bottom = (blockBottom && blockBottom > rects[rects.length-1].bottom - containerTop)
-      ? blockBottom
-      : rects[rects.length-1].bottom - containerTop;
+    const bottom = rects[rects.length-1].bottom - containerTop;
 
     const lineH = readerFontSize * 1.9;
 
