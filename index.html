@@ -2920,37 +2920,32 @@ function renderChapterPaged(bodyHtml){
     const overlay = document.getElementById('readerOverlay');
     const outer = document.getElementById('readerContent');
     const settingsBar = document.getElementById('readerSettingsBar');
-    const toolbarH = 52 + 3;
-    const settingsH = settingsBar.classList.contains('open') ? settingsBar.offsetHeight : 0;
     const toolbarEl = document.querySelector('.reader-toolbar');
     const progressEl = document.querySelector('.reader-progress');
     const actualToolbarH = (toolbarEl?.offsetHeight || 52) + (progressEl?.offsetHeight || 3);
+    const settingsH = settingsBar.classList.contains('open') ? settingsBar.offsetHeight : 0;
     const fixedH = overlay.clientHeight - actualToolbarH - settingsH;
     outer.style.height = fixedH + 'px';
 
-    console.log('overlay:', overlay.clientHeight, 
-            'toolbar:', actualToolbarH || toolbarH,
-            'settings:', settingsH,
-            'fixedH:', fixedH,
-            'staging width:', staging.style.width,
-            'outer width:', outer.clientWidth,
-            'pageA width:', document.getElementById('readerPageA').clientWidth);
-    // Apply current theme colors to staging container text
-    // so measurement matches visible rendering
-    const themeColors = {
-      day:   '#1a1a1a',
-      sepia: '#3b2a1a',
-      night: '#c8c8d8'
-    };
     const staging = document.getElementById('readerStagingContainer');
     if(!staging){ resolve(); return; }
-    // Re-sync staging dimensions before measuring
-    const outerEl = document.getElementById('readerContent');
-    staging.style.width = outerEl.clientWidth + 'px';
+    staging.style.width = outer.clientWidth + 'px';
     staging.style.height = fixedH + 'px';
     staging.style.fontSize = readerFontSize + 'px';
     staging._usableHeight = fixedH;
-    // Wait for images in staging area to load before measuring
+    staging.innerHTML = bodyHtml;
+
+    console.log('overlay:', overlay.clientHeight,
+      'toolbar:', actualToolbarH,
+      'settings:', settingsH,
+      'fixedH:', fixedH,
+      'staging width:', staging.style.width,
+      'outer width:', outer.clientWidth,
+      'pageA width:', document.getElementById('readerPageA').clientWidth);
+
+    const themeColors = { day:'#1a1a1a', sepia:'#3b2a1a', night:'#c8c8d8' };
+    staging.style.color = themeColors[readerTheme] || '#1a1a1a';
+
     const imgs = Array.from(staging.querySelectorAll('img'));
     const imgPromises = imgs.map(img=>{
       if(img.complete) return Promise.resolve();
@@ -2966,7 +2961,6 @@ function renderChapterPaged(bodyHtml){
         readerPageCount = readerPageBreaks.length;
         readerPage = 0;
 
-        // Render page 0 into the visible page slice
         const pageA = document.getElementById('readerPageA');
         pageA.style.fontSize = readerFontSize + 'px';
         pageA.innerHTML = extractPageHtml(staging, readerPageBreaks, 0);
