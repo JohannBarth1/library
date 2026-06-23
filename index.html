@@ -913,6 +913,73 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .chat-date-divider::before { left: 0; }
 .chat-date-divider::after { right: 0; }
 
+  /* ── ADMIN ── */
+.admin-card {
+  background: var(--warm-white);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: .6rem .8rem;
+  margin-bottom: .5rem;
+  font-size: .82rem;
+}
+.admin-card-title {
+  font-weight: 700;
+  color: var(--navy2);
+  margin-bottom: .2rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.admin-card-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: .5rem;
+  font-size: .75rem;
+  color: var(--muted);
+  margin-top: .15rem;
+}
+.admin-card-row.overdue {
+  color: var(--danger);
+  font-weight: 700;
+}
+.admin-config-box {
+  font-family: monospace;
+  font-size: .72rem;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: .35rem .6rem;
+  word-break: break-all;
+  line-height: 1.5;
+  margin-top: .3rem;
+  color: var(--navy2);
+}
+.admin-copy-btn {
+  background: transparent;
+  border: 1px solid var(--teal);
+  color: var(--teal);
+  font-family: 'Lato', sans-serif;
+  font-size: .65rem;
+  font-weight: 700;
+  padding: .2rem .5rem;
+  border-radius: 3px;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.admin-copy-btn:hover { background: var(--teal-light); }
+.admin-badge {
+  font-size: .62rem;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 8px;
+  white-space: nowrap;
+}
+.admin-badge.active { background: #d1fae5; color: #065f46; }
+.admin-badge.returned { background: var(--panel); color: var(--muted); }
+.admin-badge.overdue { background: #fbeaea; color: var(--danger); }
+
 /* ── RESPONSIVE ── */
 @media(max-width:768px){
   .filter-sidebar{display:none;}
@@ -1167,6 +1234,44 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
     </div>
   </div>
 
+  <!-- ── ADMIN PANEL ── -->
+  <div class="mob-panel" id="mobPanelAdmin">
+    <div class="mob-settings-scroll">
+      <h2>🔑 Admin</h2>
+
+      <!-- Checkouts -->
+      <div class="settings-group">
+        <div class="settings-group-label">📋 All Book Signouts</div>
+        <div style="display:flex;gap:.5rem;margin-bottom:.8rem;flex-wrap:wrap">
+          <button class="btn-save" style="font-size:.72rem;padding:.4rem .8rem" id="adminCheckoutsRefresh">↻ Refresh</button>
+          <button class="btn-cancel" style="font-size:.72rem;padding:.4rem .8rem" id="adminCheckoutsFilter">Show Active Only</button>
+        </div>
+        <div id="adminCheckoutsList">
+          <div style="color:var(--muted);font-size:.85rem">Loading…</div>
+        </div>
+      </div>
+
+      <!-- Kobo devices -->
+      <div class="settings-group">
+        <div class="settings-group-label">📖 All Kobo Devices</div>
+        <button class="btn-save" style="font-size:.72rem;padding:.4rem .8rem;margin-bottom:.8rem" id="adminKoboRefresh">↻ Refresh</button>
+        <div id="adminKoboList">
+          <div style="color:var(--muted);font-size:.85rem">Loading…</div>
+        </div>
+      </div>
+
+      <!-- Users -->
+      <div class="settings-group">
+        <div class="settings-group-label">👤 All Users</div>
+        <button class="btn-save" style="font-size:.72rem;padding:.4rem .8rem;margin-bottom:.8rem" id="adminUsersRefresh">↻ Refresh</button>
+        <div id="adminUsersList">
+          <div style="color:var(--muted);font-size:.85rem">Loading…</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
   <!-- ── SETTINGS PANEL ── -->
   <div class="mob-panel" id="mobPanelSettings">
     <div class="mob-settings-scroll">
@@ -1272,6 +1377,9 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
     </button>
     <button class="mob-tab" id="mobNavSettings">
       <span class="tab-icon">⚙</span><span>Settings</span>
+    </button>
+    <button class="mob-tab" id="mobNavAdmin" style="display:none">
+      <span class="tab-icon">🔑</span><span>Admin</span>
     </button>
   </div>
 </nav>
@@ -1551,6 +1659,7 @@ onAuthStateChanged(auth,async user=>{
     startLoungeListener();
     checkUrlHash();
     showDeskHome();
+    checkAdminStatus();
     // Load secondary data in background — doesn't block UI
     Promise.all([
       loadUserRatings(),
@@ -4948,6 +5057,165 @@ document.querySelectorAll('.lounge-tab').forEach(tab => {
     if(which === 'news') loadNewsClips();
   });
 });
+
+
+  // ── ADMIN ────────────────────────────────────────────────────────────────────
+
+let isAdmin = false;
+let adminCheckoutsShowAll = false;
+
+async function checkAdminStatus() {
+  if(!currentUser) return;
+  try {
+    const snap = await getDoc(doc(db, 'users', currentUser.uid));
+    isAdmin = snap.exists() && snap.data().isAdmin === true;
+    if(isAdmin){
+      document.getElementById('mobNavAdmin').style.display = '';
+    }
+  } catch(e) {
+    console.warn('Admin check failed:', e);
+  }
+}
+
+// ── CHECKOUTS ─────────────────────────────────────────────────────────────────
+async function adminLoadCheckouts() {
+  const el = document.getElementById('adminCheckoutsList');
+  el.innerHTML = '<div style="color:var(--muted);font-size:.85rem">Loading…</div>';
+  try {
+    const q = adminCheckoutsShowAll
+      ? query(collection(db, 'checkouts'), orderBy('checkedOutAt', 'desc'))
+      : query(collection(db, 'checkouts'), where('returnedAt', '==', null), orderBy('checkedOutAt', 'desc'));
+    const snap = await getDocs(q);
+    const rows = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    if(!rows.length){
+      el.innerHTML = '<div style="color:var(--muted);font-size:.85rem;padding:.5rem 0">No checkouts found</div>';
+      return;
+    }
+    el.innerHTML = rows.map(r => {
+      const out = r.checkedOutAt?.toDate?.() ?? new Date();
+      const due = r.dueDate?.toDate?.() ?? new Date();
+      const returned = r.returnedAt?.toDate?.() ?? null;
+      const isOverdue = !returned && due < new Date();
+      const badge = returned
+        ? `<span class="admin-badge returned">Returned ${returned.toLocaleDateString()}</span>`
+        : isOverdue
+          ? `<span class="admin-badge overdue">Overdue</span>`
+          : `<span class="admin-badge active">Active</span>`;
+      return `<div class="admin-card">
+        <div class="admin-card-title">📖 ${esc(r.bookTitle || 'Unknown book')}</div>
+        <div class="admin-card-row">
+          <span>👤 ${esc(r.userName || r.userId)}</span>
+          ${badge}
+        </div>
+        <div class="admin-card-row ${isOverdue ? 'overdue' : ''}">
+          <span>Out: ${out.toLocaleDateString()}</span>
+          <span>Due: ${due.toLocaleDateString()}</span>
+        </div>
+      </div>`;
+    }).join('');
+  } catch(e) {
+    el.innerHTML = `<div style="color:var(--danger);font-size:.82rem">Failed to load: ${e.message}</div>`;
+    console.error(e);
+  }
+}
+
+document.getElementById('adminCheckoutsRefresh')?.addEventListener('click', adminLoadCheckouts);
+document.getElementById('adminCheckoutsFilter')?.addEventListener('click', function(){
+  adminCheckoutsShowAll = !adminCheckoutsShowAll;
+  this.textContent = adminCheckoutsShowAll ? 'Show Active Only' : 'Show All';
+  adminLoadCheckouts();
+});
+
+// ── KOBO DEVICES ──────────────────────────────────────────────────────────────
+async function adminLoadKoboDevices() {
+  const el = document.getElementById('adminKoboList');
+  el.innerHTML = '<div style="color:var(--muted);font-size:.85rem">Loading…</div>';
+  try {
+    const snap = await getDocs(collection(db, 'kobo_devices'));
+    const devices = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    if(!devices.length){
+      el.innerHTML = '<div style="color:var(--muted);font-size:.85rem;padding:.5rem 0">No Kobo devices registered</div>';
+      return;
+    }
+    // Load user names
+    const userSnap = await getDocs(collection(db, 'users'));
+    const userMap = {};
+    userSnap.docs.forEach(d => { userMap[d.id] = d.data().displayName || d.data().email || d.id; });
+
+    el.innerHTML = devices.map(d => {
+      const configLine = `Firebase:${d.id}:${d.token}`;
+      const owner = userMap[d.ownerId] || d.ownerId;
+      return `<div class="admin-card">
+        <div class="admin-card-title">📖 ${esc(d.name || 'Unnamed device')}</div>
+        <div class="admin-card-row">
+          <span>👤 ${esc(owner)}</span>
+          <span style="font-size:.65rem;color:var(--muted)">${d.createdAt?.toDate?.()?.toLocaleDateString() || ''}</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:.4rem;margin-top:.4rem">
+          <div class="admin-config-box" style="flex:1">${esc(configLine)}</div>
+          <button class="admin-copy-btn" data-copy="${esc(configLine)}">Copy</button>
+        </div>
+      </div>`;
+    }).join('');
+
+    el.querySelectorAll('[data-copy]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        navigator.clipboard.writeText(btn.dataset.copy)
+          .then(() => showToast('Config line copied ✓'))
+          .catch(() => showToast('Copy failed'));
+      });
+    });
+  } catch(e) {
+    el.innerHTML = `<div style="color:var(--danger);font-size:.82rem">Failed to load: ${e.message}</div>`;
+    console.error(e);
+  }
+}
+
+document.getElementById('adminKoboRefresh')?.addEventListener('click', adminLoadKoboDevices);
+
+// ── USERS ─────────────────────────────────────────────────────────────────────
+async function adminLoadUsers() {
+  const el = document.getElementById('adminUsersList');
+  el.innerHTML = '<div style="color:var(--muted);font-size:.85rem">Loading…</div>';
+  try {
+    const snap = await getDocs(collection(db, 'users'));
+    const users = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    if(!users.length){
+      el.innerHTML = '<div style="color:var(--muted);font-size:.85rem">No users found</div>';
+      return;
+    }
+    el.innerHTML = users.map(u => `
+      <div class="admin-card">
+        <div style="display:flex;align-items:center;gap:.6rem">
+          ${u.photoURL
+            ? `<img src="${u.photoURL}" style="width:28px;height:28px;border-radius:50%;object-fit:cover;border:1px solid var(--border);flex-shrink:0"/>`
+            : `<div style="width:28px;height:28px;border-radius:50%;background:var(--teal);color:#fff;display:flex;align-items:center;justify-content:center;font-size:.65rem;font-weight:700;flex-shrink:0">${(u.displayName||u.email||'?').slice(0,2).toUpperCase()}</div>`
+          }
+          <div style="flex:1;min-width:0">
+            <div class="admin-card-title">${esc(u.displayName || 'Unknown')}</div>
+            <div style="font-size:.7rem;color:var(--muted)">${esc(u.email || '')}</div>
+          </div>
+          ${u.isAdmin ? `<span class="admin-badge active">Admin</span>` : ''}
+        </div>
+      </div>`).join('');
+  } catch(e) {
+    el.innerHTML = `<div style="color:var(--danger);font-size:.82rem">Failed to load: ${e.message}</div>`;
+    console.error(e);
+  }
+}
+
+document.getElementById('adminUsersRefresh')?.addEventListener('click', adminLoadUsers);
+
+// ── NAV ───────────────────────────────────────────────────────────────────────
+document.getElementById('mobNavAdmin')?.addEventListener('click', () => {
+  document.querySelectorAll('.mob-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('mobNavAdmin').classList.add('active');
+  mob_showPanel('mobPanelAdmin');
+  adminLoadCheckouts();
+  adminLoadKoboDevices();
+  adminLoadUsers();
+});
+
   
 renderAll();
 </script>
