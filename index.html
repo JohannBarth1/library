@@ -2809,23 +2809,24 @@ function findPageEnd(textNodes, startNodeIdx, startOffset, containerTop, viewpor
     const len = node.textContent.length;
     const testFrom = (i === startNodeIdx) ? startOffset : 0;
 
-const range = document.createRange();
+    const range = document.createRange();
     range.setStart(textNodes[startNodeIdx], startOffset);
     range.setEnd(node, len);
     const rects = range.getClientRects();
     if(!rects.length) continue;
     const bottom = rects[rects.length-1].bottom - containerTop;
 
-    // Count block elements between start and current position
     const rangeForCount = document.createRange();
     rangeForCount.setStart(textNodes[startNodeIdx], startOffset);
     rangeForCount.setEnd(node, len);
     const frag = rangeForCount.cloneContents();
     const blockCount = frag.querySelectorAll('p, h1, h2, h3, h4, h5, h6, div').length;
-    const marginBuffer = (staging?._avgParaMargin || 0) * Math.max(1, blockCount * 0.7);
-    const lineH = readerFontSize * 1.9 + marginBuffer;
 
-    if(bottom - pageTopPx <= viewportH - lineH){
+    const lineH = readerFontSize * 1.9;
+    const paraBuffer = blockCount > 0 ? blockCount * readerFontSize * 0.55 : 0;
+    const totalBuffer = lineH + paraBuffer;
+
+    if(bottom - pageTopPx <= viewportH - totalBuffer){
       lastGoodNodeIdx = i;
       lastGoodOffset = len;
       continue;
@@ -2841,7 +2842,7 @@ const range = document.createRange();
       if(!rs.length){ lo = mid; continue; }
       const b = rs[rs.length-1].bottom - containerTop;
 
-      if(b - pageTopPx <= viewportH - lineH){
+      if(b - pageTopPx <= viewportH - totalBuffer){
         lo = mid;
       } else {
         hi = mid - 1;
