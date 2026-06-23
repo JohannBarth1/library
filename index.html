@@ -629,6 +629,175 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 /* Drawer description area */
 .drawer-desc-area{padding:.9rem 1.5rem 1rem;flex:1;overflow-y:auto;}
 
+  /* ── LOUNGE ── */
+.lounge-tab { transition: color .15s, border-color .15s; }
+.lounge-tab.active { color: var(--teal) !important; border-bottom-color: var(--teal) !important; }
+.lounge-tab:not(.active) { color: var(--muted) !important; border-bottom-color: transparent !important; }
+
+.lounge-card {
+  background: var(--warm-white);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  margin-bottom: .8rem;
+  overflow: hidden;
+  transition: box-shadow .15s;
+}
+.lounge-card:hover { box-shadow: 0 2px 10px rgba(0,0,0,0.08); }
+.lounge-card-header {
+  padding: .7rem .9rem .5rem;
+  display: flex;
+  align-items: flex-start;
+  gap: .5rem;
+}
+.lounge-card-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--teal);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: .65rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.lounge-card-meta { flex: 1; min-width: 0; }
+.lounge-card-name { font-size: .75rem; font-weight: 700; color: var(--navy2); }
+.lounge-card-time { font-size: .65rem; color: var(--muted); }
+.lounge-card-body { padding: .2rem .9rem .7rem; }
+.lounge-card-title {
+  font-family: 'Playfair Display', serif;
+  font-size: .95rem;
+  color: var(--navy2);
+  margin-bottom: .2rem;
+}
+.lounge-card-desc { font-size: .82rem; color: #3a4a5a; line-height: 1.6; }
+.lounge-card-footer {
+  padding: .4rem .9rem .5rem;
+  border-top: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  background: var(--panel);
+}
+.lounge-comment-count {
+  font-size: .72rem;
+  color: var(--muted);
+  font-weight: 700;
+  flex: 1;
+}
+.lounge-card-actions { display: flex; gap: .3rem; }
+
+/* Comment thread */
+.lounge-comments {
+  display: none;
+  border-top: 1px solid var(--border);
+  background: var(--cream);
+  padding: .6rem .9rem;
+}
+.lounge-comments.open { display: block; }
+.lounge-comment {
+  display: flex;
+  gap: .5rem;
+  margin-bottom: .6rem;
+  align-items: flex-start;
+}
+.lounge-comment-avatar {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--navy2);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: .55rem;
+  font-weight: 700;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+.lounge-comment-bubble {
+  background: var(--warm-white);
+  border: 1px solid var(--border);
+  border-radius: 0 8px 8px 8px;
+  padding: .35rem .6rem;
+  flex: 1;
+  min-width: 0;
+}
+.lounge-comment-author { font-size: .65rem; font-weight: 700; color: var(--teal); margin-bottom: 2px; }
+.lounge-comment-text { font-size: .8rem; color: var(--navy2); line-height: 1.5; }
+.lounge-comment-time { font-size: .6rem; color: var(--muted); margin-top: 2px; }
+.lounge-comment-delete { background: none; border: none; cursor: pointer; font-size: .65rem; color: var(--muted); padding: 0 .2rem; opacity: 0; transition: opacity .15s; }
+.lounge-comment:hover .lounge-comment-delete { opacity: 1; }
+.lounge-comment-input-row {
+  display: flex;
+  gap: .4rem;
+  margin-top: .5rem;
+  align-items: center;
+}
+.lounge-comment-input {
+  flex: 1;
+  padding: .4rem .6rem;
+  font-family: 'Lato', sans-serif;
+  font-size: .82rem;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  background: var(--warm-white);
+  color: var(--navy);
+  outline: none;
+}
+.lounge-comment-input:focus { border-color: var(--teal); }
+.lounge-comment-send {
+  background: var(--teal);
+  color: var(--gold);
+  border: none;
+  border-radius: 50%;
+  width: 30px;
+  height: 30px;
+  font-size: .9rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+/* News clip card */
+.news-card {
+  background: var(--warm-white);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: .7rem .9rem;
+  margin-bottom: .7rem;
+  display: flex;
+  align-items: center;
+  gap: .7rem;
+}
+.news-card-icon { font-size: 1.5rem; flex-shrink: 0; }
+.news-card-meta { flex: 1; min-width: 0; }
+.news-card-title { font-size: .85rem; font-weight: 700; color: var(--navy2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.news-card-sub { font-size: .7rem; color: var(--muted); margin-top: 2px; }
+.news-card-expires { font-size: .65rem; color: var(--rust); font-weight: 700; margin-top: 2px; }
+
+/* Notification badge */
+.lounge-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  background: var(--rust);
+  color: #fff;
+  font-size: .55rem;
+  font-weight: 700;
+  border-radius: 50%;
+  width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
 /* ── RESPONSIVE ── */
 @media(max-width:768px){
   .filter-sidebar{display:none;}
@@ -817,14 +986,30 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
     </div>
   </div>
 
-  <!-- ── COMMUNITY PANEL (stub — content coming) ── -->
+<!-- ── COMMUNITY PANEL ── -->
   <div class="mob-panel" id="mobPanelCommunity">
-    <div class="community-placeholder">
-      <div class="cp-icon">🕯️</div>
-      <h3>The Lounge</h3>
-      <p>Book requests, announcements, and broadcasts will appear here.</p>
-      <p>Find newspaper articles, reports, and that lost stores note right here in the lounge.</p>
-      <p>Coming in a future update!</p>
+    <div style="display:flex;flex-direction:column;height:100%;overflow:hidden">
+      <!-- Header -->
+      <div style="padding:.7rem 1rem .5rem;background:var(--warm-white);border-bottom:1px solid var(--border);flex-shrink:0;display:flex;align-items:center;justify-content:space-between">
+        <div style="font-family:'Playfair Display',serif;font-size:1.1rem;color:var(--navy2)">🛋️ The Lounge</div>
+        <button class="btn-action" style="background:var(--teal);color:var(--gold);border-color:var(--teal);padding:.35rem .8rem;font-size:.72rem" id="btnNewRequest">+ Request Book</button>
+      </div>
+      <!-- Tabs -->
+      <div style="display:flex;border-bottom:1px solid var(--border);background:var(--warm-white);flex-shrink:0">
+        <button class="lounge-tab active" data-lounge-tab="requests" style="flex:1;padding:.5rem;font-family:'Lato',sans-serif;font-size:.68rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--teal);background:none;border:none;border-bottom:2px solid var(--teal);cursor:pointer">Book Requests</button>
+        <button class="lounge-tab" data-lounge-tab="news" style="flex:1;padding:.5rem;font-family:'Lato',sans-serif;font-size:.68rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);background:none;border:none;border-bottom:2px solid transparent;cursor:pointer">News Clips</button>
+      </div>
+      <!-- Requests list -->
+      <div id="loungeRequestsPanel" style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch">
+        <div id="loungeRequestsList" style="padding:.8rem"></div>
+      </div>
+      <!-- News panel -->
+      <div id="loungeNewsPanel" style="display:none;flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:.8rem">
+        <div style="display:flex;justify-content:flex-end;margin-bottom:.8rem">
+          <button class="btn-action" style="background:var(--teal);color:var(--gold);border-color:var(--teal);padding:.35rem .8rem;font-size:.72rem" id="btnUploadNews">+ Upload Clip</button>
+        </div>
+        <div id="loungeNewsList"></div>
+      </div>
     </div>
   </div>
 
@@ -956,7 +1141,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
     <button class="mob-tab" id="mobNavLibrary">
       <span class="tab-icon">📚</span><span>Library</span>
     </button>
-    <button class="mob-tab" id="mobNavCommunity">
+    <button class="mob-tab" id="mobNavCommunity" style="position:relative">
       <span class="tab-icon">🛋️</span><span>Lounge</span>
     </button>
     <button class="mob-tab" id="mobNavSettings">
@@ -1237,6 +1422,7 @@ onAuthStateChanged(auth,async user=>{
     renderSkeleton('deskHomeRecentGrid',8);
     try{await setDoc(doc(db,'users',user.uid),{displayName:user.displayName||'',email:user.email,uid:user.uid,lastSeen:serverTimestamp()},{merge:true});}catch(e){console.warn(e);}
     await loadLibrary();
+    startLoungeListener();
     checkUrlHash();
     showDeskHome();
     // Load secondary data in background — doesn't block UI
@@ -4059,6 +4245,427 @@ function _showKoboSetupModal(device) {
   });
 })();
 
+
+  // ── LOUNGE ───────────────────────────────────────────────────────────────────
+
+let loungeRequestsUnsub = null;
+let loungeUnreadCount = 0;
+let loungeLastSeen = parseInt(localStorage.getItem('elib_lounge_seen') || '0');
+
+// ── TABS ─────────────────────────────────────────────────────────────────────
+document.querySelectorAll('.lounge-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.lounge-tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    const which = tab.dataset.loungeTab;
+    document.getElementById('loungeRequestsPanel').style.display = which === 'requests' ? '' : 'none';
+    document.getElementById('loungeNewsPanel').style.display = which === 'news' ? '' : 'none';
+    if(which === 'news') loadNewsClips();
+  });
+});
+
+// ── NEW REQUEST MODAL ─────────────────────────────────────────────────────────
+document.getElementById('btnNewRequest').addEventListener('click', () => {
+  showLoungeRequestModal();
+});
+
+function showLoungeRequestModal(existing) {
+  const isEdit = !!existing;
+  // Reuse editMetaModal pattern — inject into a simple inline modal
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay open';
+  overlay.innerHTML = `
+    <div class="modal" style="max-width:440px">
+      <h3>${isEdit ? 'Edit Request' : 'Request a Book'}</h3>
+      <div class="form-row">
+        <label>Title / Author you're looking for</label>
+        <input type="text" id="reqTitleInput" placeholder="e.g. Middlemarch by George Eliot" value="${isEdit ? esc(existing.title) : ''}"/>
+      </div>
+      <div class="form-row">
+        <label>More detail <span style="font-size:.65rem;color:var(--muted);font-weight:400">(optional)</span></label>
+        <textarea id="reqDescInput" rows="3" style="width:100%;padding:.6rem .85rem;font-family:'Lato',sans-serif;font-size:.88rem;color:var(--navy);background:var(--cream);border:1px solid var(--border);border-radius:3px;outline:none;resize:vertical;line-height:1.5" placeholder="Any edition, format preference, context…">${isEdit ? esc(existing.description || '') : ''}</textarea>
+      </div>
+      <div class="modal-actions">
+        <button class="btn-cancel" id="reqCancelBtn">Cancel</button>
+        <button class="btn-save" id="reqSaveBtn">${isEdit ? 'Save' : 'Post Request'}</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+  overlay.querySelector('#reqCancelBtn').addEventListener('click', () => overlay.remove());
+  overlay.querySelector('#reqSaveBtn').addEventListener('click', async () => {
+    const title = overlay.querySelector('#reqTitleInput').value.trim();
+    if(!title){ showToast('Please enter a title'); return; }
+    const desc = overlay.querySelector('#reqDescInput').value.trim();
+    overlay.remove();
+    showLoading(isEdit ? 'Saving…' : 'Posting…');
+    try {
+      if(isEdit){
+        await updateDoc(doc(db, 'lounge_requests', existing.id), {
+          title, description: desc, updatedAt: serverTimestamp()
+        });
+      } else {
+        await addDoc(collection(db, 'lounge_requests'), {
+          title,
+          description: desc,
+          authorId: currentUser.uid,
+          authorName: currentUser.displayName || currentUser.email,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+          commentCount: 0,
+        });
+      }
+      hideLoading();
+      showToast(isEdit ? 'Request updated ✓' : 'Request posted ✓');
+    } catch(e) {
+      hideLoading();
+      showToast('Failed: ' + e.message);
+    }
+  });
+}
+
+// ── LOAD REQUESTS (real-time) ─────────────────────────────────────────────────
+function startLoungeListener() {
+  if(loungeRequestsUnsub) loungeRequestsUnsub();
+  const q = query(
+    collection(db, 'lounge_requests'),
+    orderBy('updatedAt', 'desc')
+  );
+  loungeRequestsUnsub = onSnapshot(q, snap => {
+    const requests = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    renderLoungeRequests(requests);
+    updateLoungeBadge(requests);
+  }, e => console.warn('Lounge listener:', e));
+}
+
+function updateLoungeBadge(requests) {
+  const newest = requests.reduce((max, r) => {
+    const t = r.updatedAt?.toMillis?.() || 0;
+    return t > max ? t : max;
+  }, 0);
+  const unread = newest > loungeLastSeen ? requests.filter(r =>
+    (r.updatedAt?.toMillis?.() || 0) > loungeLastSeen &&
+    r.authorId !== currentUser?.uid
+  ).length : 0;
+  loungeUnreadCount = unread;
+  const existing = document.querySelector('.lounge-badge');
+  if(existing) existing.remove();
+  if(unread > 0){
+    const badge = document.createElement('div');
+    badge.className = 'lounge-badge';
+    badge.textContent = unread > 9 ? '9+' : unread;
+    document.getElementById('mobNavCommunity').appendChild(badge);
+  }
+}
+
+function markLoungeSeen() {
+  loungeLastSeen = Date.now();
+  localStorage.setItem('elib_lounge_seen', loungeLastSeen);
+  const existing = document.querySelector('.lounge-badge');
+  if(existing) existing.remove();
+  loungeUnreadCount = 0;
+}
+
+function renderLoungeRequests(requests) {
+  const el = document.getElementById('loungeRequestsList');
+  if(!requests.length){
+    el.innerHTML = `<div style="text-align:center;padding:3rem 1rem;color:var(--muted)">
+      <div style="font-size:2rem;opacity:.2;margin-bottom:.8rem">📚</div>
+      <div style="font-size:.88rem">No book requests yet — be the first!</div>
+    </div>`;
+    return;
+  }
+  el.innerHTML = requests.map(r => {
+    const isMine = r.authorId === currentUser?.uid;
+    const initials = (r.authorName || '?').split(' ').map(w => w[0]).join('').toUpperCase().slice(0,2);
+    const time = r.createdAt?.toDate?.()
+      ? timeAgo(r.createdAt.toDate())
+      : '';
+    return `<div class="lounge-card" data-reqid="${r.id}">
+      <div class="lounge-card-header">
+        <div class="lounge-card-avatar">${initials}</div>
+        <div class="lounge-card-meta">
+          <div class="lounge-card-name">${esc(r.authorName || 'Unknown')}</div>
+          <div class="lounge-card-time">${time}</div>
+        </div>
+        ${isMine ? `<div style="display:flex;gap:.3rem">
+          <button class="btn-action btn-return" style="padding:.2rem .5rem;font-size:.65rem;border-radius:3px" data-edit-req="${r.id}">✎</button>
+          <button class="btn-action btn-delete" style="padding:.2rem .5rem;font-size:.65rem;border-radius:3px" data-delete-req="${r.id}">✕</button>
+        </div>` : ''}
+      </div>
+      <div class="lounge-card-body">
+        <div class="lounge-card-title">📚 ${esc(r.title)}</div>
+        ${r.description ? `<div class="lounge-card-desc">${esc(r.description)}</div>` : ''}
+      </div>
+      <div class="lounge-card-footer">
+        <div class="lounge-comment-count">💬 ${r.commentCount || 0} comment${r.commentCount !== 1 ? 's' : ''}</div>
+        <button class="btn-action btn-checkout" style="padding:.25rem .65rem;font-size:.68rem;border-radius:20px" data-toggle-comments="${r.id}">
+          Reply
+        </button>
+      </div>
+      <div class="lounge-comments" id="loungeComments_${r.id}"></div>
+    </div>`;
+  }).join('');
+
+  // Bind actions
+  el.querySelectorAll('[data-toggle-comments]').forEach(btn => {
+    btn.addEventListener('click', () => toggleComments(btn.dataset.toggleComments));
+  });
+  el.querySelectorAll('[data-edit-req]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const r = requests.find(x => x.id === btn.dataset.editReq);
+      if(r) showLoungeRequestModal(r);
+    });
+  });
+  el.querySelectorAll('[data-delete-req]').forEach(btn => {
+    btn.addEventListener('click', () => deleteRequest(btn.dataset.deleteReq));
+  });
+}
+
+// ── COMMENTS ─────────────────────────────────────────────────────────────────
+const commentUnsubMap = {};
+
+function toggleComments(reqId) {
+  const el = document.getElementById('loungeComments_' + reqId);
+  if(!el) return;
+  const isOpen = el.classList.contains('open');
+  // Close all others
+  document.querySelectorAll('.lounge-comments.open').forEach(c => {
+    c.classList.remove('open');
+    const id = c.id.replace('loungeComments_', '');
+    if(commentUnsubMap[id]){ commentUnsubMap[id](); delete commentUnsubMap[id]; }
+  });
+  if(!isOpen){
+    el.classList.add('open');
+    loadComments(reqId, el);
+  }
+}
+
+function loadComments(reqId, container) {
+  if(commentUnsubMap[reqId]) commentUnsubMap[reqId]();
+  const q = query(
+    collection(db, 'lounge_requests', reqId, 'comments'),
+    orderBy('createdAt', 'asc')
+  );
+  commentUnsubMap[reqId] = onSnapshot(q, snap => {
+    const comments = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    renderComments(reqId, comments, container);
+    // Update comment count on the card
+    updateDoc(doc(db, 'lounge_requests', reqId), { commentCount: comments.length }).catch(()=>{});
+  }, e => console.warn('Comments listener:', e));
+}
+
+function renderComments(reqId, comments, container) {
+  const inputHtml = `
+    <div class="lounge-comment-input-row">
+      <input class="lounge-comment-input" type="text" placeholder="Add a comment…" id="commentInput_${reqId}"/>
+      <button class="lounge-comment-send" data-send-comment="${reqId}">➤</button>
+    </div>`;
+
+  if(!comments.length){
+    container.innerHTML = `<div style="font-size:.78rem;color:var(--muted);padding:.3rem 0 .6rem">No comments yet — start the conversation!</div>${inputHtml}`;
+  } else {
+    container.innerHTML = comments.map(c => {
+      const isMine = c.authorId === currentUser?.uid;
+      const initials = (c.authorName || '?').split(' ').map(w => w[0]).join('').toUpperCase().slice(0,2);
+      return `<div class="lounge-comment">
+        <div class="lounge-comment-avatar">${initials}</div>
+        <div class="lounge-comment-bubble">
+          <div class="lounge-comment-author">${esc(c.authorName || 'Unknown')}</div>
+          <div class="lounge-comment-text">${esc(c.text)}</div>
+          <div style="display:flex;align-items:center;gap:.3rem">
+            <div class="lounge-comment-time">${c.createdAt?.toDate?.() ? timeAgo(c.createdAt.toDate()) : ''}</div>
+            ${isMine ? `<button class="lounge-comment-delete" data-delete-comment="${c.id}" data-req-id="${reqId}">✕ delete</button>` : ''}
+          </div>
+        </div>
+      </div>`;
+    }).join('') + inputHtml;
+  }
+
+  // Bind send
+  container.querySelectorAll('[data-send-comment]').forEach(btn => {
+    btn.addEventListener('click', () => sendComment(reqId));
+  });
+  container.querySelector(`#commentInput_${reqId}`)?.addEventListener('keydown', e => {
+    if(e.key === 'Enter') sendComment(reqId);
+  });
+  // Bind delete
+  container.querySelectorAll('[data-delete-comment]').forEach(btn => {
+    btn.addEventListener('click', () => deleteComment(btn.dataset.reqId, btn.dataset.deleteComment));
+  });
+}
+
+async function sendComment(reqId) {
+  const input = document.getElementById('commentInput_' + reqId);
+  if(!input) return;
+  const text = input.value.trim();
+  if(!text) return;
+  input.value = '';
+  try {
+    await addDoc(collection(db, 'lounge_requests', reqId, 'comments'), {
+      text,
+      authorId: currentUser.uid,
+      authorName: currentUser.displayName || currentUser.email,
+      createdAt: serverTimestamp(),
+    });
+  } catch(e) {
+    showToast('Failed to send: ' + e.message);
+  }
+}
+
+async function deleteComment(reqId, commentId) {
+  if(!confirm('Delete this comment?')) return;
+  try {
+    await deleteDoc(doc(db, 'lounge_requests', reqId, 'comments', commentId));
+  } catch(e) {
+    showToast('Delete failed: ' + e.message);
+  }
+}
+
+async function deleteRequest(reqId) {
+  if(!confirm('Delete this request and all its comments?')) return;
+  showLoading('Deleting…');
+  try {
+    // Delete all comments first
+    const commSnap = await getDocs(collection(db, 'lounge_requests', reqId, 'comments'));
+    for(const d of commSnap.docs) await deleteDoc(d.ref);
+    await deleteDoc(doc(db, 'lounge_requests', reqId));
+    hideLoading();
+    showToast('Request deleted ✓');
+  } catch(e) {
+    hideLoading();
+    showToast('Delete failed: ' + e.message);
+  }
+}
+
+// ── NEWS CLIPS ────────────────────────────────────────────────────────────────
+document.getElementById('btnUploadNews').addEventListener('click', () => {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = '.pdf,.doc,.docx,.txt,.jpg,.jpeg,.png';
+  input.addEventListener('change', async e => {
+    const file = e.target.files[0];
+    if(!file) return;
+    showLoading('Uploading…');
+    try {
+      const path = `news_clips/${currentUser.uid}/${Date.now()}_${file.name}`;
+      const sRef = storageRef(storage, path);
+      await uploadBytes(sRef, file);
+      const url = await getDownloadURL(sRef);
+      const expires = new Date();
+      expires.setDate(expires.getDate() + 30);
+      await addDoc(collection(db, 'news_clips'), {
+        title: file.name,
+        url,
+        storagePath: path,
+        uploadedBy: currentUser.uid,
+        uploaderName: currentUser.displayName || currentUser.email,
+        createdAt: serverTimestamp(),
+        expiresAt: Timestamp.fromDate(expires),
+        fileType: file.type,
+      });
+      hideLoading();
+      showToast('Clip uploaded ✓');
+      loadNewsClips();
+    } catch(e) {
+      hideLoading();
+      showToast('Upload failed: ' + e.message);
+    }
+  });
+  input.click();
+});
+
+async function loadNewsClips() {
+  const el = document.getElementById('loungeNewsList');
+  el.innerHTML = '<div style="color:var(--muted);font-size:.85rem">Loading…</div>';
+  try {
+    const now = Timestamp.now();
+    const q = query(
+      collection(db, 'news_clips'),
+      where('expiresAt', '>', now),
+      orderBy('expiresAt', 'asc')
+    );
+    const snap = await getDocs(q);
+    const clips = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    if(!clips.length){
+      el.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--muted);font-size:.85rem">No news clips yet</div>';
+      return;
+    }
+    el.innerHTML = clips.map(c => {
+      const expires = c.expiresAt?.toDate?.();
+      const daysLeft = expires ? Math.ceil((expires - new Date()) / 86400000) : '?';
+      const icon = c.fileType?.includes('pdf') ? '📄' : c.fileType?.startsWith('image') ? '🖼️' : '📎';
+      const isMine = c.uploadedBy === currentUser?.uid;
+      return `<div class="news-card">
+        <div class="news-card-icon">${icon}</div>
+        <div class="news-card-meta">
+          <div class="news-card-title">${esc(c.title)}</div>
+          <div class="news-card-sub">Shared by ${esc(c.uploaderName || 'Unknown')}</div>
+          <div class="news-card-expires">Expires in ${daysLeft} day${daysLeft !== 1 ? 's' : ''}</div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:.3rem;flex-shrink:0">
+          <a href="${c.url}" target="_blank" class="btn-action btn-download" style="padding:.25rem .6rem;font-size:.65rem;border-radius:3px;text-decoration:none">Open</a>
+          ${isMine ? `<button class="btn-action btn-delete" style="padding:.25rem .6rem;font-size:.65rem;border-radius:3px" data-delete-clip="${c.id}" data-clip-path="${c.storagePath}">✕</button>` : ''}
+        </div>
+      </div>`;
+    }).join('');
+    el.querySelectorAll('[data-delete-clip]').forEach(btn => {
+      btn.addEventListener('click', () => deleteNewsClip(btn.dataset.deleteClip, btn.dataset.clipPath));
+    });
+  } catch(e) {
+    el.innerHTML = '<div style="color:var(--muted);font-size:.85rem">Could not load clips</div>';
+    console.error(e);
+  }
+}
+
+async function deleteNewsClip(clipId, path) {
+  if(!confirm('Delete this clip?')) return;
+  showLoading('Deleting…');
+  try {
+    await deleteDoc(doc(db, 'news_clips', clipId));
+    if(path){
+      try{ await deleteDoc(storageRef(storage, path)); }catch(e){/* ok */}
+    }
+    hideLoading();
+    showToast('Clip deleted ✓');
+    loadNewsClips();
+  } catch(e) {
+    hideLoading();
+    showToast('Delete failed: ' + e.message);
+  }
+}
+
+// ── TIME AGO ──────────────────────────────────────────────────────────────────
+function timeAgo(date) {
+  const seconds = Math.floor((new Date() - date) / 1000);
+  if(seconds < 60) return 'just now';
+  const minutes = Math.floor(seconds / 60);
+  if(minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if(hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if(days < 7) return `${days}d ago`;
+  return date.toLocaleDateString();
+}
+
+// ── START LOUNGE WHEN TAB IS OPENED ──────────────────────────────────────────
+const _origMobSwitchTab = mob_switchTab;
+// Patch mob_switchTab to start listener when Lounge is opened
+const _patchedSwitchTab = function(tab) {
+  _origMobSwitchTab(tab);
+  if(tab === 'community'){
+    markLoungeSeen();
+    if(!loungeRequestsUnsub) startLoungeListener();
+  }
+};
+// Re-bind nav buttons with patched version
+document.getElementById('mobNavLibrary').onclick  = () => _patchedSwitchTab('library');
+document.getElementById('mobNavHome').onclick      = () => _patchedSwitchTab('home');
+document.getElementById('mobNavCommunity').onclick = () => _patchedSwitchTab('community');
+document.getElementById('mobNavSettings').onclick  = () => _patchedSwitchTab('settings');
+
+// Start listener after auth so badge shows up even before Lounge is opened
+// (done inside onAuthStateChanged after loadLibrary)
+  
 renderAll();
 </script>
 </body>
