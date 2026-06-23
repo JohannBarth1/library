@@ -2794,6 +2794,7 @@ function measureParagraphMargins(container){
 }
   
 function findPageEnd(textNodes, startNodeIdx, startOffset, containerTop, viewportH, pageTopPx){
+  const staging = document.getElementById('readerStagingContainer');
   let lastGoodNodeIdx = startNodeIdx;
   let lastGoodOffset = startOffset;
 
@@ -2872,8 +2873,7 @@ function computePageBreaksV2(container){
       }catch(e){ pageTopPx = 0; }
     }
 
-    const result = findPageEnd(
-      const staging = document.getElementById('readerStagingContainer');
+const result = findPageEnd(
       textNodes, curNodeIdx, curOffset,
       containerTop, viewportH, pageTopPx
     );
