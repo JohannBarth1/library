@@ -2816,7 +2816,14 @@ const range = document.createRange();
     if(!rects.length) continue;
     const bottom = rects[rects.length-1].bottom - containerTop;
 
-    const lineH = readerFontSize * 1.9 + (staging._avgParaMargin || 0);
+    // Count block elements between start and current position
+    const rangeForCount = document.createRange();
+    rangeForCount.setStart(textNodes[startNodeIdx], startOffset);
+    rangeForCount.setEnd(node, len);
+    const frag = rangeForCount.cloneContents();
+    const blockCount = frag.querySelectorAll('p, h1, h2, h3, h4, h5, h6, div').length;
+    const marginBuffer = (staging?._avgParaMargin || 0) * Math.max(1, blockCount * 0.5);
+    const lineH = readerFontSize * 1.9 + marginBuffer;
 
     if(bottom - pageTopPx <= viewportH - lineH){
       lastGoodNodeIdx = i;
