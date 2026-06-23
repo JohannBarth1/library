@@ -1295,8 +1295,7 @@ async function loadLibrary() {
     const pubQ = query(
       collection(db, 'books'),
       where('visibility', '==', 'public'),
-      orderBy('createdAt', 'desc'),
-      limit(50)
+      orderBy('createdAt', 'desc')
     );
     const sharedQ = query(
       collection(db, 'books'),
