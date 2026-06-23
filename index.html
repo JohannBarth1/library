@@ -2279,9 +2279,9 @@ function exitMobSelectMode(){
 }
 
 function renderMobLibrarySelectMode(){
-  grid.classList.add('select-mode');
   const books = getMobLibBooks();
   const grid = document.getElementById('mobGridLibrary');
+  grid.classList.add('select-mode');
   grid.innerHTML = books.map(b => {
     const isComm = communityLib.some(x => x.id === b.id);
     const isSelected = mobSelectedIds.has(b.id);
@@ -2697,7 +2697,6 @@ async function readCurrentBook(){
     if(!staging){
       staging = document.createElement('div');
       staging.id = 'readerStagingContainer';
-      staging.style.cssText = 'position:absolute;left:-9999px;top:0;visibility:hidden;pointer-events:none;';
       document.getElementById('readerOverlay').appendChild(staging);
     }
     const saved = loadReadingProgress(book.id);
@@ -2917,16 +2916,6 @@ function renderChapterPaged(bodyHtml){
     const fixedH = overlay.clientHeight - actualToolbarH - settingsH;
     outer.style.height = fixedH + 'px';
 
-    // Size the staging container to match the page slice exactly
-    const staging = document.getElementById('readerStagingContainer');
-    // Force a layout flush before reading width, to ensure overlay is fully painted
-    const outerW = outer.getBoundingClientRect().width;
-    staging.style.width = outerW + 'px';
-    staging.style.height = fixedH + 'px';
-    staging._usableHeight = fixedH;
-    staging.style.fontSize = readerFontSize + 'px';
-    staging.innerHTML = bodyHtml;
-
     console.log('overlay:', overlay.clientHeight, 
             'toolbar:', actualToolbarH || toolbarH,
             'settings:', settingsH,
@@ -3077,12 +3066,6 @@ function recalcReaderHeight(){
   const settingsH = settingsBar.classList.contains('open') ? settingsBar.offsetHeight : 0;
   const fixedH = overlay.clientHeight - actualToolbarH - settingsH;
   outer.style.height = fixedH + 'px';
-
-  const staging = document.getElementById('readerStagingContainer');
-  if(!staging || !staging.innerHTML) return;
-  staging.style.width = outer.clientWidth + 'px';
-  staging.style.height = fixedH + 'px';
-  staging._usableHeight = fixedH;
 
   readerPageBreaks = computePageBreaksV2(staging);
   readerPageCount = readerPageBreaks.length;
