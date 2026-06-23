@@ -2784,13 +2784,19 @@ function getTextNodeSequence(container){
 function measureParagraphMargins(container){
   const paras = container.querySelectorAll('p, h1, h2, h3, h4, h5, h6');
   let totalMargin = 0;
+  let maxMargin = 0;
   let count = 0;
   paras.forEach(el => {
     const style = getComputedStyle(el);
-    totalMargin += parseFloat(style.marginTop) + parseFloat(style.marginBottom);
+    const margin = parseFloat(style.marginTop) + parseFloat(style.marginBottom);
+    totalMargin += margin;
+    if(margin > maxMargin) maxMargin = margin;
     count++;
   });
-  return count ? totalMargin / count : 0;
+  if(!count) return 0;
+  const avg = totalMargin / count;
+  // Weight toward max to catch worst-case paragraph/heading spacing
+  return (avg + maxMargin) / 2;
 }
   
 function findPageEnd(textNodes, startNodeIdx, startOffset, containerTop, viewportH, pageTopPx){
