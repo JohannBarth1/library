@@ -1302,25 +1302,27 @@ async function loadLibrary() {
       where('allowedUsers', 'array-contains', currentUser.uid)
     );
 
-    const [mySnap, pubSnap, sharedSnap] = await Promise.all([
-      getDocs(myQ),
-      getDocs(pubQ),
-      getDocs(sharedQ)
-    ]);
-
+    // Load and render my books immediately
+    const mySnap = await getDocs(myQ);
     library = mySnap.docs.map(d => ({ id: d.id, ...d.data() }));
-
-    const pubBooks = pubSnap.docs
-      .map(d => ({ id: d.id, ...d.data() }));
-
-    const sharedBooks = sharedSnap.docs
-      .map(d => ({ id: d.id, ...d.data() }))
-      .filter(b => b.ownerId !== currentUser.uid);
-
-    communityLib = dedupe([...pubBooks, ...sharedBooks]);
-
     hideLoading();
     renderAll();
+
+    // Load public and shared in background without blocking UI
+    Promise.all([getDocs(pubQ), getDocs(sharedQ)]).then(([pubSnap, sharedSnap]) => {
+      const pubBooks = pubSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+      const sharedBooks = sharedSnap.docs
+        .map(d => ({ id: d.id, ...d.data() }))
+        .filter(b => b.ownerId !== currentUser.uid);
+      communityLib = dedupe([...pubBooks, ...sharedBooks]);
+      renderAll();
+      renderMobHome();
+      renderDeskHome();
+    }).catch(e => {
+      console.warn('Background load failed:', e);
+      showToast('Could not load public library');
+    });
+
   } catch (e) {
     hideLoading();
     showToast('Error loading library');
