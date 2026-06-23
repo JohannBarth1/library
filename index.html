@@ -2780,6 +2780,19 @@ function getTextNodeSequence(container){
 // Given a start position in the text-node sequence, binary-searches
 // for the furthest character offset whose rendered bottom edge still
 // sits within viewportH pixels below pageTopPx.
+
+function measureParagraphMargins(container){
+  const paras = container.querySelectorAll('p, h1, h2, h3, h4, h5, h6');
+  let totalMargin = 0;
+  let count = 0;
+  paras.forEach(el => {
+    const style = getComputedStyle(el);
+    totalMargin += parseFloat(style.marginTop) + parseFloat(style.marginBottom);
+    count++;
+  });
+  return count ? totalMargin / count : 0;
+}
+  
 function findPageEnd(textNodes, startNodeIdx, startOffset, containerTop, viewportH, pageTopPx){
   let lastGoodNodeIdx = startNodeIdx;
   let lastGoodOffset = startOffset;
@@ -2796,7 +2809,7 @@ const range = document.createRange();
     if(!rects.length) continue;
     const bottom = rects[rects.length-1].bottom - containerTop;
 
-    const lineH = readerFontSize * 1.9;
+    const lineH = readerFontSize * 1.9 + (staging._avgParaMargin || 0);
 
     if(bottom - pageTopPx <= viewportH - lineH){
       lastGoodNodeIdx = i;
@@ -2860,6 +2873,7 @@ function computePageBreaksV2(container){
     }
 
     const result = findPageEnd(
+      const staging = document.getElementById('readerStagingContainer');
       textNodes, curNodeIdx, curOffset,
       containerTop, viewportH, pageTopPx
     );
@@ -2945,6 +2959,8 @@ function renderChapterPaged(bodyHtml){
                       + parseFloat(getComputedStyle(staging).paddingBottom);
     staging._usableHeight = fixedH - stagingPadV;
     staging.innerHTML = bodyHtml;
+    const avgParaMargin = measureParagraphMargins(staging);
+    staging._avgParaMargin = avgParaMargin;
 
     console.log('overlay:', overlay.clientHeight,
       'toolbar:', actualToolbarH,
