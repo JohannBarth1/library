@@ -247,7 +247,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
   position: absolute;
   inset: 0;
   overflow: hidden;
-  padding: 1.8rem clamp(1rem,5vw,4rem);
+  padding: 0.3rem clamp(1rem,5vw,4rem);
   line-height: 1.9;
   font-family: 'Lato', sans-serif;
   will-change: opacity, transform;
@@ -2933,7 +2933,7 @@ function renderChapterPaged(bodyHtml){
     staging.style.height = fixedH + 'px';
     staging.style.fontSize = readerFontSize + 'px';
     staging.style.lineHeight = '1.9';
-    staging.style.padding = '1.8rem clamp(1rem,5vw,4rem)';
+    staging.style.padding = '0.3rem clamp(1rem,5vw,4rem)';
     staging.style.boxSizing = 'border-box';
     const stagingPadV = parseFloat(getComputedStyle(staging).paddingTop)
                       + parseFloat(getComputedStyle(staging).paddingBottom);
