@@ -19,7 +19,7 @@
   --gold:#c8952a; --gold2:#e8b84b; --teal:#2a7c8a; --teal-light:#e1f2f5;
   --teal-dark:#1e5f6a; --rust:#b84c1a; --light-blue:#d8e8f0; --border:#c8d8e4;
   --muted:#7a8a9a; --panel:#f0f5f8; --danger:#a02828;
-  --header-h:60px; --mob-nav-h:48px; --filter-w:220px;
+  --header-h:60px; --mob-nav-h:54px; --filter-w:220px;
 }
 *{box-sizing:border-box;margin:0;padding:0;}
 html,body{height:100%;max-width:100vw;overflow-x:hidden;}
@@ -798,6 +798,121 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
   pointer-events: none;
 }
 
+  /* ── CHAT ── */
+.chat-message {
+  display: flex;
+  gap: .5rem;
+  align-items: flex-end;
+  max-width: 85%;
+}
+.chat-message.mine {
+  align-self: flex-end;
+  flex-direction: row-reverse;
+}
+.chat-message.theirs {
+  align-self: flex-start;
+}
+.chat-bubble {
+  padding: .45rem .7rem;
+  border-radius: 16px;
+  font-size: .85rem;
+  line-height: 1.5;
+  word-break: break-word;
+  position: relative;
+}
+.chat-message.mine .chat-bubble {
+  background: var(--teal);
+  color: #fff;
+  border-radius: 16px 16px 4px 16px;
+}
+.chat-message.theirs .chat-bubble {
+  background: var(--warm-white);
+  border: 1px solid var(--border);
+  color: var(--navy2);
+  border-radius: 16px 16px 16px 4px;
+}
+.chat-avatar {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.chat-avatar-initials {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--navy2);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: .55rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.chat-message.mine .chat-avatar-initials {
+  background: var(--teal);
+}
+.chat-meta {
+  font-size: .6rem;
+  color: var(--muted);
+  margin-top: 2px;
+  white-space: nowrap;
+}
+.chat-message.mine .chat-meta {
+  text-align: right;
+}
+.chat-message.theirs .chat-meta {
+  text-align: left;
+}
+.chat-author {
+  font-size: .62rem;
+  font-weight: 700;
+  color: var(--teal);
+  margin-bottom: 2px;
+}
+.chat-message.mine .chat-author {
+  display: none;
+}
+.chat-delete {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: .6rem;
+  color: rgba(255,255,255,.5);
+  padding: 0 .2rem;
+  opacity: 0;
+  transition: opacity .15s;
+  position: absolute;
+  top: 2px;
+  left: -20px;
+}
+.chat-message.mine .chat-bubble:hover .chat-delete {
+  opacity: 1;
+}
+.chat-date-divider {
+  text-align: center;
+  font-size: .62rem;
+  color: var(--muted);
+  font-weight: 700;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  padding: .4rem 0;
+  position: relative;
+}
+.chat-date-divider::before, .chat-date-divider::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  width: 30%;
+  height: 1px;
+  background: var(--border);
+}
+.chat-date-divider::before { left: 0; }
+.chat-date-divider::after { right: 0; }
+
 /* ── RESPONSIVE ── */
 @media(max-width:768px){
   .filter-sidebar{display:none;}
@@ -995,8 +1110,9 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
       </div>
       <!-- Tabs -->
       <div style="display:flex;border-bottom:1px solid var(--border);background:var(--warm-white);flex-shrink:0">
-        <button class="lounge-tab active" data-lounge-tab="requests" style="flex:1;padding:.5rem;font-family:'Lato',sans-serif;font-size:.68rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--teal);background:none;border:none;border-bottom:2px solid var(--teal);cursor:pointer">Book Requests</button>
-        <button class="lounge-tab" data-lounge-tab="news" style="flex:1;padding:.5rem;font-family:'Lato',sans-serif;font-size:.68rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);background:none;border:none;border-bottom:2px solid transparent;cursor:pointer">News Clips</button>
+        <button class="lounge-tab active" data-lounge-tab="requests" style="flex:1;padding:.5rem;font-family:'Lato',sans-serif;font-size:.68rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--teal);background:none;border:none;border-bottom:2px solid var(--teal);cursor:pointer">Requests</button>
+        <button class="lounge-tab" data-lounge-tab="chat" style="flex:1;padding:.5rem;font-family:'Lato',sans-serif;font-size:.68rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);background:none;border:none;border-bottom:2px solid transparent;cursor:pointer">Chat</button>
+        <button class="lounge-tab" data-lounge-tab="news" style="flex:1;padding:.5rem;font-family:'Lato',sans-serif;font-size:.68rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);background:none;border:none;border-bottom:2px solid transparent;cursor:pointer">News</button>
       </div>
       <!-- Requests list -->
       <div id="loungeRequestsPanel" style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch">
@@ -1004,6 +1120,14 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
           <button class="btn-action" style="background:var(--teal);color:var(--gold);border-color:var(--teal);padding:.35rem .8rem;font-size:.72rem" id="btnNewRequest">+ Request Book</button>
         </div>
         <div id="loungeRequestsList" style="padding:.4rem .8rem .8rem"></div>
+      </div>
+      <!-- Chat panel -->
+      <div id="loungeChatPanel" style="display:none;flex:1;overflow:hidden;flex-direction:column;display:none">
+        <div id="loungeChatMessages" style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:.8rem;display:flex;flex-direction:column;gap:.5rem"></div>
+        <div style="padding:.5rem .8rem;border-top:1px solid var(--border);background:var(--warm-white);display:flex;gap:.4rem;align-items:center;flex-shrink:0">
+          <input class="lounge-comment-input" type="text" id="chatInput" placeholder="Say something…" style="font-size:1rem"/>
+          <button class="lounge-comment-send" id="chatSendBtn">➤</button>
+        </div>
       </div>
       <!-- News panel -->
       <div id="loungeNewsPanel" style="display:none;flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:.8rem">
@@ -4668,6 +4792,162 @@ document.getElementById('mobNavSettings').onclick  = () => _patchedSwitchTab('se
 
 // Start listener after auth so badge shows up even before Lounge is opened
 // (done inside onAuthStateChanged after loadLibrary)
+
+
+  // ── LOUNGE CHAT ───────────────────────────────────────────────────────────────
+
+let chatUnsub = null;
+let chatLastSeen = parseInt(localStorage.getItem('elib_chat_seen') || '0');
+
+function startChatListener() {
+  if(chatUnsub) return;
+  const q = query(
+    collection(db, 'lounge_chat'),
+    orderBy('createdAt', 'asc'),
+    limit(100)
+  );
+  chatUnsub = onSnapshot(q, snap => {
+    const messages = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    renderChatMessages(messages);
+    updateChatBadge(messages);
+  }, e => console.warn('Chat listener:', e));
+}
+
+function stopChatListener() {
+  if(chatUnsub){ chatUnsub(); chatUnsub = null; }
+}
+
+function updateChatBadge(messages) {
+  const newest = messages.reduce((max, m) => {
+    const t = m.createdAt?.toMillis?.() || 0;
+    return t > max ? t : max;
+  }, 0);
+  const unread = messages.filter(m =>
+    (m.createdAt?.toMillis?.() || 0) > chatLastSeen &&
+    m.authorId !== currentUser?.uid
+  ).length;
+
+  // Combine with lounge request unread count for the badge
+  const total = loungeUnreadCount + unread;
+  const existing = document.querySelector('.lounge-badge');
+  if(existing) existing.remove();
+  if(total > 0){
+    const badge = document.createElement('div');
+    badge.className = 'lounge-badge';
+    badge.textContent = total > 9 ? '9+' : total;
+    document.getElementById('mobNavCommunity').appendChild(badge);
+  }
+}
+
+function markChatSeen() {
+  chatLastSeen = Date.now();
+  localStorage.setItem('elib_chat_seen', chatLastSeen);
+}
+
+function renderChatMessages(messages) {
+  const container = document.getElementById('loungeChatMessages');
+  if(!container) return;
+
+  if(!messages.length){
+    container.innerHTML = `<div style="text-align:center;padding:3rem 1rem;color:var(--muted)">
+      <div style="font-size:2rem;opacity:.2;margin-bottom:.8rem">💬</div>
+      <div style="font-size:.88rem">No messages yet — say hello!</div>
+    </div>`;
+    return;
+  }
+
+  let lastDate = null;
+  container.innerHTML = messages.map(m => {
+    const isMine = m.authorId === currentUser?.uid;
+    const initials = (m.authorName || '?').split(' ').map(w => w[0]).join('').toUpperCase().slice(0,2);
+    const date = m.createdAt?.toDate?.() || new Date();
+    const dateStr = date.toLocaleDateString(undefined, { weekday:'long', month:'short', day:'numeric' });
+    const timeStr = date.toLocaleTimeString(undefined, { hour:'2-digit', minute:'2-digit' });
+
+    let divider = '';
+    if(dateStr !== lastDate){
+      lastDate = dateStr;
+      divider = `<div class="chat-date-divider">${dateStr}</div>`;
+    }
+
+    const avatarHtml = m.authorPhoto
+      ? `<img class="chat-avatar" src="${m.authorPhoto}" alt=""/>`
+      : `<div class="chat-avatar-initials">${initials}</div>`;
+
+    return `${divider}<div class="chat-message ${isMine ? 'mine' : 'theirs'}">
+      ${avatarHtml}
+      <div>
+        ${!isMine ? `<div class="chat-author">${esc(m.authorName?.split(' ')[0] || 'Unknown')}</div>` : ''}
+        <div class="chat-bubble">
+          ${isMine ? `<button class="chat-delete" data-delete-chat="${m.id}">✕</button>` : ''}
+          ${esc(m.text)}
+        </div>
+        <div class="chat-meta">${timeStr}</div>
+      </div>
+    </div>`;
+  }).join('');
+
+  // Bind delete buttons
+  container.querySelectorAll('[data-delete-chat]').forEach(btn => {
+    btn.addEventListener('click', () => deleteChatMessage(btn.dataset.deleteChat));
+  });
+
+  // Scroll to bottom
+  container.scrollTop = container.scrollHeight;
+}
+
+async function sendChatMessage() {
+  const input = document.getElementById('chatInput');
+  if(!input) return;
+  const text = input.value.trim();
+  if(!text) return;
+  input.value = '';
+  try {
+    await addDoc(collection(db, 'lounge_chat'), {
+      text,
+      authorId: currentUser.uid,
+      authorName: currentUser.displayName || currentUser.email,
+      authorPhoto: currentUser.photoURL || null,
+      createdAt: serverTimestamp(),
+    });
+  } catch(e) {
+    showToast('Failed to send: ' + e.message);
+    console.error(e);
+  }
+}
+
+async function deleteChatMessage(msgId) {
+  if(!confirm('Delete this message?')) return;
+  try {
+    await deleteDoc(doc(db, 'lounge_chat', msgId));
+  } catch(e) {
+    showToast('Delete failed: ' + e.message);
+  }
+}
+
+// Bind send button and enter key
+document.getElementById('chatSendBtn')?.addEventListener('click', sendChatMessage);
+document.getElementById('chatInput')?.addEventListener('keydown', e => {
+  if(e.key === 'Enter') sendChatMessage();
+});
+
+// Patch tab switching to handle chat panel and listener
+document.querySelectorAll('.lounge-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    const which = tab.dataset.loungeTab;
+    document.getElementById('loungeChatPanel').style.display = which === 'chat' ? 'flex' : 'none';
+    if(which === 'chat'){
+      startChatListener();
+      markChatSeen();
+      // Scroll to bottom after render
+      setTimeout(() => {
+        const c = document.getElementById('loungeChatMessages');
+        if(c) c.scrollTop = c.scrollHeight;
+      }, 100);
+    }
+    if(which === 'news') loadNewsClips();
+  });
+});
   
 renderAll();
 </script>
