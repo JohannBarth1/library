@@ -2790,12 +2790,13 @@ function findPageEnd(textNodes, startNodeIdx, startOffset, containerTop, viewpor
     if(!rects.length) continue;
     const bottom = rects[rects.length-1].bottom - containerTop;
 
-    if(bottom - pageTopPx <= viewportH){
-      // Whole node fits — record it and keep going
-      lastGoodNodeIdx = i;
-      lastGoodOffset = len;
-      continue;
-    }
+    const lineH = readerFontSize * 1.9; // matches line-height: 1.9
+        if(bottom - pageTopPx <= viewportH - lineH){
+          // Whole node fits — record it and keep going
+          lastGoodNodeIdx = i;
+          lastGoodOffset = len;
+          continue;
+        }
 
     // This node overflows partway through — binary search the exact offset
     let lo = testFrom, hi = len;
@@ -2808,7 +2809,7 @@ function findPageEnd(textNodes, startNodeIdx, startOffset, containerTop, viewpor
       if(!rs.length){ lo = mid; continue; }
       const b = rs[rs.length-1].bottom - containerTop;
 
-      if(b - pageTopPx <= viewportH){
+      if(b - pageTopPx <= viewportH - lineH){
         lo = mid;
       } else {
         hi = mid - 1;
