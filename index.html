@@ -990,9 +990,8 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
   <div class="mob-panel" id="mobPanelCommunity">
     <div style="display:flex;flex-direction:column;height:100%;overflow:hidden">
       <!-- Header -->
-      <div style="padding:.7rem 1rem .5rem;background:var(--warm-white);border-bottom:1px solid var(--border);flex-shrink:0;display:flex;align-items:center;justify-content:space-between">
+      <div style="padding:.7rem 1rem .5rem;background:var(--warm-white);border-bottom:1px solid var(--border);flex-shrink:0">
         <div style="font-family:'Playfair Display',serif;font-size:1.1rem;color:var(--navy2)">🛋️ The Lounge</div>
-        <button class="btn-action" style="background:var(--teal);color:var(--gold);border-color:var(--teal);padding:.35rem .8rem;font-size:.72rem" id="btnNewRequest">+ Request Book</button>
       </div>
       <!-- Tabs -->
       <div style="display:flex;border-bottom:1px solid var(--border);background:var(--warm-white);flex-shrink:0">
@@ -1001,7 +1000,10 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
       </div>
       <!-- Requests list -->
       <div id="loungeRequestsPanel" style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch">
-        <div id="loungeRequestsList" style="padding:.8rem"></div>
+        <div style="display:flex;justify-content:flex-end;padding:.8rem .8rem .2rem">
+          <button class="btn-action" style="background:var(--teal);color:var(--gold);border-color:var(--teal);padding:.35rem .8rem;font-size:.72rem" id="btnNewRequest">+ Request Book</button>
+        </div>
+        <div id="loungeRequestsList" style="padding:.4rem .8rem .8rem"></div>
       </div>
       <!-- News panel -->
       <div id="loungeNewsPanel" style="display:none;flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:.8rem">
@@ -1371,7 +1373,7 @@ import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/fireba
 import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut }
   from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
 import { getFirestore, collection, addDoc, getDocs, getDoc, doc,
-         query, where, orderBy, updateDoc, deleteDoc, serverTimestamp, setDoc, Timestamp, limit }
+         query, where, orderBy, updateDoc, deleteDoc, serverTimestamp, setDoc, Timestamp, limit, onSnapshot }
   from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 import { getStorage, ref as storageRef, uploadBytes, getDownloadURL, getBytes }
   from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js';
