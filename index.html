@@ -2822,7 +2822,7 @@ const range = document.createRange();
     rangeForCount.setEnd(node, len);
     const frag = rangeForCount.cloneContents();
     const blockCount = frag.querySelectorAll('p, h1, h2, h3, h4, h5, h6, div').length;
-    const marginBuffer = (staging?._avgParaMargin || 0) * Math.max(1, blockCount * 0.5);
+    const marginBuffer = (staging?._avgParaMargin || 0) * Math.max(1, blockCount * 0.7);
     const lineH = readerFontSize * 1.9 + marginBuffer;
 
     if(bottom - pageTopPx <= viewportH - lineH){
