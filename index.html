@@ -4395,14 +4395,12 @@ function renderLoungeRequests(requests) {
         </div>` : ''}
       </div>
       <div class="lounge-card-body">
-        <div class="lounge-card-title">📚 ${esc(r.title)}</div>
+        <div style="font-size:.58rem;letter-spacing:.18em;text-transform:uppercase;color:var(--gold);font-weight:700;margin-bottom:.3rem">📚 Book Request</div>
+        <div class="lounge-card-title">${esc(r.title)}</div>
         ${r.description ? `<div class="lounge-card-desc">${esc(r.description)}</div>` : ''}
       </div>
-      <div class="lounge-card-footer">
-        <div class="lounge-comment-count">💬 ${r.commentCount || 0} comment${r.commentCount !== 1 ? 's' : ''}</div>
-        <button class="btn-action btn-checkout" style="padding:.25rem .65rem;font-size:.68rem;border-radius:20px" data-toggle-comments="${r.id}">
-          Reply
-        </button>
+      <div class="lounge-card-footer" data-toggle-comments="${r.id}" style="cursor:pointer">
+        <div class="lounge-comment-count">💬 ${r.commentCount || 0} comment${r.commentCount !== 1 ? 's' : ''} · tap to reply</div>
       </div>
       <div class="lounge-comments" id="loungeComments_${r.id}"></div>
     </div>`;
