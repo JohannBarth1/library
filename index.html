@@ -2865,9 +2865,15 @@ function computePageBreaksV2(container){
 
   while(true){
     let pageTopPx;
-    if(isFirstPage){
-      pageTopPx = 0;
+if(isFirstPage){
       isFirstPage = false;
+      try{
+        const firstRange = document.createRange();
+        firstRange.setStart(textNodes[0], 0);
+        firstRange.setEnd(textNodes[0], Math.min(1, textNodes[0].textContent.length));
+        const firstRects = firstRange.getClientRects();
+        pageTopPx = firstRects.length ? (firstRects[0].top - containerTop) : 0;
+      }catch(e){ pageTopPx = 0; }
     } else {
       try{
         const topRange = document.createRange();
