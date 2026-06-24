@@ -1064,16 +1064,6 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
   border-color: rgba(200,149,42,.4);
   color: #e8d8a0;
 }
-.campfire-bubble::after {
-  content: '';
-  position: absolute;
-  width: 8px;
-  height: 8px;
-  background: inherit;
-  border: inherit;
-  border-top: none;
-  border-left: none;
-}
 .campfire-fire {
   position: absolute;
   bottom: 60px;
@@ -1338,7 +1328,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
   </div>
 
 <!-- CHAT OVERLAY -->
-<div id="loungeChatOverlay" style="position:fixed;top:0;left:0;right:0;bottom:var(--mob-nav-h);background:#0d0805;z-index:30;display:flex;flex-direction:column;opacity:0;pointer-events:none;transition:opacity .3s;">
+<div id="loungeChatOverlay" style="position:fixed;top:0;left:0;right:0;bottom:var(--mob-nav-h);background:#0d0805;z-index:100;display:flex;flex-direction:column;opacity:0;pointer-events:none;transition:opacity .3s;">
   <!-- Header -->
   <div style="background:#1e1610;border-bottom:1px solid #5a3a18;padding:8px 12px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;">
     <div style="font-family:'Playfair Display',serif;font-size:14px;color:#c8a060;">🛋️ Lounge chat</div>
@@ -5717,22 +5707,28 @@ function renderCampfire() {
     const bx = Math.cos(angle + Math.PI) * 48;
     const by = Math.sin(angle + Math.PI) * 48;
 
-    const bubbleHtml = lastMsg
-      ? `<div class="campfire-bubble ${isMe?'mine':''}"
-            style="left:${bx > 0 ? 'auto' : bx-150+'px'};right:${bx > 0 ? (-bx-150)+'px':'auto'};
-                   top:${by}px;width:140px;">
-           ${esc(lastMsg.text)}
-           <div style="font-size:7.5px;opacity:.4;margin-top:3px;">
-             ${lastMsg.createdAt?.toDate?.()?timeAgo(lastMsg.createdAt.toDate()):''}</div>
-         </div>`
-      : '';
+const bubbleHtml = lastMsg
+  ? `<div class="campfire-bubble ${isMe?'mine':''}"
+        style="position:absolute;left:50%;transform:translateX(-50%);
+               bottom:calc(100% + 8px);width:140px;text-align:center;">
+         <div style="font-size:8.5px;font-weight:700;opacity:.55;margin-bottom:3px;
+                     color:${isMe?'#c8a060':'#a89070'};">
+           ${isMe?'You':esc(person.displayName?.split(' ')[0]||'?')}
+         </div>
+         ${esc(lastMsg.text)}
+         <div style="font-size:7.5px;opacity:.35;margin-top:3px;">
+           ${lastMsg.createdAt?.toDate?.()?timeAgo(lastMsg.createdAt.toDate()):''}</div>
+       </div>`
+  : '';
 
-    wrap.innerHTML = `
-      <div style="position:relative;">
-        ${avatarInner}
-        ${bubbleHtml}
-      </div>
-      <div class="campfire-name">${isMe?'You':esc(person.displayName?.split(' ')[0]||'?')}</div>`;
+wrap.innerHTML = `
+  <div style="position:relative;display:flex;flex-direction:column;align-items:center;">
+    <div style="position:relative;">
+      ${bubbleHtml}
+      ${avatarInner}
+    </div>
+    <div class="campfire-name">${isMe?'You':esc(person.displayName?.split(' ')[0]||'?')}</div>
+  </div>`;
 
     // Tap own avatar → edit reading status
     if(isMe) {
