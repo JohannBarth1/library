@@ -1723,6 +1723,7 @@ onAuthStateChanged(auth,async user=>{
       startNotifListener(),
       loungeJoinPassive(),
       startPresenceHeartbeat(),
+      startPresenceListener(),
     ]).then(()=>{
       renderMobHome();
       renderDeskHome();
@@ -5724,10 +5725,23 @@ window.showBookById = showBookById;
 // ── ENTRY POINT: open lounge tab ──────────────────────────────────────────────
 function openLoungePanel() {
   buildLoungeTextures();
+  startPresenceListener();
   startRequestsListener();
   startNotifListener();
   markNotifsRead();
   updateLoungeBadge();
+  // Force shelf re-render in case listener fired before panel was visible
+  const shelf = document.getElementById('loungeShelf');
+  if(shelf && shelf.innerHTML.includes('Nobody')) {
+    // Listener already ran but shelf wasn't in DOM yet — re-read presence
+    getDocs(collection(db, 'lounge_presence')).then(snap => {
+      const now = Date.now();
+      const people = snap.docs
+        .map(d => d.data())
+        .filter(p => (p.expiresAt?.toMillis?.() || 0) > now);
+      renderLoungeShelf(people);
+    }).catch(() => {});
+  }
 }
 
 async function deleteNewsClip(clipId, path) {
