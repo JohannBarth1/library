@@ -5046,16 +5046,21 @@ async function loungeJoinPassive() {
   const expires = new Date(Date.now() + 30 * 60 * 1000);
   const savedBook = localStorage.getItem('elib_reading_status') || '';
   const savedBookId = localStorage.getItem('elib_reading_book_id') || null;
-  await setDoc(doc(db, 'lounge_presence', currentUser.uid), {
-    userId: currentUser.uid,
-    displayName: currentUser.displayName || currentUser.email,
-    photoURL: currentUser.photoURL || null,
-    currentlyReading: savedBook,
-    currentlyReadingBookId: savedBookId,
-    status: 'browsing',
-    expiresAt: Timestamp.fromDate(expires),
-    lastSeen: serverTimestamp(),
-  });
+  try {
+    await setDoc(doc(db, 'lounge_presence', currentUser.uid), {
+      userId: currentUser.uid,
+      displayName: currentUser.displayName || currentUser.email,
+      photoURL: currentUser.photoURL || null,
+      currentlyReading: savedBook,
+      currentlyReadingBookId: savedBookId,
+      status: 'browsing',
+      expiresAt: Timestamp.fromDate(expires),
+      lastSeen: serverTimestamp(),
+    });
+    console.log('loungeJoinPassive: wrote presence doc for', currentUser.uid);
+  } catch(e) {
+    console.error('loungeJoinPassive failed:', e);
+  }
 }
 
 // Called when lounge tab opens — upgrades to 'active'
@@ -5204,10 +5209,12 @@ document.addEventListener('visibilitychange', () => {
 function startPresenceListener() {
   if(loungePresenceUnsub) return;
   loungePresenceUnsub = onSnapshot(collection(db, 'lounge_presence'), snap => {
+    console.log('Presence snap — docs:', snap.docs.length, snap.docs.map(d => d.data()));
     const now = Date.now();
     const people = snap.docs
       .map(d => d.data())
       .filter(p => (p.expiresAt?.toMillis?.() || 0) > now);
+    console.log('After expiry filter:', people.length, people);
     renderLoungeShelf(people);
   }, e => console.warn('Presence listener:', e));
 }
