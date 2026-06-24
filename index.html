@@ -1214,23 +1214,9 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
       <div id="loungeTapHint" style="text-align:center;font-size:8px;color:rgba(200,149,42,.25);letter-spacing:.15em;text-transform:uppercase;margin-top:6px;transition:opacity .3s;">tap here to open chat</div>
     </div>
 
-    <!-- KNOCK + IM HERE row -->
-    <div style="background:#2c1f0e;border-top:1px solid #5a3a18;border-bottom:2px solid #4a2a10;padding:6px 10px;display:flex;gap:6px;align-items:center;flex-shrink:0;">
-      <button id="loungeImHereBtn" onclick="toggleLoungePresence()" style="background:rgba(200,149,42,.12);border:1px solid rgba(200,149,42,.35);color:#c8a060;font-family:'Lato',sans-serif;font-size:9px;font-weight:700;letter-spacing:.07em;padding:5px 10px;border-radius:20px;cursor:pointer;white-space:nowrap;">🔔 I'm here</button>
-    <div id="loungeImHereBook" style="display:none;align-items:center;gap:4px;position:relative;">
-      <input id="loungeReadingInput" placeholder="currently reading…"
-        style="font-size:9px;background:#1e1610;border:1px solid #5a3a18;border-radius:10px;
-               padding:3px 8px;color:#d8c8a0;outline:none;width:140px;font-family:'Lato',sans-serif;"
-        autocomplete="off"/>
-      <button onclick="saveReadingStatus()"
-        style="font-size:8px;background:#c8a060;border:none;border-radius:10px;
-               padding:3px 7px;color:#2c1f0e;font-weight:700;cursor:pointer;flex-shrink:0;">✓</button>
-      <div id="loungeReadingDropdown"
-        style="display:none;position:absolute;top:100%;left:0;right:24px;margin-top:3px;
-               background:#1e1610;border:1px solid #5a3a18;border-radius:6px;
-               overflow:hidden;z-index:50;box-shadow:0 4px 12px rgba(0,0,0,.4);"></div>
-    </div>
-      <button id="loungeKnockBtn" onclick="loungeKnock()" style="margin-left:auto;background:rgba(200,149,42,.85);border:none;border-radius:20px;padding:5px 10px;font-family:'Lato',sans-serif;font-size:9px;font-weight:700;letter-spacing:.07em;color:#2c1f0e;cursor:pointer;white-space:nowrap;">🔔 Knock</button>
+    <!-- KNOCK -->
+    <div style="background:#2c1f0e;border-top:1px solid #5a3a18;border-bottom:2px solid #4a2a10;padding:6px 10px;display:flex;justify-content:flex-end;align-items:center;flex-shrink:0;">
+      <button id="loungeKnockBtn" onclick="loungeKnock()" style="background:rgba(200,149,42,.85);border:none;border-radius:20px;padding:5px 14px;font-family:'Lato',sans-serif;font-size:9px;font-weight:700;letter-spacing:.07em;color:#2c1f0e;cursor:pointer;white-space:nowrap;">🔔 Knock</button>
     </div>
 
     <!-- TABLE: scrollable notes + news area -->
@@ -1708,6 +1694,7 @@ let loungeUnreadKnocks = 0;
 
 // Reader state
 let readerZip=null,readerSpine=[],readerChapter=0,readerOpfBase='',readerBookId = null;
+let lastOpenedBookId = null;
 let readerPage = 0;
 let readerPageCount = 1;
 let readerFontSize=parseInt(localStorage.getItem('elib_reader_font')||'17');
@@ -1728,6 +1715,8 @@ onAuthStateChanged(auth,async user=>{
     checkUrlHash();
     showDeskHome();
     checkAdminStatus();
+    loungeJoinPassive();
+    startPresenceHeartbeat();
     // Load secondary data in background — doesn't block UI
     Promise.all([
       loadUserRatings(),
@@ -2174,6 +2163,7 @@ async function renderDeskHome(){
 // ── BOOK DETAIL ───────────────────────────────────────────────────────────────
 function showBookById(id){
   const book=[...library,...communityLib].find(b=>b.id===id);if(!book)return;
+  lastOpenedBookId = id;
   currentId=id;
   if(book.allowedUsers?.length>0) loadAllUsers();
   const isMine=book.ownerId===currentUser?.uid;
@@ -5012,7 +5002,12 @@ const _origMobSwitchTab = mob_switchTab;
 // Patch mob_switchTab to start listener when Lounge is opened
 document.getElementById('mobNavLibrary').onclick  = () => mob_switchTab('library');
 document.getElementById('mobNavHome').onclick      = () => mob_switchTab('home');
-document.getElementById('mobNavCommunity').onclick = () => { mob_switchTab('community'); openLoungePanel(); markNotifsRead(); };
+document.getElementById('mobNavCommunity').onclick = () => {
+  mob_switchTab('community');
+  openLoungePanel();
+  markNotifsRead();
+  loungeSetActive();
+};
 document.getElementById('mobNavSettings').onclick  = () => mob_switchTab('settings');
 
 // ── LOUNGE ────────────────────────────────────────────────────────────────────
@@ -5041,36 +5036,157 @@ function buildLoungeTextures() {
 }
 
 // ── PRESENCE ──────────────────────────────────────────────────────────────────
-async function enterLounge() {
+let loungeReadingBookId = null;
+let loungeStatus = 'browsing'; // 'active' | 'browsing'
+let loungeHeartbeatTimer = null;
+
+// Called on login — puts user in presence as 'browsing'
+async function loungeJoinPassive() {
   if(!currentUser) return;
+  const expires = new Date(Date.now() + 30 * 60 * 1000);
+  const savedBook = localStorage.getItem('elib_reading_status') || '';
+  const savedBookId = localStorage.getItem('elib_reading_book_id') || null;
+  await setDoc(doc(db, 'lounge_presence', currentUser.uid), {
+    userId: currentUser.uid,
+    displayName: currentUser.displayName || currentUser.email,
+    photoURL: currentUser.photoURL || null,
+    currentlyReading: savedBook,
+    currentlyReadingBookId: savedBookId,
+    status: 'browsing',
+    expiresAt: Timestamp.fromDate(expires),
+    lastSeen: serverTimestamp(),
+  });
+}
+
+// Called when lounge tab opens — upgrades to 'active'
+async function loungeSetActive() {
+  if(!currentUser) return;
+  loungeStatus = 'active';
   const expires = new Date(Date.now() + 30 * 60 * 1000);
   await setDoc(doc(db, 'lounge_presence', currentUser.uid), {
     userId: currentUser.uid,
     displayName: currentUser.displayName || currentUser.email,
     photoURL: currentUser.photoURL || null,
     currentlyReading: localStorage.getItem('elib_reading_status') || '',
+    currentlyReadingBookId: localStorage.getItem('elib_reading_book_id') || null,
+    status: 'active',
     expiresAt: Timestamp.fromDate(expires),
     lastSeen: serverTimestamp(),
+  }, { merge: true });
+}
+
+// Heartbeat — refreshes TTL every 5 minutes
+function startPresenceHeartbeat() {
+  if(loungeHeartbeatTimer) return;
+  loungeHeartbeatTimer = setInterval(async () => {
+    if(!currentUser) return;
+    const expires = new Date(Date.now() + 30 * 60 * 1000);
+    await setDoc(doc(db, 'lounge_presence', currentUser.uid), {
+      status: loungeStatus,
+      expiresAt: Timestamp.fromDate(expires),
+      lastSeen: serverTimestamp(),
+    }, { merge: true }).catch(() => {});
+  }, 5 * 60 * 1000);
+}
+
+async function saveReadingStatus(bookId, bookTitle) {
+  const title = bookTitle || document.getElementById('loungeReadingInput')?.value.trim() || '';
+  const id = bookId || loungeReadingBookId || null;
+  localStorage.setItem('elib_reading_status', title);
+  localStorage.setItem('elib_reading_book_id', id || '');
+  if(currentUser) {
+    await setDoc(doc(db, 'lounge_presence', currentUser.uid), {
+      currentlyReading: title,
+      currentlyReadingBookId: id,
+      lastSeen: serverTimestamp(),
+    }, { merge: true });
+  }
+  document.getElementById('loungeReadingSaveSheet')?.remove();
+  showToast('Reading status updated ✓');
+}
+
+function showReadingEditSheet() {
+  const existing = document.getElementById('loungeReadingSaveSheet');
+  if(existing) { existing.remove(); return; }
+
+  // Default to last opened book if nothing saved
+  const savedTitle = localStorage.getItem('elib_reading_status') || '';
+  const savedBookId = localStorage.getItem('elib_reading_book_id') || '';
+  const defaultBook = !savedTitle && lastOpenedBookId
+    ? [...library, ...communityLib].find(b => b.id === lastOpenedBookId)
+    : null;
+
+  const sheet = document.createElement('div');
+  sheet.id = 'loungeReadingSaveSheet';
+  sheet.style.cssText = `position:fixed;bottom:var(--mob-nav-h);left:0;right:0;
+    background:#1e1610;border-top:2px solid #5a3a18;padding:10px 12px;
+    z-index:50;display:flex;gap:6px;align-items:center;
+    box-shadow:0 -4px 16px rgba(0,0,0,.4);`;
+  sheet.innerHTML = `
+    <div style="position:relative;flex:1;">
+      <input id="loungeReadingInput" placeholder="What are you reading?"
+        value="${esc(defaultBook ? defaultBook.title : savedTitle)}"
+        autocomplete="off"
+        style="width:100%;font-size:14px;background:#2c1f0e;border:1px solid #5a3a18;
+               border-radius:10px;padding:6px 10px;color:#d8c8a0;outline:none;
+               font-family:'Lato',sans-serif;"/>
+      <div id="loungeReadingDropdown"
+        style="display:none;position:absolute;bottom:100%;left:0;right:0;margin-bottom:3px;
+               background:#1e1610;border:1px solid #5a3a18;border-radius:6px;
+               overflow:hidden;z-index:60;box-shadow:0 -4px 12px rgba(0,0,0,.4);
+               max-height:180px;overflow-y:auto;"></div>
+    </div>
+    <button onclick="saveReadingStatus()"
+      style="font-size:11px;background:#c8a060;border:none;border-radius:10px;
+             padding:6px 10px;color:#2c1f0e;font-weight:700;cursor:pointer;flex-shrink:0;">✓ Save</button>
+    <button onclick="document.getElementById('loungeReadingSaveSheet')?.remove()"
+      style="font-size:13px;background:none;border:none;color:#c8a060;opacity:.5;
+             cursor:pointer;flex-shrink:0;padding:0 4px;">✕</button>`;
+  document.body.appendChild(sheet);
+
+  if(defaultBook) {
+    loungeReadingBookId = defaultBook.id;
+  } else {
+    loungeReadingBookId = savedBookId || null;
+  }
+
+  const input = document.getElementById('loungeReadingInput');
+  input.focus();
+  input.setSelectionRange(input.value.length, input.value.length);
+
+  input.addEventListener('input', () => {
+    loungeReadingBookId = null;
+    const q = input.value.toLowerCase().trim();
+    const dropdown = document.getElementById('loungeReadingDropdown');
+    if(!q) { dropdown.style.display = 'none'; return; }
+    const matches = [...library, ...communityLib]
+      .filter((b,i,a) => a.findIndex(x=>x.id===b.id)===i)
+      .filter(b => b.title?.toLowerCase().includes(q) || b.author?.toLowerCase().includes(q))
+      .slice(0, 6);
+    if(!matches.length) { dropdown.style.display = 'none'; return; }
+    dropdown.style.display = 'block';
+    dropdown.innerHTML = matches.map(b => `
+      <div data-bookid="${b.id}" data-title="${esc(b.title)}"
+        style="padding:6px 10px;cursor:pointer;border-bottom:1px solid #2c1f0e;font-size:11px;color:#d8c8a0;">
+        <div style="font-weight:700;">${esc(b.title)}</div>
+        <div style="opacity:.5;font-size:10px;">${esc(b.author||'')}</div>
+      </div>`).join('');
+    dropdown.querySelectorAll('[data-bookid]').forEach(el => {
+      el.addEventListener('mousedown', e => {
+        e.preventDefault();
+        input.value = el.dataset.title;
+        loungeReadingBookId = el.dataset.bookid;
+        dropdown.style.display = 'none';
+      });
+    });
   });
-}
 
-async function leaveLounge() {
-  if(!currentUser) return;
-  try { await deleteDoc(doc(db, 'lounge_presence', currentUser.uid)); } catch(e){}
-}
-
-function startPresenceCountdown() {
-  clearTimeout(loungePresenceTimer);
-  loungePresenceTimer = setTimeout(async () => {
-    await leaveLounge();
-    loungeVisible = false;
-    updateImHereBtn();
-  }, 30 * 60 * 1000);
-}
-
-function cancelPresenceCountdown() {
-  clearTimeout(loungePresenceTimer);
-  loungePresenceTimer = null;
+  input.addEventListener('blur', () => {
+    setTimeout(() => {
+      const dd = document.getElementById('loungeReadingDropdown');
+      if(dd) dd.style.display = 'none';
+    }, 150);
+  });
 }
 
 // Visibility API — start countdown when app hidden, cancel when returned
@@ -5085,100 +5201,6 @@ document.addEventListener('visibilitychange', () => {
   }
 });
 
-async function toggleLoungePresence() {
-  if(!currentUser) return;
-  loungeVisible = !loungeVisible;
-  if(loungeVisible) {
-    await enterLounge();
-    cancelPresenceCountdown();
-    document.getElementById('loungeImHereBook').style.display = 'flex';
-    const saved = localStorage.getItem('elib_reading_status') || '';
-    const savedBookId = localStorage.getItem('elib_reading_book_id') || '';
-    document.getElementById('loungeReadingInput').value = saved;
-    loungeReadingBookId = savedBookId || null;
-    initReadingInput();
-  } else {
-    await leaveLounge();
-    document.getElementById('loungeImHereBook').style.display = 'none';
-  }
-  updateImHereBtn();
-}
-
-function updateImHereBtn() {
-  const btn = document.getElementById('loungeImHereBtn');
-  if(!btn) return;
-  if(loungeVisible) {
-    btn.style.background = '#c8a060';
-    btn.style.color = '#2c1f0e';
-    btn.textContent = '✓ You\'re in';
-  } else {
-    btn.style.background = 'rgba(200,149,42,.12)';
-    btn.style.color = '#c8a060';
-    btn.textContent = '🔔 I\'m here';
-  }
-}
-
-let loungeReadingBookId = null;
-
-function initReadingInput() {
-  const input = document.getElementById('loungeReadingInput');
-  if(!input) return;
-
-  input.addEventListener('input', () => {
-    loungeReadingBookId = null; // clear book link when user types freely
-    const q = input.value.toLowerCase().trim();
-    const dropdown = document.getElementById('loungeReadingDropdown');
-    if(!q || !library.length) { dropdown.style.display = 'none'; return; }
-
-    const matches = library
-      .filter(b => b.title?.toLowerCase().includes(q) || b.author?.toLowerCase().includes(q))
-      .slice(0, 5);
-
-    if(!matches.length) { dropdown.style.display = 'none'; return; }
-
-    dropdown.style.display = 'block';
-    dropdown.innerHTML = matches.map(b => `
-      <div data-bookid="${b.id}" data-title="${esc(b.title)}"
-        style="padding:5px 9px;cursor:pointer;border-bottom:1px solid #5a3a18;
-               font-size:9px;color:#d8c8a0;line-height:1.4;">
-        <div style="font-weight:700;">${esc(b.title)}</div>
-        <div style="opacity:.5;">${esc(b.author||'')}</div>
-      </div>`).join('');
-
-    dropdown.querySelectorAll('[data-bookid]').forEach(el => {
-      el.addEventListener('click', () => {
-        input.value = el.dataset.title;
-        loungeReadingBookId = el.dataset.bookid;
-        dropdown.style.display = 'none';
-      });
-    });
-  });
-
-  input.addEventListener('blur', () => {
-    setTimeout(() => {
-      const dropdown = document.getElementById('loungeReadingDropdown');
-      if(dropdown) dropdown.style.display = 'none';
-    }, 150);
-  });
-}
-
-async function saveReadingStatus() {
-  const input = document.getElementById('loungeReadingInput');
-  if(!input) return;
-  const val = input.value.trim();
-  localStorage.setItem('elib_reading_status', val);
-  localStorage.setItem('elib_reading_book_id', loungeReadingBookId || '');
-  if(loungeVisible && currentUser) {
-    await updateDoc(doc(db, 'lounge_presence', currentUser.uid), {
-      currentlyReading: val,
-      currentlyReadingBookId: loungeReadingBookId || null,
-      lastSeen: serverTimestamp(),
-    });
-  }
-  document.getElementById('loungeReadingDropdown').style.display = 'none';
-  showToast(loungeReadingBookId ? '📖 Status saved with book link ✓' : 'Status updated ✓');
-}
-
 function startPresenceListener() {
   if(loungePresenceUnsub) return;
   loungePresenceUnsub = onSnapshot(collection(db, 'lounge_presence'), snap => {
@@ -5190,41 +5212,107 @@ function startPresenceListener() {
   }, e => console.warn('Presence listener:', e));
 }
 
-function renderLoungeShelf(people) {
+  function renderLoungeShelf(people) {
   const shelf = document.getElementById('loungeShelf');
   if(!shelf) return;
   if(!people.length) {
-    shelf.innerHTML = `<div style="font-size:.78rem;color:rgba(200,149,42,.35);align-self:center;font-style:italic;">Nobody here yet…</div>`;
+    shelf.innerHTML = `<div style="font-size:.78rem;color:rgba(200,149,42,.35);
+      align-self:center;font-style:italic;">Nobody here yet…</div>`;
     return;
   }
+
   const colors = ['#2a7c8a','#5a48b0','#b84c1a','#276749','#c8952a'];
+
   shelf.innerHTML = people.map((p, i) => {
-    const initials = (p.displayName||'?').split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
     const isMe = p.userId === currentUser?.uid;
-    const expires = p.expiresAt?.toMillis?.() || 0;
-    const minsLeft = Math.round((expires - Date.now()) / 60000);
-    const isFading = minsLeft < 10;
+    const isActive = p.status === 'active';
+    const isBrowsing = p.status === 'browsing';
+    const initials = (p.displayName||'?').split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
+
+    const dotColor = isActive ? '#4ade80' : '#6b7280';
+    const avatarBorder = isActive ? '#c8a060' : '#4b5563';
+    const avatarBg = isBrowsing && !isActive ? '#4b5563' : colors[i % colors.length];
+    const nameColor = isActive ? '#c8a060' : '#6b7280';
+    const opacity = isBrowsing && !isActive ? '.6' : '1';
+
     const avatarHtml = p.photoURL
-      ? `<img src="${p.photoURL}" style="width:34px;height:34px;border-radius:50%;object-fit:cover;border:2px solid #c8a060;"/>`
-      : `<div style="width:34px;height:34px;border-radius:50%;background:${colors[i%colors.length]};border:2px solid #c8a060;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;">${initials}</div>`;
-    return `<div style="display:flex;flex-direction:column;align-items:center;gap:2px;position:relative;">
+      ? `<img src="${p.photoURL}" style="width:34px;height:34px;border-radius:50%;
+           object-fit:cover;border:2px solid ${avatarBorder};
+           ${isBrowsing && !isActive ? 'filter:grayscale(1);' : ''}"/>`
+      : `<div style="width:34px;height:34px;border-radius:50%;background:${avatarBg};
+           border:2px solid ${avatarBorder};display:flex;align-items:center;
+           justify-content:center;font-size:11px;font-weight:700;color:#fff;
+           opacity:${opacity};">${initials}</div>`;
+
+    const bookBadge = p.currentlyReading
+      ? `<div data-booklink="${p.currentlyReadingBookId||''}"
+            style="font-size:7.5px;background:rgba(245,158,11,.15);color:#f59e0b;
+                   border:1px solid rgba(245,158,11,${p.currentlyReadingBookId?'.4':'.25'});
+                   border-radius:3px;padding:1px 4px;max-width:64px;overflow:hidden;
+                   text-overflow:ellipsis;white-space:nowrap;
+                   ${p.currentlyReadingBookId?'cursor:pointer;text-decoration:underline dotted;':''}"
+            title="${p.currentlyReadingBookId?'Tap to view book':''}">
+            ${esc(p.currentlyReading)}</div>`
+      : '';
+
+    const statusLabel = isMe
+      ? `<div style="font-size:7px;color:#c8a060;opacity:.5;cursor:pointer;"
+             onclick="event.stopPropagation();showReadingEditSheet()">✎ edit</div>`
+      : `<div style="font-size:7px;color:${nameColor};opacity:.5;">
+             ${isActive ? 'in lounge' : 'browsing'}</div>`;
+
+    return `<div class="presence-avatar-wrap" data-userid="${p.userId}"
+        data-isme="${isMe}" style="display:flex;flex-direction:column;
+        align-items:center;gap:2px;position:relative;cursor:pointer;">
       ${avatarHtml}
-      <div style="position:absolute;top:0;right:0;width:9px;height:9px;border-radius:50%;background:${isFading?'#f59e0b':'#4ade80'};border:2px solid #2e1c08;"></div>
-      <div style="font-size:8px;color:#c8a060;opacity:.7;">${isMe?'You':esc(p.displayName?.split(' ')[0]||'?')}</div>
-      ${p.currentlyReading ? (p.currentlyReadingBookId
-  ? `<div onclick="showBookById('${p.currentlyReadingBookId}')"
-      style="font-size:7.5px;background:rgba(245,158,11,.15);color:#f59e0b;
-             border:1px solid rgba(245,158,11,.4);border-radius:3px;padding:1px 4px;
-             max-width:64px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
-             cursor:pointer;text-decoration:underline dotted;"
-      title="Tap to view this book">${esc(p.currentlyReading)}</div>`
-  : `<div style="font-size:7.5px;background:rgba(245,158,11,.15);color:#f59e0b;
-             border:1px solid rgba(245,158,11,.25);border-radius:3px;padding:1px 4px;
-             max-width:64px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
-             ${esc(p.currentlyReading)}</div>`) : ''}
-      ${isFading&&!isMe?`<div style="font-size:7px;color:#f59e0b;opacity:.6;">${minsLeft}m left</div>`:''}
+      <div style="position:absolute;top:0;right:0;width:9px;height:9px;border-radius:50%;
+                  background:${dotColor};border:2px solid #2e1c08;"></div>
+      <div style="font-size:8px;color:${nameColor};">
+        ${isMe ? 'You' : esc(p.displayName?.split(' ')[0]||'?')}</div>
+      ${bookBadge}
+      ${statusLabel}
     </div>`;
   }).join('');
+
+  // Tap own avatar → edit reading status
+  shelf.querySelectorAll('.presence-avatar-wrap[data-isme="true"]').forEach(el => {
+    el.addEventListener('click', e => {
+      if(e.target.closest('[onclick]')) return;
+      showReadingEditSheet();
+    });
+  });
+
+  // Tap book badge with bookId → open book
+  shelf.querySelectorAll('[data-booklink]').forEach(el => {
+    if(!el.dataset.booklink) return;
+    el.addEventListener('click', e => {
+      e.stopPropagation();
+      showBookById(el.dataset.booklink);
+    });
+  });
+
+  // Tap other user's avatar → targeted knock
+  shelf.querySelectorAll('.presence-avatar-wrap[data-isme="false"]').forEach(el => {
+    el.addEventListener('click', async e => {
+      if(e.target.closest('[data-booklink]')) return;
+      const userId = el.dataset.userid;
+      const person = people.find(p => p.userId === userId);
+      if(!person) return;
+      // Show targeted knock for just this person
+      if(!confirm(`Knock on ${person.displayName?.split(' ')[0]}'s door?`)) return;
+      try {
+        await addDoc(collection(db, 'lounge_notifications'), {
+          toUserId: userId,
+          fromUserId: currentUser.uid,
+          fromName: currentUser.displayName || currentUser.email,
+          type: 'knock',
+          read: false,
+          createdAt: serverTimestamp(),
+        });
+        showToast(`🔔 Knocked on ${person.displayName?.split(' ')[0]}'s door!`);
+      } catch(e) { showToast('Failed: ' + e.message); }
+    });
+  });
 }
 
 // ── KNOCK ─────────────────────────────────────────────────────────────────────
@@ -5573,7 +5661,8 @@ async function loungeHaveIt(reqId, title) {
 
   // ── EXPOSE LOUNGE FUNCTIONS TO GLOBAL SCOPE ──────────────────────────────────
 window.loungeWallTap = loungeWallTap;
-window.toggleLoungePresence = toggleLoungePresence;
+window.saveReadingStatus = saveReadingStatus;
+window.showReadingEditSheet = showReadingEditSheet;
 window.saveReadingStatus = saveReadingStatus;
 window.loungeKnock = loungeKnock;
 window.closeLoungeChat = closeLoungeChat;
@@ -5628,7 +5717,6 @@ window.showBookById = showBookById;
 // ── ENTRY POINT: open lounge tab ──────────────────────────────────────────────
 function openLoungePanel() {
   buildLoungeTextures();
-  startPresenceListener();
   startRequestsListener();
   startNotifListener();
   markNotifsRead();
