@@ -3655,8 +3655,24 @@ async function inlineImagesInHtml(html,base,chapterHref){
     return `${pre}data-src="${src}"`;
   });
   const imgRe=/data-src="([^"]+)"/gi;const found=[];let m;
-  while((m=imgRe.exec(html))!==null){const src=m[1];if(src.startsWith('data:')||src.startsWith('http'))continue;found.push({orig:src,candidates:[base+chapterDir+src,base+src,chapterDir+src,src]});}
-  for(const p of found){try{let blob=null;for(const path of p.candidates){const f=readerZip.file(path);if(f){blob=await f.async('blob');break;}}html=html.replace(new RegExp(`data-src="${p.orig.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')}"`, 'g'),blob?`src="${await blobToDataUrl(blob)}"` :`src=""`);} catch(e){/* skip */}}
+  while((m=imgRe.exec(html))!==null){
+    const src=m[1];
+    if(src.startsWith('data:')||src.startsWith('http'))continue;
+    found.push({
+      orig:src,
+      candidates:[
+        base+chapterDir+src,
+        base+src,
+        chapterDir+src,
+        src,
+        src.replace(/^.*[\\/]/,''),
+        base+'images/'+src.replace(/^.*[\\/]/,''),
+        base+chapterDir+'images/'+src.replace(/^.*[\\/]/,''),
+        'images/'+src.replace(/^.*[\\/]/,''),
+      ]
+    });
+  }
+  for(const p of found){try{let blob=null;for(const path of p.candidates){const f=readerZip.file(path);if(f){blob=await f.async('blob');break;}}html=html.replace(new RegExp(`data-src="${p.orig.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')}"`, 'g'),blob?`src="${await blobToDataUrl(blob)}"` :`src="" style="display:none"`);} catch(e){/* skip */}}
   return html;
 }
 
