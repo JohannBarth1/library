@@ -1729,6 +1729,7 @@ onAuthStateChanged(auth,async user=>{
       loadUserRatings(),
       loadMyCheckouts(),
       loadKoboDevices(),
+      startNotifListener();
     ]).then(()=>{
       renderMobHome();
       renderDeskHome();
