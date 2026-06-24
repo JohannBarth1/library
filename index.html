@@ -1104,6 +1104,47 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
   margin-bottom: 2px;
 }
 
+  /* ── PARCHMENT THEME ── */
+.parchment-page {
+  position: relative;
+  overflow: visible !important;
+}
+.parchment-page::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23noise)' opacity='0.08'/%3E%3C/svg%3E");
+  background-size: 300px 300px;
+  pointer-events: none;
+  z-index: 1;
+  border-radius: inherit;
+}
+.parchment-page::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+  z-index: 3;
+}
+.parchment-fold {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  pointer-events: none;
+  z-index: 4;
+}
+.parchment-shadow {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  border-radius: inherit;
+}
+
 /* ── RESPONSIVE ── */
 @media(max-width:768px){
   .filter-sidebar{display:none;}
@@ -1124,6 +1165,24 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 </style>
 </head>
 <body>
+<svg style="position:absolute;width:0;height:0;overflow:hidden;" aria-hidden="true">
+  <defs>
+    <filter id="parchmentNoise" x="0%" y="0%" width="100%" height="100%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.04 0.06" numOctaves="4" seed="2" stitchTiles="stitch" result="noise"/>
+      <feColorMatrix type="saturate" values="0" in="noise" result="grayNoise"/>
+      <feBlend in="SourceGraphic" in2="grayNoise" mode="multiply" result="blended"/>
+      <feComponentTransfer in="blended">
+        <feFuncR type="linear" slope="0.97" intercept="0.03"/>
+        <feFuncG type="linear" slope="0.94" intercept="0.04"/>
+        <feFuncB type="linear" slope="0.85" intercept="0.05"/>
+      </feComponentTransfer>
+    </filter>
+    <filter id="parchmentEdge" x="-2%" y="-2%" width="104%" height="104%">
+      <feTurbulence type="turbulence" baseFrequency="0.02" numOctaves="3" result="noise" seed="5"/>
+      <feDisplacementMap in="SourceGraphic" in2="noise" scale="6" xChannelSelector="R" yChannelSelector="G"/>
+    </filter>
+  </defs>
+</svg>
 
 <!-- AUTH -->
 <div class="auth-screen" id="authScreen">
@@ -3169,13 +3228,22 @@ document.getElementById('readerSettingsBar').addEventListener('click', e => {
   }
 
   // Theme buttons
-  const themeBtn = e.target.closest('[data-theme]');
-  if(themeBtn){
-    readerTheme = themeBtn.dataset.theme;
-    localStorage.setItem('elib_reader_theme', readerTheme);
-    applyReaderTheme(readerTheme);
-    return;
+const themeBtn = e.target.closest('[data-theme]');
+if(themeBtn){
+  readerTheme = themeBtn.dataset.theme;
+  localStorage.setItem('elib_reader_theme', readerTheme);
+  applyReaderTheme(readerTheme);
+  const pageA = document.getElementById('readerPageA');
+  const pageB = document.getElementById('readerPageB');
+  if(readerTheme === 'sepia'){
+    applyParchmentStyle(pageA, readerPage);
+    applyParchmentStyle(pageB, readerPage + 1);
+  } else {
+    removeParchmentStyle(pageA);
+    removeParchmentStyle(pageB);
   }
+  return;
+}
 
   // Transition buttons
 // Transition buttons
@@ -3535,6 +3603,112 @@ function rangeToHtml(range){
   return div.innerHTML;
 }
 
+function seededRand(seed, idx) {
+  // Simple deterministic pseudo-random from seed + page index
+  const x = Math.sin(seed * 9301 + idx * 49297 + 233720) * 10000;
+  return x - Math.floor(x);
+}
+
+function applyParchmentStyle(el, pageIdx) {
+  const seed = readerChapter * 100 + pageIdx;
+  const r = (i) => seededRand(seed, i);
+
+  // Slightly different background tint per page
+  const hue = 35 + r(0) * 8;
+  const sat = 28 + r(1) * 12;
+  const light = 88 + r(2) * 6;
+  el.style.background = `hsl(${hue},${sat}%,${light}%)`;
+
+  // Apply SVG noise filter
+  el.style.filter = `url(#parchmentNoise)`;
+
+  // Irregular border radii — each corner slightly different
+  const tl = 1 + r(3) * 4;
+  const tr = 1 + r(4) * 5;
+  const br = 2 + r(5) * 4;
+  const bl = 1 + r(6) * 3;
+  el.style.borderRadius = `${tl}px ${tr}px ${br}px ${bl}px`;
+
+  // Edge displacement via outline trick — subtle
+  el.style.outline = `1px solid hsla(${hue},${sat}%,${light - 12}%,0.4)`;
+  el.style.outlineOffset = `${-1 - r(7) * 2}px`;
+
+  // Slight rotation — just a hair, gives organic feel
+  const rot = (r(8) - 0.5) * 0.3;
+  el.style.transform = `rotate(${rot}deg)`;
+
+  // Fold in bottom-right corner
+  addParchmentFold(el, seed);
+
+  // Vignette shadow around edges
+  el.style.boxShadow = `
+    inset 0 0 ${20 + r(9)*15}px rgba(120,80,20,${0.06 + r(10)*0.06}),
+    inset ${r(11)*6-3}px ${r(12)*6-3}px ${10+r(13)*10}px rgba(100,60,10,0.05),
+    0 2px 12px rgba(0,0,0,0.18)
+  `;
+
+  el.classList.add('parchment-page');
+}
+
+function addParchmentFold(el, seed) {
+  const r = (i) => seededRand(seed, i + 20);
+  // Remove old fold
+  el.querySelector('.parchment-fold-el')?.remove();
+
+  const foldSize = 14 + r(0) * 10;
+  const fold = document.createElement('div');
+  fold.className = 'parchment-fold-el';
+  fold.style.cssText = `
+    position:absolute;
+    bottom:0;right:0;
+    width:${foldSize}px;height:${foldSize}px;
+    pointer-events:none;
+    z-index:4;
+    background: linear-gradient(
+      225deg,
+      rgba(255,255,255,0.0) 0%,
+      rgba(255,255,255,0.0) 40%,
+      rgba(200,160,80,0.18) 41%,
+      rgba(240,210,140,0.35) 50%,
+      rgba(180,130,50,0.25) 60%,
+      rgba(140,90,20,0.2) 100%
+    );
+    clip-path: polygon(100% 0%, 100% 100%, 0% 100%);
+    filter: drop-shadow(-2px -2px 3px rgba(0,0,0,0.12));
+  `;
+
+  // Shadow cast by the fold onto the page
+  const shadow = document.createElement('div');
+  shadow.style.cssText = `
+    position:absolute;
+    bottom:${foldSize * 0.15}px;
+    right:${foldSize * 0.15}px;
+    width:${foldSize * 1.1}px;
+    height:${foldSize * 1.1}px;
+    background: radial-gradient(ellipse at bottom right,
+      rgba(0,0,0,0.12) 0%,
+      transparent 70%);
+    pointer-events:none;
+    z-index:3;
+  `;
+
+  el.style.position = 'absolute'; // ensure children can be positioned
+  el.appendChild(shadow);
+  el.appendChild(fold);
+}
+
+function removeParchmentStyle(el) {
+  el.style.background = '';
+  el.style.filter = '';
+  el.style.borderRadius = '';
+  el.style.outline = '';
+  el.style.outlineOffset = '';
+  el.style.transform = '';
+  el.style.boxShadow = '';
+  el.classList.remove('parchment-page');
+  el.querySelector('.parchment-fold-el')?.remove();
+}
+
 function renderChapterPaged(bodyHtml){
   return new Promise(resolve=>{
     const overlay = document.getElementById('readerOverlay');
@@ -3637,6 +3811,8 @@ function goToPage(page, opts={}){
   // Prepare the new page content in the background (B) div
   pageB.innerHTML = extractPageHtml(staging, readerPageBreaks, page);
   pageB.style.fontSize = readerFontSize + 'px';
+  if(readerTheme === 'sepia') applyParchmentStyle(pageB, page);
+  else removeParchmentStyle(pageB);
   pageB.style.opacity = '0';
   pageB.style.transform = `translateX(${direction * 100}%)`;
   pageB.style.transition = 'none';
@@ -3717,6 +3893,8 @@ function recalcReaderHeight(){
   pageA.style.fontSize = readerFontSize + 'px';
   pageA.style.opacity = '1';
   pageA.style.transform = 'translateX(0)';
+  if(readerTheme === 'sepia') applyParchmentStyle(pageA, 0);
+  else removeParchmentStyle(pageA);
   updatePaginationUI();
 }
   
