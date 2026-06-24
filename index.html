@@ -1715,14 +1715,14 @@ onAuthStateChanged(auth,async user=>{
     checkUrlHash();
     showDeskHome();
     checkAdminStatus();
-    loungeJoinPassive();
-    startPresenceHeartbeat();
     // Load secondary data in background — doesn't block UI
     Promise.all([
       loadUserRatings(),
       loadMyCheckouts(),
       loadKoboDevices(),
       startNotifListener(),
+      loungeJoinPassive();
+      startPresenceHeartbeat();
     ]).then(()=>{
       renderMobHome();
       renderDeskHome();
