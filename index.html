@@ -1694,6 +1694,15 @@ let selectMode=false,selectedIds=new Set(),deskView='library';
 let myCheckedOutIds=new Set();
 let koboDevices = [];
 
+let loungePresenceUnsub = null;
+let loungeChatUnsub = null;
+let loungeRequestsUnsub = null;
+let loungeNotifsUnsub = null;
+let loungeVisible = false;
+let loungePresenceTimer = null;
+let loungeUnreadKnocks = 0;
+let chatUnsubActive = null;
+
 // Reader state
 let readerZip=null,readerSpine=[],readerChapter=0,readerOpfBase='',readerBookId = null;
 let readerPage = 0;
@@ -4537,10 +4546,6 @@ function _showKoboSetupModal(device) {
   });
 })();
 
-// ── NEW REQUEST MODAL ─────────────────────────────────────────────────────────
-document.getElementById('btnNewRequest').addEventListener('click', () => {
-  showLoungeRequestModal();
-});
 
 function showLoungeRequestModal(existing) {
   const isEdit = !!existing;
@@ -4740,12 +4745,6 @@ document.getElementById('mobNavSettings').onclick  = () => mob_switchTab('settin
 
 // ── LOUNGE ────────────────────────────────────────────────────────────────────
 
-let loungePresenceUnsub = null;
-let loungeChatUnsub = null;
-let loungeNotifsUnsub = null;
-let loungeVisible = false;
-let loungePresenceTimer = null;
-let loungeUnreadKnocks = 0;
 let loungeChatLastSeen = parseInt(localStorage.getItem('elib_chat_seen') || '0');
 let loungeRequestsLastSeen = parseInt(localStorage.getItem('elib_lounge_seen') || '0');
 
