@@ -5452,11 +5452,6 @@ async function loungeHaveIt(reqId, title) {
   } catch(e) { showToast('Failed: ' + e.message); }
 }
 
-function showLoungeRequestDetail(req) {
-  // Reuse the existing lounge request modal with comments
-  showLoungeRequestModal(req, true);
-}
-
   // ── EXPOSE LOUNGE FUNCTIONS TO GLOBAL SCOPE ──────────────────────────────────
 window.loungeWallTap = loungeWallTap;
 window.toggleLoungePresence = toggleLoungePresence;
