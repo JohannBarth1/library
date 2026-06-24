@@ -4538,12 +4538,6 @@ function _showKoboSetupModal(device) {
 })();
 
 
-  // ── LOUNGE ───────────────────────────────────────────────────────────────────
-
-let loungeRequestsUnsub = null;
-let loungeUnreadCount = 0;
-let loungeLastSeen = parseInt(localStorage.getItem('elib_lounge_seen') || '0');
-
 // ── TABS ─────────────────────────────────────────────────────────────────────
 document.querySelectorAll('.lounge-tab').forEach(tab => {
   tab.addEventListener('click', () => {
@@ -4952,7 +4946,6 @@ document.getElementById('mobNavSettings').onclick  = () => mob_switchTab('settin
 
 let loungePresenceUnsub = null;
 let loungeChatUnsub = null;
-let loungeRequestsUnsub = null;
 let loungeNotifsUnsub = null;
 let loungeVisible = false;
 let loungePresenceTimer = null;
