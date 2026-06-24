@@ -1210,12 +1210,6 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
         <div style="font-size:.78rem;color:rgba(200,149,42,.35);align-self:center;font-style:italic;">Nobody here yet…</div>
       </div>
 
-      <!-- Quote of the day -->
-      <div id="loungeQuoteBar" style="margin-top:8px;border-left:2px solid rgba(200,149,42,.35);padding:4px 8px;">
-        <div style="font-family:'Playfair Display',serif;font-size:10px;font-style:italic;color:rgba(200,149,42,.75);line-height:1.5;" id="loungeQuoteText">Loading quote…</div>
-        <div style="font-size:7.5px;color:rgba(200,149,42,.4);margin-top:2px;" id="loungeQuoteBy"></div>
-      </div>
-
       <!-- Tap hint -->
       <div id="loungeTapHint" style="text-align:center;font-size:8px;color:rgba(200,149,42,.25);letter-spacing:.15em;text-transform:uppercase;margin-top:6px;transition:opacity .3s;">tap here to open chat</div>
     </div>
@@ -4635,10 +4629,20 @@ function showLoungeRequestModal(existing) {
                     line-height:1.3;color:#2c1f0e;margin-bottom:.3rem;">${esc(req.title)}</div>
         ${req.description?`<div style="font-size:.83rem;color:#3a2a1a;opacity:.7;
                     line-height:1.6;">${esc(req.description)}</div>`:''}
-        <div style="font-size:.7rem;opacity:.4;margin-top:.4rem;">
-          ${esc((req.authorName||'').split(' ')[0])} · 
-          ${req.createdAt?.toDate?.()?timeAgo(req.createdAt.toDate()):''}
-        </div>
+      <div style="font-size:.7rem;opacity:.4;margin-top:.4rem;">
+                ${esc((req.authorName||'').split(' ')[0])} · 
+                ${req.createdAt?.toDate?.()?timeAgo(req.createdAt.toDate()):''}
+              </div>
+              ${req.type!=='broadcast'?`
+              <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;">
+                <button onclick="loungeReact('${req.id}')"
+                  style="font-size:11px;background:rgba(0,0,0,.07);border:none;border-radius:20px;
+                         padding:4px 10px;cursor:pointer;">👀 I'm looking for this too</button>
+                <button onclick="loungeHaveIt('${req.id}','${esc(req.title)}')"
+                  style="font-size:11px;background:rgba(74,222,128,.12);border:1px solid rgba(74,222,128,.25);
+                         color:#276749;border-radius:20px;padding:4px 10px;cursor:pointer;border-radius:20px;">
+                  📚 I have it!</button>
+              </div>`:''}
       </div>
       <!-- Comments -->
       <div style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;
@@ -4944,15 +4948,6 @@ document.getElementById('mobNavSettings').onclick  = () => mob_switchTab('settin
 let loungeChatLastSeen = parseInt(localStorage.getItem('elib_chat_seen') || '0');
 let loungeRequestsLastSeen = parseInt(localStorage.getItem('elib_lounge_seen') || '0');
 
-const LOUNGE_QUOTES = [
-  { text: 'A reader lives a thousand lives before he dies.', by: 'George R.R. Martin' },
-  { text: 'Not all those who wander are lost.', by: 'J.R.R. Tolkien' },
-  { text: 'So many books, so little time.', by: 'Frank Zappa' },
-  { text: 'There is no friend as loyal as a book.', by: 'Ernest Hemingway' },
-  { text: 'One must always be careful of books, and what is inside them.', by: 'Cassandra Clare' },
-  { text: 'I am not afraid of storms, for I am learning how to sail my ship.', by: 'Louisa May Alcott' },
-];
-
 // ── WALL TEXTURES (generated once) ───────────────────────────────────────────
 function buildLoungeTextures() {
   const wallTex = document.getElementById('loungeWallTexture');
@@ -4971,12 +4966,6 @@ function buildLoungeTextures() {
       tg.appendChild(d);
     }
   }
-  // Quote
-  const q = LOUNGE_QUOTES[Math.floor(Date.now()/86400000) % LOUNGE_QUOTES.length];
-  const qt = document.getElementById('loungeQuoteText');
-  const qb = document.getElementById('loungeQuoteBy');
-  if(qt) qt.textContent = `"${q.text}"`;
-  if(qb) qb.textContent = `— ${q.by}`;
 }
 
 // ── PRESENCE ──────────────────────────────────────────────────────────────────
@@ -5398,11 +5387,7 @@ async function loadNewsClipsForGrid(requests) {
         <div class="ls-text">${esc(data.title)}</div>
         ${data.description?`<div style="font-size:8px;opacity:.45;margin-top:3px;font-style:italic;">${esc(data.description.slice(0,60))}${data.description.length>60?'…':''}</div>`:''}
         <div class="ls-meta">${esc((data.authorName||'').split(' ')[0])} · ${data.createdAt?.toDate?.()?timeAgo(data.createdAt.toDate()):''}</div>
-        <div class="ls-react">
-          ${commentCount?`<span class="ls-pill">💬 ${commentCount}</span>`:''}
-          <span class="ls-pill" onclick="event.stopPropagation();loungeReact('${data.id}')">👀</span>
-        </div>
-        <div class="ls-haveit" onclick="event.stopPropagation();loungeHaveIt('${data.id}','${esc(data.title)}')">📚 I have it!</div>
+        ${commentCount?`<div style="font-size:7.5px;opacity:.4;margin-top:4px;">💬 ${commentCount} comment${commentCount!==1?'s':''}</div>`:''}
         ${(isMine||isAdmin)?`<div style="display:flex;gap:3px;margin-top:4px;"><button onclick="event.stopPropagation();showLoungeRequestModal({id:'${data.id}',title:'${esc(data.title)}',description:'${esc(data.description||'')}'} )" style="font-size:7px;background:rgba(0,0,0,.08);border:none;border-radius:3px;padding:1px 5px;cursor:pointer;">✎</button><button onclick="event.stopPropagation();deleteRequest('${data.id}')" style="font-size:7px;background:rgba(0,0,0,.08);border:none;border-radius:3px;padding:1px 5px;cursor:pointer;color:#b84c1a;">✕</button></div>`:''}
         </div>`;
     } else {
