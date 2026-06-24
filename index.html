@@ -1721,8 +1721,8 @@ onAuthStateChanged(auth,async user=>{
       loadMyCheckouts(),
       loadKoboDevices(),
       startNotifListener(),
-      loungeJoinPassive();
-      startPresenceHeartbeat();
+      loungeJoinPassive(),
+      startPresenceHeartbeat(),
     ]).then(()=>{
       renderMobHome();
       renderDeskHome();
