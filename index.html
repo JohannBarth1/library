@@ -1237,7 +1237,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
       <!-- New request / news buttons -->
       <div style="display:flex;gap:6px;padding:8px 10px 4px;position:relative;z-index:2;">
         <button onclick="showLoungeRequestModal()" style="font-size:9px;background:rgba(254,243,199,.12);border:1px solid rgba(254,243,199,.25);color:#fef3c7;border-radius:20px;padding:4px 10px;font-family:'Lato',sans-serif;font-weight:700;cursor:pointer;">+ Request</button>
-        <button onclick="document.getElementById('btnUploadNews').click()" style="font-size:9px;background:rgba(250,247,239,.1);border:1px solid rgba(250,247,239,.2);color:#faf7ef;border-radius:20px;padding:4px 10px;font-family:'Lato',sans-serif;font-weight:700;cursor:pointer;">+ News clip</button>
+        <button id="loungeNewsUploadBtn" style="font-size:9px;background:rgba(250,247,239,.1);border:1px solid rgba(250,247,239,.2);color:#faf7ef;border-radius:20px;padding:4px 10px;font-family:'Lato',sans-serif;font-weight:700;cursor:pointer;">+ News clip</button>
       </div>
 
       <!-- Notes grid (requests as stickies, news as papers) -->
@@ -5214,18 +5214,20 @@ function showLoungeRequestDetail(req) {
   showLoungeRequestModal(req, true);
 }
 
-// ── ENTRY POINT: open lounge tab ──────────────────────────────────────────────
-function openLoungePanel() {
-  buildLoungeTextures();
-  startPresenceListener();
-  startRequestsListener();
-  startNotifListener();
-  markNotifsRead();
-  updateLoungeBadge();
-}
+  // ── EXPOSE LOUNGE FUNCTIONS TO GLOBAL SCOPE ──────────────────────────────────
+window.loungeWallTap = loungeWallTap;
+window.toggleLoungePresence = toggleLoungePresence;
+window.saveReadingStatus = saveReadingStatus;
+window.loungeKnock = loungeKnock;
+window.closeLoungeChat = closeLoungeChat;
+window.sendLoungeChat = sendLoungeChat;
+window.showLoungeRequestModal = showLoungeRequestModal;
+window.loungeReact = loungeReact;
+window.loungeHaveIt = loungeHaveIt;
+window.deleteRequest = deleteRequest;
+window.deleteNewsClip = deleteNewsClip;
 
-// ── NEWS CLIPS (reuse existing upload button) ─────────────────────────────────
-document.getElementById('btnUploadNews')?.addEventListener('click', () => {
+  document.getElementById('loungeNewsUploadBtn')?.addEventListener('click', () => {
   const input = document.createElement('input');
   input.type = 'file';
   input.accept = '.pdf,.doc,.docx,.txt,.jpg,.jpeg,.png';
@@ -5241,9 +5243,7 @@ document.getElementById('btnUploadNews')?.addEventListener('click', () => {
       const expires = new Date();
       expires.setDate(expires.getDate() + 30);
       await addDoc(collection(db, 'news_clips'), {
-        title: file.name,
-        url,
-        storagePath: path,
+        title: file.name, url, storagePath: path,
         uploadedBy: currentUser.uid,
         uploaderName: currentUser.displayName || currentUser.email,
         createdAt: serverTimestamp(),
@@ -5260,6 +5260,16 @@ document.getElementById('btnUploadNews')?.addEventListener('click', () => {
   });
   input.click();
 });
+
+// ── ENTRY POINT: open lounge tab ──────────────────────────────────────────────
+function openLoungePanel() {
+  buildLoungeTextures();
+  startPresenceListener();
+  startRequestsListener();
+  startNotifListener();
+  markNotifsRead();
+  updateLoungeBadge();
+}
 
 async function deleteNewsClip(clipId, path) {
   if(!confirm('Remove this clip?')) return;
