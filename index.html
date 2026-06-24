@@ -3657,31 +3657,78 @@ async function readerGoToChapter(idx, startPage=0){
   }
 }
 window.readerGoToChapterGlobal = idx => readerGoToChapter(idx, 0);
-async function inlineImagesInHtml(html,base,chapterHref){
-  const chapterDir=chapterHref&&chapterHref.includes('/')?chapterHref.replace(/\/[^/]+$/,'/'):'';
-  html=html.replace(/(<img[^>]+)src="([^"#"javascript][^"]+)"/gi,(match,pre,src)=>{
-    if(src.startsWith('data:')||src.startsWith('javascript')) return match;
-    return `${pre}data-src="${src}"`;
+async function inlineImagesInHtml(html, base, chapterHref) {
+  const chapterDir = chapterHref && chapterHref.includes('/')
+    ? chapterHref.replace(/\/[^/]+$/, '/') : '';
+
+  // Collect all src values before replacing
+  const found = [];
+  html = html.replace(/(<img[^>]+?)src="([^"]+)"/gi, (match, pre, src) => {
+    if(src.startsWith('data:') || src.startsWith('http') || src.startsWith('javascript'))
+      return match;
+    found.push(src);
+    return `${pre}data-lazysrc="${src}"`;
   });
-  const imgRe=/data-src="([^"]+)"/gi;const found=[];let m;
-  while((m=imgRe.exec(html))!==null){
-    const src=m[1];
-    if(src.startsWith('data:')||src.startsWith('http'))continue;
-    found.push({
-      orig:src,
-      candidates:[
-        base+chapterDir+src,
-        base+src,
-        chapterDir+src,
-        src,
-        src.replace(/^.*[\\/]/,''),
-        base+'images/'+src.replace(/^.*[\\/]/,''),
-        base+chapterDir+'images/'+src.replace(/^.*[\\/]/,''),
-        'images/'+src.replace(/^.*[\\/]/,''),
-      ]
-    });
+
+  // Also catch srcset and other image references
+  html = html.replace(/(<image[^>]+?)href="([^"]+)"/gi, (match, pre, src) => {
+    if(src.startsWith('data:') || src.startsWith('http')) return match;
+    found.push(src);
+    return `${pre}data-lazysrc="${src}"`;
+  });
+
+  function normalizePath(p) {
+    // Resolve ../ and ./ in paths
+    const parts = p.split('/');
+    const resolved = [];
+    for(const part of parts) {
+      if(part === '..') resolved.pop();
+      else if(part !== '.') resolved.push(part);
+    }
+    return resolved.join('/');
   }
-  for(const p of found){try{let blob=null;for(const path of p.candidates){const f=readerZip.file(path);if(f){blob=await f.async('blob');break;}}html=html.replace(new RegExp(`data-src="${p.orig.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')}"`, 'g'),blob?`src="${await blobToDataUrl(blob)}"` :`src="" style="display:none"`);} catch(e){/* skip */}}
+
+  const unique = [...new Set(found)];
+
+  for(const src of unique) {
+    const filename = src.replace(/^.*[\\/]/, '');
+    const candidates = [
+      normalizePath(chapterDir + src),
+      normalizePath(base + src),
+      normalizePath(base + chapterDir + src),
+      src,
+      filename,
+      normalizePath(base + 'images/' + filename),
+      normalizePath(base + chapterDir + 'images/' + filename),
+      'images/' + filename,
+      normalizePath(base + 'Images/' + filename),
+    ].filter((v, i, a) => a.indexOf(v) === i); // dedupe
+
+    let blob = null;
+    for(const path of candidates) {
+      const f = readerZip.file(path);
+      if(f) { blob = await f.async('blob'); break; }
+    }
+
+    // Also try case-insensitive search through zip files
+    if(!blob) {
+      const lower = filename.toLowerCase();
+      const zipFiles = Object.keys(readerZip.files);
+      const match = zipFiles.find(k => k.toLowerCase().endsWith('/' + lower) || k.toLowerCase() === lower);
+      if(match) blob = await readerZip.file(match).async('blob');
+    }
+
+    const replacement = blob
+      ? `src="${await blobToDataUrl(blob)}"`
+      : `src="" style="display:none"`;
+
+    // Replace data-lazysrc back with real src
+    html = html.replace(
+      new RegExp(`data-lazysrc="${src.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}"`, 'g'),
+      replacement
+    );
+  }
+
   return html;
 }
 
