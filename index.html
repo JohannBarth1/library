@@ -1008,6 +1008,112 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .lc-msg.mine .lc-bubble{background:rgba(200,149,42,.2);color:#e8d8a0;border-radius:12px 3px 12px 12px;}
 .lc-time{font-size:7.5px;color:rgba(200,149,42,.3);margin-top:2px;}
 
+  /* ── CAMPFIRE CHAT ── */
+.campfire-avatar-wrap {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  transition: all .3s ease;
+}
+.campfire-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid #5a3a18;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 700;
+  color: #fff;
+  flex-shrink: 0;
+  position: relative;
+}
+.campfire-avatar img {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+.campfire-name {
+  font-size: 8px;
+  color: rgba(200,149,42,.6);
+  white-space: nowrap;
+}
+.campfire-bubble {
+  position: absolute;
+  background: #2c1f0e;
+  border: 1px solid #5a3a18;
+  border-radius: 12px;
+  padding: 6px 9px;
+  font-size: 11px;
+  color: #d8c8a0;
+  line-height: 1.4;
+  max-width: 150px;
+  word-break: break-word;
+  box-shadow: 0 2px 8px rgba(0,0,0,.4);
+  animation: bubbleIn .2s ease;
+  pointer-events: none;
+  z-index: 2;
+}
+.campfire-bubble.mine {
+  background: rgba(200,149,42,.2);
+  border-color: rgba(200,149,42,.4);
+  color: #e8d8a0;
+}
+.campfire-bubble::after {
+  content: '';
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  background: inherit;
+  border: inherit;
+  border-top: none;
+  border-left: none;
+}
+.campfire-fire {
+  position: absolute;
+  bottom: 60px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 28px;
+  animation: flicker 1.5s ease-in-out infinite alternate;
+  filter: drop-shadow(0 0 8px rgba(255,140,0,.6));
+  pointer-events: none;
+  user-select: none;
+}
+@keyframes flicker {
+  0% { transform: translateX(-50%) scale(1) rotate(-1deg); }
+  100% { transform: translateX(-50%) scale(1.08) rotate(1deg); }
+}
+@keyframes bubbleIn {
+  from { opacity: 0; transform: scale(.85); }
+  to   { opacity: 1; transform: scale(1); }
+}
+/* Floating message toast */
+.floating-msg-bubble {
+  background: rgba(30,22,16,.92);
+  border: 1px solid #5a3a18;
+  border-radius: 10px;
+  padding: 7px 10px;
+  margin-bottom: 6px;
+  font-size: 11px;
+  color: #d8c8a0;
+  line-height: 1.4;
+  box-shadow: 0 2px 10px rgba(0,0,0,.4);
+  cursor: pointer;
+  animation: bubbleIn .2s ease;
+}
+.floating-msg-author {
+  font-size: 8px;
+  color: #c8a060;
+  font-weight: 700;
+  margin-bottom: 2px;
+}
+
 /* ── RESPONSIVE ── */
 @media(max-width:768px){
   .filter-sidebar{display:none;}
@@ -1210,25 +1316,18 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
         <div style="font-size:.78rem;color:rgba(200,149,42,.35);align-self:center;font-style:italic;">Nobody here yet…</div>
       </div>
 
-      <!-- Tap hint -->
-      <div id="loungeTapHint" style="text-align:center;font-size:8px;color:rgba(200,149,42,.25);letter-spacing:.15em;text-transform:uppercase;margin-top:6px;transition:opacity .3s;">tap here to open chat</div>
-    </div>
 
     <!-- KNOCK -->
-    <div style="background:#2c1f0e;border-top:1px solid #5a3a18;border-bottom:2px solid #4a2a10;padding:6px 10px;display:flex;justify-content:flex-end;align-items:center;flex-shrink:0;">
-      <button id="loungeKnockBtn" onclick="loungeKnock()" style="background:rgba(200,149,42,.85);border:none;border-radius:20px;padding:5px 14px;font-family:'Lato',sans-serif;font-size:9px;font-weight:700;letter-spacing:.07em;color:#2c1f0e;cursor:pointer;white-space:nowrap;">🔔 Knock</button>
+    <div style="background:#2c1f0e;border-top:1px solid #5a3a18;border-bottom:2px solid #4a2a10;padding:6px 10px;display:flex;gap:6px;align-items:center;flex-shrink:0;">
+      <button onclick="showLoungeRequestModal()" style="font-size:9px;background:rgba(254,243,199,.12);border:1px solid rgba(254,243,199,.25);color:#fef3c7;border-radius:20px;padding:4px 10px;font-family:'Lato',sans-serif;font-weight:700;cursor:pointer;">+ Request</button>
+      <button id="loungeBroadcastBtn" onclick="showBroadcastModal()" style="display:none;font-size:9px;background:rgba(248,113,113,.15);border:1px solid rgba(248,113,113,.35);color:#fca5a5;border-radius:20px;padding:4px 10px;font-family:'Lato',sans-serif;font-weight:700;cursor:pointer;">📢 Broadcast</button>
+      <button id="loungeNewsUploadBtn" style="font-size:9px;background:rgba(250,247,239,.1);border:1px solid rgba(250,247,239,.2);color:#faf7ef;border-radius:20px;padding:4px 10px;font-family:'Lato',sans-serif;font-weight:700;cursor:pointer;">+ News clip</button>
+      <button onclick="openLoungeChat()" style="margin-left:auto;font-size:9px;background:rgba(200,149,42,.85);border:none;border-radius:20px;padding:5px 14px;font-family:'Lato',sans-serif;font-weight:700;letter-spacing:.07em;color:#2c1f0e;cursor:pointer;white-space:nowrap;">💬 Chat</button>
     </div>
 
     <!-- TABLE: scrollable notes + news area -->
     <div style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;background:#3d2810;position:relative;border-top:3px solid #5a3a18;">
       <div id="loungeTableGrain" style="position:absolute;inset:0;pointer-events:none;overflow:hidden;opacity:.1;"></div>
-
-      <!-- New request / news buttons -->
-      <div style="display:flex;gap:6px;padding:8px 10px 4px;position:relative;z-index:2;">
-        <button onclick="showLoungeRequestModal()" style="font-size:9px;background:rgba(254,243,199,.12);border:1px solid rgba(254,243,199,.25);color:#fef3c7;border-radius:20px;padding:4px 10px;font-family:'Lato',sans-serif;font-weight:700;cursor:pointer;">+ Request</button>
-        <button id="loungeBroadcastBtn" onclick="showBroadcastModal()" style="display:none;font-size:9px;background:rgba(248,113,113,.15);border:1px solid rgba(248,113,113,.35);color:#fca5a5;border-radius:20px;padding:4px 10px;font-family:'Lato',sans-serif;font-weight:700;cursor:pointer;">📢 Broadcast</button>
-        <button id="loungeNewsUploadBtn" style="font-size:9px;background:rgba(250,247,239,.1);border:1px solid rgba(250,247,239,.2);color:#faf7ef;border-radius:20px;padding:4px 10px;font-family:'Lato',sans-serif;font-weight:700;cursor:pointer;">+ News clip</button>
-      </div>
 
       <!-- Notes grid (requests as stickies, news as papers) -->
       <div id="loungeNotesGrid" style="padding:4px 8px 16px;position:relative;z-index:2;display:flex;flex-wrap:wrap;gap:0;align-items:flex-end;min-height:320px;">
@@ -1238,20 +1337,29 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 
   </div>
 
-  <!-- CHAT OVERLAY (full panel, slides over) -->
-  <div id="loungeChatOverlay" style="position:fixed;top:0;left:0;right:0;bottom:var(--mob-nav-h);background:#120d07;z-index:30;display:flex;flex-direction:column;opacity:0;pointer-events:none;transition:opacity .3s;">
-    <div style="background:#1e1610;border-bottom:1px solid #5a3a18;padding:8px 12px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;">
-      <div style="font-family:'Playfair Display',serif;font-size:14px;color:#c8a060;">🛋️ Lounge chat</div>
-      <button onclick="closeLoungeChat()" style="background:none;border:none;color:#c8a060;font-size:18px;cursor:pointer;opacity:.6;line-height:1;padding:0 4px;">✕</button>
-    </div>
-    <div id="loungeChatMessages" style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:10px 12px;display:flex;flex-direction:column;gap:8px;"></div>
-    <div style="text-align:center;font-size:8px;color:rgba(200,149,42,.2);letter-spacing:.1em;text-transform:uppercase;padding:3px 0;flex-shrink:0;">tap outside messages to return</div>
-    <div style="border-top:1px solid #5a3a18;padding:8px 10px;display:flex;gap:6px;align-items:center;flex-shrink:0;">
-      <input id="loungeChatInput" placeholder="say something…" style="flex:1;background:#1e1610;border:1px solid #5a3a18;border-radius:16px;padding:7px 12px;font-size:16px;color:#d8c8a0;outline:none;font-family:'Lato',sans-serif;" onkeydown="if(event.key==='Enter')sendLoungeChat()"/>
-      <button onclick="sendLoungeChat()" style="background:#c8a060;border:none;border-radius:50%;width:36px;height:36px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:13px;color:#2c1f0e;flex-shrink:0;">➤</button>
-    </div>
+<!-- CHAT OVERLAY -->
+<div id="loungeChatOverlay" style="position:fixed;top:0;left:0;right:0;bottom:var(--mob-nav-h);background:#0d0805;z-index:30;display:flex;flex-direction:column;opacity:0;pointer-events:none;transition:opacity .3s;">
+  <!-- Header -->
+  <div style="background:#1e1610;border-bottom:1px solid #5a3a18;padding:8px 12px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;">
+    <div style="font-family:'Playfair Display',serif;font-size:14px;color:#c8a060;">🛋️ Lounge chat</div>
+    <button onclick="closeLoungeChat()" style="background:none;border:none;color:#c8a060;font-size:18px;cursor:pointer;opacity:.6;line-height:1;padding:0 4px;">✕</button>
+  </div>
+  <!-- Campfire room -->
+  <div id="loungeCampfire" style="flex:1;overflow:hidden;position:relative;"></div>
+  <!-- Input -->
+  <div style="border-top:1px solid #5a3a18;padding:8px 10px;display:flex;gap:6px;align-items:center;flex-shrink:0;">
+    <input id="loungeChatInput" placeholder="say something…"
+      style="flex:1;background:#1e1610;border:1px solid #5a3a18;border-radius:16px;
+             padding:7px 12px;font-size:16px;color:#d8c8a0;outline:none;
+             font-family:'Lato',sans-serif;"
+      onkeydown="if(event.key==='Enter')sendLoungeChat()"/>
+    <button onclick="sendLoungeChat()" style="background:#c8a060;border:none;border-radius:50%;width:30px;height:30px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:11px;color:#2c1f0e;flex-shrink:0;">➤</button>
   </div>
 </div>
+
+<!-- FLOATING MESSAGE OVERLAY -->
+<div id="loungeFloatingMsg" style="position:fixed;top:70px;right:10px;z-index:25;
+  max-width:200px;pointer-events:none;opacity:0;transition:opacity .3s;"></div>
 
   <!-- ── BOOK DETAIL PANEL ── -->
   <div class="mob-panel" id="mobPanelDetail">
@@ -5221,6 +5329,7 @@ function startPresenceListener() {
 }
 
   function renderLoungeShelf(people) {
+    _lastPresencePeople = people;
   const shelf = document.getElementById('loungeShelf');
   if(!shelf) return;
   if(!people.length) {
@@ -5457,31 +5566,27 @@ function updateLoungeBadge() {
 
 // ── WALL TAP → CHAT ───────────────────────────────────────────────────────────
 function loungeWallTap(e) {
-  if(e.target.closest('button') || e.target.closest('input')) return;
-  openLoungeChat();
 }
 
 function openLoungeChat() {
   const overlay = document.getElementById('loungeChatOverlay');
   overlay.style.opacity = '1';
   overlay.style.pointerEvents = 'all';
-  document.getElementById('loungeTapHint').style.opacity = '0';
+  document.getElementById('loungeTapHint')?.remove();
   startChatListener();
   markChatSeen();
-  setTimeout(() => {
-    const msgs = document.getElementById('loungeChatMessages');
-    if(msgs) msgs.scrollTop = msgs.scrollHeight;
-    document.getElementById('loungeChatInput')?.focus();
-  }, 100);
+  // Clear floating messages
+  const flt = document.getElementById('loungeFloatingMsg');
+  if(flt) { flt.innerHTML = ''; flt.style.opacity = '0'; flt.style.pointerEvents = 'none'; }
+  // Render campfire after layout settles
+  setTimeout(() => renderCampfire(), 80);
+  setTimeout(() => document.getElementById('loungeChatInput')?.focus(), 150);
 }
 
 function closeLoungeChat() {
   const overlay = document.getElementById('loungeChatOverlay');
   overlay.style.opacity = '0';
   overlay.style.pointerEvents = 'none';
-  setTimeout(() => {
-    document.getElementById('loungeTapHint').style.opacity = '';
-  }, 300);
 }
 
 // Close chat when tapping the message area background
@@ -5489,16 +5594,31 @@ document.getElementById('loungeChatMessages')?.addEventListener('click', functio
   if(e.target === this) closeLoungeChat();
 });
 
-// ── CHAT ──────────────────────────────────────────────────────────────────────
+// ── CAMPFIRE CHAT ─────────────────────────────────────────────────────────────
 let chatUnsubActive = null;
 let chatLastSeenTs = parseInt(localStorage.getItem('elib_chat_seen') || '0');
+let campfireMessages = []; // latest N messages
+let floatingMsgTimer = null;
+
+const CAMPFIRE_COLORS = ['#2a7c8a','#5a48b0','#b84c1a','#276749','#c8952a','#7c3aed'];
 
 function startChatListener() {
   if(chatUnsubActive) return;
-  const q = query(collection(db, 'lounge_chat'), orderBy('createdAt', 'asc'), limit(100));
+  const q = query(collection(db, 'lounge_chat'), orderBy('createdAt', 'asc'), limit(60));
   chatUnsubActive = onSnapshot(q, snap => {
-    const messages = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    renderLoungeChat(messages);
+    campfireMessages = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    if(document.getElementById('loungeChatOverlay').style.opacity === '1') {
+      renderCampfire();
+    } else {
+      // Show floating bubble for new messages
+      const changes = snap.docChanges().filter(c => c.type === 'added');
+      changes.forEach(c => {
+        const msg = c.doc.data();
+        if(msg.authorId !== currentUser?.uid) {
+          showFloatingMessage(msg);
+        }
+      });
+    }
   }, e => console.warn('Chat listener:', e));
 }
 
@@ -5507,34 +5627,157 @@ function markChatSeen() {
   localStorage.setItem('elib_chat_seen', chatLastSeenTs);
 }
 
-function renderLoungeChat(messages) {
-  const container = document.getElementById('loungeChatMessages');
+// ── CAMPFIRE RENDERER ─────────────────────────────────────────────────────────
+function renderCampfire() {
+  const container = document.getElementById('loungeCampfire');
   if(!container) return;
-  if(!messages.length) {
-    container.innerHTML = `<div style="text-align:center;padding:3rem 1rem;color:rgba(200,149,42,.3);font-size:.85rem;">No messages yet — say hello!</div>`;
+
+  const W = container.clientWidth || window.innerWidth;
+  const H = container.clientHeight || (window.innerHeight - 180);
+
+  // Get unique participants from presence + recent message authors
+  const presenceSnap = _lastPresencePeople || [];
+  const recentAuthors = [...new Map(
+    [...campfireMessages].reverse().slice(0, 20)
+      .map(m => [m.authorId, { userId: m.authorId, displayName: m.authorName, photoURL: m.authorPhoto }])
+  ).values()];
+
+  // Merge: presence people first, then recent authors not already in presence
+  const presenceIds = new Set(presenceSnap.map(p => p.userId));
+  const participants = [
+    ...presenceSnap,
+    ...recentAuthors.filter(a => !presenceIds.has(a.userId))
+  ].slice(0, 8);
+
+  if(!participants.length) {
+    container.innerHTML = `
+      <div class="campfire-fire">🔥</div>
+      <div style="position:absolute;top:40%;left:50%;transform:translate(-50%,-50%);
+                  text-align:center;color:rgba(200,149,42,.25);font-size:.82rem;">
+        Nobody here yet…<br/>Be the first to say something.
+      </div>`;
     return;
   }
-  let lastDate = null;
-  container.innerHTML = messages.map(m => {
-    const isMine = m.authorId === currentUser?.uid;
-    const initials = (m.authorName||'?').split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
-    const date = m.createdAt?.toDate?.() || new Date();
-    const dateStr = date.toLocaleDateString(undefined,{weekday:'long',month:'short',day:'numeric'});
-    const timeStr = date.toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'});
-    let divider = '';
-    if(dateStr !== lastDate) { lastDate = dateStr; divider = `<div style="text-align:center;font-size:8px;color:rgba(200,149,42,.25);letter-spacing:.1em;text-transform:uppercase;padding:.4rem 0;">${dateStr}</div>`; }
-    const avatarHtml = m.authorPhoto
-      ? `<img src="${m.authorPhoto}" style="width:22px;height:22px;border-radius:50%;object-fit:cover;border:1px solid #5a3a18;flex-shrink:0;"/>`
-      : `<div style="width:22px;height:22px;border-radius:50%;background:#2c1f0e;border:1px solid #5a3a18;color:#c8a060;display:flex;align-items:center;justify-content:center;font-size:.55rem;font-weight:700;flex-shrink:0;">${initials}</div>`;
-    return `${divider}<div class="lc-msg ${isMine?'mine':'theirs'}">
-      ${!isMine?`<div class="lc-author">${esc(m.authorName?.split(' ')[0]||'?')}</div>`:''}
-      <div class="lc-bubble">${esc(m.text)}</div>
-      <div class="lc-time">${timeStr}</div>
-    </div>`;
-  }).join('');
-  container.scrollTop = container.scrollHeight;
+
+  // Layout: your avatar at bottom centre, others arranged in an arc above
+  const me = participants.find(p => p.userId === currentUser?.uid);
+  const others = participants.filter(p => p.userId !== currentUser?.uid);
+
+  // Build positions
+  const positions = [];
+
+  // Others: arc from bottom-left to bottom-right, curving up
+  const arcCount = others.length;
+  others.forEach((p, i) => {
+    let x, y;
+    if(arcCount === 1) {
+      x = W * 0.5; y = H * 0.25;
+    } else {
+      // Spread across top arc
+      const t = arcCount === 1 ? 0.5 : i / (arcCount - 1);
+      x = W * 0.12 + t * W * 0.76;
+      y = H * 0.15 + Math.sin(t * Math.PI) * H * -0.05 + H * 0.15;
+    }
+    positions.push({ person: p, x, y, isMe: false });
+  });
+
+  // Me: bottom centre
+  if(me) positions.push({ person: me, x: W * 0.5, y: H * 0.78, isMe: true });
+
+  // Fire: middle
+  const fireY = H * 0.52;
+
+  // Get last message per person
+  const lastMsgByUser = {};
+  campfireMessages.forEach(m => { lastMsgByUser[m.authorId] = m; });
+
+  container.innerHTML = `<div class="campfire-fire" style="bottom:${H - fireY - 20}px;">🔥</div>`;
+
+  positions.forEach(({ person, x, y, isMe }) => {
+    const initials = (person.displayName||'?').split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
+    const colorIdx = Math.abs([...person.userId].reduce((a,c)=>a+c.charCodeAt(0),0)) % CAMPFIRE_COLORS.length;
+    const color = CAMPFIRE_COLORS[colorIdx];
+    const lastMsg = lastMsgByUser[person.userId];
+    const isActive = (person.status === 'active') || isMe;
+
+    const wrap = document.createElement('div');
+    wrap.className = 'campfire-avatar-wrap';
+    wrap.style.left = (x - 20) + 'px';
+    wrap.style.top = (y - 20) + 'px';
+
+    const avatarInner = person.photoURL
+      ? `<img src="${person.photoURL}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;border:2px solid ${isActive?'#c8a060':'#5a3a18'};${!isActive?'filter:grayscale(.7)':''}"/>`
+      : `<div style="width:40px;height:40px;border-radius:50%;background:${isActive?color:'#4b5563'};border:2px solid ${isActive?'#c8a060':'#5a3a18'};display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff;">${initials}</div>`;
+
+    // Bubble position: point toward fire
+    const dx = W * 0.5 - x;
+    const dy = fireY - y;
+    const angle = Math.atan2(dy, dx);
+    // Bubble appears on opposite side from fire
+    const bx = Math.cos(angle + Math.PI) * 48;
+    const by = Math.sin(angle + Math.PI) * 48;
+
+    const bubbleHtml = lastMsg
+      ? `<div class="campfire-bubble ${isMe?'mine':''}"
+            style="left:${bx > 0 ? 'auto' : bx-150+'px'};right:${bx > 0 ? (-bx-150)+'px':'auto'};
+                   top:${by}px;width:140px;">
+           ${esc(lastMsg.text)}
+           <div style="font-size:7.5px;opacity:.4;margin-top:3px;">
+             ${lastMsg.createdAt?.toDate?.()?timeAgo(lastMsg.createdAt.toDate()):''}</div>
+         </div>`
+      : '';
+
+    wrap.innerHTML = `
+      <div style="position:relative;">
+        ${avatarInner}
+        ${bubbleHtml}
+      </div>
+      <div class="campfire-name">${isMe?'You':esc(person.displayName?.split(' ')[0]||'?')}</div>`;
+
+    // Tap own avatar → edit reading status
+    if(isMe) {
+      wrap.style.cursor = 'pointer';
+      wrap.addEventListener('click', showReadingEditSheet);
+    }
+
+    container.appendChild(wrap);
+  });
 }
 
+// Cache presence people so campfire can use them
+let _lastPresencePeople = [];
+const _origRenderShelf = renderLoungeShelf;
+// We'll patch renderLoungeShelf below to cache
+
+// ── FLOATING MESSAGE ──────────────────────────────────────────────────────────
+function showFloatingMessage(msg) {
+  const el = document.getElementById('loungeFloatingMsg');
+  if(!el) return;
+
+  const bubble = document.createElement('div');
+  bubble.className = 'floating-msg-bubble';
+  bubble.innerHTML = `
+    <div class="floating-msg-author">${esc(msg.authorName?.split(' ')[0]||'?')}</div>
+    ${esc(msg.text)}`;
+  bubble.addEventListener('click', () => {
+    el.innerHTML = '';
+    el.style.opacity = '0';
+    openLoungeChat();
+  });
+
+  el.appendChild(bubble);
+  el.style.opacity = '1';
+  el.style.pointerEvents = 'all';
+
+  clearTimeout(floatingMsgTimer);
+  floatingMsgTimer = setTimeout(() => {
+    el.style.opacity = '0';
+    el.style.pointerEvents = 'none';
+    setTimeout(() => { el.innerHTML = ''; }, 350);
+  }, 4500);
+}
+
+// ── SEND + OPEN/CLOSE ─────────────────────────────────────────────────────────
 async function sendLoungeChat() {
   const input = document.getElementById('loungeChatInput');
   if(!input) return;
@@ -5687,6 +5930,9 @@ window.showBroadcastModal = showBroadcastModal;
 window.sendReqDetailComment = sendReqDetailComment;
 window.deleteDetailComment = deleteDetailComment;
 window.showBookById = showBookById;
+window.openLoungeChat = openLoungeChat;
+window.closeLoungeChat = closeLoungeChat;
+window.loungeWallTap = loungeWallTap;
   
   document.getElementById('loungeNewsUploadBtn')?.addEventListener('click', () => {
   const input = document.createElement('input');
