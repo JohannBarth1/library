@@ -5747,6 +5747,23 @@ wrap.innerHTML = `
     if(isMe) {
       wrap.style.cursor = 'pointer';
       wrap.addEventListener('click', showReadingEditSheet);
+    } else {
+      wrap.style.cursor = 'pointer';
+      wrap.addEventListener('click', async () => {
+        const name = person.displayName?.split(' ')[0] || 'them';
+        if(!confirm(`Knock on ${name}'s door?`)) return;
+        try {
+          await addDoc(collection(db, 'lounge_notifications'), {
+            toUserId: person.userId,
+            fromUserId: currentUser.uid,
+            fromName: currentUser.displayName || currentUser.email,
+            type: 'knock',
+            read: false,
+            createdAt: serverTimestamp(),
+          });
+          showToast(`🔔 Knocked on ${name}'s door!`);
+        } catch(e) { showToast('Failed: ' + e.message); }
+      });
     }
 
     container.appendChild(wrap);
