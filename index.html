@@ -4537,19 +4537,6 @@ function _showKoboSetupModal(device) {
   });
 })();
 
-
-// ── TABS ─────────────────────────────────────────────────────────────────────
-document.querySelectorAll('.lounge-tab').forEach(tab => {
-  tab.addEventListener('click', () => {
-    document.querySelectorAll('.lounge-tab').forEach(t => t.classList.remove('active'));
-    tab.classList.add('active');
-    const which = tab.dataset.loungeTab;
-    document.getElementById('loungeRequestsPanel').style.display = which === 'requests' ? '' : 'none';
-    document.getElementById('loungeNewsPanel').style.display = which === 'news' ? '' : 'none';
-    if(which === 'news') loadNewsClips();
-  });
-});
-
 // ── NEW REQUEST MODAL ─────────────────────────────────────────────────────────
 document.getElementById('btnNewRequest').addEventListener('click', () => {
   showLoungeRequestModal();
@@ -4724,100 +4711,6 @@ async function deleteRequest(reqId) {
     await deleteDoc(doc(db, 'lounge_requests', reqId));
     hideLoading();
     showToast('Request deleted ✓');
-  } catch(e) {
-    hideLoading();
-    showToast('Delete failed: ' + e.message);
-  }
-}
-
-// ── NEWS CLIPS ────────────────────────────────────────────────────────────────
-document.getElementById('btnUploadNews').addEventListener('click', () => {
-  const input = document.createElement('input');
-  input.type = 'file';
-  input.accept = '.pdf,.doc,.docx,.txt,.jpg,.jpeg,.png';
-  input.addEventListener('change', async e => {
-    const file = e.target.files[0];
-    if(!file) return;
-    showLoading('Uploading…');
-    try {
-      const path = `news_clips/${currentUser.uid}/${Date.now()}_${file.name}`;
-      const sRef = storageRef(storage, path);
-      await uploadBytes(sRef, file);
-      const url = await getDownloadURL(sRef);
-      const expires = new Date();
-      expires.setDate(expires.getDate() + 30);
-      await addDoc(collection(db, 'news_clips'), {
-        title: file.name,
-        url,
-        storagePath: path,
-        uploadedBy: currentUser.uid,
-        uploaderName: currentUser.displayName || currentUser.email,
-        createdAt: serverTimestamp(),
-        expiresAt: Timestamp.fromDate(expires),
-        fileType: file.type,
-      });
-      hideLoading();
-      showToast('Clip uploaded ✓');
-      loadNewsClips();
-    } catch(e) {
-      hideLoading();
-      showToast('Upload failed: ' + e.message);
-    }
-  });
-  input.click();
-});
-
-async function loadNewsClips() {
-  const el = document.getElementById('loungeNewsList');
-  el.innerHTML = '<div style="color:var(--muted);font-size:.85rem">Loading…</div>';
-  try {
-    const now = Timestamp.now();
-    const q = query(
-      collection(db, 'news_clips'),
-      where('expiresAt', '>', now),
-      orderBy('expiresAt', 'asc')
-    );
-    const snap = await getDocs(q);
-    const clips = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    if(!clips.length){
-      el.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--muted);font-size:.85rem">No news clips yet</div>';
-      return;
-    }
-    el.innerHTML = clips.map(c => {
-      const expires = c.expiresAt?.toDate?.();
-      const daysLeft = expires ? Math.ceil((expires - new Date()) / 86400000) : '?';
-      const icon = c.fileType?.includes('pdf') ? '📄' : c.fileType?.startsWith('image') ? '🖼️' : '📎';
-      const isMine = c.uploadedBy === currentUser?.uid;
-      return `<div class="news-card" onclick="window.open('${c.url}','_blank')" style="cursor:pointer">
-        <div class="news-card-icon">${icon}</div>
-        <div class="news-card-meta">
-          <div class="news-card-title">${esc(c.title)}</div>
-          <div class="news-card-sub">Shared by ${esc(c.uploaderName || 'Unknown')}</div>
-          <div class="news-card-expires">Expires in ${daysLeft} day${daysLeft !== 1 ? 's' : ''}</div>
-        </div>
-        ${isMine ? `<button class="btn-action btn-delete" style="padding:.25rem .6rem;font-size:.65rem;border-radius:3px;flex-shrink:0" data-delete-clip="${c.id}" data-clip-path="${c.storagePath}">✕</button>` : ''}
-      </div>`;
-    }).join('');
-    el.querySelectorAll('[data-delete-clip]').forEach(btn => {
-      btn.addEventListener('click', () => deleteNewsClip(btn.dataset.deleteClip, btn.dataset.clipPath));
-    });
-  } catch(e) {
-    el.innerHTML = '<div style="color:var(--muted);font-size:.85rem">Could not load clips</div>';
-    console.error(e);
-  }
-}
-
-async function deleteNewsClip(clipId, path) {
-  if(!confirm('Delete this clip?')) return;
-  showLoading('Deleting…');
-  try {
-    await deleteDoc(doc(db, 'news_clips', clipId));
-    if(path){
-      try{ await deleteDoc(storageRef(storage, path)); }catch(e){/* ok */}
-    }
-    hideLoading();
-    showToast('Clip deleted ✓');
-    loadNewsClips();
   } catch(e) {
     hideLoading();
     showToast('Delete failed: ' + e.message);
