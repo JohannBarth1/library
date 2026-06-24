@@ -1237,6 +1237,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
       <!-- New request / news buttons -->
       <div style="display:flex;gap:6px;padding:8px 10px 4px;position:relative;z-index:2;">
         <button onclick="showLoungeRequestModal()" style="font-size:9px;background:rgba(254,243,199,.12);border:1px solid rgba(254,243,199,.25);color:#fef3c7;border-radius:20px;padding:4px 10px;font-family:'Lato',sans-serif;font-weight:700;cursor:pointer;">+ Request</button>
+        <button id="loungeBroadcastBtn" onclick="showBroadcastModal()" style="display:none;font-size:9px;background:rgba(248,113,113,.15);border:1px solid rgba(248,113,113,.35);color:#fca5a5;border-radius:20px;padding:4px 10px;font-family:'Lato',sans-serif;font-weight:700;cursor:pointer;">📢 Broadcast</button>
         <button id="loungeNewsUploadBtn" style="font-size:9px;background:rgba(250,247,239,.1);border:1px solid rgba(250,247,239,.2);color:#faf7ef;border-radius:20px;padding:4px 10px;font-family:'Lato',sans-serif;font-weight:700;cursor:pointer;">+ News clip</button>
       </div>
 
@@ -4601,6 +4602,202 @@ function showLoungeRequestModal(existing) {
   });
 }
 
+  function showLoungeRequestDetail(req) {
+  const col = STICKY_COLORS.find(c => c.bg) || STICKY_COLORS[0];
+  // Pick the same colour as the rendered sticky
+  const idx = (req._idx !== undefined) ? req._idx : 0;
+  const stickyCol = STICKY_COLORS[idx % STICKY_COLORS.length];
+
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay open';
+  overlay.style.cssText = 'align-items:flex-end;padding:0;';
+  overlay.innerHTML = `
+    <div style="width:100%;max-height:85vh;display:flex;flex-direction:column;
+                background:${stickyCol.bg};border-radius:16px 16px 0 0;
+                box-shadow:0 -4px 24px rgba(0,0,0,.3);overflow:hidden;">
+      <!-- Pin + header -->
+      <div style="display:flex;align-items:center;justify-content:space-between;
+                  padding:12px 16px 8px;border-bottom:1px solid rgba(0,0,0,.08);">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <div style="width:12px;height:12px;border-radius:50%;background:${stickyCol.pin};
+                      border:2px solid rgba(0,0,0,.15);flex-shrink:0;"></div>
+          <div style="font-size:8px;font-weight:700;letter-spacing:.15em;
+                      text-transform:uppercase;opacity:.5;">
+                      ${req.type==='broadcast'?'📢 broadcast':'📚 book request'}</div>
+        </div>
+        <button onclick="this.closest('.modal-overlay').remove()"
+          style="background:none;border:none;font-size:18px;cursor:pointer;
+                 opacity:.4;line-height:1;padding:0 4px;">✕</button>
+      </div>
+      <!-- Title + desc -->
+      <div style="padding:12px 16px 8px;">
+        <div style="font-family:'Playfair Display',serif;font-size:1.15rem;
+                    line-height:1.3;color:#2c1f0e;margin-bottom:.3rem;">${esc(req.title)}</div>
+        ${req.description?`<div style="font-size:.83rem;color:#3a2a1a;opacity:.7;
+                    line-height:1.6;">${esc(req.description)}</div>`:''}
+        <div style="font-size:.7rem;opacity:.4;margin-top:.4rem;">
+          ${esc((req.authorName||'').split(' ')[0])} · 
+          ${req.createdAt?.toDate?.()?timeAgo(req.createdAt.toDate()):''}
+        </div>
+      </div>
+      <!-- Comments -->
+      <div style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;
+                  padding:0 16px 8px;min-height:120px;max-height:40vh;"
+           id="reqDetailComments_${req.id}">
+        <div style="font-size:.78rem;color:rgba(44,31,14,.4);padding:.5rem 0;">
+          Loading comments…</div>
+      </div>
+      <!-- Comment input -->
+      <div style="padding:8px 12px;border-top:1px solid rgba(0,0,0,.08);
+                  display:flex;gap:8px;align-items:center;
+                  padding-bottom:calc(8px + env(safe-area-inset-bottom));">
+        <input id="reqDetailInput_${req.id}" placeholder="Add a comment…"
+          style="flex:1;padding:8px 12px;font-family:'Lato',sans-serif;
+                 font-size:16px;border:1px solid rgba(0,0,0,.15);border-radius:20px;
+                 background:rgba(255,255,255,.6);color:#2c1f0e;outline:none;"
+          onkeydown="if(event.key==='Enter')sendReqDetailComment('${req.id}')"/>
+        <button onclick="sendReqDetailComment('${req.id}')"
+          style="background:${stickyCol.pin};border:none;border-radius:50%;
+                 width:34px;height:34px;display:flex;align-items:center;
+                 justify-content:center;cursor:pointer;font-size:12px;
+                 color:#fff;flex-shrink:0;">➤</button>
+      </div>
+    </div>`;
+
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click', e => { if(e.target===overlay) overlay.remove(); });
+
+  // Load comments into the detail modal
+  loadCommentsInto(req.id, document.getElementById(`reqDetailComments_${req.id}`));
+}
+
+  function showBroadcastModal() {
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay open';
+  overlay.innerHTML = `
+    <div class="modal" style="max-width:440px;">
+      <h3 style="color:var(--danger);">📢 Broadcast Message</h3>
+      <p style="font-size:.82rem;color:var(--muted);margin-bottom:.8rem;line-height:1.5;">
+        This will appear as a red notice on everyone's lounge table.</p>
+      <div class="form-row">
+        <label>Message</label>
+        <input type="text" id="broadcastTitleInput" placeholder="e.g. Book club meets Friday at 7pm!"/>
+      </div>
+      <div class="form-row">
+        <label>Detail <span style="font-size:.65rem;color:var(--muted);font-weight:400">(optional)</span></label>
+        <textarea id="broadcastDescInput" rows="3"
+          style="width:100%;padding:.6rem .85rem;font-family:'Lato',sans-serif;
+                 font-size:.88rem;color:var(--navy);background:var(--cream);
+                 border:1px solid var(--border);border-radius:3px;outline:none;
+                 resize:vertical;line-height:1.5"
+          placeholder="Any extra detail…"></textarea>
+      </div>
+      <div class="modal-actions">
+        <button class="btn-cancel" id="broadcastCancelBtn">Cancel</button>
+        <button class="btn-save" style="background:var(--danger);" id="broadcastSaveBtn">📢 Post Broadcast</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+  overlay.querySelector('#broadcastCancelBtn').addEventListener('click', () => overlay.remove());
+  overlay.querySelector('#broadcastSaveBtn').addEventListener('click', async () => {
+    const title = overlay.querySelector('#broadcastTitleInput').value.trim();
+    if(!title) { showToast('Please enter a message'); return; }
+    const desc = overlay.querySelector('#broadcastDescInput').value.trim();
+    overlay.remove();
+    showLoading('Broadcasting…');
+    try {
+      await addDoc(collection(db, 'lounge_requests'), {
+        title,
+        description: desc,
+        type: 'broadcast',
+        authorId: currentUser.uid,
+        authorName: currentUser.displayName || currentUser.email,
+        authorPhoto: currentUser.photoURL || null,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+        commentCount: 0,
+      });
+      hideLoading();
+      showToast('Broadcast posted ✓');
+    } catch(e) {
+      hideLoading();
+      showToast('Failed: ' + e.message);
+    }
+  });
+}
+
+function loadCommentsInto(reqId, container) {
+  const q = query(
+    collection(db, 'lounge_requests', reqId, 'comments'),
+    orderBy('createdAt', 'asc')
+  );
+  // Store unsub on container so it cleans up when removed
+  const unsub = onSnapshot(q, snap => {
+    const comments = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    if(!container) return;
+    if(!comments.length) {
+      container.innerHTML = `<div style="font-size:.78rem;color:rgba(44,31,14,.4);
+        padding:.5rem 0;">No comments yet — be the first!</div>`;
+      return;
+    }
+    container.innerHTML = comments.map(c => {
+      const isMine = c.authorId === currentUser?.uid;
+      const initials = (c.authorName||'?').split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
+      return `<div style="display:flex;gap:6px;margin-bottom:8px;align-items:flex-start;">
+        <div style="width:24px;height:24px;border-radius:50%;background:#2c1f0e;
+                    color:#c8a060;display:flex;align-items:center;justify-content:center;
+                    font-size:.55rem;font-weight:700;flex-shrink:0;margin-top:2px;">
+                    ${initials}</div>
+        <div style="flex:1;background:rgba(255,255,255,.55);border-radius:0 10px 10px 10px;
+                    padding:5px 9px;">
+          <div style="font-size:.65rem;font-weight:700;color:#5a3a18;margin-bottom:2px;">
+            ${esc(c.authorName||'Unknown')}</div>
+          <div style="font-size:.85rem;color:#2c1f0e;line-height:1.5;">${esc(c.text)}</div>
+          <div style="display:flex;align-items:center;justify-content:space-between;
+                      margin-top:2px;">
+            <div style="font-size:.65rem;opacity:.4;">
+              ${c.createdAt?.toDate?.()?timeAgo(c.createdAt.toDate()):''}</div>
+            ${isMine?`<button onclick="deleteDetailComment('${reqId}','${c.id}',this)"
+              style="font-size:.6rem;background:none;border:none;cursor:pointer;
+                     color:#b84c1a;opacity:.5;">✕ delete</button>`:''}
+          </div>
+        </div>
+      </div>`;
+    }).join('');
+    // Update comment count silently
+    updateDoc(doc(db,'lounge_requests',reqId),{commentCount:comments.length}).catch(()=>{});
+  }, e => console.warn('Detail comments:', e));
+  // Clean up listener when overlay is removed
+  const observer = new MutationObserver(() => {
+    if(!document.contains(container)){ unsub(); observer.disconnect(); }
+  });
+  observer.observe(document.body, { childList: true, subtree: true });
+}
+
+async function sendReqDetailComment(reqId) {
+  const input = document.getElementById('reqDetailInput_' + reqId);
+  if(!input) return;
+  const text = input.value.trim();
+  if(!text || !currentUser) return;
+  input.value = '';
+  try {
+    await addDoc(collection(db, 'lounge_requests', reqId, 'comments'), {
+      text,
+      authorId: currentUser.uid,
+      authorName: currentUser.displayName || currentUser.email,
+      authorPhoto: currentUser.photoURL || null,
+      createdAt: serverTimestamp(),
+    });
+  } catch(e) { showToast('Failed: ' + e.message); }
+}
+
+async function deleteDetailComment(reqId, commentId, btn) {
+  if(!confirm('Delete this comment?')) return;
+  try {
+    await deleteDoc(doc(db, 'lounge_requests', reqId, 'comments', commentId));
+  } catch(e) { showToast('Delete failed: ' + e.message); }
+}
+
 // ── COMMENTS ─────────────────────────────────────────────────────────────────
 const commentUnsubMap = {};
 
@@ -4910,41 +5107,86 @@ function renderLoungeShelf(people) {
 // ── KNOCK ─────────────────────────────────────────────────────────────────────
 async function loungeKnock() {
   if(!currentUser) return;
-  const btn = document.getElementById('loungeKnockBtn');
-  btn.textContent = '✓ Sent!';
-  btn.style.background = 'rgba(74,222,128,.8)';
-  btn.disabled = true;
+
+  // Build recipient list: presence users first, fall back to all users
+  let candidates = [];
   try {
-    // Get all other presence users to notify
-    const snap = await getDocs(query(
-      collection(db, 'lounge_presence'),
-      where('expiresAt', '>', Timestamp.now())
-    ));
-    const others = snap.docs.map(d=>d.data()).filter(p=>p.userId!==currentUser.uid);
+    const presSnap = await getDocs(collection(db, 'lounge_presence'));
+    const now = Date.now();
+    candidates = presSnap.docs
+      .map(d => d.data())
+      .filter(p => p.userId !== currentUser.uid &&
+                   (p.expiresAt?.toMillis?.() || 0) > now);
+  } catch(e) {}
 
-    // Write a notification for every user in the app (not just present ones)
-    const usersSnap = await getDocs(collection(db, 'users'));
-    const allOtherUsers = usersSnap.docs.map(d=>d.data()).filter(u=>u.uid&&u.uid!==currentUser.uid);
-
-    for(const u of allOtherUsers) {
-      await addDoc(collection(db, 'lounge_notifications'), {
-        toUserId: u.uid,
-        fromUserId: currentUser.uid,
-        fromName: currentUser.displayName || currentUser.email,
-        type: 'knock',
-        read: false,
-        createdAt: serverTimestamp(),
-      });
-    }
-    showToast('🔔 Everyone has been notified!');
-  } catch(e) {
-    showToast('Knock failed: ' + e.message);
+  if(!candidates.length) {
+    // Fall back to all users
+    try {
+      const usersSnap = await getDocs(collection(db, 'users'));
+      candidates = usersSnap.docs
+        .map(d => d.data())
+        .filter(u => u.uid && u.uid !== currentUser.uid);
+    } catch(e) {}
   }
-  setTimeout(() => {
-    btn.textContent = '🔔 Knock';
-    btn.style.background = '';
-    btn.disabled = false;
-  }, 5000);
+
+  if(!candidates.length) { showToast('No other users found'); return; }
+
+  // Show picker modal
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay open';
+  overlay.innerHTML = `
+    <div class="modal" style="max-width:360px;">
+      <h3>🔔 Knock knock</h3>
+      <p style="font-size:.82rem;color:var(--muted);margin-bottom:.8rem;line-height:1.5;">
+        Who do you want to invite to the lounge?</p>
+      <div id="knockPickerList" style="border:1px solid var(--border);border-radius:4px;
+           max-height:240px;overflow-y:auto;margin-bottom:1rem;">
+        ${candidates.map(u => {
+          const initials = (u.displayName||u.email||'?').split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
+          return `<label style="display:flex;align-items:center;gap:.7rem;padding:.6rem 1rem;
+                         cursor:pointer;border-bottom:1px solid var(--border);">
+            <input type="checkbox" name="knockPick" value="${u.uid}"
+              style="accent-color:var(--teal);width:15px;height:15px;flex-shrink:0;"/>
+            ${u.photoURL
+              ? `<img src="${u.photoURL}" style="width:28px;height:28px;border-radius:50%;object-fit:cover;border:1px solid var(--border);flex-shrink:0;"/>`
+              : `<div style="width:28px;height:28px;border-radius:50%;background:var(--teal);color:#fff;display:flex;align-items:center;justify-content:center;font-size:.65rem;font-weight:700;flex-shrink:0;">${initials}</div>`
+            }
+            <span style="font-size:.88rem;">${esc(u.displayName||u.email||u.uid)}</span>
+          </label>`;
+        }).join('')}
+      </div>
+      <div class="modal-actions">
+        <button class="btn-cancel" onclick="this.closest('.modal-overlay').remove()">Cancel</button>
+        <button class="btn-save" id="knockSendBtn">Send Knock 🔔</button>
+      </div>
+    </div>`;
+
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click', e => { if(e.target===overlay) overlay.remove(); });
+
+  overlay.querySelector('#knockSendBtn').addEventListener('click', async () => {
+    const checked = [...overlay.querySelectorAll('input[name="knockPick"]:checked')];
+    if(!checked.length) { showToast('Pick at least one person'); return; }
+    overlay.remove();
+    const btn = document.getElementById('loungeKnockBtn');
+    if(btn){ btn.textContent='✓ Sent!'; btn.style.background='rgba(74,222,128,.8)'; btn.disabled=true; }
+    try {
+      for(const cb of checked) {
+        await addDoc(collection(db, 'lounge_notifications'), {
+          toUserId: cb.value,
+          fromUserId: currentUser.uid,
+          fromName: currentUser.displayName || currentUser.email,
+          type: 'knock',
+          read: false,
+          createdAt: serverTimestamp(),
+        });
+      }
+      showToast(`🔔 Knock sent to ${checked.length} person${checked.length!==1?'s':''}!`);
+    } catch(e) { showToast('Failed: ' + e.message); }
+    setTimeout(() => {
+      if(btn){ btn.textContent='🔔 Knock'; btn.style.background=''; btn.disabled=false; }
+    }, 4000);
+  });
 }
 
 // ── NOTIFICATIONS LISTENER ────────────────────────────────────────────────────
@@ -5138,7 +5380,7 @@ async function loadNewsClipsForGrid(requests) {
 
   // Interleave requests (stickies) and news (papers) with random-ish layout
   const items = [];
-  requests.forEach((r, i) => items.push({ type:'request', data:r, idx:i }));
+  requests.forEach((r, i) => items.push({ type:'request', data:{...r, _idx:i}, idx:i }));
   newsClips.forEach((n, i) => items.push({ type:'news', data:n, idx:i }));
 
   grid.innerHTML = items.map(({ type, data, idx }) => {
@@ -5146,11 +5388,13 @@ async function loadNewsClipsForGrid(requests) {
     const isMine = data.authorId === currentUser?.uid || data.uploadedBy === currentUser?.uid;
 
     if(type === 'request') {
-      const col = STICKY_COLORS[idx % STICKY_COLORS.length];
+      const col = data.type === 'broadcast'
+        ? { bg:'#fee2e2', pin:'#ef4444' }
+        : STICKY_COLORS[idx % STICKY_COLORS.length];
       const commentCount = data.commentCount || 0;
       return `<div class="lounge-sticky" data-reqid="${data.id}" style="background:${col.bg};transform:rotate(${rot}deg);margin:${8+Math.abs(rot)}px ${6+Math.abs(rot)*0.5}px;width:calc(50% - 20px);max-width:155px;">
         <div class="ls-pin" style="background:${col.pin};"></div>
-        <div class="ls-label">${data.description?.toLowerCase().includes('challenge')?'challenge':'request'}</div>
+        <div class="ls-label" style="${data.type==='broadcast'?'color:#ef4444;opacity:.7;':''}">${data.type==='broadcast'?'📢 broadcast':data.description?.toLowerCase().includes('challenge')?'challenge':'request'}</div>
         <div class="ls-text">${esc(data.title)}</div>
         ${data.description?`<div style="font-size:8px;opacity:.45;margin-top:3px;font-style:italic;">${esc(data.description.slice(0,60))}${data.description.length>60?'…':''}</div>`:''}
         <div class="ls-meta">${esc((data.authorName||'').split(' ')[0])} · ${data.createdAt?.toDate?.()?timeAgo(data.createdAt.toDate()):''}</div>
@@ -5159,8 +5403,8 @@ async function loadNewsClipsForGrid(requests) {
           <span class="ls-pill" onclick="event.stopPropagation();loungeReact('${data.id}')">👀</span>
         </div>
         <div class="ls-haveit" onclick="event.stopPropagation();loungeHaveIt('${data.id}','${esc(data.title)}')">📚 I have it!</div>
-        ${isMine?`<div style="display:flex;gap:3px;margin-top:4px;"><button onclick="event.stopPropagation();showLoungeRequestModal({id:'${data.id}',title:'${esc(data.title)}',description:'${esc(data.description||'')}'} )" style="font-size:7px;background:rgba(0,0,0,.08);border:none;border-radius:3px;padding:1px 5px;cursor:pointer;">✎</button><button onclick="event.stopPropagation();deleteRequest('${data.id}')" style="font-size:7px;background:rgba(0,0,0,.08);border:none;border-radius:3px;padding:1px 5px;cursor:pointer;color:#b84c1a;">✕</button></div>`:''}
-      </div>`;
+        ${(isMine||isAdmin)?`<div style="display:flex;gap:3px;margin-top:4px;"><button onclick="event.stopPropagation();showLoungeRequestModal({id:'${data.id}',title:'${esc(data.title)}',description:'${esc(data.description||'')}'} )" style="font-size:7px;background:rgba(0,0,0,.08);border:none;border-radius:3px;padding:1px 5px;cursor:pointer;">✎</button><button onclick="event.stopPropagation();deleteRequest('${data.id}')" style="font-size:7px;background:rgba(0,0,0,.08);border:none;border-radius:3px;padding:1px 5px;cursor:pointer;color:#b84c1a;">✕</button></div>`:''}
+        </div>`;
     } else {
       // News paper
       const icon = data.fileType?.includes('pdf') ? '📄' : data.fileType?.startsWith('image') ? '🖼️' : '📎';
@@ -5178,12 +5422,12 @@ async function loadNewsClipsForGrid(requests) {
   }).join('');
 
   // Sticky tap → open request modal for comments
-  grid.querySelectorAll('[data-reqid]').forEach(el => {
-    el.addEventListener('click', () => {
-      const req = requests.find(r => r.id === el.dataset.reqid);
-      if(req) showLoungeRequestDetail(req);
+    grid.querySelectorAll('[data-reqid]').forEach((el, i) => {
+      el.addEventListener('click', () => {
+        const req = requests.find(r => r.id === el.dataset.reqid);
+        if(req) showLoungeRequestDetail({...req, _idx: requests.indexOf(req)});
+      });
     });
-  });
 }
 
 function loungeReact(reqId) {
@@ -5225,6 +5469,12 @@ window.loungeReact = loungeReact;
 window.loungeHaveIt = loungeHaveIt;
 window.deleteRequest = deleteRequest;
 window.deleteNewsClip = deleteNewsClip;
+window.showLoungeRequestDetail = showLoungeRequestDetail;
+window.sendReqDetailComment = sendReqDetailComment;
+window.deleteDetailComment = deleteDetailComment;
+window.showBroadcastModal = showBroadcastModal;
+window.sendReqDetailComment = sendReqDetailComment;
+window.deleteDetailComment = deleteDetailComment;
 
   document.getElementById('loungeNewsUploadBtn')?.addEventListener('click', () => {
   const input = document.createElement('input');
@@ -5294,6 +5544,7 @@ async function checkAdminStatus() {
     isAdmin = snap.exists() && snap.data().isAdmin === true;
     if(isAdmin){
       document.getElementById('mobNavAdmin').style.display = '';
+      document.getElementById('loungeBroadcastBtn').style.display = '';
     }
   } catch(e) {
     console.warn('Admin check failed:', e);
