@@ -4871,12 +4871,11 @@ async function saveReadingStatus() {
 
 function startPresenceListener() {
   if(loungePresenceUnsub) return;
-  const q = query(
-    collection(db, 'lounge_presence'),
-    where('expiresAt', '>', Timestamp.now())
-  );
-  loungePresenceUnsub = onSnapshot(q, snap => {
-    const people = snap.docs.map(d => d.data());
+  loungePresenceUnsub = onSnapshot(collection(db, 'lounge_presence'), snap => {
+    const now = Date.now();
+    const people = snap.docs
+      .map(d => d.data())
+      .filter(p => (p.expiresAt?.toMillis?.() || 0) > now);
     renderLoungeShelf(people);
   }, e => console.warn('Presence listener:', e));
 }
