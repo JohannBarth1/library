@@ -5596,9 +5596,21 @@ function startChatListener() {
   if(chatUnsubActive) return;
   const q = query(collection(db, 'lounge_chat'), orderBy('createdAt', 'asc'), limit(60));
   chatUnsubActive = onSnapshot(q, snap => {
-    campfireMessages = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    if(document.getElementById('loungeChatOverlay').style.opacity === '1') {
-      renderCampfire();
+    const prev = campfireMessages;
+campfireMessages = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+if(document.getElementById('loungeChatOverlay').style.opacity === '1') {
+  // Find which users got new messages
+  const prevLastByUser = {};
+  prev.forEach(m => { prevLastByUser[m.authorId] = m.id; });
+  const changedUsers = new Set();
+  campfireMessages.forEach(m => {
+    if(prevLastByUser[m.authorId] !== m.id) changedUsers.add(m.authorId);
+  });
+  if(changedUsers.size === 0 || prev.length === 0) {
+    renderCampfire(); // full render on first load
+  } else {
+    updateCampfireBubbles(changedUsers);
+  }
     } else {
       // Show floating bubble for new messages
       const changes = snap.docChanges().filter(c => c.type === 'added');
@@ -5692,6 +5704,7 @@ function renderCampfire() {
 
     const wrap = document.createElement('div');
     wrap.className = 'campfire-avatar-wrap';
+    wrap.dataset.userid = person.userId;
     wrap.style.left = (x - 20) + 'px';
     wrap.style.top = (y - 20) + 'px';
 
@@ -5737,6 +5750,50 @@ wrap.innerHTML = `
     }
 
     container.appendChild(wrap);
+  });
+}
+
+  function updateCampfireBubbles(changedUserIds) {
+  const lastMsgByUser = {};
+  campfireMessages.forEach(m => { lastMsgByUser[m.authorId] = m; });
+
+  changedUserIds.forEach(userId => {
+    const lastMsg = lastMsgByUser[userId];
+    if(!lastMsg) return;
+    const isMe = userId === currentUser?.uid;
+
+    // Find the existing bubble for this user
+    const container = document.getElementById('loungeCampfire');
+    if(!container) return;
+
+    // Each avatar wrap has a data-userid attribute — add it in renderCampfire
+    const wrap = container.querySelector(`[data-userid="${userId}"]`);
+    if(!wrap) return;
+
+    const existingBubble = wrap.querySelector('.campfire-bubble');
+    const person = (_lastPresencePeople.find(p => p.userId === userId))
+      || { displayName: lastMsg.authorName, userId };
+
+    const newBubble = document.createElement('div');
+    newBubble.className = `campfire-bubble ${isMe ? 'mine' : ''}`;
+    newBubble.style.cssText = `position:absolute;left:50%;transform:translateX(-50%);
+      bottom:calc(100% + 8px);width:140px;text-align:center;`;
+    newBubble.innerHTML = `
+      <div style="font-size:8.5px;font-weight:700;opacity:.55;margin-bottom:3px;
+                  color:${isMe?'#c8a060':'#a89070'};">
+        ${isMe?'You':esc(person.displayName?.split(' ')[0]||'?')}
+      </div>
+      ${esc(lastMsg.text)}
+      <div style="font-size:7.5px;opacity:.35;margin-top:3px;">
+        ${timeAgo(lastMsg.createdAt?.toDate?.() || new Date())}
+      </div>`;
+
+    if(existingBubble) {
+      existingBubble.replaceWith(newBubble);
+    } else {
+      const avatarDiv = wrap.querySelector('[style*="position:relative"]');
+      if(avatarDiv) avatarDiv.insertBefore(newBubble, avatarDiv.firstChild);
+    }
   });
 }
 
