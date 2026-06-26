@@ -1008,101 +1008,6 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .lc-msg.mine .lc-bubble{background:rgba(200,149,42,.2);color:#e8d8a0;border-radius:12px 3px 12px 12px;}
 .lc-time{font-size:7.5px;color:rgba(200,149,42,.3);margin-top:2px;}
 
-  /* ── CAMPFIRE CHAT ── */
-.campfire-avatar-wrap {
-  position: absolute;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-  transition: all .3s ease;
-}
-.campfire-avatar {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  object-fit: cover;
-  border: 2px solid #5a3a18;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 13px;
-  font-weight: 700;
-  color: #fff;
-  flex-shrink: 0;
-  position: relative;
-}
-.campfire-avatar img {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  object-fit: cover;
-}
-.campfire-name {
-  font-size: 8px;
-  color: rgba(200,149,42,.6);
-  white-space: nowrap;
-}
-.campfire-bubble {
-  position: absolute;
-  background: #2c1f0e;
-  border: 1px solid #5a3a18;
-  border-radius: 12px;
-  padding: 6px 9px;
-  font-size: 11px;
-  color: #d8c8a0;
-  line-height: 1.4;
-  max-width: 150px;
-  word-break: break-word;
-  box-shadow: 0 2px 8px rgba(0,0,0,.4);
-  animation: bubbleIn .2s ease;
-  pointer-events: none;
-  z-index: 2;
-}
-.campfire-bubble.mine {
-  background: rgba(200,149,42,.2);
-  border-color: rgba(200,149,42,.4);
-  color: #e8d8a0;
-}
-.campfire-fire {
-  position: absolute;
-  bottom: 60px;
-  left: 50%;
-  transform: translateX(-50%);
-  font-size: 28px;
-  animation: flicker 1.5s ease-in-out infinite alternate;
-  filter: drop-shadow(0 0 8px rgba(255,140,0,.6));
-  pointer-events: none;
-  user-select: none;
-}
-@keyframes flicker {
-  0% { transform: translateX(-50%) scale(1) rotate(-1deg); }
-  100% { transform: translateX(-50%) scale(1.08) rotate(1deg); }
-}
-@keyframes bubbleIn {
-  from { opacity: 0; transform: scale(.85); }
-  to   { opacity: 1; transform: scale(1); }
-}
-/* Floating message toast */
-.floating-msg-bubble {
-  background: rgba(30,22,16,.92);
-  border: 1px solid #5a3a18;
-  border-radius: 10px;
-  padding: 7px 10px;
-  margin-bottom: 6px;
-  font-size: 11px;
-  color: #d8c8a0;
-  line-height: 1.4;
-  box-shadow: 0 2px 10px rgba(0,0,0,.4);
-  cursor: pointer;
-  animation: bubbleIn .2s ease;
-}
-.floating-msg-author {
-  font-size: 8px;
-  color: #c8a060;
-  font-weight: 700;
-  margin-bottom: 2px;
-}
 
 
 /* ── RESPONSIVE ── */
@@ -1297,37 +1202,38 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 <div class="mob-panel" id="mobPanelCommunity">
   <div style="display:flex;flex-direction:column;height:100%;overflow:hidden;position:relative;">
 
-    <!-- WALL (presence + quote + tap for chat) -->
-    <div id="loungeWall" style="background:#1e1610;flex-shrink:0;padding:10px 12px 12px;position:relative;cursor:pointer;" onclick="loungeWallTap(event)">
+    <!-- Header -->
+    <div style="background:#1e1610;flex-shrink:0;padding:8px 12px 10px;position:relative;">
       <div id="loungeWallTexture" style="position:absolute;inset:0;pointer-events:none;overflow:hidden;opacity:.07;"></div>
-
+      <div style="font-family:'Playfair Display',serif;font-size:1rem;color:#c8a060;position:relative;z-index:1;">🛋️ The Lounge</div>
       <!-- Presence shelf -->
-      <div style="font-size:8px;letter-spacing:.2em;text-transform:uppercase;color:#c8a060;opacity:.6;margin-bottom:5px;">In the lounge now</div>
+      <div style="font-size:8px;letter-spacing:.2em;text-transform:uppercase;color:#c8a060;opacity:.6;margin-top:8px;margin-bottom:5px;">In the lounge</div>
       <div id="loungeShelf" style="background:#2e1c08;border:1px solid #5a3a18;border-bottom:3px solid #4a2a10;border-radius:3px;padding:6px 8px;display:flex;gap:8px;align-items:flex-start;flex-wrap:wrap;min-height:52px;">
         <div style="font-size:.78rem;color:rgba(200,149,42,.35);align-self:center;font-style:italic;">Nobody here yet…</div>
       </div>
-
-
-    <!-- KNOCK -->
-    <div style="background:#2c1f0e;border-top:1px solid #5a3a18;border-bottom:2px solid #4a2a10;padding:6px 10px;display:flex;gap:6px;align-items:center;flex-shrink:0;">
-      <button onclick="showLoungeRequestModal()" style="font-size:9px;background:rgba(254,243,199,.12);border:1px solid rgba(254,243,199,.25);color:#a5fcb1;border-radius:20px;padding:4px 10px;font-family:'Lato',sans-serif;font-weight:700;cursor:pointer;">🪄 Request</button>
-      <button id="loungeBroadcastBtn" onclick="showBroadcastModal()" style="display:none;font-size:9px;background:rgba(248,113,113,.15);border:1px solid rgba(248,113,113,.35);color:#fca5a5;border-radius:20px;padding:4px 10px;font-family:'Lato',sans-serif;font-weight:700;cursor:pointer;">📢 Broadcast</button>
-      <button id="loungeNewsUploadBtn" style="font-size:9px;background:rgba(250,247,239,.1);border:1px solid rgba(250,247,239,.2);color:#f8fca5;border-radius:20px;padding:4px 10px;font-family:'Lato',sans-serif;font-weight:700;cursor:pointer;">📜 News clip</button>
-      <button onclick="openLoungeChat()" style="margin-left:auto;font-size:9px;background:rgba(200,149,42,.85);border:none;border-radius:20px;padding:5px 14px;font-family:'Lato',sans-serif;font-weight:700;letter-spacing:.07em;color:#2c1f0e;cursor:pointer;white-space:nowrap;">🔥 Campfire</button>
     </div>
 
-    <!-- TABLE: scrollable notes + news area -->
+    <!-- Action buttons -->
+    <div style="background:#2c1f0e;border-top:1px solid #5a3a18;border-bottom:2px solid #4a2a10;padding:6px 10px;display:flex;gap:6px;align-items:center;flex-shrink:0;">
+      <button onclick="showLoungeRequestModal()" style="font-size:9px;background:rgba(254,243,199,.12);border:1px solid rgba(254,243,199,.25);color:#fef3c7;border-radius:20px;padding:4px 10px;font-family:'Lato',sans-serif;font-weight:700;cursor:pointer;">+ Request</button>
+      <button id="loungeBroadcastBtn" onclick="showBroadcastModal()" style="display:none;font-size:9px;background:rgba(248,113,113,.15);border:1px solid rgba(248,113,113,.35);color:#fca5a5;border-radius:20px;padding:4px 10px;font-family:'Lato',sans-serif;font-weight:700;cursor:pointer;">📢 Broadcast</button>
+      <button id="loungeNewsUploadBtn" style="font-size:9px;background:rgba(250,247,239,.1);border:1px solid rgba(250,247,239,.2);color:#faf7ef;border-radius:20px;padding:4px 10px;font-family:'Lato',sans-serif;font-weight:700;cursor:pointer;">+ News clip</button>
+    </div>
+
+    <!-- Table: scrollable notes + news -->
     <div style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;background:#3d2810;position:relative;border-top:3px solid #5a3a18;">
       <div id="loungeTableGrain" style="position:absolute;inset:0;pointer-events:none;overflow:hidden;opacity:.1;"></div>
-
-      <!-- Notes grid (requests as stickies, news as papers) -->
       <div id="loungeNotesGrid" style="padding:4px 8px 16px;position:relative;z-index:2;display:flex;flex-wrap:wrap;gap:0;align-items:flex-end;min-height:320px;">
         <div style="color:rgba(200,149,42,.25);font-size:.8rem;text-align:center;width:100%;padding:3rem 0;">Loading…</div>
       </div>
     </div>
+
+  </div>
+
+  <!-- FLOATING MESSAGE OVERLAY (kept for background chat infra) -->
+  <div id="loungeFloatingMsg" style="position:fixed;top:70px;right:10px;z-index:25;
+    max-width:200px;pointer-events:none;opacity:0;transition:opacity .3s;"></div>
 </div>
-  </div>
-  </div>
 
 <!-- CHAT OVERLAY -->
 <div id="loungeChatOverlay" style="position:fixed;top:0;left:0;right:0;bottom:var(--mob-nav-h);background:#0d0805;z-index:100;display:flex;flex-direction:column;opacity:0;pointer-events:none;transition:opacity .3s;">
@@ -5358,7 +5264,6 @@ function startPresenceListener() {
 }
 
   function renderLoungeShelf(people) {
-    _lastPresencePeople = people;
   const shelf = document.getElementById('loungeShelf');
   if(!shelf) return;
   if(!people.length) {
@@ -5593,298 +5498,11 @@ function updateLoungeBadge() {
   }
 }
 
-// ── WALL TAP → CHAT ───────────────────────────────────────────────────────────
-function loungeWallTap(e) {
-}
-
-function openLoungeChat() {
-  const overlay = document.getElementById('loungeChatOverlay');
-  overlay.style.opacity = '1';
-  overlay.style.pointerEvents = 'all';
-  document.getElementById('loungeTapHint')?.remove();
-  startChatListener();
-  markChatSeen();
-  // Clear floating messages
-  const flt = document.getElementById('loungeFloatingMsg');
-  if(flt) { flt.innerHTML = ''; flt.style.opacity = '0'; flt.style.pointerEvents = 'none'; }
-  // Render campfire after layout settles
-  setTimeout(() => renderCampfire(), 80);
-  setTimeout(() => document.getElementById('loungeChatInput')?.focus(), 150);
-}
-
-function closeLoungeChat() {
-  const overlay = document.getElementById('loungeChatOverlay');
-  overlay.style.opacity = '0';
-  overlay.style.pointerEvents = 'none';
-}
 
 // Close chat when tapping the message area background
 document.getElementById('loungeChatMessages')?.addEventListener('click', function(e) {
   if(e.target === this) closeLoungeChat();
 });
-
-// ── CAMPFIRE CHAT ─────────────────────────────────────────────────────────────
-let chatUnsubActive = null;
-let chatLastSeenTs = parseInt(localStorage.getItem('elib_chat_seen') || '0');
-let campfireMessages = []; // latest N messages
-let floatingMsgTimer = null;
-
-const CAMPFIRE_COLORS = ['#2a7c8a','#5a48b0','#b84c1a','#276749','#c8952a','#7c3aed'];
-
-function startChatListener() {
-  if(chatUnsubActive) return;
-  const q = query(collection(db, 'lounge_chat'), orderBy('createdAt', 'asc'), limit(60));
-  chatUnsubActive = onSnapshot(q, snap => {
-    const prev = campfireMessages;
-campfireMessages = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-if(document.getElementById('loungeChatOverlay').style.opacity === '1') {
-  // Find which users got new messages
-  const prevLastByUser = {};
-  prev.forEach(m => { prevLastByUser[m.authorId] = m.id; });
-  const changedUsers = new Set();
-  campfireMessages.forEach(m => {
-    if(prevLastByUser[m.authorId] !== m.id) changedUsers.add(m.authorId);
-  });
-  if(changedUsers.size === 0 || prev.length === 0) {
-    renderCampfire(); // full render on first load
-  } else {
-    updateCampfireBubbles(changedUsers);
-  }
-    } else {
-      // Show floating bubble for new messages
-      const changes = snap.docChanges().filter(c => c.type === 'added');
-      changes.forEach(c => {
-        const msg = c.doc.data();
-        if(msg.authorId !== currentUser?.uid) {
-          showFloatingMessage(msg);
-        }
-      });
-    }
-  }, e => console.warn('Chat listener:', e));
-}
-
-function markChatSeen() {
-  chatLastSeenTs = Date.now();
-  localStorage.setItem('elib_chat_seen', chatLastSeenTs);
-}
-
-// ── CAMPFIRE RENDERER ─────────────────────────────────────────────────────────
-function renderCampfire() {
-  const container = document.getElementById('loungeCampfire');
-  if(!container) return;
-
-  const W = container.clientWidth || window.innerWidth;
-  const H = container.clientHeight || (window.innerHeight - 180);
-
-  // Get unique participants from presence + recent message authors
-  const presenceSnap = _lastPresencePeople || [];
-  const recentAuthors = [...new Map(
-    [...campfireMessages].reverse().slice(0, 20)
-      .map(m => [m.authorId, { userId: m.authorId, displayName: m.authorName, photoURL: m.authorPhoto }])
-  ).values()];
-
-  // Merge: presence people first, then recent authors not already in presence
-  const presenceIds = new Set(presenceSnap.map(p => p.userId));
-  const participants = [
-    ...presenceSnap,
-    ...recentAuthors.filter(a => !presenceIds.has(a.userId))
-  ].slice(0, 8);
-
-  if(!participants.length) {
-    container.innerHTML = `
-      <div class="campfire-fire">🔥</div>
-      <div style="position:absolute;top:40%;left:50%;transform:translate(-50%,-50%);
-                  text-align:center;color:rgba(200,149,42,.25);font-size:.82rem;">
-        Nobody here yet…<br/>Be the first to say something.
-      </div>`;
-    return;
-  }
-
-  // Layout: your avatar at bottom centre, others arranged in an arc above
-  const me = participants.find(p => p.userId === currentUser?.uid);
-  const others = participants.filter(p => p.userId !== currentUser?.uid);
-
-  // Build positions
-  const positions = [];
-
-  // Others: arc from bottom-left to bottom-right, curving up
-  const arcCount = others.length;
-  others.forEach((p, i) => {
-    let x, y;
-    if(arcCount === 1) {
-      x = W * 0.5; y = H * 0.25;
-    } else {
-      // Spread across top arc
-      const t = arcCount === 1 ? 0.5 : i / (arcCount - 1);
-      x = W * 0.12 + t * W * 0.76;
-      y = H * 0.15 + Math.sin(t * Math.PI) * H * -0.05 + H * 0.15;
-    }
-    positions.push({ person: p, x, y, isMe: false });
-  });
-
-  // Me: bottom centre
-  if(me) positions.push({ person: me, x: W * 0.5, y: H * 0.78, isMe: true });
-
-  // Fire: middle
-  const fireY = H * 0.52;
-
-  // Get last message per person
-  const lastMsgByUser = {};
-  campfireMessages.forEach(m => { lastMsgByUser[m.authorId] = m; });
-
-  container.innerHTML = `<div class="campfire-fire" style="bottom:${H - fireY - 20}px;">🔥</div>`;
-
-  positions.forEach(({ person, x, y, isMe }) => {
-    const initials = (person.displayName||'?').split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
-    const colorIdx = Math.abs([...person.userId].reduce((a,c)=>a+c.charCodeAt(0),0)) % CAMPFIRE_COLORS.length;
-    const color = CAMPFIRE_COLORS[colorIdx];
-    const lastMsg = lastMsgByUser[person.userId];
-    const isActive = (person.status === 'active') || isMe;
-
-    const wrap = document.createElement('div');
-    wrap.className = 'campfire-avatar-wrap';
-    wrap.dataset.userid = person.userId;
-    wrap.style.left = (x - 20) + 'px';
-    wrap.style.top = (y - 20) + 'px';
-
-    const avatarInner = person.photoURL
-      ? `<img src="${person.photoURL}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;border:2px solid ${isActive?'#c8a060':'#5a3a18'};${!isActive?'filter:grayscale(.7)':''}"/>`
-      : `<div style="width:40px;height:40px;border-radius:50%;background:${isActive?color:'#4b5563'};border:2px solid ${isActive?'#c8a060':'#5a3a18'};display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff;">${initials}</div>`;
-
-    // Bubble position: point toward fire
-    const dx = W * 0.5 - x;
-    const dy = fireY - y;
-    const angle = Math.atan2(dy, dx);
-    // Bubble appears on opposite side from fire
-    const bx = Math.cos(angle + Math.PI) * 48;
-    const by = Math.sin(angle + Math.PI) * 48;
-
-const bubbleHtml = lastMsg
-  ? `<div class="campfire-bubble ${isMe?'mine':''}"
-        style="position:absolute;left:50%;transform:translateX(-50%);
-               bottom:calc(100% + 8px);width:140px;text-align:center;">
-         <div style="font-size:8.5px;font-weight:700;opacity:.55;margin-bottom:3px;
-                     color:${isMe?'#c8a060':'#a89070'};">
-           ${isMe?'You':esc(person.displayName?.split(' ')[0]||'?')}
-         </div>
-         ${esc(lastMsg.text)}
-         <div style="font-size:7.5px;opacity:.35;margin-top:3px;">
-           ${lastMsg.createdAt?.toDate?.()?timeAgo(lastMsg.createdAt.toDate()):''}</div>
-       </div>`
-  : '';
-
-wrap.innerHTML = `
-  <div style="position:relative;display:flex;flex-direction:column;align-items:center;">
-    <div style="position:relative;">
-      ${bubbleHtml}
-      ${avatarInner}
-    </div>
-    <div class="campfire-name">${isMe?'You':esc(person.displayName?.split(' ')[0]||'?')}</div>
-  </div>`;
-
-    // Tap own avatar → edit reading status
-    if(isMe) {
-      wrap.style.cursor = 'pointer';
-      wrap.addEventListener('click', showReadingEditSheet);
-    } else {
-      wrap.style.cursor = 'pointer';
-      wrap.addEventListener('click', async () => {
-        const name = person.displayName?.split(' ')[0] || 'them';
-        if(!confirm(`Knock on ${name}'s door?`)) return;
-        try {
-          await addDoc(collection(db, 'lounge_notifications'), {
-            toUserId: person.userId,
-            fromUserId: currentUser.uid,
-            fromName: currentUser.displayName || currentUser.email,
-            type: 'knock',
-            read: false,
-            createdAt: serverTimestamp(),
-          });
-          showToast(`🔔 Knocked on ${name}'s door!`);
-        } catch(e) { showToast('Failed: ' + e.message); }
-      });
-    }
-
-    container.appendChild(wrap);
-  });
-}
-
-  function updateCampfireBubbles(changedUserIds) {
-  const lastMsgByUser = {};
-  campfireMessages.forEach(m => { lastMsgByUser[m.authorId] = m; });
-
-  changedUserIds.forEach(userId => {
-    const lastMsg = lastMsgByUser[userId];
-    if(!lastMsg) return;
-    const isMe = userId === currentUser?.uid;
-
-    // Find the existing bubble for this user
-    const container = document.getElementById('loungeCampfire');
-    if(!container) return;
-
-    // Each avatar wrap has a data-userid attribute — add it in renderCampfire
-    const wrap = container.querySelector(`[data-userid="${userId}"]`);
-    if(!wrap) return;
-
-    const existingBubble = wrap.querySelector('.campfire-bubble');
-    const person = (_lastPresencePeople.find(p => p.userId === userId))
-      || { displayName: lastMsg.authorName, userId };
-
-    const newBubble = document.createElement('div');
-    newBubble.className = `campfire-bubble ${isMe ? 'mine' : ''}`;
-    newBubble.style.cssText = `position:absolute;left:50%;transform:translateX(-50%);
-      bottom:calc(100% + 8px);width:140px;text-align:center;`;
-    newBubble.innerHTML = `
-      <div style="font-size:8.5px;font-weight:700;opacity:.55;margin-bottom:3px;
-                  color:${isMe?'#c8a060':'#a89070'};">
-        ${isMe?'You':esc(person.displayName?.split(' ')[0]||'?')}
-      </div>
-      ${esc(lastMsg.text)}
-      <div style="font-size:7.5px;opacity:.35;margin-top:3px;">
-        ${timeAgo(lastMsg.createdAt?.toDate?.() || new Date())}
-      </div>`;
-
-    if(existingBubble) {
-      existingBubble.replaceWith(newBubble);
-    } else {
-      const avatarDiv = wrap.querySelector('[style*="position:relative"]');
-      if(avatarDiv) avatarDiv.insertBefore(newBubble, avatarDiv.firstChild);
-    }
-  });
-}
-
-// Cache presence people so campfire can use them
-let _lastPresencePeople = [];
-const _origRenderShelf = renderLoungeShelf;
-// We'll patch renderLoungeShelf below to cache
-
-// ── FLOATING MESSAGE ──────────────────────────────────────────────────────────
-function showFloatingMessage(msg) {
-  const el = document.getElementById('loungeFloatingMsg');
-  if(!el) return;
-
-  const bubble = document.createElement('div');
-  bubble.className = 'floating-msg-bubble';
-  bubble.innerHTML = `
-    <div class="floating-msg-author">${esc(msg.authorName?.split(' ')[0]||'?')}</div>
-    ${esc(msg.text)}`;
-  bubble.addEventListener('click', () => {
-    el.innerHTML = '';
-    el.style.opacity = '0';
-    openLoungeChat();
-  });
-
-  el.appendChild(bubble);
-  el.style.opacity = '1';
-  el.style.pointerEvents = 'all';
-
-  clearTimeout(floatingMsgTimer);
-  floatingMsgTimer = setTimeout(() => {
-    el.style.opacity = '0';
-    el.style.pointerEvents = 'none';
-    setTimeout(() => { el.innerHTML = ''; }, 350);
-  }, 4500);
-}
 
 // ── SEND + OPEN/CLOSE ─────────────────────────────────────────────────────────
 async function sendLoungeChat() {
@@ -6025,8 +5643,6 @@ window.saveReadingStatus = saveReadingStatus;
 window.showReadingEditSheet = showReadingEditSheet;
 window.saveReadingStatus = saveReadingStatus;
 window.loungeKnock = loungeKnock;
-window.closeLoungeChat = closeLoungeChat;
-window.sendLoungeChat = sendLoungeChat;
 window.showLoungeRequestModal = showLoungeRequestModal;
 window.loungeReact = loungeReact;
 window.loungeHaveIt = loungeHaveIt;
@@ -6039,9 +5655,6 @@ window.showBroadcastModal = showBroadcastModal;
 window.sendReqDetailComment = sendReqDetailComment;
 window.deleteDetailComment = deleteDetailComment;
 window.showBookById = showBookById;
-window.openLoungeChat = openLoungeChat;
-window.closeLoungeChat = closeLoungeChat;
-window.loungeWallTap = loungeWallTap;
   
   document.getElementById('loungeNewsUploadBtn')?.addEventListener('click', () => {
   const input = document.createElement('input');
