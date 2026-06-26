@@ -319,20 +319,21 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .reader-content-inner p{margin:0 0 1.1em;}
 .reader-content-inner h1,.reader-content-inner h2,.reader-content-inner h3{font-family:'Playfair Display',serif;margin:1.5em 0 .5em;}
 
-  /* ── TTS AUDIO BAR ── */
+/* ── TTS AUDIO BAR ── */
 .tts-bar{position:fixed;bottom:0;left:0;right:0;z-index:140;background:var(--navy);border-top:2px solid var(--gold);transform:translateY(100%);transition:transform .3s ease;display:flex;flex-direction:column;padding:0;}
 .tts-bar.open{transform:translateY(0);}
-.tts-bar-main{display:flex;align-items:center;gap:.8rem;padding:.7rem 1.2rem;}
+.tts-bar-main{display:flex;align-items:center;gap:.6rem;padding:.6rem 1rem;}
 .tts-bar-info{flex:1;min-width:0;}
 .tts-bar-title{font-family:'Playfair Display',serif;font-size:.88rem;color:var(--cream);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .tts-bar-chapter{font-size:.7rem;color:var(--muted);margin-top:1px;}
-.tts-bar-controls{display:flex;gap:.4rem;align-items:center;flex-shrink:0;}
-.tts-btn{background:transparent;border:1px solid rgba(255,255,255,.2);color:var(--cream);padding:.38rem .7rem;font-family:'Lato',sans-serif;font-size:.72rem;font-weight:700;border-radius:3px;cursor:pointer;transition:all .15s;white-space:nowrap;}
+.tts-bar-controls{display:flex;gap:.3rem;align-items:center;flex-shrink:0;}
+.tts-btn{background:transparent;border:1px solid rgba(255,255,255,.15);color:var(--cream);padding:.35rem .6rem;font-family:'Lato',sans-serif;font-size:.75rem;font-weight:700;border-radius:3px;cursor:pointer;transition:all .15s;white-space:nowrap;min-width:32px;text-align:center;}
 .tts-btn:hover{background:rgba(255,255,255,.1);}
-.tts-btn.primary{background:var(--teal);border-color:var(--teal);color:var(--gold);}
-.tts-btn.stop{color:#f87171;border-color:#f87171;}
-.tts-progress{height:2px;background:rgba(255,255,255,.15);}
-.tts-progress-bar{height:2px;background:var(--gold);transition:width .5s linear;width:0%;}
+.tts-btn.primary{background:var(--teal);border-color:var(--teal);color:var(--gold);min-width:40px;}
+.tts-btn.stop{color:#f87171;border-color:rgba(248,113,113,.4);}
+.tts-btn.speed-active{background:rgba(200,149,42,.2);border-color:var(--gold);color:var(--gold);}
+.tts-progress{height:2px;background:rgba(255,255,255,.1);}
+.tts-progress-bar{height:2px;background:var(--gold);transition:width .4s linear;width:0%;}
 
 /* ── SKELETON ── */
 .skeleton-card{border-radius:4px;overflow:hidden;background:var(--warm-white);border:1px solid var(--border);}
@@ -1629,7 +1630,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
   </div>
 </div>
 
-  <!-- TTS Audio Bar -->
+<!-- TTS Audio Bar -->
 <div class="tts-bar" id="ttsBar">
   <div class="tts-progress"><div class="tts-progress-bar" id="ttsProgressBar"></div></div>
   <div class="tts-bar-main">
@@ -1638,11 +1639,17 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
       <div class="tts-bar-chapter" id="ttsBarChapter"></div>
     </div>
     <div class="tts-bar-controls">
-      <button class="tts-btn" id="ttsBtnPrev">⏮ Prev</button>
-      <button class="tts-btn primary" id="ttsBtnPlay">▶ Play</button>
-      <button class="tts-btn" id="ttsBtnNext">Next ⏭</button>
+      <button class="tts-btn" id="ttsBtnPrev">⏮</button>
+      <button class="tts-btn primary" id="ttsBtnPlay">▶</button>
+      <button class="tts-btn" id="ttsBtnNext">⏭</button>
+      <button class="tts-btn" id="ttsBtnSpeed">1×</button>
       <button class="tts-btn stop" id="ttsBtnStop">✕</button>
     </div>
+  </div>
+  <!-- Voice + settings row -->
+  <div id="ttsSettingsRow" style="display:none;padding:.4rem 1.2rem .6rem;display:none;gap:.5rem;align-items:center;flex-wrap:wrap;border-top:1px solid rgba(255,255,255,.08);">
+    <span style="font-size:.65rem;letter-spacing:.12em;text-transform:uppercase;color:rgba(200,169,82,.5);font-weight:700;">Voice</span>
+    <select id="ttsVoiceSelect" style="flex:1;background:#1a2840;border:1px solid rgba(200,149,42,.3);color:#d8c8a0;font-family:'Lato',sans-serif;font-size:.78rem;padding:.28rem .5rem;border-radius:3px;outline:none;min-width:0;"></select>
   </div>
 </div>
 <div class="loading-overlay" id="loadingOverlay">
@@ -3817,91 +3824,358 @@ window.addEventListener('resize',()=>{
   }
 });
 
-  // ── TTS ───────────────────────────────────────────────────────────────────────
-let ttsBookId=null,ttsSpine=[],ttsChapter=0,ttsZip=null,ttsOpfBase='',ttsPlaying=false,ttsUtterance=null,ttsWatchdog=null;
+// ── TTS ───────────────────────────────────────────────────────────────────────
 
-async function startTTS(bookId){
-  const book=[...library,...communityLib].find(b=>b.id===bookId);
-  if(!book){showToast('Book not found');return;}
-  if(ttsBookId===bookId&&ttsPlaying){ttsPause();return;}
-  if(ttsBookId!==bookId){
-    window.speechSynthesis.cancel();
-    ttsBookId=bookId;ttsChapter=0;ttsSpine=[];ttsZip=null;
-    showLoading('Preparing audio…');
-    try{
-      let sp=book.storagePath;
-      if(!sp&&book.epubUrl){const m=book.epubUrl.match(/\/o\/(.+?)\?/);if(m)sp=decodeURIComponent(m[1]);}
-      if(!sp){hideLoading();showToast('EPUB not available');return;}
-      const bytes=await getBytes(storageRef(storage,sp));
-      ttsZip=await JSZip.loadAsync(bytes);
-      const container=await ttsZip.file('META-INF/container.xml')?.async('string');
-      const opfPath=container?.match(/full-path="([^"]+\.opf)"/i)?.[1];
-      if(!opfPath)throw new Error('No OPF');
-      const opfXml=await ttsZip.file(opfPath)?.async('string');
-      ttsOpfBase=opfPath.includes('/')?opfPath.replace(/\/[^/]+$/,'/'):'';
-      const manifestMap={};const mRe=/<item\s+([^>]+)>/gi;let mm;
-      while((mm=mRe.exec(opfXml))!==null){const a=mm[1];const id=a.match(/\bid="([^"]+)"/)?.[1];const href=a.match(/\bhref="([^"]+)"/)?.[1];if(id&&href)manifestMap[id]={href};}
-      const spineRe=/<itemref\s+idref="([^"]+)"/gi;let sp2;
-      while((sp2=spineRe.exec(opfXml))!==null){const item=manifestMap[sp2[1]];if(item)ttsSpine.push(item.href);}
-      hideLoading();
-    }catch(e){hideLoading();showToast('Could not load book: '+e.message);return;}
-    document.getElementById('ttsBarTitle').textContent=book.title||'';
-    document.getElementById('ttsBar').classList.add('open');
+let ttsBookId = null;
+let ttsSpine = [];
+let ttsChapter = 0;
+let ttsZip = null;
+let ttsOpfBase = '';
+let ttsPlaying = false;
+let ttsUtterance = null;
+let ttsWatchdog = null;
+let ttsRate = 1;
+let ttsVoice = null;
+let ttsParagraphs = [];
+let ttsParagraphIdx = 0;
+let ttsChapterText = '';
+
+const TTS_RATES = [0.75, 1, 1.25, 1.5, 2];
+
+// ── VOICE LOADING ─────────────────────────────────────────────────────────────
+function ttsLoadVoices() {
+  const sel = document.getElementById('ttsVoiceSelect');
+  if(!sel) return;
+  let voices = window.speechSynthesis.getVoices();
+  if(!voices.length) return;
+
+  // Prefer English voices, put them first
+  const eng = voices.filter(v => v.lang.startsWith('en'));
+  const rest = voices.filter(v => !v.lang.startsWith('en'));
+  voices = [...eng, ...rest];
+
+  sel.innerHTML = voices.map((v, i) =>
+    `<option value="${i}">${v.name} (${v.lang})</option>`
+  ).join('');
+
+  // Default: first local English voice, else first English
+  const localEng = eng.find(v => v.localService);
+  const defaultIdx = voices.indexOf(localEng || eng[0] || voices[0]);
+  sel.value = defaultIdx >= 0 ? defaultIdx : 0;
+  ttsVoice = voices[parseInt(sel.value)];
+
+  sel.addEventListener('change', () => {
+    ttsVoice = voices[parseInt(sel.value)];
+  });
+}
+
+// Voices load asynchronously — wire both the event and a fallback poll
+window.speechSynthesis.onvoiceschanged = ttsLoadVoices;
+setTimeout(ttsLoadVoices, 500);
+
+// ── EXTRACT CLEAN TEXT FROM CHAPTER HTML ──────────────────────────────────────
+function ttsExtractParagraphs(html) {
+  const div = document.createElement('div');
+  div.innerHTML = html;
+
+  // Remove script, style, nav elements
+  div.querySelectorAll('script,style,nav,aside,[epub\\:type="toc"],[role="doc-toc"]')
+    .forEach(el => el.remove());
+
+  // Get paragraphs and headings as separate chunks
+  const blocks = [];
+  const walk = (node) => {
+    if(node.nodeType === Node.TEXT_NODE) {
+      const t = node.textContent.trim();
+      if(t) blocks.push(t);
+      return;
+    }
+    if(node.nodeType !== Node.ELEMENT_NODE) return;
+    const tag = node.tagName.toLowerCase();
+
+    // Block elements — add their text as a chunk
+    if(['p','h1','h2','h3','h4','h5','h6','li','td','blockquote','div'].includes(tag)) {
+      const text = node.textContent.replace(/\s+/g, ' ').trim();
+      if(text.length > 2) blocks.push(text);
+    } else {
+      for(const child of node.childNodes) walk(child);
+    }
+  };
+
+  for(const child of div.childNodes) walk(child);
+
+  // Filter out very short fragments (page numbers, labels etc.)
+  return blocks.filter(t => t.length > 3);
+}
+
+// ── IS THIS A NAV/TOC CHAPTER? ────────────────────────────────────────────────
+function ttsIsNavChapter(html) {
+  const lower = html.toLowerCase();
+  return lower.includes('epub:type="toc"') ||
+         lower.includes('epub:type="nav"') ||
+         lower.includes('role="doc-toc"') ||
+         (lower.includes('<nav') && lower.includes('toc'));
+}
+
+// ── OPEN TTS ──────────────────────────────────────────────────────────────────
+async function startTTS(bookId) {
+  if(!bookId) return;
+  const book = [...library, ...communityLib].find(b => b.id === bookId);
+  if(!book) { showToast('Book not found'); return; }
+
+  // If same book, just toggle play/pause
+  if(ttsBookId === bookId) {
+    if(ttsPlaying) ttsPause();
+    else ttsResume();
+    return;
   }
-  ttsPlaying=true;
-  document.getElementById('ttsBtnPlay').textContent='⏸ Pause';
-  ttsReadChapter(ttsChapter);
-}
 
-async function ttsReadChapter(idx){
-  if(!ttsZip||idx<0||idx>=ttsSpine.length){ttsStop();return;}
-  ttsChapter=idx;
-  document.getElementById('ttsBarChapter').textContent=`Chapter ${idx+1} of ${ttsSpine.length}`;
-  document.getElementById('ttsProgressBar').style.width=((idx/Math.max(ttsSpine.length-1,1))*100)+'%';
-  try{
-    const html=await ttsZip.file(ttsOpfBase+ttsSpine[idx])?.async('string')||'';
-    const text=html.replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim();
-    const clean=text.replace(/\s+/g,' ').trim();
-    if(!clean){ttsReadChapter(idx+1);return;}
-    window.speechSynthesis.cancel();
-    ttsUtterance=new SpeechSynthesisUtterance(clean);
-    ttsUtterance.rate=1;ttsUtterance.pitch=1;
-    ttsUtterance.onend=()=>{clearInterval(ttsWatchdog);if(ttsPlaying)ttsReadChapter(idx+1);};
-    ttsUtterance.onerror=e=>{clearInterval(ttsWatchdog);if(e.error!=='interrupted')ttsReadChapter(idx+1);};
-    window.speechSynthesis.speak(ttsUtterance);
-    ttsWatchdog=setInterval(()=>{
-      if(!window.speechSynthesis.speaking&&!window.speechSynthesis.paused){
-        clearInterval(ttsWatchdog);if(ttsPlaying)ttsReadChapter(idx+1);
-      }
-    },1000);
-  }catch(e){ttsReadChapter(idx+1);}
-}
-
-function ttsPause(){
-  if(window.speechSynthesis.speaking&&!window.speechSynthesis.paused){
-    window.speechSynthesis.pause();ttsPlaying=false;
-    document.getElementById('ttsBtnPlay').textContent='▶ Play';
-  } else if(window.speechSynthesis.paused){
-    window.speechSynthesis.resume();ttsPlaying=true;
-    document.getElementById('ttsBtnPlay').textContent='⏸ Pause';
-  }
-}
-
-function ttsStop(){
+  // New book — load it
   window.speechSynthesis.cancel();
-  ttsPlaying=false;ttsBookId=null;ttsZip=null;ttsSpine=[];ttsChapter=0;
-  document.getElementById('ttsBar').classList.remove('open');
-  document.getElementById('ttsBtnPlay').textContent='▶ Play';
+  ttsBookId = bookId;
+  ttsChapter = 0;
+  ttsSpine = [];
+  ttsZip = null;
+  ttsParagraphs = [];
+  ttsParagraphIdx = 0;
+
+  showLoading('Preparing audio…');
+  try {
+    let sp = book.storagePath;
+    if(!sp && book.epubUrl) {
+      const m = book.epubUrl.match(/\/o\/(.+?)\?/);
+      if(m) sp = decodeURIComponent(m[1]);
+    }
+    if(!sp) { hideLoading(); showToast('EPUB not available'); return; }
+
+    const bytes = await getBytes(storageRef(storage, sp));
+    ttsZip = await JSZip.loadAsync(bytes);
+
+    const container = await ttsZip.file('META-INF/container.xml')?.async('string');
+    const opfPath = container?.match(/full-path="([^"]+\.opf)"/i)?.[1];
+    if(!opfPath) throw new Error('No OPF');
+
+    const opfXml = await ttsZip.file(opfPath)?.async('string');
+    ttsOpfBase = opfPath.includes('/') ? opfPath.replace(/\/[^/]+$/, '/') : '';
+
+    const manifestMap = {};
+    const mRe = /<item\s+([^>]+)>/gi;
+    let mm;
+    while((mm = mRe.exec(opfXml)) !== null) {
+      const a = mm[1];
+      const id = a.match(/\bid="([^"]+)"/)?.[1];
+      const href = a.match(/\bhref="([^"]+)"/)?.[1];
+      const mt = a.match(/\bmedia-type="([^"]+)"/)?.[1];
+      if(id && href) manifestMap[id] = { href, mt };
+    }
+
+    const spineRe = /<itemref\s+idref="([^"]+)"/gi;
+    let sp2;
+    while((sp2 = spineRe.exec(opfXml)) !== null) {
+      const item = manifestMap[sp2[1]];
+      if(item && item.mt !== 'application/x-dtbncx+xml') {
+        ttsSpine.push(item.href);
+      }
+    }
+
+    if(!ttsSpine.length) throw new Error('No spine items');
+
+    // If visual reader is open on this book, start from current chapter
+    if(readerBookId === bookId && readerChapter > 0) {
+      ttsChapter = readerChapter;
+    }
+
+    hideLoading();
+    ttsShowBar(book.title);
+    ttsLoadVoices();
+
+    await ttsGoToChapter(ttsChapter);
+
+  } catch(e) {
+    hideLoading();
+    showToast('Could not load book: ' + e.message);
+    console.error(e);
+  }
 }
 
-document.getElementById('ttsBtnPlay').addEventListener('click',()=>{
-  if(ttsBookId&&!ttsPlaying&&window.speechSynthesis.paused){ttsPause();}
-  else if(ttsBookId&&ttsPlaying){ttsPause();}
-  else if(ttsBookId){ttsPlaying=true;ttsReadChapter(ttsChapter);}
+// ── SHOW / HIDE BAR ───────────────────────────────────────────────────────────
+function ttsShowBar(title) {
+  document.getElementById('ttsBarTitle').textContent = title || '';
+  document.getElementById('ttsBar').classList.add('open');
+}
+
+function ttsStop() {
+  window.speechSynthesis.cancel();
+  clearInterval(ttsWatchdog);
+  ttsPlaying = false;
+  ttsBookId = null;
+  ttsZip = null;
+  ttsSpine = [];
+  ttsParagraphs = [];
+  ttsParagraphIdx = 0;
+  document.getElementById('ttsBar').classList.remove('open');
+  document.getElementById('ttsSettingsRow').style.display = 'none';
+  document.getElementById('ttsBtnPlay').textContent = '▶';
+}
+
+// ── CHAPTER LOADING ───────────────────────────────────────────────────────────
+async function ttsGoToChapter(idx) {
+  if(!ttsZip || idx < 0 || idx >= ttsSpine.length) {
+    if(idx >= ttsSpine.length) showToast('End of book 📖');
+    ttsStop();
+    return;
+  }
+
+  ttsChapter = idx;
+  ttsParagraphs = [];
+  ttsParagraphIdx = 0;
+
+  try {
+    const html = await ttsZip.file(ttsOpfBase + ttsSpine[idx])?.async('string') || '';
+
+    // Skip nav/toc chapters silently
+    if(ttsIsNavChapter(html)) {
+      await ttsGoToChapter(idx + 1);
+      return;
+    }
+
+    ttsParagraphs = ttsExtractParagraphs(html);
+
+    if(!ttsParagraphs.length) {
+      await ttsGoToChapter(idx + 1);
+      return;
+    }
+
+    const pct = Math.round((idx / Math.max(ttsSpine.length - 1, 1)) * 100);
+    document.getElementById('ttsBarChapter').textContent =
+      `Chapter ${idx + 1} of ${ttsSpine.length}`;
+    document.getElementById('ttsProgressBar').style.width = pct + '%';
+
+    ttsPlaying = true;
+    document.getElementById('ttsBtnPlay').textContent = '⏸';
+    ttsSpeakNextParagraph();
+
+  } catch(e) {
+    console.warn('TTS chapter load error:', e);
+    await ttsGoToChapter(idx + 1);
+  }
+}
+
+// ── SPEAK ONE PARAGRAPH ───────────────────────────────────────────────────────
+function ttsSpeakNextParagraph() {
+  if(!ttsPlaying) return;
+  if(ttsParagraphIdx >= ttsParagraphs.length) {
+    // Chapter done — move to next
+    ttsGoToChapter(ttsChapter + 1);
+    return;
+  }
+
+  const text = ttsParagraphs[ttsParagraphIdx];
+  ttsParagraphIdx++;
+
+  // Update progress within chapter
+  const chapterPct = Math.round(((ttsChapter + ttsParagraphIdx / ttsParagraphs.length)
+    / Math.max(ttsSpine.length, 1)) * 100);
+  document.getElementById('ttsProgressBar').style.width = chapterPct + '%';
+
+  window.speechSynthesis.cancel();
+
+  ttsUtterance = new SpeechSynthesisUtterance(text);
+  ttsUtterance.rate = ttsRate;
+  if(ttsVoice) ttsUtterance.voice = ttsVoice;
+  ttsUtterance.lang = ttsVoice?.lang || 'en-US';
+
+  ttsUtterance.onend = () => {
+    clearInterval(ttsWatchdog);
+    if(ttsPlaying) ttsSpeakNextParagraph();
+  };
+
+  ttsUtterance.onerror = (e) => {
+    clearInterval(ttsWatchdog);
+    if(e.error === 'interrupted' || e.error === 'canceled') return;
+    console.warn('TTS error:', e.error);
+    if(ttsPlaying) ttsSpeakNextParagraph();
+  };
+
+  window.speechSynthesis.speak(ttsUtterance);
+
+  // iOS Chrome watchdog — onend is unreliable
+  clearInterval(ttsWatchdog);
+  ttsWatchdog = setInterval(() => {
+    if(!window.speechSynthesis.speaking && !window.speechSynthesis.paused && ttsPlaying) {
+      clearInterval(ttsWatchdog);
+      ttsSpeakNextParagraph();
+    }
+  }, 800);
+}
+
+// ── PAUSE / RESUME ────────────────────────────────────────────────────────────
+function ttsPause() {
+  if(!ttsPlaying) return;
+  ttsPlaying = false;
+  clearInterval(ttsWatchdog);
+  window.speechSynthesis.cancel(); // more reliable than pause() on iOS
+  // Back up one paragraph so resume repeats the interrupted one
+  ttsParagraphIdx = Math.max(0, ttsParagraphIdx - 1);
+  document.getElementById('ttsBtnPlay').textContent = '▶';
+}
+
+function ttsResume() {
+  if(ttsPlaying) return;
+  ttsPlaying = true;
+  document.getElementById('ttsBtnPlay').textContent = '⏸';
+  ttsSpeakNextParagraph();
+}
+
+// ── SPEED CYCLING ─────────────────────────────────────────────────────────────
+function ttsCycleSpeed() {
+  const idx = TTS_RATES.indexOf(ttsRate);
+  ttsRate = TTS_RATES[(idx + 1) % TTS_RATES.length];
+  const btn = document.getElementById('ttsBtnSpeed');
+  btn.textContent = ttsRate + '×';
+  btn.classList.toggle('speed-active', ttsRate !== 1);
+  // Restart current paragraph at new speed
+  if(ttsPlaying) {
+    ttsParagraphIdx = Math.max(0, ttsParagraphIdx - 1);
+    window.speechSynthesis.cancel();
+    clearInterval(ttsWatchdog);
+    setTimeout(() => ttsSpeakNextParagraph(), 80);
+  }
+}
+
+// ── BUTTON BINDINGS ───────────────────────────────────────────────────────────
+document.getElementById('ttsBtnPlay').addEventListener('click', () => {
+  if(!ttsBookId) return;
+  if(ttsPlaying) ttsPause();
+  else ttsResume();
 });
-document.getElementById('ttsBtnPrev').addEventListener('click',()=>{window.speechSynthesis.cancel();ttsReadChapter(Math.max(0,ttsChapter-1));});
-document.getElementById('ttsBtnNext').addEventListener('click',()=>{window.speechSynthesis.cancel();ttsReadChapter(ttsChapter+1);});
-document.getElementById('ttsBtnStop').addEventListener('click',ttsStop);
+
+document.getElementById('ttsBtnPrev').addEventListener('click', () => {
+  if(!ttsBookId) return;
+  window.speechSynthesis.cancel();
+  clearInterval(ttsWatchdog);
+  ttsGoToChapter(Math.max(0, ttsChapter - 1));
+});
+
+document.getElementById('ttsBtnNext').addEventListener('click', () => {
+  if(!ttsBookId) return;
+  window.speechSynthesis.cancel();
+  clearInterval(ttsWatchdog);
+  ttsGoToChapter(ttsChapter + 1);
+});
+
+document.getElementById('ttsBtnSpeed').addEventListener('click', ttsCycleSpeed);
+
+document.getElementById('ttsBtnStop').addEventListener('click', ttsStop);
+
+// Show/hide voice row on title tap
+document.getElementById('ttsBarTitle').style.cursor = 'pointer';
+document.getElementById('ttsBarTitle').addEventListener('click', () => {
+  const row = document.getElementById('ttsSettingsRow');
+  const isOpen = row.style.display === 'flex';
+  row.style.display = isOpen ? 'none' : 'flex';
+  if(!isOpen) ttsLoadVoices();
+});
   
 // ── EPUB META ─────────────────────────────────────────────────────────────────
 async function parseEpubMeta(file){
