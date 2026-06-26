@@ -3546,68 +3546,17 @@ function rangeToHtml(range){
   return div.innerHTML;
 }
 
-function seededRand(seed, idx) {
-  const x = Math.sin(seed * 9301 + idx * 49297 + 233720) * 10000;
-  return x - Math.floor(x);
-}
-
 function applyParchmentStyle(el, pageIdx) {
-  const seed = readerChapter * 100 + pageIdx;
-  const r = (i) => seededRand(seed, i);
-
-  // Slightly different warm tint per page — no filter, just colour
-  const hue = 34 + r(0) * 6;
-  const sat = 30 + r(1) * 10;
-  const light = 89 + r(2) * 5;
-  el.style.background = `hsl(${hue},${sat}%,${light}%)`;
+  el.style.background = '#ede0c4';
   el.style.filter = '';
-
-  // Subtle irregular border radii
-  const tl = 1 + r(3) * 3;
-  const tr = 1 + r(4) * 4;
-  const br = 2 + r(5) * 3;
-  const bl = 1 + r(6) * 2;
-  el.style.borderRadius = `${tl}px ${tr}px ${br}px ${bl}px`;
-
-  // Faint inset shadow for depth — no external filter needed
-  const s1 = 18 + r(9) * 10;
-  const s2 = 8 + r(10) * 6;
-  el.style.boxShadow = `
-    inset 0 0 ${s1}px rgba(120,80,20,0.07),
-    inset 0 0 ${s2}px rgba(100,60,10,0.04),
-    0 1px 6px rgba(0,0,0,0.1)
-  `;
-
-  // Very slight rotation for organic feel
-  const rot = (r(8) - 0.5) * 0.25;
-  el.style.transform = `rotate(${rot}deg)`;
-
+  el.style.borderRadius = '';
+  el.style.outline = '';
+  el.style.outlineOffset = '';
+  el.style.transform = '';
+  el.style.boxShadow = 'inset 0 0 30px rgba(120,80,20,0.08), 0 1px 6px rgba(0,0,0,0.08)';
   el.classList.add('parchment-page');
-  addParchmentFold(el, seed);
 }
 
-function addParchmentFold(el, seed) {
-  const r = (i) => seededRand(seed, i + 20);
-  el.querySelector('.parchment-fold-el')?.remove();
-
-  const size = 12 + r(0) * 8;
-  const fold = document.createElement('div');
-  fold.className = 'parchment-fold-el';
-  fold.style.cssText = `
-    position:absolute;bottom:0;right:0;
-    width:${size}px;height:${size}px;
-    pointer-events:none;z-index:4;
-    background:linear-gradient(225deg,
-      transparent 0%,transparent 40%,
-      rgba(180,130,60,0.2) 41%,
-      rgba(220,180,100,0.3) 50%,
-      rgba(160,110,40,0.2) 60%,
-      rgba(120,80,20,0.15) 100%);
-    clip-path:polygon(100% 0%,100% 100%,0% 100%);
-  `;
-  el.style.position = 'absolute';
-  el.appendChild(fold);
-}
 
 function removeParchmentStyle(el) {
   el.style.background = '';
