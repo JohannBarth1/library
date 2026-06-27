@@ -1616,7 +1616,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
     <h3>Edit Book Details</h3>
     <div class="form-row"><label>Title</label><input type="text" id="metaTitle"/></div>
     <div class="form-row"><label>Author</label><input type="text" id="metaAuthor"/></div>
-    <div class="form-row"><label>Category</label><input type="text" id="metaCategory" list="catSuggestions2"/><datalist id="catSuggestions2"></datalist></div>
+    <div class="form-row"><label>Category</label><select id="metaCategory"></select></div>
     <div class="form-row"><label>Language</label><input type="text" id="metaLanguage" placeholder="e.g. en"/></div>
     <div class="form-row"><label>Description</label><textarea id="metaDesc" rows="4" style="width:100%;padding:.6rem .85rem;font-family:'Lato',sans-serif;font-size:.88rem;color:var(--navy);background:var(--cream);border:1px solid var(--border);border-radius:3px;outline:none;resize:vertical;line-height:1.5"></textarea></div>
     <div class="modal-actions">
@@ -2649,25 +2649,21 @@ function showEditMeta(){
   const book=library.find(b=>b.id===currentId);if(!book)return;
   document.getElementById('metaTitle').value=book.title||'';
   document.getElementById('metaAuthor').value=book.author||'';
-  document.getElementById('metaCategory').value=book.category||'';
   document.getElementById('metaLanguage').value=book.language||'';
   document.getElementById('metaDesc').value=stripHtml(book.description||'');
-  // Populate from managed category list
-  populateCategoryDatalist('catSuggestions2');
-  // Make category a restricted select
-  const catInput = document.getElementById('metaCategory');
-  catInput.setAttribute('list','catSuggestions2');
+  const catSelect = document.getElementById('metaCategory');
+  catSelect.innerHTML = _categories.map(c =>
+    `<option value="${esc(c)}" ${(book.category||'Uncategorised')===c?'selected':''}>${esc(c)}</option>`
+  ).join('');
   document.getElementById('editMetaModal').classList.add('open');
 }
 document.getElementById('btnCancelEditMeta').addEventListener('click',()=>document.getElementById('editMetaModal').classList.remove('open'));
 document.getElementById('btnSaveEditMeta').addEventListener('click',async()=>{
   const book=library.find(b=>b.id===currentId);if(!book)return;
-  const rawCat = document.getElementById('metaCategory').value.trim();
-  const validCat = _categories.includes(rawCat) ? rawCat : 'Uncategorised';
   const updates={
     title:document.getElementById('metaTitle').value.trim()||book.title,
     author:document.getElementById('metaAuthor').value.trim()||book.author,
-    category: validCat,
+    category: document.getElementById('metaCategory').value,
     language:document.getElementById('metaLanguage').value.trim(),
     description:stripHtml(document.getElementById('metaDesc').value.trim()),
     updatedAt:serverTimestamp()
