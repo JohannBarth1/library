@@ -1009,6 +1009,16 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .lc-msg.mine .lc-bubble{background:rgba(200,149,42,.2);color:#e8d8a0;border-radius:12px 3px 12px 12px;}
 .lc-time{font-size:7.5px;color:rgba(200,149,42,.3);margin-top:2px;}
 
+  #mobGridLibrary {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+#mobGridLibrary * {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
 
 
 /* ── RESPONSIVE ── */
@@ -2732,8 +2742,9 @@ function startLongPress(bookId){
   didLongPress = false;
   longPressTimer = setTimeout(()=>{
     didLongPress = true;
-    console.log('LONG PRESS FIRED on:', bookId); // temp test
     if(navigator.vibrate) navigator.vibrate(40);
+    // Dismiss any active text selection
+    window.getSelection()?.removeAllRanges();
     enterMobSelectMode(bookId);
   }, 500);
 }
@@ -2743,11 +2754,11 @@ function startLongPress(bookId){
     longPressTimer = null;
   }
 
-  document.getElementById('mobGridLibrary').addEventListener('touchstart', e => {
+document.getElementById('mobGridLibrary').addEventListener('touchstart', e => {
     const card = e.target.closest('.book-card[data-bookid]');
     if(!card) return;
     startLongPress(card.dataset.bookid);
-  }, {passive: true});
+  }, {passive: false});
 
   document.getElementById('mobGridLibrary').addEventListener('touchend', e => {
     cancelLongPress();
