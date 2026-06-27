@@ -1020,6 +1020,138 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
   -webkit-touch-callout: none;
 }
 
+  /* ── LISTS ── */
+.list-shelf {
+  margin-bottom: 1.2rem;
+}
+.list-shelf-label {
+  font-size: .68rem;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  font-weight: 700;
+  margin-bottom: .6rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.list-shelf-scroll {
+  display: flex;
+  gap: .7rem;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  padding-bottom: .3rem;
+}
+.list-shelf-scroll::-webkit-scrollbar { display: none; }
+
+/* ── TAG CHIPS ── */
+.tag-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: .25rem;
+  padding: .2rem .6rem;
+  font-size: .65rem;
+  font-weight: 700;
+  border-radius: 20px;
+  background: #ece8f8;
+  color: #5a48b0;
+  border: 1px solid #d0c8f0;
+  cursor: pointer;
+  transition: all .15s;
+  white-space: nowrap;
+}
+.tag-chip:hover { background: #d8d0f0; }
+.tag-chip.removable::after { content: '×'; opacity: .6; font-size: .8rem; }
+
+/* ── LIST PICKER ── */
+.list-picker-item {
+  display: flex;
+  align-items: center;
+  gap: .7rem;
+  padding: .7rem 1.2rem;
+  cursor: pointer;
+  transition: background .12s;
+  border-bottom: 1px solid var(--border);
+}
+.list-picker-item:hover { background: var(--teal-light); }
+.list-picker-item .lpi-icon { font-size: 1.1rem; width: 24px; text-align: center; }
+.list-picker-item .lpi-name { flex: 1; font-size: .88rem; font-weight: 700; color: var(--navy2); }
+.list-picker-item .lpi-check {
+  width: 20px; height: 20px; border-radius: 50%;
+  border: 2px solid var(--border);
+  display: flex; align-items: center; justify-content: center;
+  font-size: .7rem; color: #fff; flex-shrink: 0;
+  transition: all .15s;
+}
+.list-picker-item.in-list .lpi-check {
+  background: var(--teal); border-color: var(--teal);
+}
+.list-picker-item.in-list .lpi-check::after { content: '✓'; }
+
+/* ── ADMIN COLLAPSIBLE ── */
+.admin-section { margin-bottom: 1rem; }
+.admin-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: .6rem .8rem;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  cursor: pointer;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.admin-section-header.open { border-radius: 4px 4px 0 0; }
+.admin-section-title {
+  font-size: .72rem;
+  font-weight: 700;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--navy2);
+}
+.admin-section-chevron {
+  font-size: .8rem;
+  color: var(--muted);
+  transition: transform .2s;
+}
+.admin-section-header.open .admin-section-chevron { transform: rotate(180deg); }
+.admin-section-body {
+  display: none;
+  border: 1px solid var(--border);
+  border-top: none;
+  border-radius: 0 0 4px 4px;
+  padding: .8rem;
+  background: var(--warm-white);
+}
+.admin-section-body.open { display: block; }
+
+/* ── CATEGORY ADMIN ── */
+.cat-admin-row {
+  display: flex;
+  align-items: center;
+  gap: .4rem;
+  padding: .35rem 0;
+  border-bottom: 1px solid var(--border);
+}
+.cat-admin-name {
+  flex: 1;
+  font-size: .82rem;
+  color: var(--navy2);
+  font-weight: 700;
+}
+.cat-admin-input {
+  flex: 1;
+  font-size: .82rem;
+  font-family: 'Lato', sans-serif;
+  border: 1px solid var(--teal);
+  border-radius: 3px;
+  padding: .25rem .5rem;
+  color: var(--navy);
+  background: var(--cream);
+  outline: none;
+}
+
 
 /* ── RESPONSIVE ── */
 @media(max-width:768px){
@@ -1738,6 +1870,8 @@ onAuthStateChanged(auth,async user=>{
     checkUrlHash();
     showDeskHome();
     checkAdminStatus();
+    await loadConfig();
+    await loadUserLists();
     // Load secondary data in background — doesn't block UI
     Promise.all([
       loadUserRatings(),
@@ -2174,7 +2308,26 @@ async function renderDeskHome(){
     sharedWithMeGrid.innerHTML=sharedWithMe.map(b=>bookCardHtml(b,true)).join('');
     sharedWithMeGrid.querySelectorAll('.book-card[data-bookid]').forEach(c=>c.addEventListener('click',()=>{hideDeskHome();showBookById(c.dataset.bookid);}));
   } else sharedWithMeSection.style.display='none';
-
+// List shelves on desktop home
+  const listSection = document.getElementById('deskHomeListsSection');
+  const listHtml = renderListShelves();
+  if(listHtml) {
+    let listsEl = document.getElementById('deskHomeListsSection');
+    if(!listsEl) {
+      listsEl = document.createElement('div');
+      listsEl.id = 'deskHomeListsSection';
+      listsEl.className = 'desk-home-section';
+      document.getElementById('deskHomePanel').insertBefore(
+        listsEl,
+        document.querySelector('.desk-home-section:last-child')
+      );
+    }
+    listsEl.innerHTML = `<div class="desk-home-section-label">📚 My Lists</div>` + listHtml;
+    listsEl.querySelectorAll('.book-card[data-bookid]').forEach(c =>
+      c.addEventListener('click', () => { hideDeskHome(); showBookById(c.dataset.bookid); })
+    );
+  }
+  
   // Recently added to my library
   const recent=library.slice(0,12);
   const recentGrid=document.getElementById('deskHomeRecentGrid');
@@ -2385,6 +2538,7 @@ function handleAction(e){
   if(a==='history')      showCheckoutHistory(currentId);
   if(a==='delete')       deleteCurrentBook();
   if(a==='sendtokobo') { loadKoboDevices().then(()=>showKoboDevicePicker(currentId)); }
+  if(a==='addtolist') showListPicker(currentId);
 }
 
 // ── UNPUBLISH and DELETE functions ─────────────────────────────────────────────────────────────────
@@ -2489,6 +2643,7 @@ document.getElementById('btnSaveEditMeta').addEventListener('click',async()=>{
   const book=library.find(b=>b.id===currentId);if(!book)return;
   const updates={title:document.getElementById('metaTitle').value.trim()||book.title,author:document.getElementById('metaAuthor').value.trim()||book.author,category:document.getElementById('metaCategory').value.trim()||book.category,language:document.getElementById('metaLanguage').value.trim(),description:stripHtml(document.getElementById('metaDesc').value.trim()),updatedAt:serverTimestamp()};
   document.getElementById('editMetaModal').classList.remove('open');
+  populateCategoryDatalist('catSuggestions2');
   showLoading('Saving…');
   try{await updateDoc(doc(db,'books',currentId),updates);Object.assign(book,updates);hideLoading();renderAll();showBookById(currentId);showToast('Details saved ✓');}
   catch(e){hideLoading();showToast('Save failed: '+e.message);}
@@ -2564,6 +2719,7 @@ const row = (icon, label, action, danger=false) =>
   </div>`;
 
 // Secondary actions
+  html += row('📚','Add to List','addtolist');
   html += `<div style="display:flex;flex-wrap:wrap;padding:.5rem 1rem .3rem;gap:.3rem;border-bottom:1px solid var(--border)">`;
   html += row('⬇','Download','download');
   html += row('📋','History','history');
@@ -3034,7 +3190,11 @@ async function renderMobHome(){
     html+=`<div style="font-size:.68rem;letter-spacing:.18em;text-transform:uppercase;color:#5a48b0;font-weight:700;margin-bottom:.6rem;margin-top:.5rem">🔒 Shared with Me</div>
     <div class="mob-book-grid" style="margin-bottom:1.5rem;grid-template-columns:repeat(auto-fill,minmax(140px,1fr))">${sharedWithMe.map(b=>bookCardHtml(b,true)).join('')}</div>`;
   }
-
+// List shelves
+  const listShelvesHtml = renderListShelves();
+  if(listShelvesHtml) {
+    html += listShelvesHtml;
+  }
   html+=`<div style="font-size:.68rem;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:.6rem">Recently Added</div>`;
   html+=recent.length
     ?`<div class="mob-book-grid" style="margin-bottom:1.5rem;grid-template-columns:repeat(auto-fill,minmax(140px,1fr))">${recent.map(b=>bookCardHtml(b,false)).join('')}</div>`
@@ -3196,6 +3356,7 @@ async function readCurrentBook(){
   if(!currentId)return;
   const book=[...library,...communityLib].find(b=>b.id===currentId);if(!book)return;
   recordBookOpened(book);
+  addBookToViewedList(book.id);
   let storagePath=book.storagePath;
   if(!storagePath&&book.epubUrl){const match=book.epubUrl.match(/\/o\/(.+?)\?/);if(match)storagePath=decodeURIComponent(match[1]);}
   if(!storagePath){showToast('EPUB not available');return;}
@@ -6095,6 +6256,719 @@ document.getElementById('mobNavAdmin')?.addEventListener('click', () => {
   adminLoadCheckouts();
   adminLoadKoboDevices();
   adminLoadUsers();
+});
+
+  // ── CATEGORIES (admin-managed) ────────────────────────────────────────────────
+
+const SYSTEM_CATEGORIES = [
+  'Fiction','Literary Fiction','Historical Fiction','Science Fiction','Fantasy',
+  'Horror','Thriller','Mystery','Romance','Adventure','Short Stories','Poetry',
+  'Drama','Graphic Novel',"Children's",'Young Adult','Biography','Autobiography',
+  'Memoir','History','Science','Nature','Travel','Philosophy','Religion',
+  'Spirituality','Psychology','Self-Help','Business','Economics','Politics',
+  'Law','Art','Music','Cooking','Health','Sport','Reference','Academic',
+  'Essays','Journalism','Uncategorised'
+];
+
+const SYSTEM_TAGS = [
+  'Favourite','To Read','Currently Reading','Finished','Classic','Quick Read',
+  'Long Read','Challenging','Inspiring','Funny','Dark','Thought-provoking',
+  'Illustrated','Award Winner','Series','Translated','Gift','Reference',
+  'Christmas','Holiday','Children','Family','Book Club','Recommended to Me',
+  'Lent Out'
+];
+
+let _categories = [];
+let _globalTags = [];
+
+async function loadConfig() {
+  try {
+    const catSnap = await getDoc(doc(db, 'config', 'categories'));
+    _categories = catSnap.exists()
+      ? catSnap.data().list || []
+      : [...SYSTEM_CATEGORIES];
+    if(!catSnap.exists()) {
+      await setDoc(doc(db, 'config', 'categories'), { list: _categories });
+    }
+
+    const tagSnap = await getDoc(doc(db, 'config', 'tags'));
+    _globalTags = tagSnap.exists()
+      ? tagSnap.data().list || []
+      : [...SYSTEM_TAGS];
+    if(!tagSnap.exists()) {
+      await setDoc(doc(db, 'config', 'tags'), { list: _globalTags });
+    }
+  } catch(e) {
+    console.warn('loadConfig:', e);
+    _categories = [...SYSTEM_CATEGORIES];
+    _globalTags = [...SYSTEM_TAGS];
+  }
+}
+
+function getCategoryList() { return _categories; }
+function getTagList() { return _globalTags; }
+
+// Populate category datalists throughout the app
+function populateCategoryDatalist(datalistId) {
+  const dl = document.getElementById(datalistId);
+  if(!dl) return;
+  dl.innerHTML = _categories.map(c => `<option value="${esc(c)}">`).join('');
+}
+
+// ── LISTS ────────────────────────────────────────────────────────────────────
+
+const SYSTEM_LISTS = [
+  { id: 'viewed',            name: 'Viewed',             icon: '👁', system: true  },
+  { id: 'want-to-read',      name: 'Want to Read',       icon: '📖', system: true  },
+  { id: 'currently-reading', name: 'Currently Reading',  icon: '🔖', system: true  },
+  { id: 'finished',          name: 'Finished',           icon: '✓',  system: true  },
+  { id: 'favourites',        name: 'Favourites',         icon: '⭐', system: true  },
+];
+
+let _userLists = []; // loaded from Firestore
+
+async function loadUserLists() {
+  if(!currentUser) return;
+  try {
+    const snap = await getDocs(
+      collection(db, 'user_lists', currentUser.uid, 'lists')
+    );
+    _userLists = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+    // Ensure system lists exist
+    for(const sl of SYSTEM_LISTS) {
+      if(!_userLists.find(l => l.id === sl.id)) {
+        await setDoc(
+          doc(db, 'user_lists', currentUser.uid, 'lists', sl.id),
+          { name: sl.name, icon: sl.icon, system: true, bookIds: [], createdAt: serverTimestamp() }
+        );
+        _userLists.push({ id: sl.id, name: sl.name, icon: sl.icon, system: true, bookIds: [] });
+      }
+    }
+  } catch(e) {
+    console.warn('loadUserLists:', e);
+    _userLists = SYSTEM_LISTS.map(sl => ({ ...sl, bookIds: [] }));
+  }
+}
+
+function getListsForBook(bookId) {
+  return _userLists.filter(l => (l.bookIds || []).includes(bookId));
+}
+
+async function toggleBookInList(listId, bookId) {
+  const list = _userLists.find(l => l.id === listId);
+  if(!list) return;
+  const bookIds = [...(list.bookIds || [])];
+  const idx = bookIds.indexOf(bookId);
+  if(idx >= 0) bookIds.splice(idx, 1);
+  else bookIds.push(bookId);
+  list.bookIds = bookIds;
+  await setDoc(
+    doc(db, 'user_lists', currentUser.uid, 'lists', listId),
+    { bookIds, updatedAt: serverTimestamp() },
+    { merge: true }
+  );
+}
+
+async function createUserList(name, icon='📚') {
+  const id = 'list_' + Date.now();
+  const data = { name, icon, system: false, bookIds: [], createdAt: serverTimestamp() };
+  await setDoc(doc(db, 'user_lists', currentUser.uid, 'lists', id), data);
+  _userLists.push({ id, ...data });
+  return id;
+}
+
+async function deleteUserList(listId) {
+  await deleteDoc(doc(db, 'user_lists', currentUser.uid, 'lists', listId));
+  _userLists = _userLists.filter(l => l.id !== listId);
+}
+
+async function addBookToViewedList(bookId) {
+  const list = _userLists.find(l => l.id === 'viewed');
+  if(!list) return;
+  if((list.bookIds || []).includes(bookId)) return;
+  list.bookIds = [...(list.bookIds || []), bookId];
+  await setDoc(
+    doc(db, 'user_lists', currentUser.uid, 'lists', 'viewed'),
+    { bookIds: list.bookIds, updatedAt: serverTimestamp() },
+    { merge: true }
+  );
+}
+
+// ── LIST PICKER (bottom sheet) ────────────────────────────────────────────────
+
+function showListPicker(bookId) {
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay open';
+  overlay.style.cssText = 'align-items:flex-end;padding:0;';
+
+  const renderItems = () => {
+    return _userLists.map(l => {
+      const inList = (l.bookIds || []).includes(bookId);
+      return `<div class="list-picker-item ${inList ? 'in-list' : ''}"
+        data-listid="${l.id}">
+        <span class="lpi-icon">${l.icon || '📚'}</span>
+        <span class="lpi-name">${esc(l.name)}</span>
+        <span class="lpi-check"></span>
+      </div>`;
+    }).join('');
+  };
+
+  overlay.innerHTML = `
+    <div style="width:100%;background:var(--warm-white);border-radius:16px 16px 0 0;
+                box-shadow:0 -4px 24px rgba(0,0,0,.2);overflow:hidden;
+                padding-bottom:env(safe-area-inset-bottom);">
+      <div style="width:36px;height:4px;background:var(--border);border-radius:2px;margin:.75rem auto .5rem;"></div>
+      <div style="font-family:'Playfair Display',serif;font-size:1rem;color:var(--navy2);
+                  padding:.25rem 1.2rem .75rem;border-bottom:1px solid var(--border);
+                  display:flex;align-items:center;justify-content:space-between;">
+        <span>Add to List</span>
+        <button onclick="this.closest('.modal-overlay').remove()"
+          style="background:none;border:none;font-size:1.2rem;cursor:pointer;
+                 color:var(--muted);line-height:1;">✕</button>
+      </div>
+      <div style="max-height:50vh;overflow-y:auto;" id="listPickerItems">
+        ${renderItems()}
+      </div>
+      <div style="padding:.7rem 1.2rem;border-top:1px solid var(--border);">
+        <button id="btnNewListInPicker"
+          style="width:100%;padding:.6rem;font-family:'Lato',sans-serif;font-size:.82rem;
+                 font-weight:700;border:1px dashed var(--border);border-radius:4px;
+                 background:transparent;color:var(--teal);cursor:pointer;">
+          + Create New List
+        </button>
+      </div>
+    </div>`;
+
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click', e => { if(e.target === overlay) overlay.remove(); });
+
+  // Toggle list membership
+  overlay.querySelectorAll('.list-picker-item').forEach(item => {
+    item.addEventListener('click', async () => {
+      await toggleBookInList(item.dataset.listid, bookId);
+      item.classList.toggle('in-list');
+      renderMobHome();
+      renderDeskHome();
+    });
+  });
+
+  // Create new list
+  overlay.querySelector('#btnNewListInPicker').addEventListener('click', () => {
+    overlay.remove();
+    showCreateListModal(bookId);
+  });
+}
+
+function showCreateListModal(bookIdToAdd) {
+  const icons = ['📚','❤️','🌟','🎯','📝','🔥','💡','🎭','🌍','🎨'];
+  let selectedIcon = '📚';
+
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay open';
+  overlay.innerHTML = `
+    <div class="modal" style="max-width:380px">
+      <h3>Create New List</h3>
+      <div class="form-row">
+        <label>List Name</label>
+        <input type="text" id="newListNameInput" placeholder="e.g. Beach Reads"
+          style="font-size:1rem"/>
+      </div>
+      <div class="form-row">
+        <label>Icon</label>
+        <div style="display:flex;gap:.4rem;flex-wrap:wrap;" id="newListIconPicker">
+          ${icons.map(ic => `
+            <button data-icon="${ic}"
+              style="font-size:1.4rem;padding:.3rem .4rem;border-radius:6px;
+                     border:2px solid ${ic===selectedIcon?'var(--teal)':'var(--border)'};
+                     background:${ic===selectedIcon?'var(--teal-light)':'transparent'};
+                     cursor:pointer;line-height:1;transition:all .15s;">${ic}</button>
+          `).join('')}
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn-cancel" id="newListCancelBtn">Cancel</button>
+        <button class="btn-save" id="newListSaveBtn">Create</button>
+      </div>
+    </div>`;
+
+  document.body.appendChild(overlay);
+
+  overlay.querySelectorAll('[data-icon]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      selectedIcon = btn.dataset.icon;
+      overlay.querySelectorAll('[data-icon]').forEach(b => {
+        b.style.borderColor = b.dataset.icon === selectedIcon ? 'var(--teal)' : 'var(--border)';
+        b.style.background = b.dataset.icon === selectedIcon ? 'var(--teal-light)' : 'transparent';
+      });
+    });
+  });
+
+  overlay.querySelector('#newListCancelBtn').addEventListener('click', () => overlay.remove());
+  overlay.querySelector('#newListSaveBtn').addEventListener('click', async () => {
+    const name = overlay.querySelector('#newListNameInput').value.trim();
+    if(!name) { showToast('Please enter a list name'); return; }
+    overlay.remove();
+    showLoading('Creating list…');
+    try {
+      const id = await createUserList(name, selectedIcon);
+      if(bookIdToAdd) await toggleBookInList(id, bookIdToAdd);
+      hideLoading();
+      showToast(`"${name}" created ✓`);
+      renderMobHome();
+      renderDeskHome();
+    } catch(e) {
+      hideLoading();
+      showToast('Failed: ' + e.message);
+    }
+  });
+}
+
+// ── IMPROVED TAGS MODAL ───────────────────────────────────────────────────────
+
+function showTagsModal() {
+  if(!currentId) return;
+  const book = [...library, ...communityLib].find(b => b.id === currentId);
+  if(!book) return;
+  const isMine = book.ownerId === currentUser?.uid;
+  if(!isMine && !isAdmin) { showToast('Only the owner can edit tags'); return; }
+
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay open';
+  overlay.style.cssText = 'align-items:flex-end;padding:0;';
+
+  const render = () => {
+    const currentTags = book.tags || [];
+    const suggestedTags = _globalTags.filter(t => !currentTags.includes(t));
+
+    overlay.querySelector('#tagsSheetBody').innerHTML = `
+      <!-- Current tags -->
+      <div style="padding:.7rem 1.2rem .4rem;">
+        <div style="font-size:.62rem;letter-spacing:.15em;text-transform:uppercase;
+                    color:var(--muted);font-weight:700;margin-bottom:.5rem;">
+          Current Tags</div>
+        <div style="display:flex;flex-wrap:wrap;gap:.3rem;min-height:28px;" id="tagsCurrentChips">
+          ${currentTags.length
+            ? currentTags.map(t => `
+                <span class="tag-chip removable" data-remove="${esc(t)}">${esc(t)}</span>
+              `).join('')
+            : `<span style="font-size:.8rem;color:var(--muted);font-style:italic;">No tags yet</span>`
+          }
+        </div>
+      </div>
+      <!-- Add custom tag -->
+      <div style="padding:.4rem 1.2rem .5rem;display:flex;gap:.4rem;
+                  border-top:1px solid var(--border);border-bottom:1px solid var(--border);">
+        <input id="tagsCustomInput" type="text" placeholder="Add a custom tag…"
+          style="flex:1;padding:.45rem .7rem;font-size:1rem;font-family:'Lato',sans-serif;
+                 border:1px solid var(--border);border-radius:20px;background:var(--cream);
+                 color:var(--navy);outline:none;"/>
+        <button id="tagsCustomAdd"
+          style="background:var(--teal);color:var(--gold);border:none;border-radius:20px;
+                 padding:.45rem 1rem;font-family:'Lato',sans-serif;font-size:.78rem;
+                 font-weight:700;cursor:pointer;">Add</button>
+      </div>
+      <!-- Suggested tags -->
+      <div style="padding:.6rem 1.2rem .8rem;max-height:35vh;overflow-y:auto;">
+        <div style="font-size:.62rem;letter-spacing:.15em;text-transform:uppercase;
+                    color:var(--muted);font-weight:700;margin-bottom:.5rem;">
+          Suggested</div>
+        <div style="display:flex;flex-wrap:wrap;gap:.3rem;">
+          ${suggestedTags.map(t => `
+            <span class="tag-chip" data-add="${esc(t)}">${esc(t)}</span>
+          `).join('')}
+        </div>
+      </div>`;
+
+    // Bind remove
+    overlay.querySelectorAll('[data-remove]').forEach(chip => {
+      chip.addEventListener('click', async () => {
+        const tag = chip.dataset.remove;
+        const tags = (book.tags || []).filter(t => t !== tag);
+        book.tags = tags;
+        await updateDoc(doc(db, 'books', currentId), { tags, updatedAt: serverTimestamp() });
+        // Add back to global suggestions if it was custom
+        render();
+        renderAll();
+      });
+    });
+
+    // Bind add suggestion
+    overlay.querySelectorAll('[data-add]').forEach(chip => {
+      chip.addEventListener('click', async () => {
+        const tag = chip.dataset.add;
+        const tags = [...new Set([...(book.tags || []), tag])];
+        book.tags = tags;
+        await updateDoc(doc(db, 'books', currentId), { tags, updatedAt: serverTimestamp() });
+        render();
+        renderAll();
+      });
+    });
+
+    // Bind custom input
+    const customInput = overlay.querySelector('#tagsCustomInput');
+    const addCustom = async () => {
+      const tag = customInput.value.trim();
+      if(!tag) return;
+      customInput.value = '';
+      const tags = [...new Set([...(book.tags || []), tag])];
+      book.tags = tags;
+      await updateDoc(doc(db, 'books', currentId), { tags, updatedAt: serverTimestamp() });
+      // Add to global tag list if new
+      if(!_globalTags.includes(tag)) {
+        _globalTags.push(tag);
+        _globalTags.sort();
+        await updateDoc(doc(db, 'config', 'tags'), { list: _globalTags });
+      }
+      render();
+      renderAll();
+    };
+    overlay.querySelector('#tagsCustomAdd').addEventListener('click', addCustom);
+    customInput.addEventListener('keydown', e => { if(e.key === 'Enter') addCustom(); });
+  };
+
+  overlay.innerHTML = `
+    <div style="width:100%;background:var(--warm-white);border-radius:16px 16px 0 0;
+                box-shadow:0 -4px 24px rgba(0,0,0,.2);overflow:hidden;
+                padding-bottom:env(safe-area-inset-bottom);">
+      <div style="width:36px;height:4px;background:var(--border);border-radius:2px;
+                  margin:.75rem auto .5rem;"></div>
+      <div style="font-family:'Playfair Display',serif;font-size:1rem;color:var(--navy2);
+                  padding:.25rem 1.2rem .75rem;border-bottom:1px solid var(--border);
+                  display:flex;align-items:center;justify-content:space-between;">
+        <span>Edit Tags — ${esc(book.title)}</span>
+        <button onclick="this.closest('.modal-overlay').remove()"
+          style="background:none;border:none;font-size:1.2rem;cursor:pointer;
+                 color:var(--muted);line-height:1;">✕</button>
+      </div>
+      <div id="tagsSheetBody"></div>
+    </div>`;
+
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click', e => { if(e.target === overlay) overlay.remove(); });
+  render();
+}
+
+// ── HOME TAB: LIST SHELVES ────────────────────────────────────────────────────
+
+function renderListShelves(containerEl) {
+  const nonEmpty = _userLists.filter(l => (l.bookIds || []).length > 0);
+  if(!nonEmpty.length) return '';
+
+  return nonEmpty.map(list => {
+    const books = (list.bookIds || [])
+      .map(id => [...library, ...communityLib].find(b => b.id === id))
+      .filter(Boolean);
+    if(!books.length) return '';
+
+    const color = list.id === 'favourites' ? 'var(--gold)'
+      : list.id === 'want-to-read' ? 'var(--teal)'
+      : list.id === 'finished' ? '#276749'
+      : list.id === 'currently-reading' ? '#5a48b0'
+      : 'var(--muted)';
+
+    return `<div class="list-shelf">
+      <div class="list-shelf-label" style="color:${color}">
+        <span>${list.icon || '📚'} ${esc(list.name)}</span>
+        <span style="font-size:.65rem;color:var(--muted);font-weight:400">
+          ${books.length} book${books.length !== 1 ? 's' : ''}</span>
+      </div>
+      <div class="list-shelf-scroll">
+        ${books.map(b => bookCardHtml(b, communityLib.some(x => x.id === b.id))).join('')}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── ADMIN: CATEGORIES + TAGS ──────────────────────────────────────────────────
+
+async function adminLoadCategories() {
+  const el = document.getElementById('adminCatBody');
+  if(!el) return;
+  el.innerHTML = '<div style="color:var(--muted);font-size:.85rem">Loading…</div>';
+
+  const cats = getCategoryList();
+  el.innerHTML = `
+    <div id="adminCatList">
+      ${cats.map((c, i) => `
+        <div class="cat-admin-row" data-catidx="${i}">
+          <span class="cat-admin-name">${esc(c)}</span>
+          <button class="admin-copy-btn" data-cat-edit="${i}">✎</button>
+          <button class="admin-copy-btn" style="color:var(--danger);border-color:#e0b0b0;"
+            data-cat-delete="${i}">✕</button>
+        </div>`).join('')}
+    </div>
+    <div style="display:flex;gap:.4rem;margin-top:.7rem;">
+      <input id="adminCatNewInput" type="text" placeholder="New category…"
+        class="filter-search" style="flex:1;font-size:.82rem;"/>
+      <button class="btn-save" style="font-size:.72rem;padding:.4rem .8rem;"
+        id="adminCatAddBtn">+ Add</button>
+    </div>`;
+
+  // Edit
+  el.querySelectorAll('[data-cat-edit]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const idx = parseInt(btn.dataset.catEdit);
+      const row = btn.closest('.cat-admin-row');
+      const nameEl = row.querySelector('.cat-admin-name');
+      const orig = nameEl.textContent;
+      row.innerHTML = `
+        <input class="cat-admin-input" value="${esc(orig)}" id="catEditInput_${idx}"/>
+        <button class="btn-save" style="font-size:.7rem;padding:.3rem .6rem;"
+          id="catEditSave_${idx}">✓</button>
+        <button class="btn-cancel" style="font-size:.7rem;padding:.3rem .6rem;"
+          id="catEditCancel_${idx}">✕</button>`;
+
+      document.getElementById(`catEditCancel_${idx}`).addEventListener('click', adminLoadCategories);
+      document.getElementById(`catEditSave_${idx}`).addEventListener('click', async () => {
+        const newName = document.getElementById(`catEditInput_${idx}`).value.trim();
+        if(!newName || newName === orig) { adminLoadCategories(); return; }
+        showLoading('Updating category…');
+        try {
+          // Update config
+          _categories[idx] = newName;
+          await setDoc(doc(db, 'config', 'categories'), { list: _categories });
+          // Batch update all books with old category
+          const q = query(collection(db, 'books'), where('category', '==', orig));
+          const snap = await getDocs(q);
+          for(const d of snap.docs) {
+            await updateDoc(d.ref, { category: newName, updatedAt: serverTimestamp() });
+            // Update local copy
+            const book = [...library, ...communityLib].find(b => b.id === d.id);
+            if(book) book.category = newName;
+          }
+          hideLoading();
+          showToast(`"${orig}" renamed to "${newName}" — ${snap.size} books updated ✓`);
+          adminLoadCategories();
+          renderAll();
+        } catch(e) {
+          hideLoading();
+          showToast('Failed: ' + e.message);
+        }
+      });
+    });
+  });
+
+  // Delete
+  el.querySelectorAll('[data-cat-delete]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const idx = parseInt(btn.dataset.catDelete);
+      const name = _categories[idx];
+      if(!confirm(`Delete category "${name}"?\n\nBooks in this category will be moved to Uncategorised.`)) return;
+      showLoading('Deleting category…');
+      try {
+        _categories.splice(idx, 1);
+        await setDoc(doc(db, 'config', 'categories'), { list: _categories });
+        // Move affected books
+        const q = query(collection(db, 'books'), where('category', '==', name));
+        const snap = await getDocs(q);
+        for(const d of snap.docs) {
+          await updateDoc(d.ref, { category: 'Uncategorised', updatedAt: serverTimestamp() });
+          const book = [...library, ...communityLib].find(b => b.id === d.id);
+          if(book) book.category = 'Uncategorised';
+        }
+        hideLoading();
+        showToast(`"${name}" deleted — ${snap.size} books moved to Uncategorised ✓`);
+        adminLoadCategories();
+        renderAll();
+      } catch(e) {
+        hideLoading();
+        showToast('Failed: ' + e.message);
+      }
+    });
+  });
+
+  // Add new
+  const addBtn = document.getElementById('adminCatAddBtn');
+  const addInput = document.getElementById('adminCatNewInput');
+  const doAdd = async () => {
+    const name = addInput.value.trim();
+    if(!name) return;
+    if(_categories.includes(name)) { showToast('Category already exists'); return; }
+    _categories.push(name);
+    _categories.sort();
+    addInput.value = '';
+    await setDoc(doc(db, 'config', 'categories'), { list: _categories });
+    showToast(`"${name}" added ✓`);
+    adminLoadCategories();
+  };
+  addBtn?.addEventListener('click', doAdd);
+  addInput?.addEventListener('keydown', e => { if(e.key === 'Enter') doAdd(); });
+}
+
+async function adminLoadTags() {
+  const el = document.getElementById('adminTagBody');
+  if(!el) return;
+  el.innerHTML = '<div style="color:var(--muted);font-size:.85rem">Loading…</div>';
+
+  const tags = getTagList();
+  el.innerHTML = `
+    <div style="display:flex;flex-wrap:wrap;gap:.3rem;margin-bottom:.7rem;" id="adminTagChips">
+      ${tags.map((t, i) => `
+        <span style="display:inline-flex;align-items:center;gap:.25rem;padding:.2rem .6rem;
+                     font-size:.65rem;font-weight:700;border-radius:20px;
+                     background:#ece8f8;color:#5a48b0;border:1px solid #d0c8f0;">
+          ${esc(t)}
+          <button data-tag-delete="${i}"
+            style="background:none;border:none;cursor:pointer;font-size:.7rem;
+                   color:#5a48b0;opacity:.6;padding:0;line-height:1;">×</button>
+        </span>`).join('')}
+    </div>
+    <div style="display:flex;gap:.4rem;">
+      <input id="adminTagNewInput" type="text" placeholder="New tag…"
+        class="filter-search" style="flex:1;font-size:.82rem;"/>
+      <button class="btn-save" style="font-size:.72rem;padding:.4rem .8rem;"
+        id="adminTagAddBtn">+ Add</button>
+    </div>`;
+
+  // Delete tag
+  el.querySelectorAll('[data-tag-delete]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const idx = parseInt(btn.dataset.tagDelete);
+      const name = _globalTags[idx];
+      if(!confirm(`Remove tag "${name}" from the global list?\n\nExisting book tags are not affected.`)) return;
+      _globalTags.splice(idx, 1);
+      await updateDoc(doc(db, 'config', 'tags'), { list: _globalTags });
+      showToast(`"${name}" removed ✓`);
+      adminLoadTags();
+    });
+  });
+
+  // Add tag
+  const addBtn = document.getElementById('adminTagAddBtn');
+  const addInput = document.getElementById('adminTagNewInput');
+  const doAdd = async () => {
+    const name = addInput.value.trim();
+    if(!name) return;
+    if(_globalTags.includes(name)) { showToast('Tag already exists'); return; }
+    _globalTags.push(name);
+    _globalTags.sort();
+    addInput.value = '';
+    await updateDoc(doc(db, 'config', 'tags'), { list: _globalTags });
+    showToast(`"${name}" added ✓`);
+    adminLoadTags();
+  };
+  addBtn?.addEventListener('click', doAdd);
+  addInput?.addEventListener('keydown', e => { if(e.key === 'Enter') doAdd(); });
+}
+
+// ── ADMIN COLLAPSIBLE SECTIONS ────────────────────────────────────────────────
+
+function buildAdminSections() {
+  const panel = document.getElementById('mobPanelAdmin');
+  if(!panel) return;
+  const scroll = panel.querySelector('.mob-settings-scroll');
+  if(!scroll) return;
+
+  scroll.innerHTML = `<h2>🔑 Admin</h2>
+
+    <div class="admin-section">
+      <div class="admin-section-header" data-admin-section="checkouts">
+        <span class="admin-section-title">📋 Book Signouts</span>
+        <span class="admin-section-chevron">▾</span>
+      </div>
+      <div class="admin-section-body" id="adminCheckoutsBody">
+        <div style="display:flex;gap:.5rem;margin-bottom:.8rem;flex-wrap:wrap">
+          <button class="btn-save" style="font-size:.72rem;padding:.4rem .8rem"
+            id="adminCheckoutsRefresh">↻ Refresh</button>
+          <button class="btn-cancel" style="font-size:.72rem;padding:.4rem .8rem"
+            id="adminCheckoutsFilter">Show Active Only</button>
+        </div>
+        <div id="adminCheckoutsList">
+          <div style="color:var(--muted);font-size:.85rem">
+            Open to load…</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="admin-section">
+      <div class="admin-section-header" data-admin-section="kobo">
+        <span class="admin-section-title">📖 Kobo Devices</span>
+        <span class="admin-section-chevron">▾</span>
+      </div>
+      <div class="admin-section-body" id="adminKoboBody">
+        <button class="btn-save" style="font-size:.72rem;padding:.4rem .8rem;margin-bottom:.8rem"
+          id="adminKoboRefresh">↻ Refresh</button>
+        <div id="adminKoboList">
+          <div style="color:var(--muted);font-size:.85rem">Open to load…</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="admin-section">
+      <div class="admin-section-header" data-admin-section="users">
+        <span class="admin-section-title">👤 Users</span>
+        <span class="admin-section-chevron">▾</span>
+      </div>
+      <div class="admin-section-body" id="adminUsersBody">
+        <button class="btn-save" style="font-size:.72rem;padding:.4rem .8rem;margin-bottom:.8rem"
+          id="adminUsersRefresh">↻ Refresh</button>
+        <div id="adminUsersList">
+          <div style="color:var(--muted);font-size:.85rem">Open to load…</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="admin-section">
+      <div class="admin-section-header" data-admin-section="categories">
+        <span class="admin-section-title">🏷 Categories</span>
+        <span class="admin-section-chevron">▾</span>
+      </div>
+      <div class="admin-section-body" id="adminCatBody">
+        <div style="color:var(--muted);font-size:.85rem">Open to load…</div>
+      </div>
+    </div>
+
+    <div class="admin-section">
+      <div class="admin-section-header" data-admin-section="tags">
+        <span class="admin-section-title">🔖 Tags</span>
+        <span class="admin-section-chevron">▾</span>
+      </div>
+      <div class="admin-section-body" id="adminTagBody">
+        <div style="color:var(--muted);font-size:.85rem">Open to load…</div>
+      </div>
+    </div>`;
+
+  // Collapsible toggle
+  scroll.querySelectorAll('.admin-section-header').forEach(header => {
+    header.addEventListener('click', () => {
+      const section = header.dataset.adminSection;
+      const body = header.nextElementSibling;
+      const isOpen = body.classList.contains('open');
+      body.classList.toggle('open', !isOpen);
+      header.classList.toggle('open', !isOpen);
+      if(!isOpen) {
+        // Load content on first open
+        if(section === 'checkouts') adminLoadCheckouts();
+        if(section === 'kobo') adminLoadKoboDevices();
+        if(section === 'users') adminLoadUsers();
+        if(section === 'categories') adminLoadCategories();
+        if(section === 'tags') adminLoadTags();
+      }
+    });
+  });
+
+  // Re-bind refresh buttons
+  scroll.querySelector('#adminCheckoutsRefresh')
+    ?.addEventListener('click', adminLoadCheckouts);
+  scroll.querySelector('#adminCheckoutsFilter')
+    ?.addEventListener('click', function(){
+      adminCheckoutsShowAll = !adminCheckoutsShowAll;
+      this.textContent = adminCheckoutsShowAll ? 'Show Active Only' : 'Show All';
+      adminLoadCheckouts();
+    });
+  scroll.querySelector('#adminKoboRefresh')
+    ?.addEventListener('click', adminLoadKoboDevices);
+  scroll.querySelector('#adminUsersRefresh')
+    ?.addEventListener('click', adminLoadUsers);
+}
+
+// Rebuild admin panel when tab is opened
+document.getElementById('mobNavAdmin')?.addEventListener('click', () => {
+  document.querySelectorAll('.mob-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('mobNavAdmin').classList.add('active');
+  mob_showPanel('mobPanelAdmin');
+  buildAdminSections();
 });
 
   
