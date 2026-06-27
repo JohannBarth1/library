@@ -259,7 +259,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
   margin: 1.5em 0 .5em;
 }
 .reader-overlay.theme-day .reader-page-slice { color: #1a1a1a; background: #fff; }
-.reader-overlay.theme-sepia .reader-page-slice { color: #3b2a1a; background: #f4ede0; }
+.reader-overlay.theme-sepia .reader-page-slice { color: #3b2a1a; background: #ede0c4; box-shadow: inset 0 0 30px rgba(120,80,20,0.08), 0 1px 6px rgba(0,0,0,0.08); }
 .reader-overlay.theme-night .reader-page-slice { color: #c8c8d8; background: #1a1a2e; }
 .reader-overlay.theme-night .reader-page-slice h1,
 .reader-overlay.theme-night .reader-page-slice h2,
@@ -3074,6 +3074,18 @@ function applyReaderTheme(theme){
   o.classList.add('theme-'+theme);
   document.querySelectorAll('#readerSettingsBar [data-theme]')
     .forEach(b => b.classList.toggle('active', b.dataset.theme === theme));
+
+  // Re-sync staging color so next pagination uses correct color
+  const staging = document.getElementById('readerStagingContainer');
+  const themeColors = { day:'#1a1a1a', sepia:'#3b2a1a', night:'#c8c8d8' };
+  const color = themeColors[theme] || '#1a1a1a';
+  if(staging) staging.style.color = color;
+
+  // Apply color directly to visible page slices to prevent flash
+  const pageA = document.getElementById('readerPageA');
+  const pageB = document.getElementById('readerPageB');
+  if(pageA) pageA.style.color = color;
+  if(pageB) pageB.style.color = color;
 }
   
 function setReaderFont(size){
@@ -3103,13 +3115,6 @@ if(themeBtn){
   applyReaderTheme(readerTheme);
   const pageA = document.getElementById('readerPageA');
   const pageB = document.getElementById('readerPageB');
-  if(readerTheme === 'sepia'){
-    applyParchmentStyle(pageA, readerPage);
-    applyParchmentStyle(pageB, readerPage + 1);
-  } else {
-    removeParchmentStyle(pageA);
-    removeParchmentStyle(pageB);
-  }
   return;
 }
 
@@ -3472,30 +3477,6 @@ function rangeToHtml(range){
   return div.innerHTML;
 }
 
-function applyParchmentStyle(el, pageIdx) {
-  el.style.background = '#ede0c4';
-  el.style.filter = '';
-  el.style.borderRadius = '';
-  el.style.outline = '';
-  el.style.outlineOffset = '';
-  el.style.transform = '';
-  el.style.boxShadow = 'inset 0 0 30px rgba(120,80,20,0.08), 0 1px 6px rgba(0,0,0,0.08)';
-  el.classList.add('parchment-page');
-}
-
-
-function removeParchmentStyle(el) {
-  el.style.background = '';
-  el.style.filter = '';
-  el.style.borderRadius = '';
-  el.style.outline = '';
-  el.style.outlineOffset = '';
-  el.style.transform = '';
-  el.style.boxShadow = '';
-  el.classList.remove('parchment-page');
-  el.querySelector('.parchment-fold-el')?.remove();
-}
-
 function renderChapterPaged(bodyHtml){
   return new Promise(resolve=>{
     const overlay = document.getElementById('readerOverlay');
@@ -3532,7 +3513,10 @@ function renderChapterPaged(bodyHtml){
       'pageA width:', document.getElementById('readerPageA').clientWidth);
 
     const themeColors = { day:'#1a1a1a', sepia:'#3b2a1a', night:'#c8c8d8' };
-    staging.style.color = themeColors[readerTheme] || '#1a1a1a';
+    const themeColor = themeColors[readerTheme] || '#1a1a1a';
+    staging.style.color = themeColor;
+    document.getElementById('readerPageA').style.color = themeColor;
+    document.getElementById('readerPageB').style.color = themeColor;
 
     const imgs = Array.from(staging.querySelectorAll('img'));
     const imgPromises = imgs.map(img=>{
@@ -3598,8 +3582,6 @@ function goToPage(page, opts={}){
   // Prepare the new page content in the background (B) div
   pageB.innerHTML = extractPageHtml(staging, readerPageBreaks, page);
   pageB.style.fontSize = readerFontSize + 'px';
-  if(readerTheme === 'sepia') applyParchmentStyle(pageB, page);
-  else removeParchmentStyle(pageB);
   pageB.style.opacity = '0';
   pageB.style.transform = `translateX(${direction * 100}%)`;
   pageB.style.transition = 'none';
@@ -3680,8 +3662,6 @@ function recalcReaderHeight(){
   pageA.style.fontSize = readerFontSize + 'px';
   pageA.style.opacity = '1';
   pageA.style.transform = 'translateX(0)';
-  if(readerTheme === 'sepia') applyParchmentStyle(pageA, 0);
-  else removeParchmentStyle(pageA);
   updatePaginationUI();
 }
   
