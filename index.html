@@ -1864,6 +1864,8 @@ let readerPageCount = 1;
 let readerFontSize=parseInt(localStorage.getItem('elib_reader_font')||'17');
 let readerTheme=localStorage.getItem('elib_reader_theme')||'day';
 let readerTransition = localStorage.getItem('elib_reader_transition') || 'bounce';
+let _bookmarkTemplates = [];
+let _myBookmarks = [];
 
 // ── AUTH ──────────────────────────────────────────────────────────────────────
 onAuthStateChanged(auth,async user=>{
@@ -1886,6 +1888,8 @@ onAuthStateChanged(auth,async user=>{
       loadUserRatings(),
       loadMyCheckouts(),
       loadKoboDevices(),
+      loadBookmarkTemplates(),
+      loadMyBookmarks(),
       startNotifListener(),
       loungeJoinPassive(),
       startPresenceHeartbeat(),
@@ -3248,20 +3252,41 @@ function bookCardHtml(b, isComm, showProgress=false){
   const tagsHtml = (b.tags||[]).slice(0,2).map(t=>`<span class="tag-pill" style="font-size:.55rem;padding:1px 5px">${esc(t)}</span>`).join('');
   const isMyPublicBook = b.ownerId===currentUser?.uid && b.visibility==='public';
 
+  // Award bookmark ribbon (top-right)
+  const awardBookmarks = getAwardBookmarksForBook(b.id);
+  const topAward = awardBookmarks[0];
+  const awardTemplate = topAward
+    ? _bookmarkTemplates.find(t => t.id === topAward.bookmarkId)
+    : null;
+  const ribbonHtml = awardTemplate
+    ? `<div style="position:absolute;top:0;right:4px;z-index:3;filter:drop-shadow(1px 2px 3px rgba(0,0,0,0.3))">
+        ${renderBookmarkSVG(awardTemplate, 22, 34, 'card'+b.id)}
+       </div>`
+    : '';
+
+  // Reading position tab (bottom of cover)
+  const prog = getReadingProgress(b.id);
   let progBar = '';
-  if(showProgress){
-    const prog = getReadingProgress(b.id);
-    if(prog > 0){
-      progBar = `<div class="book-card-progress"><div class="book-card-progress-bar" style="width:${Math.round(prog*100)}%"></div></div>`;
-    }
+  if(prog > 0) {
+    const pct = Math.round(prog * 100);
+    const posBookmark = getReadingPositionBookmark(b.id);
+    const chLabel = posBookmark?.chapterLabel || '';
+    progBar = `<div class="book-card-progress" title="${chLabel ? chLabel + ' · ' : ''}${pct}% read">
+      <div class="book-card-progress-bar" style="width:${pct}%"></div>
+    </div>`;
   }
 
-  return `<div class="book-card" data-bookid="${b.id}">${coverHtml}${b.recommended?'<span class="rec-badge">⭐ Pick</span>':''}${isMyPublicBook?'<span class="community-badge">Shared</span>':''}
+  return `<div class="book-card" data-bookid="${b.id}">${coverHtml}
+    ${b.recommended?'<span class="rec-badge">⭐ Pick</span>':''}
+    ${isMyPublicBook?'<span class="community-badge">Shared</span>':''}
+    ${ribbonHtml}
     <div class="book-card-body">
-    <div class="book-card-title">${esc(b.title)}</div>
-    <div class="book-card-author">${esc(b.author)}</div>
-  ${isComm&&b.ownerId!==currentUser?.uid&&b.allowedUsers?.includes(currentUser?.uid)?`<div class="book-card-shared-by">Shared by ${esc(b.ownerName||'')}</div>`:''}
-  ${isComm?`<div class="book-card-stars">${starsHtml}</div>`:''}${tagsHtml}</div>${progBar}</div>`;
+      <div class="book-card-title">${esc(b.title)}</div>
+      <div class="book-card-author">${esc(b.author)}</div>
+      ${isComm&&b.ownerId!==currentUser?.uid&&b.allowedUsers?.includes(currentUser?.uid)?`<div class="book-card-shared-by">Shared by ${esc(b.ownerName||'')}</div>`:''}
+      ${isComm?`<div class="book-card-stars">${starsHtml}</div>`:''}
+      ${tagsHtml}
+    </div>${progBar}</div>`;
 }
 
 // ── EPUB READER ───────────────────────────────────────────────────────────────
@@ -3458,22 +3483,65 @@ let readerPageBreaks = [0];
 // ── READING PROGRESS ──────────────────────────────────────────────
 function progressKey(bookId){ return `elib_progress_${bookId}`; }
 
-function saveReadingProgress(bookId, chapterIdx, pageIdx, totalChapters){
+async function saveReadingProgress(bookId, chapterIdx, pageIdx, totalChapters){
   if(!bookId) return;
   const progress = (chapterIdx + (pageIdx / Math.max(readerPageCount,1))) / Math.max(totalChapters,1);
+
+  // Keep localStorage as offline fallback
   localStorage.setItem(progressKey(bookId), JSON.stringify({
     chapterIdx, pageIdx, totalChapters, progress, ts: Date.now()
   }));
-  // Live-update any progress bars currently shown on book cards
+
+  // Update progress bars on book cards
   document.querySelectorAll(`.book-card[data-bookid="${bookId}"] .book-card-progress-bar`)
     .forEach(el => { el.style.width = Math.round(progress*100) + '%'; });
+
+  // Write to Firestore
+  if(!currentUser) return;
+  try {
+    const existing = getReadingPositionBookmark(bookId);
+    const data = {
+      userId: currentUser.uid,
+      bookId,
+      type: 'reading_position',
+      chapterIdx,
+      pageIdx,
+      totalChapters,
+      progress,
+      chapterLabel: readerSpine[chapterIdx]?.label || '',
+      updatedAt: serverTimestamp(),
+    };
+    if(existing) {
+      await updateDoc(doc(db, 'user_bookmarks', existing.id), data);
+      Object.assign(existing, data);
+    } else {
+      const ref = await addDoc(collection(db, 'user_bookmarks'), {
+        ...data,
+        createdAt: serverTimestamp(),
+      });
+      _myBookmarks.push({ id: ref.id, ...data });
+    }
+  } catch(e) {
+    console.warn('saveReadingProgress Firestore:', e);
+  }
 }
 
-function loadReadingProgress(bookId){
-  try{
+function loadReadingProgress(bookId) {
+  // Prefer Firestore data already loaded into _myBookmarks
+  const fbBookmark = getReadingPositionBookmark(bookId);
+  if(fbBookmark) {
+    return {
+      chapterIdx: fbBookmark.chapterIdx || 0,
+      pageIdx: fbBookmark.pageIdx || 0,
+      totalChapters: fbBookmark.totalChapters || 1,
+      progress: fbBookmark.progress || 0,
+    };
+  }
+  // Fall back to localStorage
+  try {
     const v = localStorage.getItem(progressKey(bookId));
     return v ? JSON.parse(v) : null;
-  }catch{
+  } catch {
     return null;
   }
 }
@@ -4421,6 +4489,41 @@ function showLoading(msg){document.getElementById('loadingMsg').textContent=msg|
 function hideLoading(){document.getElementById('loadingOverlay').classList.remove('open');}
 function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.remove('show'),2800);}
 function getCoverSrc(b){return b.coverDataUrl||b.coverUrl||null;}
+const BOOKMARK_SHAPES = {
+  classic: (w,h) => `M0,0 H${w} V${h} L${w/2},${h-w*0.28} L0,${h} Z`,
+  rounded: (w,h) => `M${w*0.12},0 H${w-w*0.12} Q${w},0 ${w},${w*0.12} V${h} L${w/2},${h-w*0.28} L0,${h} V${w*0.12} Q0,0 ${w*0.12},0 Z`,
+  flag:    (w,h) => `M0,0 H${w} V${h} L${w*0.75},${h*0.78} L${w/2},${h} L${w*0.25},${h*0.78} L0,${h} Z`,
+  double:  (w,h) => `M0,0 H${w} V${h} L${w*0.75},${h-w*0.22} L${w/2},${h} L${w*0.25},${h-w*0.22} L0,${h} Z`,
+  ribbon:  (w,h) => `M${w*0.1},0 H${w-w*0.1} L${w},${h*0.12} V${h} L${w/2},${h-w*0.28} L0,${h} V${h*0.12} Z`,
+};
+
+function renderBookmarkSVG(template, w=36, h=56, uid='bm') {
+  if(!template) return '';
+  const shapeFn = BOOKMARK_SHAPES[template.shape] || BOOKMARK_SHAPES.classic;
+  const p = shapeFn(w, h);
+  const body = template.colors?.body || '#1e3a5f';
+  const accent = template.colors?.accent || '#2a7c8a';
+  const textCol = template.colors?.text || '#ffffff';
+  const stripeH = h * 0.12;
+  const iconY = h * 0.42;
+  const labelY = h * 0.62;
+  const iconFs = Math.round(w * 0.42);
+  const labelFs = Math.round(w * 0.16);
+
+  return `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}"
+    xmlns="http://www.w3.org/2000/svg" style="display:block;flex-shrink:0">
+    <defs><clipPath id="${uid}clip"><path d="${p}"/></clipPath></defs>
+    <path d="${p}" fill="${body}"/>
+    <rect x="0" y="0" width="${w}" height="${stripeH}"
+      fill="${accent}" clip-path="url(#${uid}clip)"/>
+    <text x="${w/2}" y="${iconY}" text-anchor="middle"
+      dominant-baseline="middle" font-size="${iconFs}">${template.icon || '🔖'}</text>
+    ${template.label ? `<text x="${w/2}" y="${labelY}" text-anchor="middle"
+      dominant-baseline="middle" font-size="${labelFs}"
+      fill="${textCol}" font-family="system-ui,sans-serif"
+      font-weight="500">${esc(template.label)}</text>` : ''}
+  </svg>`;
+}
 function esc(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 
 // ── TAGS ──────────────────────────────────────────────────────────────────────
@@ -4804,8 +4907,48 @@ async function saveChapterManager(){
   }catch(e){hideLoading();showToast('Save failed: '+e.message);console.error(e);}
 }
 
-  // ── KOBO INTEGRATION ─────────────────────────────────────────────────────────
+  // ── BOOKMARKS ─────────────────────────────────────────────────────────
 
+  async function loadBookmarkTemplates() {
+  try {
+    const snap = await getDocs(
+      query(collection(db, 'bookmarks'), where('active', '==', true))
+    );
+    _bookmarkTemplates = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  } catch(e) {
+    console.warn('loadBookmarkTemplates:', e);
+    _bookmarkTemplates = [];
+  }
+}
+
+async function loadMyBookmarks() {
+  if(!currentUser) return;
+  try {
+    const snap = await getDocs(
+      query(
+        collection(db, 'user_bookmarks'),
+        where('userId', '==', currentUser.uid)
+      )
+    );
+    _myBookmarks = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  } catch(e) {
+    console.warn('loadMyBookmarks:', e);
+    _myBookmarks = [];
+  }
+}
+
+function getBookmarksForBook(bookId) {
+  return _myBookmarks.filter(b => b.bookId === bookId);
+}
+
+function getReadingPositionBookmark(bookId) {
+  return _myBookmarks.find(b => b.bookId === bookId && b.type === 'reading_position');
+}
+
+function getAwardBookmarksForBook(bookId) {
+  return _myBookmarks.filter(b => b.bookId === bookId && b.type === 'award');
+}
+  
 // ── LOAD KOBO DEVICES ────────────────────────────────────────────────────────
 
 async function loadKoboDevices() {
@@ -6914,6 +7057,66 @@ async function adminLoadTags() {
   addInput?.addEventListener('keydown', e => { if(e.key === 'Enter') doAdd(); });
 }
 
+  async function adminLoadBookmarks() {
+  const el = document.getElementById('adminBookmarkBody');
+  if(!el) return;
+  el.innerHTML = '<div style="color:var(--muted);font-size:.85rem">Loading…</div>';
+
+  try {
+    const snap = await getDocs(collection(db, 'bookmarks'));
+    const templates = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    _bookmarkTemplates = templates.filter(t => t.active !== false);
+
+    el.innerHTML = `
+      <div style="margin-bottom:.8rem;display:flex;flex-wrap:wrap;gap:.4rem;" id="adminBmList">
+        ${templates.map(t => `
+          <div style="display:flex;align-items:center;gap:.6rem;padding:.5rem .7rem;
+                      background:var(--panel);border:1px solid var(--border);
+                      border-radius:4px;width:100%">
+            ${renderBookmarkSVG(t, 24, 38, 'adm'+t.id)}
+            <div style="flex:1;min-width:0">
+              <div style="font-size:.82rem;font-weight:700;color:var(--navy2)">${esc(t.name)}</div>
+              <div style="font-size:.7rem;color:var(--muted)">${esc(t.description||'')}</div>
+              <div style="font-size:.65rem;color:var(--teal);margin-top:1px">
+                ${t.condition?.type==='manual'?'Manual award':
+                  t.condition?.type==='auto_category'?`Auto: ${t.condition.count} × ${t.condition.category}`:
+                  t.condition?.type==='auto_count'?`Auto: ${t.condition.count} books read`:
+                  'Seasonal'}
+              </div>
+            </div>
+            <div style="display:flex;gap:.3rem;flex-shrink:0">
+              <button class="admin-copy-btn" data-bm-award="${t.id}">🎖 Award</button>
+              <button class="admin-copy-btn" data-bm-edit="${t.id}">✎</button>
+              <button class="admin-copy-btn" style="color:var(--danger);border-color:#e0b0b0"
+                data-bm-delete="${t.id}">✕</button>
+            </div>
+          </div>`).join('')}
+      </div>
+      <button class="btn-save" style="width:100%;font-size:.72rem;padding:.45rem"
+        id="adminBmNewBtn">+ New Bookmark Template</button>`;
+
+    el.querySelectorAll('[data-bm-award]').forEach(btn => {
+      btn.addEventListener('click', () => showAwardBookmarkModal(btn.dataset.bmAward));
+    });
+    el.querySelectorAll('[data-bm-edit]').forEach(btn => {
+      btn.addEventListener('click', () => showBookmarkTemplateEditor(btn.dataset.bmEdit));
+    });
+    el.querySelectorAll('[data-bm-delete]').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const t = templates.find(x => x.id === btn.dataset.bmDelete);
+        if(!t || !confirm(`Delete "${t.name}"?`)) return;
+        await updateDoc(doc(db, 'bookmarks', t.id), { active: false });
+        showToast('Bookmark deleted ✓');
+        adminLoadBookmarks();
+      });
+    });
+    el.querySelector('#adminBmNewBtn')?.addEventListener('click', () => showBookmarkTemplateEditor(null));
+
+  } catch(e) {
+    el.innerHTML = `<div style="color:var(--danger);font-size:.82rem">Failed: ${e.message}</div>`;
+  }
+}
+
 // ── ADMIN COLLAPSIBLE SECTIONS ────────────────────────────────────────────────
 
 function buildAdminSections() {
@@ -6982,6 +7185,16 @@ function buildAdminSections() {
     </div>
 
     <div class="admin-section">
+  <div class="admin-section-header" data-admin-section="bookmarks">
+    <span class="admin-section-title">🎖 Bookmarks</span>
+    <span class="admin-section-chevron">▾</span>
+  </div>
+  <div class="admin-section-body" id="adminBookmarkBody">
+    <div style="color:var(--muted);font-size:.85rem">Open to load…</div>
+  </div>
+</div>
+
+    <div class="admin-section">
       <div class="admin-section-header" data-admin-section="tags">
         <span class="admin-section-title">🔖 Tags</span>
         <span class="admin-section-chevron">▾</span>
@@ -6991,8 +7204,11 @@ function buildAdminSections() {
       </div>
     </div>`;
 
+  
+
   // Collapsible toggle
   scroll.querySelectorAll('.admin-section-header').forEach(header => {
+    if(section === 'bookmarks') adminLoadBookmarks();
     header.addEventListener('click', () => {
       const section = header.dataset.adminSection;
       const body = header.nextElementSibling;
@@ -7033,7 +7249,202 @@ document.getElementById('mobNavAdmin')?.addEventListener('click', () => {
   buildAdminSections();
 });
 
-  
+
+function showBookmarkTemplateEditor(templateId) {
+  const existing = templateId ? _bookmarkTemplates.find(t => t.id === templateId) : null;
+
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay open';
+  overlay.innerHTML = `
+    <div class="modal" style="max-width:480px">
+      <h3>${existing ? 'Edit Bookmark' : 'New Bookmark Template'}</h3>
+      <div class="form-row"><label>Name</label>
+        <input type="text" id="bmEdName" value="${esc(existing?.name||'')}"/></div>
+      <div class="form-row"><label>Description</label>
+        <input type="text" id="bmEdDesc" value="${esc(existing?.description||'')}"/></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:.6rem">
+        <div class="form-row"><label>Icon (emoji)</label>
+          <input type="text" id="bmEdIcon" value="${existing?.icon||'🔖'}" maxlength="2"
+            style="font-size:1.4rem;text-align:center"/></div>
+        <div class="form-row"><label>Label</label>
+          <input type="text" id="bmEdLabel" value="${esc(existing?.label||'')}" maxlength="16"/></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:.6rem">
+        <div class="form-row"><label>Body colour</label>
+          <input type="color" id="bmEdBody" value="${existing?.colors?.body||'#1e3a5f'}"
+            style="width:100%;height:38px;border-radius:3px;border:1px solid var(--border);padding:2px;cursor:pointer"/></div>
+        <div class="form-row"><label>Accent colour</label>
+          <input type="color" id="bmEdAccent" value="${existing?.colors?.accent||'#2a7c8a'}"
+            style="width:100%;height:38px;border-radius:3px;border:1px solid var(--border);padding:2px;cursor:pointer"/></div>
+        <div class="form-row"><label>Text colour</label>
+          <input type="color" id="bmEdText" value="${existing?.colors?.text||'#ffffff'}"
+            style="width:100%;height:38px;border-radius:3px;border:1px solid var(--border);padding:2px;cursor:pointer"/></div>
+      </div>
+      <div class="form-row"><label>Shape</label>
+        <select id="bmEdShape">
+          ${['classic','rounded','flag','double','ribbon'].map(s =>
+            `<option value="${s}" ${existing?.shape===s?'selected':''}>${s}</option>`
+          ).join('')}
+        </select>
+      </div>
+      <div class="form-row"><label>Condition</label>
+        <select id="bmEdCond">
+          <option value="manual" ${existing?.condition?.type==='manual'?'selected':''}>Manual (admin awards)</option>
+          <option value="auto_category" ${existing?.condition?.type==='auto_category'?'selected':''}>Auto — category count</option>
+          <option value="auto_count" ${existing?.condition?.type==='auto_count'?'selected':''}>Auto — total books read</option>
+          <option value="seasonal" ${existing?.condition?.type==='seasonal'?'selected':''}>Seasonal</option>
+        </select>
+      </div>
+      <!-- Live preview -->
+      <div style="display:flex;align-items:center;gap:1rem;padding:.7rem;
+                  background:var(--panel);border-radius:4px;margin:.5rem 0">
+        <div id="bmEdPreview"></div>
+        <div style="font-size:.78rem;color:var(--muted)">Live preview</div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn-cancel" id="bmEdCancel">Cancel</button>
+        <button class="btn-save" id="bmEdSave">${existing ? 'Save Changes' : 'Create Template'}</button>
+      </div>
+    </div>`;
+
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click', e => { if(e.target===overlay) overlay.remove(); });
+  overlay.querySelector('#bmEdCancel').addEventListener('click', () => overlay.remove());
+
+  const updatePreview = () => {
+    const t = {
+      shape: overlay.querySelector('#bmEdShape').value,
+      icon: overlay.querySelector('#bmEdIcon').value,
+      label: overlay.querySelector('#bmEdLabel').value,
+      colors: {
+        body: overlay.querySelector('#bmEdBody').value,
+        accent: overlay.querySelector('#bmEdAccent').value,
+        text: overlay.querySelector('#bmEdText').value,
+      }
+    };
+    overlay.querySelector('#bmEdPreview').innerHTML = renderBookmarkSVG(t, 40, 62, 'ed');
+  };
+
+  ['bmEdShape','bmEdIcon','bmEdLabel','bmEdBody','bmEdAccent','bmEdText']
+    .forEach(id => overlay.querySelector('#'+id)?.addEventListener('input', updatePreview));
+  updatePreview();
+
+  overlay.querySelector('#bmEdSave').addEventListener('click', async () => {
+    const data = {
+      name: overlay.querySelector('#bmEdName').value.trim(),
+      description: overlay.querySelector('#bmEdDesc').value.trim(),
+      shape: overlay.querySelector('#bmEdShape').value,
+      icon: overlay.querySelector('#bmEdIcon').value,
+      label: overlay.querySelector('#bmEdLabel').value.trim(),
+      colors: {
+        body: overlay.querySelector('#bmEdBody').value,
+        accent: overlay.querySelector('#bmEdAccent').value,
+        text: overlay.querySelector('#bmEdText').value,
+      },
+      condition: { type: overlay.querySelector('#bmEdCond').value },
+      active: true,
+      updatedAt: serverTimestamp(),
+    };
+    if(!data.name) { showToast('Please enter a name'); return; }
+    overlay.remove();
+    showLoading(existing ? 'Saving…' : 'Creating…');
+    try {
+      if(existing) {
+        await updateDoc(doc(db, 'bookmarks', templateId), data);
+      } else {
+        data.createdAt = serverTimestamp();
+        data.createdBy = currentUser.uid;
+        await addDoc(collection(db, 'bookmarks'), data);
+      }
+      hideLoading();
+      showToast(`Bookmark ${existing?'updated':'created'} ✓`);
+      await loadBookmarkTemplates();
+      adminLoadBookmarks();
+    } catch(e) {
+      hideLoading();
+      showToast('Failed: ' + e.message);
+    }
+  });
+}
+
+  async function showAwardBookmarkModal(templateId) {
+  const template = _bookmarkTemplates.find(t => t.id === templateId);
+  if(!template) return;
+
+  const users = await loadAllUsers();
+
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay open';
+  overlay.innerHTML = `
+    <div class="modal" style="max-width:420px">
+      <h3>🎖 Award Bookmark</h3>
+      <div style="display:flex;align-items:center;gap:.8rem;padding:.6rem;
+                  background:var(--panel);border-radius:4px;margin-bottom:1rem">
+        ${renderBookmarkSVG(template, 32, 50, 'aw')}
+        <div>
+          <div style="font-weight:700;font-size:.88rem">${esc(template.name)}</div>
+          <div style="font-size:.75rem;color:var(--muted)">${esc(template.description||'')}</div>
+        </div>
+      </div>
+      <div class="form-row"><label>Award to</label>
+        <select id="awardUserId">
+          <option value="">— Select user —</option>
+          <option value="__all__">Everyone</option>
+          ${users.map(u => `<option value="${u.uid}">${esc(u.displayName||u.email||u.uid)}</option>`).join('')}
+        </select>
+      </div>
+      <div class="form-row"><label>Attach to book <span style="font-size:.65rem;color:var(--muted);font-weight:400">(optional)</span></label>
+        <select id="awardBookId">
+          <option value="">— General award (no specific book) —</option>
+          ${library.map(b => `<option value="${b.id}" ${currentId===b.id?'selected':''}>${esc(b.title)}</option>`).join('')}
+        </select>
+      </div>
+      <div class="form-row"><label>Note <span style="font-size:.65rem;color:var(--muted);font-weight:400">(optional)</span></label>
+        <input type="text" id="awardNote" placeholder="e.g. Winner — December 2025 reading competition"/></div>
+      <div class="modal-actions">
+        <button class="btn-cancel" id="awardCancel">Cancel</button>
+        <button class="btn-save" id="awardConfirm">Award ✓</button>
+      </div>
+    </div>`;
+
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click', e => { if(e.target===overlay) overlay.remove(); });
+  overlay.querySelector('#awardCancel').addEventListener('click', () => overlay.remove());
+
+  overlay.querySelector('#awardConfirm').addEventListener('click', async () => {
+    const userId = overlay.querySelector('#awardUserId').value;
+    const bookId = overlay.querySelector('#awardBookId').value || null;
+    const note = overlay.querySelector('#awardNote').value.trim();
+    if(!userId) { showToast('Please select a user'); return; }
+    overlay.remove();
+    showLoading('Awarding…');
+    try {
+      const targets = userId === '__all__'
+        ? await loadAllUsers().then(u => u.map(x => x.uid))
+        : [userId];
+
+      for(const uid of targets) {
+        await addDoc(collection(db, 'user_bookmarks'), {
+          userId: uid,
+          bookmarkId: templateId,
+          bookId,
+          type: 'award',
+          awardedBy: currentUser.uid,
+          awardedAt: serverTimestamp(),
+          note,
+          displayed: true,
+        });
+      }
+      hideLoading();
+      showToast(`Awarded to ${targets.length} user${targets.length!==1?'s':''} ✓`);
+      await loadMyBookmarks();
+      renderAll();
+    } catch(e) {
+      hideLoading();
+      showToast('Failed: ' + e.message);
+    }
+  });
+}
 renderAll();
 </script>
 </body>
