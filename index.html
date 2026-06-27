@@ -4933,12 +4933,21 @@ async function saveChapterManager(){
 
   // ── BOOKMARKS ─────────────────────────────────────────────────────────
 
-  async function loadBookmarkTemplates() {
+async function loadBookmarkTemplates() {
   try {
     const snap = await getDocs(
       query(collection(db, 'bookmarks'), where('active', '==', true))
     );
-    _bookmarkTemplates = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    const now = new Date();
+    _bookmarkTemplates = snap.docs
+      .map(d => ({ id: d.id, ...d.data() }))
+      .filter(t => {
+        if(t.condition?.type !== 'seasonal') return true;
+        const from = t.condition.startsAt?.toDate?.();
+        const to   = t.condition.endsAt?.toDate?.();
+        if(!from || !to) return true;
+        return now >= from && now <= to;
+      });
   } catch(e) {
     console.warn('loadBookmarkTemplates:', e);
     _bookmarkTemplates = [];
@@ -7120,10 +7129,10 @@ async function adminLoadTags() {
         id="adminBmNewBtn">+ New Bookmark Template</button>`;
 
     el.querySelectorAll('[data-bm-award]').forEach(btn => {
-      btn.addEventListener('click', () => showAwardBookmarkModal(btn.dataset.bmAward));
+      btn.addEventListener('click', () => showBookmarkEditor(btn.dataset.bmAward, currentId||null));
     });
     el.querySelectorAll('[data-bm-edit]').forEach(btn => {
-      btn.addEventListener('click', () => showBookmarkTemplateEditor(btn.dataset.bmEdit));
+      btn.addEventListener('click', () => showBookmarkEditor(btn.dataset.bmEdit, null));
     });
     el.querySelectorAll('[data-bm-delete]').forEach(btn => {
       btn.addEventListener('click', async () => {
@@ -7134,7 +7143,7 @@ async function adminLoadTags() {
         adminLoadBookmarks();
       });
     });
-    el.querySelector('#adminBmNewBtn')?.addEventListener('click', () => showBookmarkTemplateEditor(null));
+    el.querySelector('#adminBmNewBtn')?.addEventListener('click', () => showBookmarkEditor(null, null));
 
   } catch(e) {
     el.innerHTML = `<div style="color:var(--danger);font-size:.82rem">Failed: ${e.message}</div>`;
@@ -7266,61 +7275,143 @@ document.getElementById('mobNavAdmin')?.addEventListener('click', () => {
   buildAdminSections();
 });
 
-
-function showBookmarkTemplateEditor(templateId) {
+function showBookmarkEditor(templateId, preselectedBookId) {
   const existing = templateId ? _bookmarkTemplates.find(t => t.id === templateId) : null;
 
   const overlay = document.createElement('div');
   overlay.className = 'modal-overlay open';
+  overlay.style.cssText = 'align-items:flex-start;padding:1rem;overflow-y:auto';
+
   overlay.innerHTML = `
-    <div class="modal" style="max-width:480px">
-      <h3>${existing ? 'Edit Bookmark' : 'New Bookmark Template'}</h3>
+    <div class="modal" style="max-width:520px;width:100%;margin:auto">
+      <h3>${existing ? 'Edit Bookmark' : 'New Bookmark'}</h3>
+
+      <!-- SECTION 1: Identity -->
+      <div style="font-size:.62rem;letter-spacing:.15em;text-transform:uppercase;
+                  color:var(--muted);font-weight:700;margin:.8rem 0 .5rem">
+        Identity</div>
       <div class="form-row"><label>Name</label>
-        <input type="text" id="bmEdName" value="${esc(existing?.name||'')}"/></div>
+        <input type="text" id="bmEdName" value="${esc(existing?.name||'')}"
+          placeholder="e.g. Ghost Reader"/></div>
       <div class="form-row"><label>Description</label>
-        <input type="text" id="bmEdDesc" value="${esc(existing?.description||'')}"/></div>
+        <input type="text" id="bmEdDesc" value="${esc(existing?.description||'')}"
+          placeholder="e.g. Awarded for reading 5 Thrillers"/></div>
+
+      <!-- SECTION 2: Visual -->
+      <div style="font-size:.62rem;letter-spacing:.15em;text-transform:uppercase;
+                  color:var(--muted);font-weight:700;margin:.8rem 0 .5rem">
+        Appearance</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:.6rem">
         <div class="form-row"><label>Icon (emoji)</label>
           <input type="text" id="bmEdIcon" value="${existing?.icon||'🔖'}" maxlength="2"
             style="font-size:1.4rem;text-align:center"/></div>
-        <div class="form-row"><label>Label</label>
-          <input type="text" id="bmEdLabel" value="${esc(existing?.label||'')}" maxlength="16"/></div>
-      </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:.6rem">
-        <div class="form-row"><label>Body colour</label>
-          <input type="color" id="bmEdBody" value="${existing?.colors?.body||'#1e3a5f'}"
-            style="width:100%;height:38px;border-radius:3px;border:1px solid var(--border);padding:2px;cursor:pointer"/></div>
-        <div class="form-row"><label>Accent colour</label>
-          <input type="color" id="bmEdAccent" value="${existing?.colors?.accent||'#2a7c8a'}"
-            style="width:100%;height:38px;border-radius:3px;border:1px solid var(--border);padding:2px;cursor:pointer"/></div>
-        <div class="form-row"><label>Text colour</label>
-          <input type="color" id="bmEdText" value="${existing?.colors?.text||'#ffffff'}"
-            style="width:100%;height:38px;border-radius:3px;border:1px solid var(--border);padding:2px;cursor:pointer"/></div>
+        <div class="form-row"><label>Label text</label>
+          <input type="text" id="bmEdLabel" value="${esc(existing?.label||'')}"
+            maxlength="16" placeholder="e.g. Thriller Club"/></div>
       </div>
       <div class="form-row"><label>Shape</label>
         <select id="bmEdShape">
           ${['classic','rounded','flag','double','ribbon'].map(s =>
-            `<option value="${s}" ${existing?.shape===s?'selected':''}>${s}</option>`
+            `<option value="${s}" ${(existing?.shape||'classic')===s?'selected':''}>${s}</option>`
           ).join('')}
         </select>
       </div>
-      <div class="form-row"><label>Condition</label>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:.6rem">
+        <div class="form-row"><label>Body colour</label>
+          <input type="color" id="bmEdBody" value="${existing?.colors?.body||'#1e3a5f'}"
+            style="width:100%;height:38px;border-radius:3px;border:1px solid var(--border);
+                   padding:2px;cursor:pointer"/></div>
+        <div class="form-row"><label>Accent stripe</label>
+          <input type="color" id="bmEdAccent" value="${existing?.colors?.accent||'#2a7c8a'}"
+            style="width:100%;height:38px;border-radius:3px;border:1px solid var(--border);
+                   padding:2px;cursor:pointer"/></div>
+        <div class="form-row"><label>Text colour</label>
+          <input type="color" id="bmEdText" value="${existing?.colors?.text||'#ffffff'}"
+            style="width:100%;height:38px;border-radius:3px;border:1px solid var(--border);
+                   padding:2px;cursor:pointer"/></div>
+      </div>
+
+      <!-- Quick theme presets -->
+      <div style="display:flex;gap:.3rem;flex-wrap:wrap;margin-bottom:.8rem">
+        ${[
+          {label:'Thriller',icon:'👻',body:'#1a1a2e',accent:'#7c3aed',text:'#e2d9f3'},
+          {label:'Christmas',icon:'⭐',body:'#14532d',accent:'#dc2626',text:'#fef9c3'},
+          {label:'Gold',icon:'🏆',body:'#78350f',accent:'#f59e0b',text:'#fef3c7'},
+          {label:'Romance',icon:'❤️',body:'#831843',accent:'#f472b6',text:'#fdf2f8'},
+          {label:'Sci-Fi',icon:'🚀',body:'#0f172a',accent:'#38bdf8',text:'#e0f2fe'},
+        ].map((p,i) => `<button data-preset="${i}"
+          style="font-size:.68rem;padding:.2rem .55rem;border-radius:20px;
+                 border:1px solid var(--border);background:var(--warm-white);
+                 color:var(--navy2);cursor:pointer">${p.icon} ${p.label}</button>`).join('')}
+      </div>
+
+      <!-- Live preview -->
+      <div style="display:flex;align-items:center;gap:1rem;padding:.7rem .9rem;
+                  background:var(--panel);border-radius:4px;margin-bottom:.9rem;
+                  border:1px solid var(--border)">
+        <div id="bmEdPreview"></div>
+        <div>
+          <div id="bmEdPreviewName" style="font-size:.82rem;font-weight:700;
+            color:var(--navy2)"></div>
+          <div id="bmEdPreviewDesc" style="font-size:.72rem;color:var(--muted);
+            margin-top:2px"></div>
+        </div>
+      </div>
+
+      <!-- SECTION 3: Condition -->
+      <div style="font-size:.62rem;letter-spacing:.15em;text-transform:uppercase;
+                  color:var(--muted);font-weight:700;margin:.8rem 0 .5rem">
+        When is this awarded?</div>
+      <div class="form-row"><label>Award type</label>
         <select id="bmEdCond">
-          <option value="manual" ${existing?.condition?.type==='manual'?'selected':''}>Manual (admin awards)</option>
-          <option value="auto_category" ${existing?.condition?.type==='auto_category'?'selected':''}>Auto — category count</option>
-          <option value="auto_count" ${existing?.condition?.type==='auto_count'?'selected':''}>Auto — total books read</option>
-          <option value="seasonal" ${existing?.condition?.type==='seasonal'?'selected':''}>Seasonal</option>
+          <option value="manual" ${(existing?.condition?.type||'manual')==='manual'?'selected':''}>
+            Manual — admin awards this directly</option>
+          <option value="auto_category" ${existing?.condition?.type==='auto_category'?'selected':''}>
+            Auto — reader finishes N books in a category</option>
+          <option value="auto_count" ${existing?.condition?.type==='auto_count'?'selected':''}>
+            Auto — reader finishes N books total</option>
+          <option value="seasonal" ${existing?.condition?.type==='seasonal'?'selected':''}>
+            Seasonal — visible only between two dates</option>
         </select>
       </div>
-      <!-- Live preview -->
-      <div style="display:flex;align-items:center;gap:1rem;padding:.7rem;
-                  background:var(--panel);border-radius:4px;margin:.5rem 0">
-        <div id="bmEdPreview"></div>
-        <div style="font-size:.78rem;color:var(--muted)">Live preview</div>
+      <div id="bmEdCondExtra"></div>
+
+      <!-- SECTION 4: Award targets (shown for manual + seasonal) -->
+      <div id="bmEdAwardSection">
+        <div style="font-size:.62rem;letter-spacing:.15em;text-transform:uppercase;
+                    color:var(--muted);font-weight:700;margin:.8rem 0 .5rem">
+          Award to</div>
+        <div class="form-row"><label>User</label>
+          <select id="bmEdAwardUser">
+            <option value="">— Save template only, award later —</option>
+            <option value="__all__">Everyone</option>
+            ${(allUsers.length ? allUsers : []).map(u =>
+              `<option value="${u.uid}">${esc(u.displayName||u.email||u.uid)}</option>`
+            ).join('')}
+          </select>
+        </div>
+        <div class="form-row"><label>Attach to book
+          <span style="font-size:.65rem;color:var(--muted);font-weight:400">
+            (optional)</span></label>
+          <select id="bmEdAwardBook">
+            <option value="">— No specific book —</option>
+            ${library.map(b =>
+              `<option value="${b.id}" ${preselectedBookId===b.id?'selected':''}>
+                ${esc(b.title)}</option>`
+            ).join('')}
+          </select>
+        </div>
+        <div class="form-row"><label>Award note
+          <span style="font-size:.65rem;color:var(--muted);font-weight:400">
+            (optional)</span></label>
+          <input type="text" id="bmEdAwardNote"
+            placeholder="e.g. Winner — December 2025 reading competition"/></div>
       </div>
-      <div class="modal-actions">
+
+      <div class="modal-actions" style="margin-top:1.2rem">
         <button class="btn-cancel" id="bmEdCancel">Cancel</button>
-        <button class="btn-save" id="bmEdSave">${existing ? 'Save Changes' : 'Create Template'}</button>
+        <button class="btn-save" id="bmEdSave">
+          ${existing ? 'Save Changes' : 'Create &amp; Award'}</button>
       </div>
     </div>`;
 
@@ -7328,140 +7419,217 @@ function showBookmarkTemplateEditor(templateId) {
   overlay.addEventListener('click', e => { if(e.target===overlay) overlay.remove(); });
   overlay.querySelector('#bmEdCancel').addEventListener('click', () => overlay.remove());
 
-  const updatePreview = () => {
-    const t = {
+  // ── PRESETS ───────────────────────────────────────────────────────────────
+  const PRESETS = [
+    {icon:'👻',body:'#1a1a2e',accent:'#7c3aed',text:'#e2d9f3'},
+    {icon:'⭐',body:'#14532d',accent:'#dc2626',text:'#fef9c3'},
+    {icon:'🏆',body:'#78350f',accent:'#f59e0b',text:'#fef3c7'},
+    {icon:'❤️',body:'#831843',accent:'#f472b6',text:'#fdf2f8'},
+    {icon:'🚀',body:'#0f172a',accent:'#38bdf8',text:'#e0f2fe'},
+  ];
+  overlay.querySelectorAll('[data-preset]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const p = PRESETS[parseInt(btn.dataset.preset)];
+      overlay.querySelector('#bmEdIcon').value = p.icon;
+      overlay.querySelector('#bmEdBody').value = p.body;
+      overlay.querySelector('#bmEdAccent').value = p.accent;
+      overlay.querySelector('#bmEdText').value = p.text;
+      updatePreview();
+    });
+  });
+
+  // ── CONDITION EXTRA FIELDS ────────────────────────────────────────────────
+  function updateCondExtra() {
+    const type = overlay.querySelector('#bmEdCond').value;
+    const el = overlay.querySelector('#bmEdCondExtra');
+    const awardSection = overlay.querySelector('#bmEdAwardSection');
+
+    if(type === 'auto_category') {
+      el.innerHTML = `
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:.6rem">
+          <div class="form-row"><label>Category</label>
+            <select id="bmEdCondCat">
+              ${_categories.map(c =>
+                `<option value="${c}" ${existing?.condition?.category===c?'selected':''}>${esc(c)}</option>`
+              ).join('')}
+            </select>
+          </div>
+          <div class="form-row"><label>Books needed</label>
+            <input type="number" id="bmEdCondCount" min="1" max="100"
+              value="${existing?.condition?.count||5}" style="width:100%"/></div>
+        </div>`;
+      awardSection.style.display = 'none';
+    } else if(type === 'auto_count') {
+      el.innerHTML = `
+        <div class="form-row"><label>Total books read</label>
+          <input type="number" id="bmEdCondCount" min="1" max="1000"
+            value="${existing?.condition?.count||10}" style="width:100%"/></div>`;
+      awardSection.style.display = 'none';
+    } else if(type === 'seasonal') {
+      const from = existing?.condition?.startsAt?.toDate?.()?.toISOString().slice(0,10) || '';
+      const to   = existing?.condition?.endsAt?.toDate?.()?.toISOString().slice(0,10) || '';
+      el.innerHTML = `
+        <div style="background:var(--teal-light);border:1px solid var(--teal);
+                    border-radius:4px;padding:.55rem .75rem;font-size:.78rem;
+                    color:var(--teal-dark);margin-bottom:.6rem;line-height:1.5">
+          Seasonal bookmarks are only visible to users between the two dates below.
+          Outside those dates the bookmark is hidden but not deleted.
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:.6rem">
+          <div class="form-row"><label>Show from</label>
+            <input type="date" id="bmEdCondFrom" value="${from}" style="width:100%"/></div>
+          <div class="form-row"><label>Hide after</label>
+            <input type="date" id="bmEdCondTo" value="${to}" style="width:100%"/></div>
+        </div>`;
+      awardSection.style.display = '';
+    } else {
+      el.innerHTML = '';
+      awardSection.style.display = '';
+    }
+  }
+
+  overlay.querySelector('#bmEdCond').addEventListener('change', updateCondExtra);
+  updateCondExtra();
+
+  // ── LIVE PREVIEW ──────────────────────────────────────────────────────────
+  function getTemplate() {
+    return {
       shape: overlay.querySelector('#bmEdShape').value,
-      icon: overlay.querySelector('#bmEdIcon').value,
+      icon:  overlay.querySelector('#bmEdIcon').value,
       label: overlay.querySelector('#bmEdLabel').value,
       colors: {
-        body: overlay.querySelector('#bmEdBody').value,
+        body:   overlay.querySelector('#bmEdBody').value,
         accent: overlay.querySelector('#bmEdAccent').value,
-        text: overlay.querySelector('#bmEdText').value,
+        text:   overlay.querySelector('#bmEdText').value,
       }
     };
-    overlay.querySelector('#bmEdPreview').innerHTML = renderBookmarkSVG(t, 40, 62, 'ed');
-  };
+  }
 
-  ['bmEdShape','bmEdIcon','bmEdLabel','bmEdBody','bmEdAccent','bmEdText']
-    .forEach(id => overlay.querySelector('#'+id)?.addEventListener('input', updatePreview));
+  function updatePreview() {
+    overlay.querySelector('#bmEdPreview').innerHTML =
+      renderBookmarkSVG(getTemplate(), 40, 62, 'ed');
+    overlay.querySelector('#bmEdPreviewName').textContent =
+      overlay.querySelector('#bmEdName').value || 'Bookmark name';
+    overlay.querySelector('#bmEdPreviewDesc').textContent =
+      overlay.querySelector('#bmEdDesc').value || 'Description';
+  }
+
+  ['bmEdShape','bmEdIcon','bmEdLabel','bmEdBody','bmEdAccent','bmEdText',
+   'bmEdName','bmEdDesc'].forEach(id => {
+    overlay.querySelector('#'+id)?.addEventListener('input', updatePreview);
+  });
   updatePreview();
 
+  // Load users if not yet loaded
+  if(!allUsers.length) loadAllUsers().then(() => {
+    const sel = overlay.querySelector('#bmEdAwardUser');
+    if(!sel) return;
+    const current = sel.value;
+    sel.innerHTML = `
+      <option value="">— Save template only, award later —</option>
+      <option value="__all__">Everyone</option>
+      ${allUsers.map(u =>
+        `<option value="${u.uid}" ${current===u.uid?'selected':''}>
+          ${esc(u.displayName||u.email||u.uid)}</option>`
+      ).join('')}`;
+  });
+
+  // ── SAVE ─────────────────────────────────────────────────────────────────
   overlay.querySelector('#bmEdSave').addEventListener('click', async () => {
-    const data = {
-      name: overlay.querySelector('#bmEdName').value.trim(),
+    const name = overlay.querySelector('#bmEdName').value.trim();
+    if(!name) { showToast('Please enter a name'); return; }
+
+    const condType = overlay.querySelector('#bmEdCond').value;
+    const condition = { type: condType };
+
+    if(condType === 'auto_category') {
+      condition.category = overlay.querySelector('#bmEdCondCat')?.value || '';
+      condition.count = parseInt(overlay.querySelector('#bmEdCondCount')?.value || '5');
+    } else if(condType === 'auto_count') {
+      condition.count = parseInt(overlay.querySelector('#bmEdCondCount')?.value || '10');
+    } else if(condType === 'seasonal') {
+      const from = overlay.querySelector('#bmEdCondFrom')?.value;
+      const to   = overlay.querySelector('#bmEdCondTo')?.value;
+      if(!from || !to) { showToast('Please set both dates for a seasonal bookmark'); return; }
+      if(new Date(from) >= new Date(to)) { showToast('Start date must be before end date'); return; }
+      condition.startsAt = Timestamp.fromDate(new Date(from));
+      condition.endsAt   = Timestamp.fromDate(new Date(to));
+    }
+
+    const templateData = {
+      name,
       description: overlay.querySelector('#bmEdDesc').value.trim(),
-      shape: overlay.querySelector('#bmEdShape').value,
-      icon: overlay.querySelector('#bmEdIcon').value,
-      label: overlay.querySelector('#bmEdLabel').value.trim(),
+      shape:  overlay.querySelector('#bmEdShape').value,
+      icon:   overlay.querySelector('#bmEdIcon').value,
+      label:  overlay.querySelector('#bmEdLabel').value.trim(),
       colors: {
-        body: overlay.querySelector('#bmEdBody').value,
+        body:   overlay.querySelector('#bmEdBody').value,
         accent: overlay.querySelector('#bmEdAccent').value,
-        text: overlay.querySelector('#bmEdText').value,
+        text:   overlay.querySelector('#bmEdText').value,
       },
-      condition: { type: overlay.querySelector('#bmEdCond').value },
+      condition,
       active: true,
       updatedAt: serverTimestamp(),
     };
-    if(!data.name) { showToast('Please enter a name'); return; }
+
+    const awardUserId  = overlay.querySelector('#bmEdAwardUser')?.value  || '';
+    const awardBookId  = overlay.querySelector('#bmEdAwardBook')?.value  || null;
+    const awardNote    = overlay.querySelector('#bmEdAwardNote')?.value?.trim() || '';
+
     overlay.remove();
     showLoading(existing ? 'Saving…' : 'Creating…');
+
     try {
+      let templateId = templateId;
+
+      // Save or update template
       if(existing) {
-        await updateDoc(doc(db, 'bookmarks', templateId), data);
+        await updateDoc(doc(db, 'bookmarks', existing.id), templateData);
+        templateId = existing.id;
       } else {
-        data.createdAt = serverTimestamp();
-        data.createdBy = currentUser.uid;
-        await addDoc(collection(db, 'bookmarks'), data);
+        templateData.createdAt = serverTimestamp();
+        templateData.createdBy = currentUser.uid;
+        const ref = await addDoc(collection(db, 'bookmarks'), templateData);
+        templateId = ref.id;
       }
-      hideLoading();
-      showToast(`Bookmark ${existing?'updated':'created'} ✓`);
+
+      // Award if a user was selected
+      if(awardUserId && (condType === 'manual' || condType === 'seasonal')) {
+        const targets = awardUserId === '__all__'
+          ? allUsers.map(u => u.uid)
+          : [awardUserId];
+
+        for(const uid of targets) {
+          await addDoc(collection(db, 'user_bookmarks'), {
+            userId: uid,
+            bookmarkId: templateId,
+            bookId: awardBookId,
+            type: 'award',
+            awardedBy: currentUser.uid,
+            awardedAt: serverTimestamp(),
+            note: awardNote,
+            displayed: true,
+          });
+        }
+        showToast(`Created and awarded to ${targets.length} user${targets.length!==1?'s':''} ✓`);
+      } else {
+        showToast(`Bookmark ${existing?'updated':'created'} ✓`);
+      }
+
       await loadBookmarkTemplates();
-      adminLoadBookmarks();
-    } catch(e) {
-      hideLoading();
-      showToast('Failed: ' + e.message);
-    }
-  });
-}
-
-  async function showAwardBookmarkModal(templateId) {
-  const template = _bookmarkTemplates.find(t => t.id === templateId);
-  if(!template) return;
-
-  const users = await loadAllUsers();
-
-  const overlay = document.createElement('div');
-  overlay.className = 'modal-overlay open';
-  overlay.innerHTML = `
-    <div class="modal" style="max-width:420px">
-      <h3>🎖 Award Bookmark</h3>
-      <div style="display:flex;align-items:center;gap:.8rem;padding:.6rem;
-                  background:var(--panel);border-radius:4px;margin-bottom:1rem">
-        ${renderBookmarkSVG(template, 32, 50, 'aw')}
-        <div>
-          <div style="font-weight:700;font-size:.88rem">${esc(template.name)}</div>
-          <div style="font-size:.75rem;color:var(--muted)">${esc(template.description||'')}</div>
-        </div>
-      </div>
-      <div class="form-row"><label>Award to</label>
-        <select id="awardUserId">
-          <option value="">— Select user —</option>
-          <option value="__all__">Everyone</option>
-          ${users.map(u => `<option value="${u.uid}">${esc(u.displayName||u.email||u.uid)}</option>`).join('')}
-        </select>
-      </div>
-      <div class="form-row"><label>Attach to book <span style="font-size:.65rem;color:var(--muted);font-weight:400">(optional)</span></label>
-        <select id="awardBookId">
-          <option value="">— General award (no specific book) —</option>
-          ${library.map(b => `<option value="${b.id}" ${currentId===b.id?'selected':''}>${esc(b.title)}</option>`).join('')}
-        </select>
-      </div>
-      <div class="form-row"><label>Note <span style="font-size:.65rem;color:var(--muted);font-weight:400">(optional)</span></label>
-        <input type="text" id="awardNote" placeholder="e.g. Winner — December 2025 reading competition"/></div>
-      <div class="modal-actions">
-        <button class="btn-cancel" id="awardCancel">Cancel</button>
-        <button class="btn-save" id="awardConfirm">Award ✓</button>
-      </div>
-    </div>`;
-
-  document.body.appendChild(overlay);
-  overlay.addEventListener('click', e => { if(e.target===overlay) overlay.remove(); });
-  overlay.querySelector('#awardCancel').addEventListener('click', () => overlay.remove());
-
-  overlay.querySelector('#awardConfirm').addEventListener('click', async () => {
-    const userId = overlay.querySelector('#awardUserId').value;
-    const bookId = overlay.querySelector('#awardBookId').value || null;
-    const note = overlay.querySelector('#awardNote').value.trim();
-    if(!userId) { showToast('Please select a user'); return; }
-    overlay.remove();
-    showLoading('Awarding…');
-    try {
-      const targets = userId === '__all__'
-        ? await loadAllUsers().then(u => u.map(x => x.uid))
-        : [userId];
-
-      for(const uid of targets) {
-        await addDoc(collection(db, 'user_bookmarks'), {
-          userId: uid,
-          bookmarkId: templateId,
-          bookId,
-          type: 'award',
-          awardedBy: currentUser.uid,
-          awardedAt: serverTimestamp(),
-          note,
-          displayed: true,
-        });
-      }
-      hideLoading();
-      showToast(`Awarded to ${targets.length} user${targets.length!==1?'s':''} ✓`);
       await loadMyBookmarks();
+      adminLoadBookmarks();
       renderAll();
     } catch(e) {
       hideLoading();
       showToast('Failed: ' + e.message);
+      console.error(e);
     }
+    hideLoading();
   });
 }
+
+  
 renderAll();
 </script>
 </body>
