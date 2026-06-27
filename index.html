@@ -1838,7 +1838,10 @@ let shelfMode='mine',activeCat='All',activeCatPublic='All',searchQ='';
 let selectMode=false,selectedIds=new Set(),deskView='library';
 let myCheckedOutIds=new Set();
 let koboDevices = [];
-
+let _userLists = [];
+let _categories = [];
+let _globalTags = [];
+  
 let loungePresenceUnsub = null;
 let loungeChatUnsub = null;
 let loungeRequestsUnsub = null;
@@ -6277,9 +6280,6 @@ const SYSTEM_TAGS = [
   'Lent Out'
 ];
 
-let _categories = [];
-let _globalTags = [];
-
 async function loadConfig() {
   try {
     const catSnap = await getDoc(doc(db, 'config', 'categories'));
@@ -6323,8 +6323,6 @@ const SYSTEM_LISTS = [
   { id: 'finished',          name: 'Finished',           icon: '✓',  system: true  },
   { id: 'favourites',        name: 'Favourites',         icon: '⭐', system: true  },
 ];
-
-let _userLists = []; // loaded from Firestore
 
 async function loadUserLists() {
   if(!currentUser) return;
