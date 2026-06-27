@@ -522,6 +522,12 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .btn-kobo{background:transparent;color:var(--teal);border-color:var(--teal);}
 .btn-kobo:hover{background:var(--teal-light);}
 
+  <div style="margin-top:1rem;padding-top:.8rem;border-top:1px solid var(--border)">
+  <div style="font-family:'Playfair Display',serif;font-size:.9rem;color:var(--navy2);margin-bottom:.7rem">🏷 Categories &amp; Tags</div>
+  <button class="btn-save" style="width:100%;margin-bottom:.4rem;font-size:.72rem;padding:.45rem" id="deskManageCatsBtn">Manage Categories</button>
+  <button class="btn-save" style="width:100%;font-size:.72rem;padding:.45rem;background:var(--navy2)" id="deskManageTagsBtn">Manage Tags</button>
+</div>
+
 /* CHECKOUT */
 .checkout-badge{display:inline-block;font-size:.65rem;font-weight:700;padding:2px 8px;border-radius:10px;background:#fff4e0;color:#a87820;margin-top:.3rem;}
 .checkout-badge.overdue{background:#fbeaea;color:var(--danger);}
@@ -2084,7 +2090,7 @@ setUpP(rowId,70,'Saving…');
       title:meta.title,
       author:meta.author,
       description:stripHtml(meta.description||''),
-      category:meta.category||localStorage.getItem('elib_default_cat')||'Uncategorised',
+      category: _categories.includes(meta.category) ? meta.category : (_categories.includes(localStorage.getItem('elib_default_cat')||'') ? localStorage.getItem('elib_default_cat') : 'Uncategorised'),
       language:meta.language,publisher:meta.publisher,
       coverUrl:coverUrl||null,
       epubUrl,
@@ -2405,10 +2411,9 @@ function showBookById(id){
 
 function buildDrawerIconBar(book, isMine){
   const bar = document.getElementById('drawerIconBar');
-  const canRead = true; // all books can be read now
 
-  // Hero buttons
-  let heroHtml = `
+  let html = `
+    <!-- Primary actions: available to all -->
     <div style="display:flex;gap:.5rem;padding:.6rem 1.5rem .4rem;border-bottom:1px solid var(--border)">
       <button class="btn-action btn-read" style="flex:1;justify-content:center;padding:.55rem 1rem;font-size:.82rem;border-radius:20px" data-action="read">
         📖 Read
@@ -2416,40 +2421,50 @@ function buildDrawerIconBar(book, isMine){
       <button class="btn-action btn-kobo" style="flex:1;justify-content:center;padding:.55rem 1rem;font-size:.82rem;border-radius:20px" data-action="sendtokobo">
         📲 Send to Kobo
       </button>
+    </div>
+
+    <!-- Secondary global actions -->
+    <div style="padding:.4rem 1.5rem .2rem;">
+      <div style="font-size:.58rem;letter-spacing:.15em;text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:.35rem;">Everyone</div>
+      <div style="display:flex;gap:.4rem;flex-wrap:wrap;">
+        <button class="drawer-icon-btn" data-action="download"><span class="di-icon">⬇</span><span class="di-label">Download</span></button>
+        <button class="drawer-icon-btn" data-action="history"><span class="di-icon">📋</span><span class="di-label">History</span></button>
+        <button class="drawer-icon-btn" data-action="addtolist"><span class="di-icon">📚</span><span class="di-label">My Lists</span></button>
+      </div>
     </div>`;
 
-  // Secondary icon buttons
-  const iconBtn = (icon, label, action, extraClass='') =>
-    `<button class="drawer-icon-btn ${extraClass}" data-action="${action}">
-      <span class="di-icon">${icon}</span>
-      <span class="di-label">${label}</span>
-    </button>`;
-
-  let secondaryHtml = `<div class="drawer-icon-bar" style="padding:.5rem 1.5rem .6rem;border-bottom:1px solid var(--border);flex-wrap:wrap">`;
-  secondaryHtml += iconBtn('⬇','Download','download');
-  secondaryHtml += iconBtn('📋','History','history');
-
   if(isMine){
-    secondaryHtml += `<button class="drawer-more-btn" id="drawerMoreBtn" style="margin-left:auto">
-      <span class="di-icon">⋯</span>
-      <span class="di-label">More</span>
-    </button>`;
+    html += `
+    <!-- Owner-only actions -->
+    <div style="padding:.4rem 1.5rem .6rem;border-top:1px solid var(--border);margin-top:.3rem;background:rgba(15,26,46,0.03);border-radius:0 0 4px 4px;">
+      <div style="font-size:.58rem;letter-spacing:.15em;text-transform:uppercase;color:var(--gold);font-weight:700;margin-bottom:.35rem;">🔑 Owner Only</div>
+      <div style="display:flex;gap:.4rem;flex-wrap:wrap;">
+        <button class="drawer-icon-btn" data-action="share" ${book.visibility==='public'?'style="display:none"':''}>
+          <span class="di-icon">🌐</span><span class="di-label">Publish</span></button>
+        <button class="drawer-icon-btn" data-action="unpublish" ${book.visibility!=='public'?'style="display:none"':''}>
+          <span class="di-icon">🔒</span><span class="di-label">Unpublish</span></button>
+        <button class="drawer-icon-btn" data-action="shareprivate">
+          <span class="di-icon">🔗</span><span class="di-label">Share</span></button>
+        <button class="drawer-icon-btn" data-action="editmeta">
+          <span class="di-icon">✎</span><span class="di-label">Edit</span></button>
+        <button class="drawer-icon-btn" data-action="tags">
+          <span class="di-icon">🏷</span><span class="di-label">Tags</span></button>
+        <button class="drawer-icon-btn" data-action="recommend">
+          <span class="di-icon">${book.recommended?'☆':'⭐'}</span>
+          <span class="di-label">${book.recommended?'Unrec':'Rec'}</span></button>
+        <button class="drawer-icon-btn" data-action="chapters">
+          <span class="di-icon">📑</span><span class="di-label">Chapters</span></button>
+        <button class="drawer-icon-btn di-danger" data-action="delete">
+          <span class="di-icon">✕</span><span class="di-label">Delete</span></button>
+      </div>
+    </div>`;
   }
-  secondaryHtml += `</div>`;
 
-  bar.innerHTML = heroHtml + secondaryHtml;
+  bar.innerHTML = html;
   bar.style.display = 'block';
   bar.style.padding = '0';
   bar.style.border = 'none';
-
   bar.querySelectorAll('[data-action]').forEach(b => b.addEventListener('click', handleAction));
-
-  if(isMine){
-    document.getElementById('drawerMoreBtn')?.addEventListener('click', e => {
-      e.stopPropagation();
-      showDrawerMoreMenu(book, isMine);
-    });
-  }
 }
 
 function showDrawerMoreMenu(book, isMine){
@@ -2637,19 +2652,33 @@ function showEditMeta(){
   document.getElementById('metaCategory').value=book.category||'';
   document.getElementById('metaLanguage').value=book.language||'';
   document.getElementById('metaDesc').value=stripHtml(book.description||'');
-  const cats=[...new Set(library.map(b=>b.category).filter(Boolean))].sort();
-  document.getElementById('catSuggestions2').innerHTML=cats.map(c=>`<option value="${esc(c)}">`).join('');
+  // Populate from managed category list
+  populateCategoryDatalist('catSuggestions2');
+  // Make category a restricted select
+  const catInput = document.getElementById('metaCategory');
+  catInput.setAttribute('list','catSuggestions2');
   document.getElementById('editMetaModal').classList.add('open');
 }
 document.getElementById('btnCancelEditMeta').addEventListener('click',()=>document.getElementById('editMetaModal').classList.remove('open'));
 document.getElementById('btnSaveEditMeta').addEventListener('click',async()=>{
   const book=library.find(b=>b.id===currentId);if(!book)return;
-  const updates={title:document.getElementById('metaTitle').value.trim()||book.title,author:document.getElementById('metaAuthor').value.trim()||book.author,category:document.getElementById('metaCategory').value.trim()||book.category,language:document.getElementById('metaLanguage').value.trim(),description:stripHtml(document.getElementById('metaDesc').value.trim()),updatedAt:serverTimestamp()};
+  const rawCat = document.getElementById('metaCategory').value.trim();
+  const validCat = _categories.includes(rawCat) ? rawCat : 'Uncategorised';
+  const updates={
+    title:document.getElementById('metaTitle').value.trim()||book.title,
+    author:document.getElementById('metaAuthor').value.trim()||book.author,
+    category: validCat,
+    language:document.getElementById('metaLanguage').value.trim(),
+    description:stripHtml(document.getElementById('metaDesc').value.trim()),
+    updatedAt:serverTimestamp()
+  };
   document.getElementById('editMetaModal').classList.remove('open');
-  populateCategoryDatalist('catSuggestions2');
   showLoading('Saving…');
-  try{await updateDoc(doc(db,'books',currentId),updates);Object.assign(book,updates);hideLoading();renderAll();showBookById(currentId);showToast('Details saved ✓');}
-  catch(e){hideLoading();showToast('Save failed: '+e.message);}
+  try{
+    await updateDoc(doc(db,'books',currentId),updates);
+    Object.assign(book,updates);
+    hideLoading();renderAll();showBookById(currentId);showToast('Details saved ✓');
+  }catch(e){hideLoading();showToast('Save failed: '+e.message);}
 });
 
 // ── MOBILE DETAIL ─────────────────────────────────────────────────────────────
@@ -4371,6 +4400,16 @@ document.getElementById('btnToggleSettings').addEventListener('click',e=>{
     renderKoboSettings(document.getElementById('deskKoboSettings'));
   }
 });
+
+document.getElementById('deskManageCatsBtn')?.addEventListener('click', () => {
+  document.getElementById('deskSettings').style.display = 'none';
+  showAdminSheetFor('categories');
+});
+document.getElementById('deskManageTagsBtn')?.addEventListener('click', () => {
+  document.getElementById('deskSettings').style.display = 'none';
+  showAdminSheetFor('tags');
+});
+  
 document.addEventListener('click',e=>{const s=document.getElementById('deskSettings');if(s.style.display!=='none'&&!s.contains(e.target)&&e.target.id!=='btnToggleSettings')s.style.display='none';});
 document.getElementById('defaultCatInput').value=localStorage.getItem('elib_default_cat')||'';
 document.getElementById('defaultCatInput').addEventListener('keydown',e=>{if(e.key==='Enter'){localStorage.setItem('elib_default_cat',e.target.value);showToast('Default category saved');}});
@@ -6121,6 +6160,34 @@ async function checkAdminStatus() {
   }
 }
 
+  function showAdminSheetFor(section) {
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay open';
+  overlay.innerHTML = `
+    <div class="modal" style="max-width:500px;max-height:80vh;display:flex;flex-direction:column;overflow:hidden;">
+      <h3 style="margin-bottom:.8rem">${section === 'categories' ? '🏷 Manage Categories' : '🔖 Manage Tags'}</h3>
+      <div style="flex:1;overflow-y:auto;" id="adminSheetBody"></div>
+      <div class="modal-actions" style="margin-top:.8rem">
+        <button class="btn-cancel" onclick="this.closest('.modal-overlay').remove()">Close</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click', e => { if(e.target===overlay) overlay.remove(); });
+  // Reuse existing admin loaders, pointing at the new container
+  const body = overlay.querySelector('#adminSheetBody');
+  if(section === 'categories'){
+    const realEl = document.getElementById('adminCatBody');
+    // Temporarily redirect adminLoadCategories to our sheet body
+    body.id = 'adminCatBody';
+    adminLoadCategories();
+    body.id = 'adminSheetBody'; // restore after
+  } else {
+    body.id = 'adminTagBody';
+    adminLoadTags();
+    body.id = 'adminSheetBody';
+  }
+}
+  
 // ── CHECKOUTS ─────────────────────────────────────────────────────────────────
 async function adminLoadCheckouts() {
   const el = document.getElementById('adminCheckoutsList');
