@@ -2539,9 +2539,16 @@ function showBottomSheet(book, isMine){
   const isMyBook = book.ownerId === currentUser?.uid;
   document.getElementById('bsTitle').textContent = book.title || '';
 
-  const row = (icon, label, action, danger=false, highlight=false) =>
-    `<button class="bs-action ${danger?'danger':''} ${highlight?'highlight':''}" data-action="${action}">
-      <span class="bs-icon">${icon}</span>${label}
+const row = (icon, label, action, danger=false) =>
+    `<button class="btn-action" style="
+      background:transparent;
+      color:${danger ? 'var(--danger)' : 'var(--navy2)'};
+      border-color:${danger ? '#e0b0b0' : 'var(--border)'};
+      padding:.38rem .85rem;
+      font-size:.72rem;
+      border-radius:20px;
+      margin:.2rem .3rem;" data-action="${action}">
+      ${icon} ${label}
     </button>`;
 
   let html = '';
@@ -2556,23 +2563,26 @@ function showBottomSheet(book, isMine){
     </button>
   </div>`;
 
-  // Secondary actions
-  html += `<div class="bs-group-label">Actions</div>`;
+// Secondary actions
+  html += `<div style="display:flex;flex-wrap:wrap;padding:.5rem 1rem .3rem;gap:.3rem;border-bottom:1px solid var(--border)">`;
   html += row('⬇','Download','download');
-  html += row('📋','Checkout History','history');
+  html += row('📋','History','history');
+  html += `</div>`;
 
-  if(isMyBook){
-    html += `<div class="bs-group-label">Manage</div>`;
-    if(book.visibility !== 'public') html += row('🌐','Publish to Library','share');
+if(isMyBook){
+    html += `<div style="display:flex;flex-wrap:wrap;padding:.5rem 1rem .3rem;gap:.3rem">`;
+    if(book.visibility !== 'public') html += row('🌐','Publish','share');
     else html += row('🔒','Unpublish','unpublish');
     html += row('🔗','Share Privately','shareprivate');
     html += row('📎','Copy Link','link');
-    html += row('✎','Edit Details','editmeta');
+    html += row('✎','Edit','editmeta');
     html += row('🏷','Tags','tags');
     html += row('📑','Chapters','chapters');
-    html += row('⭐', book.recommended ? 'Remove Recommendation' : 'Recommend','recommend');
-    html += `<div style="height:1px;background:var(--border);margin:.3rem 0"></div>`;
-    html += row('✕','Delete Book','delete',true);
+    html += row('⭐', book.recommended ? 'Unrecommend' : 'Recommend','recommend');
+    html += `</div>`;
+    html += `<div style="display:flex;flex-wrap:wrap;padding:.2rem 1rem .6rem;gap:.3rem;border-top:1px solid var(--border)">`;
+    html += row('✕','Delete','delete',true);
+    html += `</div>`;
   }
 
   const bsBody = document.getElementById('bsBody');
