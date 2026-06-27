@@ -7141,8 +7141,6 @@ async function adminLoadTags() {
   }
 }
 
-// ── ADMIN COLLAPSIBLE SECTIONS ────────────────────────────────────────────────
-
 function buildAdminSections() {
   const panel = document.getElementById('mobPanelAdmin');
   if(!panel) return;
@@ -7164,8 +7162,7 @@ function buildAdminSections() {
             id="adminCheckoutsFilter">Show Active Only</button>
         </div>
         <div id="adminCheckoutsList">
-          <div style="color:var(--muted);font-size:.85rem">
-            Open to load…</div>
+          <div style="color:var(--muted);font-size:.85rem">Open to load…</div>
         </div>
       </div>
     </div>
@@ -7209,14 +7206,14 @@ function buildAdminSections() {
     </div>
 
     <div class="admin-section">
-  <div class="admin-section-header" data-admin-section="bookmarks">
-    <span class="admin-section-title">🎖 Bookmarks</span>
-    <span class="admin-section-chevron">▾</span>
-  </div>
-  <div class="admin-section-body" id="adminBookmarkBody">
-    <div style="color:var(--muted);font-size:.85rem">Open to load…</div>
-  </div>
-</div>
+      <div class="admin-section-header" data-admin-section="bookmarks">
+        <span class="admin-section-title">🎖 Bookmarks</span>
+        <span class="admin-section-chevron">▾</span>
+      </div>
+      <div class="admin-section-body" id="adminBookmarkBody">
+        <div style="color:var(--muted);font-size:.85rem">Open to load…</div>
+      </div>
+    </div>
 
     <div class="admin-section">
       <div class="admin-section-header" data-admin-section="tags">
@@ -7228,11 +7225,8 @@ function buildAdminSections() {
       </div>
     </div>`;
 
-  
-
   // Collapsible toggle
   scroll.querySelectorAll('.admin-section-header').forEach(header => {
-    if(section === 'bookmarks') adminLoadBookmarks();
     header.addEventListener('click', () => {
       const section = header.dataset.adminSection;
       const body = header.nextElementSibling;
@@ -7240,12 +7234,12 @@ function buildAdminSections() {
       body.classList.toggle('open', !isOpen);
       header.classList.toggle('open', !isOpen);
       if(!isOpen) {
-        // Load content on first open
         if(section === 'checkouts') adminLoadCheckouts();
-        if(section === 'kobo') adminLoadKoboDevices();
-        if(section === 'users') adminLoadUsers();
+        if(section === 'kobo')      adminLoadKoboDevices();
+        if(section === 'users')     adminLoadUsers();
         if(section === 'categories') adminLoadCategories();
-        if(section === 'tags') adminLoadTags();
+        if(section === 'bookmarks') adminLoadBookmarks();
+        if(section === 'tags')      adminLoadTags();
       }
     });
   });
@@ -7265,7 +7259,6 @@ function buildAdminSections() {
     ?.addEventListener('click', adminLoadUsers);
 }
 
-// Rebuild admin panel when tab is opened
 document.getElementById('mobNavAdmin')?.addEventListener('click', () => {
   document.querySelectorAll('.mob-tab').forEach(t => t.classList.remove('active'));
   document.getElementById('mobNavAdmin').classList.add('active');
