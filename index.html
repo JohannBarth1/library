@@ -2787,6 +2787,7 @@ function enterMobSelectMode(firstBookId){
 function exitMobSelectMode(){
   mobSelectMode = false;
   mobSelectedIds.clear();
+  document.getElementById('mobGridLibrary').onclick = null;
   renderMobLibrary();
   hideMobBulkBar();
 }
@@ -2813,16 +2814,16 @@ function renderMobLibrarySelectMode(){
   }).join('');
 
   // Tap to toggle selection in select mode
-  grid.querySelectorAll('.book-card[data-bookid]').forEach(card => {
-    card.addEventListener('click', () => {
-      const id = card.dataset.bookid;
-      if(mobSelectedIds.has(id)){ mobSelectedIds.delete(id); }
-      else { mobSelectedIds.add(id); }
-      if(mobSelectedIds.size === 0){ exitMobSelectMode(); return; }
-      renderMobLibrarySelectMode();
-      updateMobBulkBar();
-    });
-  });
+  grid.onclick = (e) => {
+    const card = e.target.closest('.book-card[data-bookid]');
+    if(!card) return;
+    const id = card.dataset.bookid;
+    if(mobSelectedIds.has(id)){ mobSelectedIds.delete(id); }
+    else { mobSelectedIds.add(id); }
+    if(mobSelectedIds.size === 0){ exitMobSelectMode(); return; }
+    renderMobLibrarySelectMode();
+    updateMobBulkBar();
+  };
 }
 
 function showMobBulkBar(){
