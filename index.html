@@ -2721,6 +2721,7 @@ function renderMobLibrary() {
 }
 
 document.getElementById('mobGridLibrary').addEventListener('click', e => {
+  if(mobSelectMode) return; // let grid.onclick handle it in select mode
   const card = e.target.closest('.book-card[data-bookid]');
   if (!card) return;
   mobPrevPanel = 'mobPanelLibrary';
