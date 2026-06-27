@@ -4393,7 +4393,6 @@ document.getElementById('tagsInput').addEventListener('keydown',async e=>{
   await updateDoc(doc(db,'books',currentId),{tags,updatedAt:serverTimestamp()});renderTagsModal();
 });
 async function removeTag(tag){const book=library.find(b=>b.id===currentId);if(!book)return;const tags=(book.tags||[]).filter(t=>t!==tag);book.tags=tags;await updateDoc(doc(db,'books',currentId),{tags,updatedAt:serverTimestamp()});renderTagsModal();}
-function showTagsModal(){if(!currentId)return;document.getElementById('tagsModal').classList.add('open');renderTagsModal();}
 function renderTagsModal(){
   const book=library.find(b=>b.id===currentId);if(!book)return;
   const current=book.tags||[];
