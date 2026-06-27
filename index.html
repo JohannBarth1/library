@@ -1105,7 +1105,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
         <div class="desk-home-sub">Your reading at a glance</div>
       </div>
       <div class="desk-home-section" id="deskHomeCheckoutSection" style="display:none">
-        <div class="desk-home-section-label teal">📋 Currently Signed Out</div>
+        <div class="desk-home-section-label teal">📖 Recent Books</div>
         <div class="desk-home-grid" id="deskHomeCheckoutGrid"></div>
       </div>
       <div class="desk-home-section" id="deskHomeRecSection" style="display:none">
@@ -2237,42 +2237,56 @@ function showBookById(id){
   document.getElementById('bookDrawer').classList.add('open');
 }
 
-  function buildDrawerIconBar(book, isMine){
-  const isSignedOut = myCheckedOutIds.has(book.id);
-  const canRead = isMine || isSignedOut;
+function buildDrawerIconBar(book, isMine){
   const bar = document.getElementById('drawerIconBar');
+  const canRead = true; // all books can be read now
 
-  const btn = (icon, label, action, extraClass='') =>
+  // Hero buttons
+  let heroHtml = `
+    <div style="display:flex;gap:.5rem;padding:.6rem 1.5rem .4rem;border-bottom:1px solid var(--border)">
+      <button class="btn-action btn-read" style="flex:1;justify-content:center;padding:.55rem 1rem;font-size:.82rem;border-radius:20px" data-action="read">
+        📖 Read
+      </button>
+      <button class="btn-action btn-kobo" style="flex:1;justify-content:center;padding:.55rem 1rem;font-size:.82rem;border-radius:20px" data-action="sendtokobo">
+        📲 Send to Kobo
+      </button>
+    </div>`;
+
+  // Secondary icon buttons
+  const iconBtn = (icon, label, action, extraClass='') =>
     `<button class="drawer-icon-btn ${extraClass}" data-action="${action}">
       <span class="di-icon">${icon}</span>
       <span class="di-label">${label}</span>
     </button>`;
 
-  let html = '';
-  if(canRead) html += btn('⬇','Download','download');
-  if(!isSignedOut) html += btn('📋','Sign Out','checkout');
-  else             html += btn('↩','Return','returnbook');
-  html += btn('📖','History','history');
-  if(isMine || isSignedOut) html += btn('📖','Kobo','sendtokobo');
+  let secondaryHtml = `<div class="drawer-icon-bar" style="padding:.5rem 1.5rem .6rem;border-bottom:1px solid var(--border);flex-wrap:wrap">`;
+  secondaryHtml += iconBtn('⬇','Download','download');
+  secondaryHtml += iconBtn('📋','History','history');
 
-  // More button — opens desktop dropdown
-  html += `<button class="drawer-more-btn" id="drawerMoreBtn">
-    <span class="di-icon">⋯</span>
-    <span class="di-label">More</span>
-  </button>`;
+  if(isMine){
+    secondaryHtml += `<button class="drawer-more-btn" id="drawerMoreBtn" style="margin-left:auto">
+      <span class="di-icon">⋯</span>
+      <span class="di-label">More</span>
+    </button>`;
+  }
+  secondaryHtml += `</div>`;
 
-  bar.innerHTML = html;
-  bar.querySelectorAll('[data-action]').forEach(b=>b.addEventListener('click', handleAction));
+  bar.innerHTML = heroHtml + secondaryHtml;
+  bar.style.display = 'block';
+  bar.style.padding = '0';
+  bar.style.border = 'none';
 
-  // More dropdown
-  document.getElementById('drawerMoreBtn').addEventListener('click', e=>{
-    e.stopPropagation();
-    showDrawerMoreMenu(book, isMine);
-  });
+  bar.querySelectorAll('[data-action]').forEach(b => b.addEventListener('click', handleAction));
+
+  if(isMine){
+    document.getElementById('drawerMoreBtn')?.addEventListener('click', e => {
+      e.stopPropagation();
+      showDrawerMoreMenu(book, isMine);
+    });
+  }
 }
 
-  function showDrawerMoreMenu(book, isMine){
-  // Reuse the existing action-dropdown pattern as a simple popover
+function showDrawerMoreMenu(book, isMine){
   const existing = document.getElementById('drawerMoreMenu');
   if(existing){ existing.remove(); return; }
 
@@ -2288,38 +2302,35 @@ function showBookById(id){
     </button>`;
 
   let html = '';
-  const isMyBook = book.ownerId === currentUser?.uid;
-  if(isMyBook){
+  if(isMine){
     html += `<div style="font-size:.6rem;letter-spacing:.15em;text-transform:uppercase;color:var(--muted);font-weight:700;padding:.5rem 1rem .2rem">Share</div>`;
-    if(book.visibility!=='public') html += item('⇧','Publish to Library','share');
-    else html += item('↓','Unpublish','unpublish');
-    html += item('🔒','Share Privately','shareprivate');
-    html += item('🔗','Copy Link','link');
+    if(book.visibility !== 'public') html += item('🌐','Publish to Library','share');
+    else html += item('🔒','Unpublish','unpublish');
+    html += item('🔗','Share Privately','shareprivate');
+    html += item('📎','Copy Link','link');
     html += `<div style="height:1px;background:var(--border);margin:.3rem 0"></div>`;
     html += `<div style="font-size:.6rem;letter-spacing:.15em;text-transform:uppercase;color:var(--muted);font-weight:700;padding:.5rem 1rem .2rem">Manage</div>`;
     html += item('✎','Edit Details','editmeta');
     html += item('🏷','Tags','tags');
     html += item('📑','Chapters','chapters');
-    html += item('⭐', book.recommended?'Remove Recommendation':'Recommend','recommend');
+    html += item('⭐', book.recommended ? 'Remove Recommendation' : 'Recommend','recommend');
     html += `<div style="height:1px;background:var(--border);margin:.3rem 0"></div>`;
     html += item('✕','Delete','delete',true);
   }
 
   menu.innerHTML = html;
-  menu.querySelectorAll('[data-action]').forEach(b=>{
-    b.addEventListener('click', e=>{
+  menu.querySelectorAll('[data-action]').forEach(b => {
+    b.addEventListener('click', e => {
       menu.remove();
       handleAction(e);
     });
   });
 
-  // Position relative to drawer icon bar
   const bar = document.getElementById('drawerIconBar');
   bar.style.position = 'relative';
   bar.appendChild(menu);
 
-  // Close on outside click
-  setTimeout(()=>{
+  setTimeout(() => {
     document.addEventListener('click', function close(){
       menu.remove();
       document.removeEventListener('click', close);
@@ -2361,8 +2372,6 @@ function handleAction(e){
   if(a==='chapters')     openChapterManager();
   if(a==='recommend')    toggleRecommended();
   if(a==='tags')         showTagsModal();
-  if(a==='checkout')     signOutBook();
-  if(a==='returnbook')   returnCurrentBook();
   if(a==='history')      showCheckoutHistory(currentId);
   if(a==='delete')       deleteCurrentBook();
   if(a==='sendtokobo') { loadKoboDevices().then(()=>showKoboDevicePicker(currentId)); }
@@ -2520,12 +2529,9 @@ function mob_showBook(id){
   mob_showPanel('mobPanelDetail');
 }
 
-  function showBottomSheet(book, isMine){
-  console.log('isMine:', isMine, 'ownerId:', book.ownerId, 'currentUid:', currentUser?.uid);
-  const isSignedOut = myCheckedOutIds.has(book.id);
-  const canRead = isMine || isSignedOut;
-
-  document.getElementById('bsTitle').textContent = book.title||'';
+function showBottomSheet(book, isMine){
+  const isMyBook = book.ownerId === currentUser?.uid;
+  document.getElementById('bsTitle').textContent = book.title || '';
 
   const row = (icon, label, action, danger=false, highlight=false) =>
     `<button class="bs-action ${danger?'danger':''} ${highlight?'highlight':''}" data-action="${action}">
@@ -2534,45 +2540,39 @@ function mob_showBook(id){
 
   let html = '';
 
-  // Read / Listen
-  html += `<div class="bs-group-label">Read</div>`;
-  if(canRead){
-    html += row('▶','Read Book','read', false, true);
-    html += row('🔊','Listen','listen', false, true);
-  } else {
-    html += `<div style="padding:.5rem 1.2rem;font-size:.82rem;color:var(--muted)">Sign out this book to read or listen</div>`;
-  }
+  // Hero actions
+  html += `<div style="display:flex;gap:.5rem;padding:.7rem 1.2rem;border-bottom:1px solid var(--border)">
+    <button class="btn-action btn-read" style="flex:1;justify-content:center;padding:.55rem 1rem;font-size:.82rem;border-radius:20px" data-action="read">
+      📖 Read
+    </button>
+    <button class="btn-action btn-kobo" style="flex:1;justify-content:center;padding:.55rem 1rem;font-size:.82rem;border-radius:20px" data-action="sendtokobo">
+      📲 Send to Kobo
+    </button>
+  </div>`;
 
-  // Actions
+  // Secondary actions
   html += `<div class="bs-group-label">Actions</div>`;
-  if(canRead) html += row('⬇','Download','download');
-  if(!isSignedOut) html += row('📋','Sign Out Book','checkout');
-  else             html += row('↩','Return Book','returnbook');
-  html += row('📖','Checkout History','history');
+  html += row('⬇','Download','download');
+  html += row('📋','Checkout History','history');
 
-    
-  if(isMine||isSignedOut) html += row('📖','Send to Kobo','sendtokobo');
-
-  // Manage (owner only)
-const isMyBook = book.ownerId === currentUser?.uid;
-if(isMyBook){
+  if(isMyBook){
     html += `<div class="bs-group-label">Manage</div>`;
-    if(book.visibility!=='public') html += row('⇧','Publish to Library','share');
-    else html += row('↓','Unpublish','unpublish');
-    html += row('🔒','Share Privately','shareprivate');
-    html += row('🔗','Copy Link','link');
+    if(book.visibility !== 'public') html += row('🌐','Publish to Library','share');
+    else html += row('🔒','Unpublish','unpublish');
+    html += row('🔗','Share Privately','shareprivate');
+    html += row('📎','Copy Link','link');
     html += row('✎','Edit Details','editmeta');
     html += row('🏷','Tags','tags');
     html += row('📑','Chapters','chapters');
-    html += row('⭐', book.recommended?'Remove Recommendation':'Recommend','recommend');
+    html += row('⭐', book.recommended ? 'Remove Recommendation' : 'Recommend','recommend');
     html += `<div style="height:1px;background:var(--border);margin:.3rem 0"></div>`;
     html += row('✕','Delete Book','delete',true);
   }
 
   const bsBody = document.getElementById('bsBody');
   bsBody.innerHTML = html;
-  bsBody.querySelectorAll('[data-action]').forEach(b=>{
-    b.addEventListener('click', e=>{
+  bsBody.querySelectorAll('[data-action]').forEach(b => {
+    b.addEventListener('click', e => {
       closeBottomSheet();
       handleAction(e);
     });
@@ -2997,7 +2997,7 @@ async function renderMobHome(){
   let html='';
   
   if(checkedOutBooks.length){
-  html+=`<div style="font-size:.68rem;letter-spacing:.18em;text-transform:uppercase;color:var(--teal);font-weight:700;margin-bottom:.6rem;margin-top:.5rem">📋 Currently Signed Out</div>
+  html+=`<div style="font-size:.68rem;letter-spacing:.18em;text-transform:uppercase;color:var(--teal);font-weight:700;margin-bottom:.6rem;margin-top:.5rem">📖 Recent Books</div>
   <div class="mob-book-grid" style="margin-bottom:1.5rem;grid-template-columns:repeat(auto-fill,minmax(140px,1fr))">${checkedOutBooks.map(b=>bookCardHtml(b,communityLib.some(x=>x.id===b.id),true)).join('')}</div>`;
   }
   
@@ -3171,6 +3171,7 @@ if(isAndroidChrome){
 async function readCurrentBook(){
   if(!currentId)return;
   const book=[...library,...communityLib].find(b=>b.id===currentId);if(!book)return;
+  recordBookOpened(book);
   let storagePath=book.storagePath;
   if(!storagePath&&book.epubUrl){const match=book.epubUrl.match(/\/o\/(.+?)\?/);if(match)storagePath=decodeURIComponent(match[1]);}
   if(!storagePath){showToast('EPUB not available');return;}
@@ -4324,6 +4325,49 @@ async function showCheckoutHistory(bookId){
 }
 document.getElementById('btnCloseCheckoutModal').addEventListener('click',()=>document.getElementById('checkoutModal').classList.remove('open'));
 
+  async function recordBookOpened(book) {
+  if(!currentUser || !book) return;
+  try {
+    const due = new Date();
+    due.setDate(due.getDate() + 14);
+    // Check if already has an active record
+    if(!myCheckedOutIds.has(book.id)){
+      await addDoc(collection(db, 'checkouts'), {
+        bookId: book.id,
+        bookTitle: book.title,
+        userId: currentUser.uid,
+        userName: currentUser.displayName || currentUser.email,
+        checkedOutAt: serverTimestamp(),
+        dueDate: Timestamp.fromDate(due),
+        returnedAt: null,
+        openedAt: serverTimestamp(),
+      });
+      myCheckedOutIds.add(book.id);
+      renderMobHome();
+      renderDeskHome();
+    } else {
+      // Update the openedAt timestamp on the most recent record
+      const q = query(
+        collection(db, 'checkouts'),
+        where('bookId', '==', book.id),
+        where('userId', '==', currentUser.uid)
+      );
+      const snap = await getDocs(q);
+      const active = snap.docs
+        .filter(d => !d.data().returnedAt)
+        .sort((a,b) => b.data().checkedOutAt?.toMillis() - a.data().checkedOutAt?.toMillis());
+      if(active.length){
+        await updateDoc(doc(db, 'checkouts', active[0].id), {
+          openedAt: serverTimestamp(),
+          dueDate: Timestamp.fromDate(due), // extend by 14 days from last open
+        });
+      }
+    }
+  } catch(e) {
+    console.warn('recordBookOpened:', e);
+  }
+}
+  
 // ── MULTI-SELECT ──────────────────────────────────────────────────────────────
 document.getElementById('btnSelectMode').addEventListener('click',toggleSelectMode);
 function toggleSelectMode(){
