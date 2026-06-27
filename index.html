@@ -4739,172 +4739,169 @@ document.getElementById('koboPickerConfirm')?.addEventListener('click', async ()
 function renderKoboSettings(container) {
   if (!container || !currentUser) return;
 
-  const formHtml = `
-    <div class="kobo-add-form" style="display:flex;gap:.4rem;margin-top:.6rem">
-      <input class="kobo-name-input filter-search" type="text"
-        placeholder="Device name (e.g. My Kobo)"
-        style="flex:1;font-size:.8rem;padding:.38rem .6rem"/>
-      <button class="kobo-add-btn btn-save"
-        style="padding:.38rem .75rem;font-size:.75rem;border-radius:2px;white-space:nowrap">
-        + Add
-      </button>
-    </div>`;
-
-  const instructionsHtml = `
-    <div style="margin-top:.9rem;padding:.7rem .8rem;background:var(--panel);
-                border:1px solid var(--border);border-radius:4px">
-      <div style="font-size:.62rem;letter-spacing:.15em;text-transform:uppercase;
-                  color:var(--muted);font-weight:700;margin-bottom:.5rem">First-time setup</div>
-      <ol style="font-size:.75rem;color:var(--navy2);line-height:2;padding-left:1.1rem;margin:0">
-        <li>Connect your Kobo via USB.</li>
-        <li>Copy <a href="https://github.com/YOUR_REPO/releases/latest"
-              target="_blank" style="color:var(--teal)">KoboRoot.tgz</a>
-            into the <code style="font-size:.72rem">.kobo/</code> folder on the device.</li>
-        <li>Click <strong>+ Add</strong> above — a screen will show your token.</li>
-        <li>Create a plain text file named <code style="font-size:.72rem">elib_setup.txt</code>,
-            paste your token as the only content, and copy it into
-            <code style="font-size:.72rem">.kobo/</code> on the device.</li>
-        <li>Safely eject and reconnect. The Kobo configures itself automatically
-            and the setup file is deleted.</li>
-      </ol>
-    </div>`;
-
-  if (!koboDevices.length) {
-    container.innerHTML = `
-      <div style="font-size:.8rem;color:var(--muted);margin-bottom:.4rem;line-height:1.5">
-        No devices yet. Add one to start sending books to your Kobo.
-      </div>
-      ${formHtml}
-      ${instructionsHtml}`;
-  } else {
-const deviceListHtml = koboDevices.map(d => `
+  const deviceListHtml = koboDevices.length
+    ? koboDevices.map(d => `
       <div style="display:flex;align-items:center;justify-content:space-between;
-                  padding:.45rem 0;border-bottom:1px solid var(--border);gap:.5rem">
-        <span style="font-size:.82rem;font-weight:700;color:var(--navy2)">${esc(d.name)}</span>
-        <div style="display:flex;gap:.35rem;flex-shrink:0">
-          <button class="btn-action btn-edit-cat" data-kobo-config="${d.id}"
-            style="padding:.25rem .6rem;font-size:.65rem;border-radius:3px">
-            📋 Config
-          </button>
-          <button class="btn-action btn-return" data-delete-kobo="${d.id}"
-            style="padding:.25rem .6rem;font-size:.65rem;border-radius:3px">
-            ✕ Remove
-          </button>
-        </div>
-      </div>`).join('');
+                  padding:.55rem 0;border-bottom:1px solid var(--border);gap:.5rem">
+        <span style="font-size:.85rem;font-weight:700;color:var(--navy2)">${esc(d.name)}</span>
+        <button class="admin-copy-btn" data-kobo-config="${d.id}">
+          📋 View Config
+        </button>
+      </div>`).join('')
+    : `<div style="font-size:.82rem;color:var(--muted);line-height:1.5;margin-bottom:.6rem">
+        No devices yet. Add one to start sending books to your Kobo.
+      </div>`;
 
-    container.innerHTML = `
-      <div style="margin-bottom:.4rem">${deviceListHtml}</div>
-      ${formHtml}
-      ${instructionsHtml}`;
-  }
+  container.innerHTML = `
+    <div style="margin-bottom:.8rem">${deviceListHtml}</div>
+    <button class="settings-btn upload-s" id="koboAddDeviceBtn" style="margin-top:.4rem">
+      <span class="s-icon">📖</span>
+      <div><div>Add Kobo Device</div>
+      <div class="settings-note" style="color:rgba(200,149,42,.85)">Register a new Kobo e-reader</div></div>
+    </button>`;
 
-  // Bind config buttons
+  // Bind view config buttons
   container.querySelectorAll('[data-kobo-config]').forEach(btn => {
     btn.addEventListener('click', () => {
       const device = koboDevices.find(d => d.id === btn.dataset.koboConfig);
-      if (device) _showKoboSetupModal(device);
+      if(device) _showKoboSetupModal(device);
     });
   });
 
-  // Bind remove buttons
-  container.querySelectorAll('[data-delete-kobo]').forEach(btn => {
-    btn.addEventListener('click', async () => {
-      const id = btn.dataset.deleteKobo;
-      const device = koboDevices.find(d => d.id === id);
-      if (!device || !confirm(`Remove "${device.name}"?\n\nThe setup file in Storage will also be deleted.`)) return;
-      showLoading('Removing device...');
-      try {
-        await deleteKoboDevice(id);
-        hideLoading();
-        renderKoboSettings(container);
-        showToast('Device removed ✓');
-      } catch (e) {
-        hideLoading();
-        showToast('Remove failed: ' + e.message);
-      }
-    });
+  // Bind add button
+  container.querySelector('#koboAddDeviceBtn')?.addEventListener('click', () => {
+    _showKoboAddModal(container);
   });
-
-  // Bind add-device form
-  const form = container.querySelector('.kobo-add-form');
-  if (!form) return;
-  const inp = form.querySelector('.kobo-name-input');
-  const btn = form.querySelector('.kobo-add-btn');
-
-const doAdd = async () => {
-  const name = inp.value.trim() || 'My Kobo';
-  btn.disabled = true;
-  btn.textContent = 'Adding...';
-  try {
-    const pending = await saveKoboDevice(name);
-    if (pending) {
-      inp.value = '';
-      _showKoboSetupModal(pending);
-    } else {
-      showToast('Failed to add device');
-    }
-  } catch (e) {
-    showToast('Failed: ' + e.message);
-    console.error(e);
-  }
-  btn.disabled = false;
-  btn.textContent = '+ Add';
-};
-
-  btn.addEventListener('click', doAdd);
-  inp.addEventListener('keydown', e => { if (e.key === 'Enter') doAdd(); });
 }
 
 // ── SETUP MODAL ───────────────────────────────────────────────────────────────
 // Shown once after a device is added. Piggybacks on the existing linkModal
 // to avoid adding a new modal to the HTML.
+  function _showKoboAddModal(settingsContainer) {
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay open';
+  overlay.innerHTML = `
+    <div class="modal" style="max-width:380px">
+      <h3>📖 Add Kobo Device</h3>
+      <p style="font-size:.82rem;color:var(--muted);line-height:1.5;margin-bottom:1rem">
+        Give your device a name so you can identify it when sending books.
+      </p>
+      <div class="form-row">
+        <label>Device Name</label>
+        <input type="text" id="koboNewNameInput" placeholder="e.g. My Kobo Libra"
+          style="font-size:1rem"/>
+      </div>
+      <div class="modal-actions">
+        <button class="btn-cancel" id="koboAddCancel">Cancel</button>
+        <button class="btn-save" id="koboAddConfirm">Add Device</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+
+  const inp = overlay.querySelector('#koboNewNameInput');
+  inp.focus();
+
+  overlay.querySelector('#koboAddCancel').addEventListener('click', () => overlay.remove());
+
+  const doAdd = async () => {
+    const name = inp.value.trim();
+    if(!name){ showToast('Please enter a device name'); return; }
+    overlay.remove();
+    showLoading('Adding device…');
+    try {
+      const device = await saveKoboDevice(name);
+      hideLoading();
+      if(device){
+        renderKoboSettings(settingsContainer);
+        _showKoboSetupModal(device);
+      }
+    } catch(e) {
+      hideLoading();
+      showToast('Failed: ' + e.message);
+    }
+  };
+
+  overlay.querySelector('#koboAddConfirm').addEventListener('click', doAdd);
+  inp.addEventListener('keydown', e => { if(e.key === 'Enter') doAdd(); });
+}
+  
 function _showKoboSetupModal(device) {
   const box     = document.getElementById('directLinkBox');
   const modal   = document.getElementById('linkModal');
   const h       = modal.querySelector('h3');
   const p       = modal.querySelector('p');
   const copyBtn = document.getElementById('btnCopyDirectLink');
- 
-  const origH       = h.textContent;
-  const origP       = p.innerHTML;
-  const origBtnText = copyBtn.textContent;
-  const origOnclick = copyBtn.onclick;
- 
-  // device.id is the Firestore document ID for this kobo_devices doc
+  const closeBtn = document.getElementById('btnCloseLinkModal');
+
+  const origH        = h.textContent;
+  const origP        = p.innerHTML;
+  const origBtnText  = copyBtn.textContent;
+  const origOnclick  = copyBtn.onclick;
+
   const configLine = `Firebase:${device.id}:${device.token}`;
- 
-  h.textContent = `📖 New device: "${device.name}"`;
+
+  h.textContent = `📖 ${device.name}`;
   p.innerHTML = `
-    <strong>1.</strong> Copy the line below (button).<br><br>
+    <strong>1.</strong> Copy the config line below.<br><br>
     <strong>2.</strong> Connect your Kobo via USB and open
     <code style="font-size:.82rem">.add/kobocloud/kobocloudrc</code>
-    in a plain text editor (Notepad).<br><br>
+    in a plain text editor.<br><br>
     <strong>3.</strong> Add the copied line at the bottom of the file
-    — keep any existing lines above it.<br><br>
-    <strong>4.</strong> Save, eject, and toggle WiFi off/on on the Kobo
-    to trigger a sync.<br><br>
+    and save.<br><br>
+    <strong>4.</strong> Eject and toggle WiFi off/on on the Kobo to sync.<br><br>
     <span style="font-size:.75rem;color:var(--muted)">
-      Keep this line private — it's this device's access credential.
+      Keep this line private — it is this device's access credential.
     </span>`;
- 
+
   box.textContent = configLine;
   copyBtn.textContent = 'Copy Config Line';
   copyBtn.onclick = () => {
     navigator.clipboard.writeText(configLine)
       .then(() => showToast('Config line copied ✓'))
-      .catch(() => showToast('Copy failed — select the text and copy manually'));
+      .catch(() => showToast('Copy failed — select and copy manually'));
   };
- 
+
+  // Add delete button if not already there
+  let deleteBtn = document.getElementById('koboModalDeleteBtn');
+  if(!deleteBtn){
+    deleteBtn = document.createElement('button');
+    deleteBtn.id = 'koboModalDeleteBtn';
+    deleteBtn.className = 'btn-cancel';
+    deleteBtn.style.cssText = 'color:var(--danger);border-color:#e0b0b0;margin-right:auto';
+    deleteBtn.textContent = '✕ Remove Device';
+    const actions = modal.querySelector('.modal-actions');
+    actions.insertBefore(deleteBtn, actions.firstChild);
+  }
+
+  deleteBtn.onclick = async () => {
+    if(!confirm(`Remove "${device.name}"?\n\nThis cannot be undone.`)) return;
+    modal.classList.remove('open');
+    restore();
+    showLoading('Removing…');
+    try {
+      await deleteKoboDevice(device.id);
+      hideLoading();
+      showToast('Device removed ✓');
+      // Refresh both settings panels
+      renderKoboSettings(document.getElementById('deskKoboSettings'));
+      renderKoboSettings(document.getElementById('mobKoboSettings'));
+    } catch(e) {
+      hideLoading();
+      showToast('Remove failed: ' + e.message);
+    }
+  };
+
   modal.classList.add('open');
- 
-  // Restore modal to normal state when closed
-  document.getElementById('btnCloseLinkModal').addEventListener('click', () => {
+
+  function restore() {
     h.textContent       = origH;
     p.innerHTML         = origP;
     copyBtn.textContent = origBtnText;
     copyBtn.onclick     = origOnclick;
-  }, { once: true });
+    deleteBtn?.remove();
+  }
+
+  closeBtn.addEventListener('click', restore, { once: true });
 }
 
 // ── BULK BAR: SEND TO KOBO ────────────────────────────────────────────────────
