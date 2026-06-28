@@ -3228,7 +3228,7 @@ function matchesQ(b,q){return(b.title||'').toLowerCase().includes(q)||(b.author|
   const ribbonHtml = _bmTpl
     ? `<div style="position:absolute;top:0;right:3px;z-index:3;
                    filter:drop-shadow(1px 2px 2px rgba(0,0,0,0.35))">
-        ${renderBookmarkSVG(_bmTpl, 16, 64, 'uc'+b.id)}
+        ${renderBookmarkSVG(_bmTpl, 16, 64, 'uc'+b.id, true)}
        </div>`
     : '';
   const coverHtml = coverSrc
@@ -3545,7 +3545,7 @@ function bookCardHtml(b, isComm, showProgress=false){
   const _bmTpl = getDisplayBookmarkTemplate(b.id);
   const ribbonHtml = _bmTpl
     ? `<div style="position:absolute;top:0;right:4px;z-index:3;filter:drop-shadow(1px 2px 3px rgba(0,0,0,0.35))">
-        ${renderBookmarkSVG(_bmTpl, 18, 68, 'card'+b.id)}
+        ${renderBookmarkSVG(_bmTpl, 18, 68, 'card'+b.id, true)}
        </div>`
     : '';
 
@@ -4927,20 +4927,23 @@ function renderBookmarkSVG(template, w=36, h=56, uid='bm', verticalLabel=false) 
 
   let labelHtml = '';
   if(labelParts.length && verticalLabel) {
-    // Vertical: each line rotated 90°, stacked down the bookmark body
-    // Two lines are spaced so both fit comfortably above the pointed tip
-    const lineGap   = labelFs * 1.5;
-    // Centre the block of lines in the lower 60% of the bookmark body
-    const bodyEnd   = h * 0.80;   // above the pointed tip
-    const blockH    = (labelParts.length - 1) * lineGap;
-    const startY    = h * 0.48 + (bodyEnd - h * 0.48 - blockH) / 2;
-    labelHtml = labelParts.map((line, i) =>
-      `<text transform="translate(${w / 2},${startY + i * lineGap}) rotate(90)"
+    // In vertical mode each <text> is rotated 90° around its translate origin.
+    // After rotation, the visual "rows" run down the bookmark — so stacking
+    // multiple lines means shifting the translate X (which becomes the visual
+    // vertical axis after rotation), not Y.
+    // We divide the bookmark width into lanes, one per line.
+    const laneW     = w / (labelParts.length + 1);  // even lanes across width
+    const textY     = h * 0.60;   // how far down the bookmark the text runs to
+    const textStart = h * 0.44;   // where the text starts (below icon)
+    const textMid   = (textStart + textY) / 2;      // centre of text region
+    labelHtml = labelParts.map((line, i) => {
+      const laneX = laneW * (i + 1);   // x position for this lane
+      return `<text transform="translate(${laneX},${textMid}) rotate(90)"
         text-anchor="middle" dominant-baseline="middle"
         font-size="${labelFs}" fill="${textCol}"
         font-family="system-ui,sans-serif" font-weight="700"
-        letter-spacing="0.06em">${esc(line)}</text>`
-    ).join('');
+        letter-spacing="0.06em">${esc(line)}</text>`;
+    }).join('');
   } else if(labelParts.length) {
     // Horizontal: centred lines stacked in lower portion
     const lineGap = labelFs * 1.35;
