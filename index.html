@@ -7692,17 +7692,11 @@ function showBookmarkEditor(templateId, preselectedBookId) {
         <div style="font-size:.62rem;letter-spacing:.15em;text-transform:uppercase;
                     color:var(--muted);font-weight:700;margin:.8rem 0 .5rem">
           Award to</div>
-        <div class="form-row"><label>User</label>
-          <select id="bmEdAwardUser">
-            <option value="">— Save template only, award later —</option>
-            <option value="__all__">Everyone</option>
-            ${users.map(u =>
-              `<option value="${u.uid}" ${u.uid===currentUser?.uid?'selected':''}>
-                ${esc(u.displayName||u.email||u.uid)}${u.uid===currentUser?.uid?' (you)':''}
-              </option>`
-            ).join('')}
-          </select>
-        </div>
+      <div class="form-row"><label>User</label>
+                <select id="bmEdAwardUser">
+                  <option value="">Loading users…</option>
+                </select>
+              </div>
         <div class="form-row"><label>Attach to book
           <span style="font-size:.65rem;color:var(--muted);font-weight:400">
             (optional)</span></label>
