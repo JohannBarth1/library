@@ -1902,7 +1902,6 @@ onAuthStateChanged(auth,async user=>{
     updateUserUI(user);
     renderSkeleton('deskBookGrid',16);
     renderSkeleton('mobGridLibrary',12);
-    renderSkeleton('deskHomeRecentGrid',8);
     try{await setDoc(doc(db,'users',user.uid),{displayName:user.displayName||'',email:user.email,uid:user.uid,lastSeen:serverTimestamp()},{merge:true});}catch(e){console.warn(e);}
     await loadLibrary();
     checkUrlHash();
@@ -2362,11 +2361,10 @@ async function renderDeskHome(){
       listsEl = document.createElement('div');
       listsEl.id = 'deskHomeListsSection';
       listsEl.className = 'desk-home-section';
-      document.getElementById('deskHomePanel').insertBefore(
-        listsEl,
-        document.querySelector('.desk-home-section:last-child')
-      );
-    }
+      const deskHomePanel = document.getElementById('deskHomePanel');
+      const lastSection = deskHomePanel.querySelector('.desk-home-section:last-child');
+      deskHomePanel.insertBefore(listsEl, lastSection);
+      }
     listsEl.innerHTML = `<div class="desk-home-section-label">📚 My Lists</div>` + listHtml;
     listsEl.querySelectorAll('.book-card[data-bookid]').forEach(c =>
       c.addEventListener('click', () => { hideDeskHome(); showBookById(c.dataset.bookid); })
