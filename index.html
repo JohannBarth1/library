@@ -3217,7 +3217,9 @@ function matchesQ(b,q){return(b.title||'').toLowerCase().includes(q)||(b.author|
   const isComm = communityLib.some(x=>x.id===b.id);
   const avg = isComm ? getAvgRating(b) : 0;
 // Single bookmark — priority-resolved, top-right only
-  const _bmTpl = getDisplayBookmarkTemplate(b.id);
+    const _bmTpl = (_bookmarkTemplates.length && _myBookmarks !== undefined)
+    ? getDisplayBookmarkTemplate(b.id)
+    : null;
   const ribbonHtml = _bmTpl
     ? `<div style="position:absolute;top:0;right:3px;z-index:3;
                    filter:drop-shadow(1px 2px 2px rgba(0,0,0,0.35))">
@@ -3332,8 +3334,9 @@ window.toggleHomeSection = toggleHomeSection;
 async function renderMobHome(){
   const name = (currentUser?.displayName||'').split(' ')[0] || 'Reader';
   document.getElementById('mobHomeGreeting').textContent = `Hello, ${name}`;
-
   const container = document.getElementById('mobHomeContent');
+  if(!library.length && !communityLib.length) return;
+  container.innerHTML = '';
   if(!_userLists.length && !library.length) { renderMobHomeSkeleton(); return; }
 
   const GRID_STYLE = `display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:.7rem;margin-bottom:.3rem;`;
@@ -3536,7 +3539,9 @@ function bookCardHtml(b, isComm, showProgress=false){
   const isMyPublicBook = b.ownerId===currentUser?.uid && b.visibility==='public';
 
 // Single bookmark — priority-resolved, top-right only
-  const _bmTpl = getDisplayBookmarkTemplate(b.id);
+    const _bmTpl = (_bookmarkTemplates.length && _myBookmarks !== undefined)
+    ? getDisplayBookmarkTemplate(b.id)
+    : null;
   const ribbonHtml = _bmTpl
     ? `<div style="position:absolute;top:0;right:4px;z-index:3;filter:drop-shadow(1px 2px 3px rgba(0,0,0,0.35))">
         ${renderBookmarkSVG(_bmTpl, 18, 68, 'card'+b.id, true)}
@@ -5415,6 +5420,8 @@ function getAwardBookmarksForBook(bookId) {
 // Returns null if the book has no saved reading position AND no award.
 
 function getDisplayBookmarkTemplate(bookId) {
+  if(!bookId || !_bookmarkTemplates.length) return null;
+  console.log('templates:', _bookmarkTemplates.length, 'bookmarks:', _myBookmarks.length);
   const now = new Date();
 
   // 1. User-specific award for this book
