@@ -5417,7 +5417,7 @@ function getAwardBookmarksForBook(bookId) {
 function getDisplayBookmarkTemplate(bookId) {
   const now = new Date();
 
-  // 1. User-specific award for this specific book
+  // 1. User-specific award for this book
   const userBookAward = _myBookmarks.find(b =>
     b.type === 'award' && b.bookId === bookId && b.userId === currentUser?.uid
   );
@@ -5435,27 +5435,26 @@ function getDisplayBookmarkTemplate(bookId) {
     if(t) return t;
   }
 
-  // 3. Active seasonal bookmark (overrides default for all books)
+  // 3. Active seasonal — ONLY templates explicitly typed as seasonal with valid dates
   const seasonal = _bookmarkTemplates.find(t => {
     if(t.condition?.type !== 'seasonal') return false;
     const from = t.condition.startsAt?.toDate?.();
     const to   = t.condition.endsAt?.toDate?.();
-    return from && to && now >= from && now <= to;
+    if(!from || !to) return false;          // ← skip malformed seasonal templates
+    return now >= from && now <= to;
   });
   if(seasonal) return seasonal;
 
-    // 4. Default — only shown if book is in the "Currently Reading" list
-      const currentlyReadingList = _userLists.find(l => l.id === 'currently-reading');
-      if(currentlyReadingList && (currentlyReadingList.bookIds || []).includes(bookId)) {
-        return {
-          shape: 'classic',
-          icon: '📖',
-          label: '',
-          colors: { body: '#0f1a2e', accent: '#c8952a', text: '#faf7f2' }
-        };
-      }
-    
-      return null;
+  // 4. Reading position — only if book is in "Currently Reading" list
+  const currentlyReadingList = _userLists.find(l => l.id === 'currently-reading');
+  if(currentlyReadingList && (currentlyReadingList.bookIds || []).includes(bookId)) {
+    return {
+      shape: 'classic',
+      icon: '📖',
+      label: '',
+      colors: { body: '#0f1a2e', accent: '#c8952a', text: '#faf7f2' }
+    };
+  }
 
   return null;
 }
