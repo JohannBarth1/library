@@ -2829,7 +2829,7 @@ function mob_showPanel(id){document.querySelectorAll('.mob-panel').forEach(p=>p.
 
 // ── MOBILE NAV ───────────────────────────────────────────────────────────────
 document.getElementById('mobNavLibrary').addEventListener('click',  () => mob_switchTab('library'));
-document.getElementById('mobNavHome').addEventListener('click',     () => mob_switchTab('home'));
+document.getElementById('mobNavHome').addEventListener('click', () => { mob_switchTab('home');});
 document.getElementById('mobNavCommunity').addEventListener('click',() => mob_switchTab('community'));
 document.getElementById('mobNavSettings').addEventListener('click', () => mob_switchTab('settings'));
 
@@ -2839,7 +2839,14 @@ function mob_switchTab(tab) {
   document.getElementById(tabMap[tab])?.classList.add('active');
   const panelMap = { library:'mobPanelLibrary', home:'mobPanelHome', community:'mobPanelCommunity', settings:'mobPanelSettings' };
   mob_showPanel(panelMap[tab] || 'mobPanelHome');
-  if (tab === 'home')      renderMobHome();
+  if (tab === 'home') {
+    // Show skeleton rows immediately, then render real content
+    if(!document.getElementById('mobHomeContent').children.length ||
+       document.getElementById('mobHomeContent').textContent.includes('Loading')) {
+      renderMobHomeSkeleton();
+    }
+    renderMobHome();
+  }
   if (tab === 'library')   renderMobLibrary();
   if (tab === 'settings')  renderKoboSettings(document.getElementById('mobKoboSettings'));
 }
@@ -3291,86 +3298,184 @@ function toggleHomeSection(id) {
 }
 
 window.toggleHomeSection = toggleHomeSection;
-  
-async function renderMobHome(){
-  const name=(currentUser?.displayName||'').split(' ')[0]||'Reader';
-  document.getElementById('mobHomeGreeting').textContent=`Hello, ${name}`;
 
-  const GRID_STYLE = `display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:.7rem;margin-bottom:.3rem;`;
-
-  const section = (label, id, booksHtml, defaultOpen=true) => `
-    <div style="margin-bottom:.8rem;border:1px solid var(--border);border-radius:6px;overflow:hidden">
-      <div onclick="toggleHomeSection('${id}')"
-        style="display:flex;align-items:center;justify-content:space-between;
-               padding:.6rem .9rem;background:var(--panel);cursor:pointer;
-               -webkit-tap-highlight-color:transparent;user-select:none">
-        <div style="font-size:.68rem;letter-spacing:.15em;text-transform:uppercase;
-                    font-weight:700;color:var(--navy2)">${label}</div>
-        <div id="${id}_chevron" style="font-size:.8rem;color:var(--muted);
-          transition:transform .2s;${defaultOpen?'':'transform:rotate(-90deg)'}">▾</div>
-      </div>
-      <div id="${id}_body" style="padding:${defaultOpen?'.8rem':' 0'} .8rem;
-        max-height:${defaultOpen?'2000px':'0'};overflow:hidden;
-        transition:max-height .25s ease,padding .25s ease">
-        ${booksHtml}
+  function renderMobHomeSkeleton() {
+  const GRID = `display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:.7rem;`;
+  const skeletonCard = `
+    <div style="border-radius:4px;overflow:hidden;background:var(--warm-white);
+                border:1px solid var(--border);">
+      <div style="width:100%;aspect-ratio:2/3;background:linear-gradient(90deg,
+        var(--panel) 25%,var(--light-blue) 50%,var(--panel) 75%);
+        background-size:200% 100%;animation:shimmer 1.4s infinite;"></div>
+      <div style="padding:.4rem .45rem .5rem">
+        <div style="height:.65rem;border-radius:3px;margin-bottom:.35rem;
+          background:linear-gradient(90deg,var(--panel) 25%,var(--light-blue) 50%,var(--panel) 75%);
+          background-size:200% 100%;animation:shimmer 1.4s infinite;"></div>
+        <div style="height:.55rem;border-radius:3px;width:60%;
+          background:linear-gradient(90deg,var(--panel) 25%,var(--light-blue) 50%,var(--panel) 75%);
+          background-size:200% 100%;animation:shimmer 1.4s infinite;"></div>
       </div>
     </div>`;
 
-  const bookGrid = (books) => {
+  const skeletonSection = (label) => `
+    <div style="margin-bottom:.8rem;border:1px solid var(--border);border-radius:6px;overflow:hidden">
+      <div style="display:flex;align-items:center;justify-content:space-between;
+                  padding:.6rem .9rem;background:var(--panel);">
+        <div style="font-size:.68rem;letter-spacing:.15em;text-transform:uppercase;
+                    font-weight:700;color:var(--navy2)">${label}</div>
+        <div style="font-size:.8rem;color:var(--muted);">▾</div>
+      </div>
+      <div style="padding:.8rem">
+        <div style="${GRID}">${Array(4).fill(skeletonCard).join('')}</div>
+      </div>
+    </div>`;
+
+  document.getElementById('mobHomeContent').innerHTML =
+    skeletonSection('📖 Currently Reading') +
+    skeletonSection('⭐ Recommended') +
+    skeletonSection('🕐 Recently Added');
+}
+  
+async function renderMobHome(){
+  const name = (currentUser?.displayName||'').split(' ')[0] || 'Reader';
+  document.getElementById('mobHomeGreeting').textContent = `Hello, ${name}`;
+
+  const container = document.getElementById('mobHomeContent');
+
+  const GRID_STYLE = `display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:.7rem;margin-bottom:.3rem;`;
+
+  // ── Helpers ───────────────────────────────────────────────────────────────
+
+  function sectionHtml(label, id, innerHtml, defaultOpen=true) {
+    return `
+      <div style="margin-bottom:.8rem;border:1px solid var(--border);border-radius:6px;overflow:hidden"
+           id="homeSection_${id}">
+        <div onclick="toggleHomeSection('${id}')"
+          style="display:flex;align-items:center;justify-content:space-between;
+                 padding:.6rem .9rem;background:var(--panel);cursor:pointer;
+                 -webkit-tap-highlight-color:transparent;user-select:none">
+          <div style="font-size:.68rem;letter-spacing:.15em;text-transform:uppercase;
+                      font-weight:700;color:var(--navy2)">${label}</div>
+          <div id="${id}_chevron" style="font-size:.8rem;color:var(--muted);
+            transition:transform .2s;${defaultOpen?'':'transform:rotate(-90deg)'}">▾</div>
+        </div>
+        <div id="${id}_body" style="padding:${defaultOpen?'.8rem':'0'} .8rem;
+          max-height:${defaultOpen?'2000px':'0'};overflow:hidden;
+          transition:max-height .25s ease,padding .25s ease">
+          ${innerHtml}
+        </div>
+      </div>`;
+  }
+
+  function bookGrid(books) {
     if(!books.length) return `<div style="font-size:.82rem;color:var(--muted);padding:.3rem 0">Nothing here yet</div>`;
     return `<div style="${GRID_STYLE}">${books.map(b => uniformBookCard(b)).join('')}</div>`;
-  };
+  }
 
-  // ── Data ──────────────────────────────────────────────────────────────────
+  function bindCards(scopeEl) {
+    scopeEl.querySelectorAll('.book-card[data-bookid]').forEach(c => {
+      c.addEventListener('click', () => {
+        mobPrevPanel = 'mobPanelHome';
+        mob_showBook(c.dataset.bookid);
+      });
+    });
+  }
 
-  // 1. Currently Reading list
+  // ── Helper: upsert a section into the container ───────────────────────────
+  // Adds it if missing, replaces inner content if already there.
+  // Sections are inserted in a fixed display order using data-order attribute.
+
+  const ORDER = [
+    'home_reading', 'home_rec', 'home_bm',
+    'home_sharedby', 'home_sharedwith',
+    'home_recent'
+  ];
+
+  function upsertSection(id, label, innerHtml, defaultOpen=true) {
+    const existing = document.getElementById('homeSection_' + id);
+    if(existing) {
+      // Just update the body content, preserving open/closed state
+      const body = document.getElementById(id + '_body');
+      if(body) {
+        body.innerHTML = innerHtml;
+        bindCards(body);
+      }
+      return;
+    }
+    // Build and insert in correct order
+    const html = sectionHtml(label, id, innerHtml, defaultOpen);
+    const div = document.createElement('div');
+    div.innerHTML = html;
+    const newEl = div.firstElementChild;
+
+    // Find the right insertion point
+    const myOrder = ORDER.indexOf(id);
+    const siblings = [...container.children];
+    let inserted = false;
+    for(const sib of siblings) {
+      const sibId = sib.id?.replace('homeSection_', '');
+      if(ORDER.indexOf(sibId) > myOrder) {
+        container.insertBefore(newEl, sib);
+        inserted = true;
+        break;
+      }
+    }
+    if(!inserted) container.appendChild(newEl);
+    bindCards(newEl);
+  }
+
+  function removeSection(id) {
+    document.getElementById('homeSection_' + id)?.remove();
+  }
+
+  // ── Section 1: Currently Reading — instant (lists already loaded) ─────────
+
   const currentlyReading = (_userLists.find(l => l.id === 'currently-reading')?.bookIds || [])
     .map(id => [...library, ...communityLib].find(b => b.id === id))
     .filter(Boolean);
 
-  // 2. Recommended (deduplicated across own + community)
+  if(currentlyReading.length) {
+    upsertSection('home_reading', '📖 Currently Reading', bookGrid(currentlyReading), true);
+  } else {
+    removeSection('home_reading');
+  }
+
+  // ── Section 2: Recommended — instant ─────────────────────────────────────
+
   const recommended = [...library, ...communityLib]
     .filter(b => b.recommended)
     .filter((b,i,arr) => arr.findIndex(x => x.id === b.id) === i);
 
-  // 3. Award bookmarks earned
-  const awardedBookmarks = _myBookmarks.filter(b => b.type === 'award' && b.displayed !== false);
-
-  // 4. Privately shared
-  const sharedByMe = library.filter(b => b.allowedUsers && b.allowedUsers.length > 0);
-  const sharedWithMe = communityLib.filter(b =>
-    b.ownerId !== currentUser?.uid && b.allowedUsers?.includes(currentUser?.uid)
-  );
-
-  // 5. Custom lists (non-system, non-empty; exclude currently-reading already shown above)
-  const customLists = _userLists.filter(l =>
-    !l.system && (l.bookIds || []).length > 0
-  );
-
-  // 6. Recently added to my library
-  const recent = library.slice(0, 12);
-
-  // ── Render ────────────────────────────────────────────────────────────────
-  let html = '';
-
-  if(currentlyReading.length) {
-    html += section('📖 Currently Reading', 'home_reading', bookGrid(currentlyReading), true);
-  }
-
   if(recommended.length) {
-    html += section('⭐ Recommended', 'home_rec', bookGrid(recommended), true);
+    upsertSection('home_rec', '⭐ Recommended', bookGrid(recommended), true);
+  } else {
+    removeSection('home_rec');
   }
 
-  if(awardedBookmarks.length) {
+  // ── Section 3: Recently Added — instant ───────────────────────────────────
+
+  const recent = library.slice(0, 12);
+  if(recent.length) {
+    upsertSection('home_recent', '🕐 Recently Added', bookGrid(recent), false);
+  } else {
+    removeSection('home_recent');
+  }
+
+  // ── Section 4: Award Bookmarks — needs _myBookmarks + _bookmarkTemplates ──
+  // These may still be loading on first render; update when ready.
+
+  const renderBmSection = () => {
+    const awarded = _myBookmarks.filter(b => b.type === 'award' && b.displayed !== false);
+    if(!awarded.length) { removeSection('home_bm'); return; }
     const bmHtml = `<div style="display:flex;flex-wrap:wrap;gap:.6rem;padding:.1rem 0">
-      ${awardedBookmarks.map(ub => {
+      ${awarded.map(ub => {
         const t = _bookmarkTemplates.find(x => x.id === ub.bookmarkId);
         if(!t) return '';
         const book = [...library, ...communityLib].find(b => b.id === ub.bookId);
         return `<div style="display:flex;flex-direction:column;align-items:center;
                             gap:3px;cursor:pointer"
                   onclick="${book ? `mob_showBook('${book.id}')` : ''}"
-                  title="${esc(t.name)}${ub.note ? ' — ' + ub.note : ''}">
+                  title="${esc(t.name)}${ub.note ? ' — '+ub.note : ''}">
           ${renderBookmarkSVG(t, 32, 50, 'home'+ub.id)}
           <div style="font-size:.58rem;color:var(--muted);text-align:center;
                       max-width:42px;overflow:hidden;text-overflow:ellipsis;
@@ -3378,52 +3483,50 @@ async function renderMobHome(){
         </div>`;
       }).join('')}
     </div>`;
-    html += section('🎖 My Bookmarks', 'home_bm', bmHtml, true);
-  }
+    upsertSection('home_bm', '🎖 My Bookmarks', bmHtml, true);
+  };
+  renderBmSection();
+
+  // ── Section 5: Shared — instant ───────────────────────────────────────────
+
+  const sharedByMe = library.filter(b => b.allowedUsers && b.allowedUsers.length > 0);
+  const sharedWithMe = communityLib.filter(b =>
+    b.ownerId !== currentUser?.uid && b.allowedUsers?.includes(currentUser?.uid)
+  );
 
   if(sharedByMe.length) {
-    html += section('🔒 Shared by Me', 'home_sharedby', bookGrid(sharedByMe), false);
+    upsertSection('home_sharedby', '🔒 Shared by Me', bookGrid(sharedByMe), false);
+  } else {
+    removeSection('home_sharedby');
   }
 
   if(sharedWithMe.length) {
-    html += section('🔒 Shared with Me', 'home_sharedwith', bookGrid(sharedWithMe), false);
+    upsertSection('home_sharedwith', '🔒 Shared with Me', bookGrid(sharedWithMe), false);
+  } else {
+    removeSection('home_sharedwith');
   }
 
-  // Custom user-created lists
+  // ── Custom lists — instant ────────────────────────────────────────────────
+
+  const customLists = _userLists.filter(l => !l.system && (l.bookIds||[]).length > 0);
   for(const list of customLists) {
-    const books = (list.bookIds || [])
-      .map(id => [...library, ...communityLib].find(b => b.id === id))
+    const books = (list.bookIds||[])
+      .map(id => [...library,...communityLib].find(b => b.id === id))
       .filter(Boolean);
     if(!books.length) continue;
-    html += section(
-      `${list.icon || '📚'} ${esc(list.name)}`,
-      'home_list_' + list.id,
-      bookGrid(books),
-      false
-    );
+    const listId = 'home_list_' + list.id;
+    ORDER.splice(ORDER.indexOf('home_recent'), 0, listId); // insert before recently added
+    upsertSection(listId, `${list.icon||'📚'} ${esc(list.name)}`, bookGrid(books), false);
   }
 
-  if(recent.length) {
-    html += section('🕐 Recently Added', 'home_recent', bookGrid(recent), false);
-  }
+  // ── Empty state ───────────────────────────────────────────────────────────
 
-  if(!html) {
-    html = `<div style="text-align:center;padding:3rem 1rem;color:var(--muted)">
+  if(!container.children.length) {
+    container.innerHTML = `<div style="text-align:center;padding:3rem 1rem;color:var(--muted)">
       <div style="font-size:2.5rem;opacity:.2;margin-bottom:.8rem">📚</div>
       <div style="font-size:.9rem">Upload books to get started</div>
     </div>`;
   }
-
-  document.getElementById('mobHomeContent').innerHTML = html;
-
-  // Bind card taps
-  document.getElementById('mobHomeContent')
-    .querySelectorAll('.book-card[data-bookid]').forEach(c => {
-      c.addEventListener('click', () => {
-        mobPrevPanel = 'mobPanelHome';
-        mob_showBook(c.dataset.bookid);
-      });
-    });
 }
 
 function bookCardHtml(b, isComm, showProgress=false){
