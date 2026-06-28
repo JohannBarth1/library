@@ -7268,21 +7268,33 @@ async function adminLoadTags() {
     el.querySelectorAll('[data-bm-edit]').forEach(btn => {
       btn.addEventListener('click', () => showBookmarkEditor(btn.dataset.bmEdit, null));
     });
-    el.querySelectorAll('[data-bm-delete]').forEach(btn => {
-      btn.addEventListener('click', async () => {
-        const t = templates.find(x => x.id === btn.dataset.bmDelete);
-        if(!t || !confirm(`Delete "${t.name}"?`)) return;
-        await updateDoc(doc(db, 'bookmarks', t.id), { active: false });
-        showToast('Bookmark deleted ✓');
-        adminLoadBookmarks();
-      });
-    });
-    el.querySelector('#adminBmNewBtn')?.addEventListener('click', () => showBookmarkEditor(null, null));
-
-  } catch(e) {
-    el.innerHTML = `<div style="color:var(--danger);font-size:.82rem">Failed: ${e.message}</div>`;
-  }
-}
+el.querySelectorAll('[data-bm-delete]').forEach(btn => {
+  btn.addEventListener('click', async () => {
+    const t = templates.find(x => x.id === btn.dataset.bmDelete);
+    if(!t || !confirm(`Delete "${t.name}"?\n\nThis will also remove it from all users who have been awarded it.`)) return;
+    showLoading('Deleting…');
+    try {
+      // Hard delete the template
+      await deleteDoc(doc(db, 'bookmarks', t.id));
+      // Remove all user_bookmarks referencing this template
+      const ubSnap = await getDocs(
+        query(collection(db, 'user_bookmarks'), where('bookmarkId', '==', t.id))
+      );
+      for(const d of ubSnap.docs) await deleteDoc(d.ref);
+      // Refresh local state
+      await loadBookmarkTemplates();
+      await loadMyBookmarks();
+      hideLoading();
+      showToast('Bookmark deleted ✓');
+      adminLoadBookmarks();
+      renderAll();
+    } catch(e) {
+      hideLoading();
+      showToast('Delete failed: ' + e.message);
+      console.error(e);
+    }
+  });
+});
 
 function buildAdminSections() {
   const panel = document.getElementById('mobPanelAdmin');
