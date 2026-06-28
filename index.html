@@ -5424,16 +5424,7 @@ function getDisplayBookmarkTemplate(bookId) {
   console.log('templates:', _bookmarkTemplates.length, 'bookmarks:', _myBookmarks.length);
   const now = new Date();
 
-  // ── GATE: Only show bookmarks for books the user is CURRENTLY READING ──
-  const currentlyReadingList = _userLists.find(l => l.id === 'currently-reading');
-  const isCurrentlyReading = currentlyReadingList && 
-    (currentlyReadingList.bookIds || []).includes(bookId);
-
-  if (!isCurrentlyReading) return null;
-
-  // ── Now pick the best bookmark for this currently-reading book ──
-
-  // 1. User-specific award for this book (highest priority)
+  // ── PRIORITY 1: User-specific award for THIS book (always show, even if not reading) ──
   const userBookAward = _myBookmarks.find(b =>
     b.type === 'award' && b.bookId === bookId && b.userId === currentUser?.uid
   );
@@ -5442,7 +5433,14 @@ function getDisplayBookmarkTemplate(bookId) {
     if (t) return t;
   }
 
-  // 2. Any award bookmark for this book
+  // ── GATE: Everything below only shows if currently reading ──
+  const currentlyReadingList = _userLists.find(l => l.id === 'currently-reading');
+  const isCurrentlyReading = currentlyReadingList &&
+    (currentlyReadingList.bookIds || []).includes(bookId);
+
+  if (!isCurrentlyReading) return null;
+
+  // ── PRIORITY 2: Any award bookmark for this book (not user-specific) ──
   const anyBookAward = _myBookmarks.find(b =>
     b.type === 'award' && b.bookId === bookId
   );
@@ -5451,7 +5449,7 @@ function getDisplayBookmarkTemplate(bookId) {
     if (t) return t;
   }
 
-  // 3. Active seasonal template
+  // ── PRIORITY 3: Active seasonal template ──
   const seasonal = _bookmarkTemplates.find(t => {
     if (t.condition?.type !== 'seasonal') return false;
     const from = t.condition.startsAt?.toDate?.();
@@ -5461,7 +5459,7 @@ function getDisplayBookmarkTemplate(bookId) {
   });
   if (seasonal) return seasonal;
 
-  // 4. Default "currently reading" bookmark (no special award/seasonal)
+  // ── PRIORITY 4: Default "currently reading" bookmark ──
   return {
     shape: 'classic',
     icon: '📖',
