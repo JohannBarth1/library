@@ -4365,6 +4365,33 @@ function renderReaderBookmarkTab() {
 }
 
 function closeReader(){
+    // Move finished book: currently-reading → finished
+  if(readerBookId){
+    const crList = _userLists.find(l => l.id === 'currently-reading');
+    // Only mark finished if they've read past 90% of the book
+    const progress = getReadingProgress(readerBookId);
+    if(crList && progress >= 0.9){
+      const bookIds = (crList.bookIds || []).filter(id => id !== readerBookId);
+      crList.bookIds = bookIds;
+      setDoc(
+        doc(db, 'user_lists', currentUser.uid, 'lists', 'currently-reading'),
+        { bookIds, updatedAt: serverTimestamp() },
+        { merge: true }
+      ).catch(e => console.warn('closeReader list update:', e));
+
+      const finList = _userLists.find(l => l.id === 'finished');
+      if(finList && !(finList.bookIds || []).includes(readerBookId)){
+        const finIds = [...(finList.bookIds || []), readerBookId];
+        finList.bookIds = finIds;
+        setDoc(
+          doc(db, 'user_lists', currentUser.uid, 'lists', 'finished'),
+          { bookIds: finIds, updatedAt: serverTimestamp() },
+          { merge: true }
+        ).catch(e => console.warn('closeReader finished update:', e));
+        showToast('Added to Finished ✓');
+      }
+    }
+  }
   document.getElementById('readerOverlay').classList.remove('open');
   document.getElementById('readerChapterList').classList.remove('open');
   document.getElementById('readerSettingsBar').classList.remove('open');
@@ -5009,12 +5036,13 @@ async function showCheckoutHistory(bookId){
 }
 document.getElementById('btnCloseCheckoutModal').addEventListener('click',()=>document.getElementById('checkoutModal').classList.remove('open'));
 
-  async function recordBookOpened(book) {
+async function recordBookOpened(book) {
   if(!currentUser || !book) return;
   try {
     const due = new Date();
     due.setDate(due.getDate() + 14);
-    // Check if already has an active record
+
+    // ── 1. Checkout record (existing behaviour) ───────────────────────────
     if(!myCheckedOutIds.has(book.id)){
       await addDoc(collection(db, 'checkouts'), {
         bookId: book.id,
@@ -5027,10 +5055,8 @@ document.getElementById('btnCloseCheckoutModal').addEventListener('click',()=>do
         openedAt: serverTimestamp(),
       });
       myCheckedOutIds.add(book.id);
-      renderMobHome();
-      renderDeskHome();
     } else {
-      // Update the openedAt timestamp on the most recent record
+      // Extend the due date on the existing active checkout
       const q = query(
         collection(db, 'checkouts'),
         where('bookId', '==', book.id),
@@ -5043,10 +5069,39 @@ document.getElementById('btnCloseCheckoutModal').addEventListener('click',()=>do
       if(active.length){
         await updateDoc(doc(db, 'checkouts', active[0].id), {
           openedAt: serverTimestamp(),
-          dueDate: Timestamp.fromDate(due), // extend by 14 days from last open
+          dueDate: Timestamp.fromDate(due),
         });
       }
     }
+
+    // ── 2. Add to "currently-reading" list ───────────────────────────────
+    const crList = _userLists.find(l => l.id === 'currently-reading');
+    if(crList && !(crList.bookIds || []).includes(book.id)){
+      const bookIds = [...(crList.bookIds || []), book.id];
+      crList.bookIds = bookIds;
+      await setDoc(
+        doc(db, 'user_lists', currentUser.uid, 'lists', 'currently-reading'),
+        { bookIds, updatedAt: serverTimestamp() },
+        { merge: true }
+      );
+    }
+
+    // ── 3. Remove from "want-to-read" if it was there ────────────────────
+    const wtrList = _userLists.find(l => l.id === 'want-to-read');
+    if(wtrList && (wtrList.bookIds || []).includes(book.id)){
+      const bookIds = wtrList.bookIds.filter(id => id !== book.id);
+      wtrList.bookIds = bookIds;
+      await setDoc(
+        doc(db, 'user_lists', currentUser.uid, 'lists', 'want-to-read'),
+        { bookIds, updatedAt: serverTimestamp() },
+        { merge: true }
+      );
+    }
+
+    // ── 4. Refresh home panels ────────────────────────────────────────────
+    renderMobHome();
+    renderDeskHome();
+
   } catch(e) {
     console.warn('recordBookOpened:', e);
   }
@@ -6710,88 +6765,420 @@ async function adminLoadKoboDevices() {
 
 document.getElementById('adminKoboRefresh')?.addEventListener('click', adminLoadKoboDevices);
 
-  // ── ADMIN LOAD CURRENT USERS ──────────────────────────────────────────────────
+  // ── ADMIN LOAD USERS AND CURRENT USERS ──────────────────────────────────────────────────
 async function adminLoadPresence() {
   const el = document.getElementById('adminPresenceBody');
   if(!el) return;
   el.innerHTML = '<div style="color:var(--muted);font-size:.85rem">Loading…</div>';
   try {
-    const snap = await getDocs(collection(db, 'lounge_presence'));
+    const [presSnap, userSnap, checkoutSnap, listSnap] = await Promise.all([
+      getDocs(collection(db, 'lounge_presence')),
+      getDocs(collection(db, 'users')),
+      getDocs(query(collection(db, 'checkouts'), orderBy('checkedOutAt', 'desc'))),
+      getDocs(collection(db, 'user_lists')),  // top-level collection
+    ]);
+
+    const presMap = {};
+    presSnap.docs.forEach(d => { presMap[d.id] = d.data(); });
+
+    const checkoutsByUser = {};
+    checkoutSnap.docs.forEach(d => {
+      const data = d.data();
+      if(!checkoutsByUser[data.userId]) checkoutsByUser[data.userId] = [];
+      checkoutsByUser[data.userId].push({ id: d.id, ...data });
+    });
+
+    // Build currently-reading map from user_lists subcollections
+    // listSnap gives us top-level user docs — we need subcollections
+    // We'll load them lazily on expand instead
+
     const now = Date.now();
-    const all = snap.docs.map(d => d.data())
-      .sort((a,b) => (b.lastSeen?.toMillis?.() || 0) - (a.lastSeen?.toMillis?.() || 0));
+    const users = userSnap.docs
+      .map(d => ({ id: d.id, ...d.data() }))
+      .sort((a, b) => {
+        const pa = presMap[a.uid]?.lastSeen?.toMillis?.() || 0;
+        const pb = presMap[b.uid]?.lastSeen?.toMillis?.() || 0;
+        return pb - pa;
+      });
 
-    if(!all.length) {
-      el.innerHTML = '<div style="color:var(--muted);font-size:.85rem">No presence data yet</div>';
-      return;
-    }
-
-    el.innerHTML = all.map(p => {
-      const isActive = (p.expiresAt?.toMillis?.() || 0) > now;
-      const lastSeen = p.lastSeen?.toDate?.();
-      const initials = (p.displayName||'?').split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
-      return `<div class="admin-card">
-        <div style="display:flex;align-items:center;gap:.6rem">
-          ${p.photoURL
-            ? `<img src="${p.photoURL}" style="width:28px;height:28px;border-radius:50%;
-                object-fit:cover;border:1px solid var(--border);flex-shrink:0"/>`
-            : `<div style="width:28px;height:28px;border-radius:50%;background:var(--teal);
-                color:#fff;display:flex;align-items:center;justify-content:center;
-                font-size:.65rem;font-weight:700;flex-shrink:0">${initials}</div>`}
-          <div style="flex:1;min-width:0">
-            <div class="admin-card-title">${esc(p.displayName||'Unknown')}</div>
-            <div style="font-size:.7rem;color:var(--muted)">${esc(p.email||'')}</div>
-            ${p.currentlyReading
-              ? `<div style="font-size:.7rem;color:var(--gold);margin-top:1px">
-                  📖 ${esc(p.currentlyReading)}</div>` : ''}
-          </div>
-          <div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px;flex-shrink:0">
-            <span class="admin-badge ${isActive ? 'active' : 'returned'}">
-              ${isActive ? 'Online' : 'Offline'}</span>
-            ${lastSeen
-              ? `<span style="font-size:.6rem;color:var(--muted)">${timeAgo(lastSeen)}</span>`
-              : ''}
-          </div>
-        </div>
-      </div>`;
-    }).join('');
-  } catch(e) {
-    el.innerHTML = `<div style="color:var(--danger);font-size:.82rem">Failed: ${e.message}</div>`;
-    console.error(e);
-  }
-}
-// ── USERS ─────────────────────────────────────────────────────────────────────
-async function adminLoadUsers() {
-  const el = document.getElementById('adminUsersList');
-  el.innerHTML = '<div style="color:var(--muted);font-size:.85rem">Loading…</div>';
-  try {
-    const snap = await getDocs(collection(db, 'users'));
-    const users = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    if(!users.length){
+    if(!users.length) {
       el.innerHTML = '<div style="color:var(--muted);font-size:.85rem">No users found</div>';
       return;
     }
-    el.innerHTML = users.map(u => `
-      <div class="admin-card">
-        <div style="display:flex;align-items:center;gap:.6rem">
+
+    el.innerHTML = users.map(u => {
+      const pres = presMap[u.uid] || {};
+      const isOnline = (pres.expiresAt?.toMillis?.() || 0) > now;
+      const lastSeen = pres.lastSeen?.toDate?.() || u.lastSeen?.toDate?.();
+      const lastConnected = u.lastSeen?.toDate?.();
+      const initials = (u.displayName || u.email || '?')
+        .split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
+      const checkouts = checkoutsByUser[u.uid] || [];
+      const activeCheckouts = checkouts.filter(c => !c.returnedAt);
+
+      return `<div class="admin-user-card" data-uid="${u.uid}"
+        style="background:var(--warm-white);border:1px solid var(--border);
+               border-radius:4px;margin-bottom:.5rem;overflow:hidden;cursor:pointer;
+               transition:border-color .15s;"
+        onclick="adminToggleUserCard('${u.uid}')">
+
+        <div style="display:flex;align-items:center;gap:.6rem;padding:.6rem .8rem;">
           ${u.photoURL
-            ? `<img src="${u.photoURL}" style="width:28px;height:28px;border-radius:50%;object-fit:cover;border:1px solid var(--border);flex-shrink:0"/>`
-            : `<div style="width:28px;height:28px;border-radius:50%;background:var(--teal);color:#fff;display:flex;align-items:center;justify-content:center;font-size:.65rem;font-weight:700;flex-shrink:0">${(u.displayName||u.email||'?').slice(0,2).toUpperCase()}</div>`
-          }
-          <div style="flex:1;min-width:0">
-            <div class="admin-card-title">${esc(u.displayName || 'Unknown')}</div>
-            <div style="font-size:.7rem;color:var(--muted)">${esc(u.email || '')}</div>
+            ? `<img src="${u.photoURL}" style="width:32px;height:32px;border-radius:50%;
+                object-fit:cover;border:1px solid var(--border);flex-shrink:0"/>`
+            : `<div style="width:32px;height:32px;border-radius:50%;background:var(--teal);
+                color:#fff;display:flex;align-items:center;justify-content:center;
+                font-size:.65rem;font-weight:700;flex-shrink:0">${initials}</div>`}
+          <div style="flex:1;min-width:0;">
+            <div style="font-weight:700;font-size:.82rem;color:var(--navy2);
+                        white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+              ${esc(u.displayName || 'Unknown')}
+            </div>
+            <div style="font-size:.7rem;color:var(--muted);
+                        white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+              ${esc(u.email || '')}
+            </div>
+            <div style="font-size:.65rem;color:var(--muted);margin-top:1px;">
+              ${lastConnected
+                ? `Last connected ${timeAgo(lastConnected)}`
+                : 'Never connected'}
+              ${lastSeen && lastSeen !== lastConnected
+                ? ` · Lounge ${timeAgo(lastSeen)}`
+                : ''}
+            </div>
           </div>
-          ${u.isAdmin ? `<span class="admin-badge active">Admin</span>` : ''}
+          <div style="display:flex;flex-direction:column;align-items:flex-end;
+                      gap:3px;flex-shrink:0;">
+            <span style="font-size:.6rem;font-weight:700;padding:1px 6px;border-radius:8px;
+              background:${isOnline ? '#d1fae5' : 'var(--panel)'};
+              color:${isOnline ? '#065f46' : 'var(--muted)'};">
+              ${isOnline ? '● Online' : '○ Offline'}
+            </span>
+            ${u.isAdmin
+              ? `<span style="font-size:.6rem;font-weight:700;padding:1px 6px;
+                  border-radius:8px;background:#fff8ec;color:var(--gold);">Admin</span>`
+              : ''}
+            ${activeCheckouts.length
+              ? `<span style="font-size:.6rem;color:var(--teal);font-weight:700;">
+                  📖 ${activeCheckouts.length} out</span>`
+              : ''}
+            <span style="font-size:.7rem;color:var(--muted);margin-top:1px;">▾</span>
+          </div>
         </div>
-      </div>`).join('');
+
+        ${pres.currentlyReading
+          ? `<div style="padding:0 .8rem .5rem;font-size:.7rem;color:var(--gold);
+                         font-weight:700;">📖 ${esc(pres.currentlyReading)}</div>`
+          : ''}
+
+        <div id="adminUserExpand_${u.uid}"
+          style="display:none;border-top:1px solid var(--border);background:var(--panel);">
+          <div style="padding:.6rem .8rem;font-size:.75rem;color:var(--muted);">
+            Loading…</div>
+        </div>
+      </div>`;
+    }).join('');
+
+    // Store checkout data for lazy expand
+    el._checkoutsByUser = checkoutsByUser;
+
   } catch(e) {
-    el.innerHTML = `<div style="color:var(--danger);font-size:.82rem">Failed to load: ${e.message}</div>`;
+    el.innerHTML = `<div style="color:var(--danger);font-size:.82rem">
+      Failed: ${e.message}</div>`;
+    console.error(e);
+  }
+}
+
+async function adminLoadUsers() {
+  const el = document.getElementById('adminUsersList');
+  if(!el) return;
+  // Reuse the same rich card design
+  el.innerHTML = '<div style="color:var(--muted);font-size:.85rem">Loading…</div>';
+  try {
+    const [userSnap, presSnap, checkoutSnap] = await Promise.all([
+      getDocs(collection(db, 'users')),
+      getDocs(collection(db, 'lounge_presence')),
+      getDocs(query(collection(db, 'checkouts'), orderBy('checkedOutAt', 'desc'))),
+    ]);
+
+    const presMap = {};
+    presSnap.docs.forEach(d => { presMap[d.id] = d.data(); });
+
+    const checkoutsByUser = {};
+    checkoutSnap.docs.forEach(d => {
+      const data = d.data();
+      if(!checkoutsByUser[data.userId]) checkoutsByUser[data.userId] = [];
+      checkoutsByUser[data.userId].push({ id: d.id, ...data });
+    });
+
+    const now = Date.now();
+    const users = userSnap.docs
+      .map(d => ({ id: d.id, ...d.data() }))
+      .sort((a, b) => {
+        const ta = a.lastSeen?.toMillis?.() || 0;
+        const tb = b.lastSeen?.toMillis?.() || 0;
+        return tb - ta;
+      });
+
+    if(!users.length) {
+      el.innerHTML = '<div style="color:var(--muted);font-size:.85rem">No users</div>';
+      return;
+    }
+
+    el.innerHTML = users.map(u => {
+      const pres = presMap[u.uid] || {};
+      const isOnline = (pres.expiresAt?.toMillis?.() || 0) > now;
+      const lastConnected = u.lastSeen?.toDate?.();
+      const lastLounge = pres.lastSeen?.toDate?.();
+      const initials = (u.displayName || u.email || '?')
+        .split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
+      const checkouts = checkoutsByUser[u.uid] || [];
+      const activeCheckouts = checkouts.filter(c => !c.returnedAt);
+
+      return `<div class="admin-user-card" data-uid="${u.uid}"
+        style="background:var(--warm-white);border:1px solid var(--border);
+               border-radius:4px;margin-bottom:.5rem;overflow:hidden;cursor:pointer;
+               transition:border-color .15s;"
+        onclick="adminToggleUserCard('${u.uid}')">
+
+        <div style="display:flex;align-items:center;gap:.6rem;padding:.6rem .8rem;">
+          ${u.photoURL
+            ? `<img src="${u.photoURL}" style="width:32px;height:32px;border-radius:50%;
+                object-fit:cover;border:1px solid var(--border);flex-shrink:0"/>`
+            : `<div style="width:32px;height:32px;border-radius:50%;background:var(--teal);
+                color:#fff;display:flex;align-items:center;justify-content:center;
+                font-size:.65rem;font-weight:700;flex-shrink:0">${initials}</div>`}
+          <div style="flex:1;min-width:0;">
+            <div style="font-weight:700;font-size:.82rem;color:var(--navy2);">
+              ${esc(u.displayName || 'Unknown')}
+            </div>
+            <div style="font-size:.7rem;color:var(--muted);
+                        white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+              ${esc(u.email || '')}
+            </div>
+            <div style="font-size:.65rem;color:var(--muted);margin-top:1px;">
+              ${lastConnected
+                ? `Last connected ${timeAgo(lastConnected)}`
+                : 'Never connected'}
+              ${lastLounge
+                ? ` · Lounge ${timeAgo(lastLounge)}`
+                : ''}
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:flex-end;
+                      gap:3px;flex-shrink:0;">
+            <span style="font-size:.6rem;font-weight:700;padding:1px 6px;border-radius:8px;
+              background:${isOnline ? '#d1fae5' : 'var(--panel)'};
+              color:${isOnline ? '#065f46' : 'var(--muted)'};">
+              ${isOnline ? '● Online' : '○ Offline'}
+            </span>
+            ${u.isAdmin
+              ? `<span style="font-size:.6rem;font-weight:700;padding:1px 6px;
+                  border-radius:8px;background:#fff8ec;color:var(--gold);">Admin</span>`
+              : ''}
+            ${activeCheckouts.length
+              ? `<span style="font-size:.6rem;color:var(--teal);font-weight:700;">
+                  📖 ${activeCheckouts.length} out</span>`
+              : ''}
+            <span style="font-size:.7rem;color:var(--muted);margin-top:1px;">▾</span>
+          </div>
+        </div>
+
+        ${pres.currentlyReading
+          ? `<div style="padding:0 .8rem .5rem;font-size:.7rem;color:var(--gold);
+                         font-weight:700;">📖 ${esc(pres.currentlyReading)}</div>`
+          : ''}
+
+        <div id="adminUserExpand_${u.uid}"
+          style="display:none;border-top:1px solid var(--border);background:var(--panel);">
+          <div style="padding:.6rem .8rem;font-size:.75rem;color:var(--muted);">
+            Loading…</div>
+        </div>
+      </div>`;
+    }).join('');
+
+    el._checkoutsByUser = checkoutsByUser;
+
+  } catch(e) {
+    el.innerHTML = `<div style="color:var(--danger);font-size:.82rem">
+      Failed: ${e.message}</div>`;
     console.error(e);
   }
 }
 
 document.getElementById('adminUsersRefresh')?.addEventListener('click', adminLoadUsers);
+
+  async function adminToggleUserCard(uid) {
+  // Find the expand panel — it may live in either the presence or users section
+  const panel = document.getElementById('adminUserExpand_' + uid);
+  if(!panel) return;
+
+  const isOpen = panel.style.display !== 'none';
+
+  // Close all open panels first
+  document.querySelectorAll('[id^="adminUserExpand_"]').forEach(p => {
+    p.style.display = 'none';
+  });
+  document.querySelectorAll('.admin-user-card').forEach(c => {
+    c.style.borderColor = '';
+    const chevron = c.querySelector('span:last-child');
+    if(chevron && (chevron.textContent === '▴' || chevron.textContent === '▾'))
+      chevron.textContent = '▾';
+  });
+
+  if(isOpen) return; // was open — just close it
+
+  // Open this one
+  panel.style.display = 'block';
+  const card = panel.closest('.admin-user-card');
+  if(card) {
+    card.style.borderColor = 'var(--teal)';
+    const chevron = card.querySelector('span:last-child');
+    if(chevron) chevron.textContent = '▴';
+  }
+
+  // Load data if not yet loaded
+  if(panel.dataset.loaded) return;
+  panel.dataset.loaded = '1';
+
+  try {
+    // Get checkout history for this user
+    const checkoutSnap = await getDocs(
+      query(
+        collection(db, 'checkouts'),
+        where('userId', '==', uid),
+        orderBy('checkedOutAt', 'desc')
+      )
+    );
+    const checkouts = checkoutSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+    // Get their lists (currently reading, finished, want to read)
+    const listsSnap = await getDocs(
+      collection(db, 'user_lists', uid, 'lists')
+    );
+    const lists = {};
+    listsSnap.docs.forEach(d => { lists[d.id] = d.data(); });
+
+    const crIds   = lists['currently-reading']?.bookIds || [];
+    const finIds  = lists['finished']?.bookIds || [];
+    const wtrIds  = lists['want-to-read']?.bookIds || [];
+
+    // Resolve book titles from local library + community cache
+    const allBooks = [...library, ...communityLib];
+    const resolveTitle = id => {
+      const b = allBooks.find(x => x.id === id);
+      return b ? b.title : id;
+    };
+
+    const active   = checkouts.filter(c => !c.returnedAt);
+    const returned = checkouts.filter(c => c.returnedAt);
+
+    panel.innerHTML = `
+      <div style="padding:.7rem .8rem;display:flex;flex-direction:column;gap:.75rem;">
+
+        ${crIds.length ? `
+          <div>
+            <div style="font-size:.6rem;letter-spacing:.15em;text-transform:uppercase;
+                        font-weight:700;color:var(--teal);margin-bottom:.35rem;">
+              📖 Currently Reading</div>
+            ${crIds.map(id => `
+              <div style="font-size:.78rem;color:var(--navy2);padding:.2rem 0;
+                          border-bottom:1px solid var(--border);display:flex;
+                          align-items:center;gap:.4rem;">
+                <span style="color:var(--teal);">▶</span>
+                ${esc(resolveTitle(id))}
+              </div>`).join('')}
+          </div>` : ''}
+
+        ${finIds.length ? `
+          <div>
+            <div style="font-size:.6rem;letter-spacing:.15em;text-transform:uppercase;
+                        font-weight:700;color:#276749;margin-bottom:.35rem;">
+              ✓ Finished (${finIds.length})</div>
+            ${finIds.slice(0, 5).map(id => `
+              <div style="font-size:.75rem;color:var(--navy2);padding:.15rem 0;
+                          border-bottom:1px solid var(--border);">
+                ${esc(resolveTitle(id))}
+              </div>`).join('')}
+            ${finIds.length > 5
+              ? `<div style="font-size:.68rem;color:var(--muted);margin-top:.2rem;">
+                  + ${finIds.length - 5} more</div>` : ''}
+          </div>` : ''}
+
+        ${wtrIds.length ? `
+          <div>
+            <div style="font-size:.6rem;letter-spacing:.15em;text-transform:uppercase;
+                        font-weight:700;color:var(--muted);margin-bottom:.35rem;">
+              🔖 Want to Read (${wtrIds.length})</div>
+            ${wtrIds.slice(0, 3).map(id => `
+              <div style="font-size:.75rem;color:var(--navy2);padding:.15rem 0;
+                          border-bottom:1px solid var(--border);">
+                ${esc(resolveTitle(id))}
+              </div>`).join('')}
+            ${wtrIds.length > 3
+              ? `<div style="font-size:.68rem;color:var(--muted);margin-top:.2rem;">
+                  + ${wtrIds.length - 3} more</div>` : ''}
+          </div>` : ''}
+
+        ${active.length ? `
+          <div>
+            <div style="font-size:.6rem;letter-spacing:.15em;text-transform:uppercase;
+                        font-weight:700;color:var(--gold);margin-bottom:.35rem;">
+              📋 Currently Signed Out (${active.length})</div>
+            ${active.map(c => {
+              const due = c.dueDate?.toDate?.();
+              const isOverdue = due && due < new Date();
+              return `<div style="display:flex;justify-content:space-between;
+                          align-items:center;font-size:.75rem;padding:.2rem 0;
+                          border-bottom:1px solid var(--border);gap:.4rem;">
+                <span style="color:var(--navy2);flex:1;min-width:0;overflow:hidden;
+                             text-overflow:ellipsis;white-space:nowrap;">
+                  ${esc(c.bookTitle || resolveTitle(c.bookId))}</span>
+                <span style="font-size:.68rem;white-space:nowrap;flex-shrink:0;
+                  color:${isOverdue ? 'var(--danger)' : 'var(--muted)'};">
+                  ${isOverdue ? '⚠ ' : ''}Due ${due ? due.toLocaleDateString() : '?'}</span>
+              </div>`;
+            }).join('')}
+          </div>` : ''}
+
+        ${returned.length ? `
+          <div>
+            <div style="font-size:.6rem;letter-spacing:.15em;text-transform:uppercase;
+                        font-weight:700;color:var(--muted);margin-bottom:.35rem;">
+              History (${returned.length} returned)</div>
+            ${returned.slice(0, 5).map(c => {
+              const out = c.checkedOutAt?.toDate?.();
+              const ret = c.returnedAt?.toDate?.();
+              return `<div style="font-size:.72rem;color:var(--muted);padding:.15rem 0;
+                          border-bottom:1px solid var(--border);display:flex;
+                          justify-content:space-between;gap:.4rem;">
+                <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;
+                             white-space:nowrap;color:var(--navy2);">
+                  ${esc(c.bookTitle || resolveTitle(c.bookId))}</span>
+                <span style="font-size:.65rem;flex-shrink:0;white-space:nowrap;">
+                  ${out ? out.toLocaleDateString() : '?'} → ${ret ? ret.toLocaleDateString() : '?'}
+                </span>
+              </div>`;
+            }).join('')}
+            ${returned.length > 5
+              ? `<div style="font-size:.68rem;color:var(--muted);margin-top:.2rem;">
+                  + ${returned.length - 5} more</div>` : ''}
+          </div>` : ''}
+
+        ${!crIds.length && !finIds.length && !active.length && !returned.length ? `
+          <div style="font-size:.8rem;color:var(--muted);text-align:center;padding:.5rem 0;">
+            No reading activity yet</div>` : ''}
+
+      </div>`;
+
+  } catch(e) {
+    panel.innerHTML = `<div style="padding:.6rem .8rem;font-size:.75rem;
+      color:var(--danger);">Failed to load: ${e.message}</div>`;
+    console.error(e);
+  }
+}
+
+window.adminToggleUserCard = adminToggleUserCard;
 
 // ── NAV ───────────────────────────────────────────────────────────────────────
 document.getElementById('mobNavAdmin')?.addEventListener('click', () => {
