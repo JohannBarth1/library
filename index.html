@@ -3221,7 +3221,7 @@ function matchesQ(b,q){return(b.title||'').toLowerCase().includes(q)||(b.author|
   const ribbonHtml = _bmTpl
     ? `<div style="position:absolute;top:0;right:3px;z-index:3;
                    filter:drop-shadow(1px 2px 2px rgba(0,0,0,0.35))">
-        ${renderBookmarkSVG(_bmTpl, 16, 48, 'uc'+b.id)}
+        ${renderBookmarkSVG(_bmTpl, 16, 64, 'uc'+b.id)}
        </div>`
     : '';
   const coverHtml = coverSrc
@@ -3442,7 +3442,7 @@ function bookCardHtml(b, isComm, showProgress=false){
   const _bmTpl = getDisplayBookmarkTemplate(b.id);
   const ribbonHtml = _bmTpl
     ? `<div style="position:absolute;top:0;right:4px;z-index:3;filter:drop-shadow(1px 2px 3px rgba(0,0,0,0.35))">
-        ${renderBookmarkSVG(_bmTpl, 18, 52, 'card'+b.id)}
+        ${renderBookmarkSVG(_bmTpl, 18, 68, 'card'+b.id)}
        </div>`
     : '';
 
@@ -4299,7 +4299,7 @@ function renderReaderBookmarkTab() {
     tab.title = 'Tap to place bookmark here';
   }
 
-  tab.innerHTML = renderBookmarkSVG(bmTpl, 28, 88, 'rdrbm', true);
+  tab.innerHTML = renderBookmarkSVG(bmTpl, 28, 120, 'rdrbm', true);
   content.style.position = 'relative';
   content.appendChild(tab);
 
@@ -4354,11 +4354,14 @@ document.getElementById('btnReaderNext').addEventListener('click',()=>goToPage(r
       if(dx<0)goToPage(readerPage+1); // swipe left → next
       else goToPage(readerPage-1);     // swipe right → prev
     } else if(Math.abs(dx)<10&&Math.abs(dy)<10){
-      // Tap — ignore if on toolbar/settings
-      const tgt=e.target.closest('.reader-toolbar,.readerSettingsBar,.chapter-list');
+      // Tap — ignore if on toolbar, settings, or bookmark tab
+      const tgt=e.target.closest('.reader-toolbar,.readerSettingsBar,.chapter-list,#readerBookmarkTab');
       if(tgt)return;
       const x=e.changedTouches[0].clientX;
+      const y=e.changedTouches[0].clientY;
       const w=overlay.clientWidth;
+      // Also exclude top-right corner (bookmark zone: top 120px, right 60px)
+      if(x > w - 60 && y < 120) return;
       if(x<w*0.3)goToPage(readerPage-1);
       else if(x>w*0.7)goToPage(readerPage+1);
     }
@@ -4797,26 +4800,43 @@ function renderBookmarkSVG(template, w=36, h=56, uid='bm', verticalLabel=false) 
   if(!template) return '';
   const shapeFn = BOOKMARK_SHAPES[template.shape] || BOOKMARK_SHAPES.classic;
   const p = shapeFn(w, h);
-  const body = template.colors?.body || '#1e3a5f';
+  const body   = template.colors?.body   || '#1e3a5f';
   const accent = template.colors?.accent || '#2a7c8a';
-  const textCol = template.colors?.text || '#ffffff';
+  const textCol= template.colors?.text   || '#ffffff';
   const stripeH = h * 0.10;
-  const iconY = verticalLabel ? h * 0.28 : h * 0.42;
-  const iconFs = Math.round(w * 0.48);
-  const labelFs = Math.round(w * 0.18);
-  // Vertical label: rotated text running down the body
-  const labelHtml = template.label && verticalLabel
-    ? `<text transform="translate(${w/2},${h*0.56}) rotate(90)"
+  const iconFs  = Math.round(w * 0.48);
+  const labelFs = Math.round(w * 0.17);
+
+  // Split label on '|' for two lines, e.g. "Ghost|Reader"
+  const labelParts = (template.label || '').split('|').map(s => s.trim()).filter(Boolean);
+
+  let labelHtml = '';
+  if(labelParts.length && verticalLabel) {
+    // Vertical mode: rotate each line 90° and stack them side by side along the bookmark
+    // Line 1 sits closer to icon, line 2 below
+    const spacing = labelFs * 1.4;
+    const startY  = h * 0.52;
+    labelHtml = labelParts.map((line, i) =>
+      `<text transform="translate(${w/2},${startY + i * spacing}) rotate(90)"
         text-anchor="middle" dominant-baseline="middle"
         font-size="${labelFs}" fill="${textCol}"
         font-family="system-ui,sans-serif" font-weight="600"
-        letter-spacing="0.08em">${esc(template.label)}</text>`
-    : template.label
-      ? `<text x="${w/2}" y="${h*0.65}" text-anchor="middle"
-          dominant-baseline="middle" font-size="${labelFs}"
-          fill="${textCol}" font-family="system-ui,sans-serif"
-          font-weight="500">${esc(template.label)}</text>`
-      : '';
+        letter-spacing="0.07em">${esc(line)}</text>`
+    ).join('');
+  } else if(labelParts.length) {
+    // Horizontal mode: stack lines centred
+    const totalH   = labelParts.length * labelFs * 1.35;
+    const startY   = h * 0.62 - totalH / 2 + labelFs * 0.5;
+    labelHtml = labelParts.map((line, i) =>
+      `<text x="${w/2}" y="${startY + i * labelFs * 1.35}"
+        text-anchor="middle" dominant-baseline="middle"
+        font-size="${labelFs}" fill="${textCol}"
+        font-family="system-ui,sans-serif" font-weight="500">${esc(line)}</text>`
+    ).join('');
+  }
+
+  // Icon sits just below the stripe; nudge down a little more when there are label lines
+  const iconY = h * (labelParts.length ? 0.28 : 0.40);
 
   return `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}"
     xmlns="http://www.w3.org/2000/svg" style="display:block;flex-shrink:0">
