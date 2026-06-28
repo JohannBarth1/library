@@ -4365,37 +4365,20 @@ function renderReaderBookmarkTab() {
 }
 
 function closeReader(){
-  // Move finished book: currently-reading → finished
-  if(readerBookId){
-    const crList = _userLists.find(l => l.id === 'currently-reading');
-    // Only mark finished if they've read past 90% of the book
-    const progress = getReadingProgress(readerBookId);
-    if(crList && progress >= 0.9){
-      const bookIds = (crList.bookIds || []).filter(id => id !== readerBookId);
-      crList.bookIds = bookIds;
-      setDoc(
-        doc(db, 'user_lists', currentUser.uid, 'lists', 'currently-reading'),
-        { bookIds, updatedAt: serverTimestamp() },
-        { merge: true }
-      ).catch(e => console.warn('closeReader list update:', e));
-
-      const finList = _userLists.find(l => l.id === 'finished');
-      if(finList && !(finList.bookIds || []).includes(readerBookId)){
-        const finIds = [...(finList.bookIds || []), readerBookId];
-        finList.bookIds = finIds;
-        setDoc(
-          doc(db, 'user_lists', currentUser.uid, 'lists', 'finished'),
-          { bookIds: finIds, updatedAt: serverTimestamp() },
-          { merge: true }
-        ).catch(e => console.warn('closeReader finished update:', e));
-        showToast('Added to Finished ✓');
-      }
-    }
-  }
-
-  // ... existing closeReader cleanup below this point (unchanged)
   document.getElementById('readerOverlay').classList.remove('open');
-  // etc.
+  document.getElementById('readerChapterList').classList.remove('open');
+  document.getElementById('readerSettingsBar').classList.remove('open');
+  const staging = document.getElementById('readerStagingContainer');
+  if(staging) staging.innerHTML = '';
+  const pageA = document.getElementById('readerPageA');
+  const pageB = document.getElementById('readerPageB');
+  if(pageA){ pageA.innerHTML = ''; pageA.id = 'readerPageA'; }
+  if(pageB){ pageB.innerHTML = ''; pageB.id = 'readerPageB'; }
+  document.getElementById('readerBookmarkTab')?.remove();
+  readerZip = null;
+  readerSpine = [];
+  readerBookId = null;
+}
 
 
 
@@ -5026,13 +5009,12 @@ async function showCheckoutHistory(bookId){
 }
 document.getElementById('btnCloseCheckoutModal').addEventListener('click',()=>document.getElementById('checkoutModal').classList.remove('open'));
 
-async function recordBookOpened(book) {
+  async function recordBookOpened(book) {
   if(!currentUser || !book) return;
   try {
     const due = new Date();
     due.setDate(due.getDate() + 14);
-
-    // ── 1. Checkout record (existing behaviour) ───────────────────────────
+    // Check if already has an active record
     if(!myCheckedOutIds.has(book.id)){
       await addDoc(collection(db, 'checkouts'), {
         bookId: book.id,
@@ -5045,8 +5027,10 @@ async function recordBookOpened(book) {
         openedAt: serverTimestamp(),
       });
       myCheckedOutIds.add(book.id);
+      renderMobHome();
+      renderDeskHome();
     } else {
-      // Extend the due date on the existing active checkout
+      // Update the openedAt timestamp on the most recent record
       const q = query(
         collection(db, 'checkouts'),
         where('bookId', '==', book.id),
@@ -5059,39 +5043,10 @@ async function recordBookOpened(book) {
       if(active.length){
         await updateDoc(doc(db, 'checkouts', active[0].id), {
           openedAt: serverTimestamp(),
-          dueDate: Timestamp.fromDate(due),
+          dueDate: Timestamp.fromDate(due), // extend by 14 days from last open
         });
       }
     }
-
-    // ── 2. Add to "currently-reading" list ───────────────────────────────
-    const crList = _userLists.find(l => l.id === 'currently-reading');
-    if(crList && !(crList.bookIds || []).includes(book.id)){
-      const bookIds = [...(crList.bookIds || []), book.id];
-      crList.bookIds = bookIds;
-      await setDoc(
-        doc(db, 'user_lists', currentUser.uid, 'lists', 'currently-reading'),
-        { bookIds, updatedAt: serverTimestamp() },
-        { merge: true }
-      );
-    }
-
-    // ── 3. Remove from "want-to-read" if it was there ────────────────────
-    const wtrList = _userLists.find(l => l.id === 'want-to-read');
-    if(wtrList && (wtrList.bookIds || []).includes(book.id)){
-      const bookIds = wtrList.bookIds.filter(id => id !== book.id);
-      wtrList.bookIds = bookIds;
-      await setDoc(
-        doc(db, 'user_lists', currentUser.uid, 'lists', 'want-to-read'),
-        { bookIds, updatedAt: serverTimestamp() },
-        { merge: true }
-      );
-    }
-
-    // ── 4. Refresh home panels ────────────────────────────────────────────
-    renderMobHome();
-    renderDeskHome();
-
   } catch(e) {
     console.warn('recordBookOpened:', e);
   }
@@ -6454,7 +6409,7 @@ function renderLoungeNotes(requests) {
   loadNewsClipsForGrid(requests);
 }
 
-  async function loadNewsClipsForGrid(requests) {
+async function loadNewsClipsForGrid(requests) {
   const grid = document.getElementById('loungeNotesGrid');
   if(!grid) return;
 
@@ -6471,195 +6426,52 @@ function renderLoungeNotes(requests) {
     return;
   }
 
-  // Seed-based pseudo-random so layout is stable per session
-  let _seed = 42;
-  function seededRand() {
-    _seed = (_seed * 1664525 + 1013904223) & 0xffffffff;
-    return ((_seed >>> 0) / 0xffffffff);
-  }
-
-  const ROTATIONS = [-5.2, 3.8, -1.4, 4.5, -3.0, 2.1, -4.1, 1.7, -2.6, 3.3, -0.9, 4.8, -3.7, 2.9];
-  const STICKY_COLORS = [
-    {bg:'#fef9c3',pin:'#ca8a04',text:'#713f12'},
-    {bg:'#dcfce7',pin:'#16a34a',text:'#14532d'},
-    {bg:'#ede9fe',pin:'#7c3aed',text:'#3b0764'},
-    {bg:'#fce7f3',pin:'#db2777',text:'#500724'},
-    {bg:'#dbeafe',pin:'#1d4ed8',text:'#1e3a8a'},
-    {bg:'#ffedd5',pin:'#c2410c',text:'#431407'},
-    {bg:'#cffafe',pin:'#0891b2',text:'#164e63'},
-  ];
-  const PAPER_TINTS = ['#faf7ef','#fffef8','#f8f6f0','#fefce8','#faf5ff'];
-  const WIDTHS_SM = [95,105,88,112,98,102,90,108];
-  const WIDTHS_LG = [130,145,120,155,135,140,125,150];
-
-  // Three distinct paper designs for news clips
-  function newsDesignA(clip, rot, w, tint) {
-    // Newspaper clipping with torn look via border-image
-    const daysLeft = clip.expiresAt?.toDate ? Math.ceil((clip.expiresAt.toDate() - new Date()) / 86400000) : '?';
-    const icon = clip.fileType?.includes('pdf') ? '📄' : clip.fileType?.startsWith('image') ? '🖼️' : '📎';
-    return `<div class="lp-newsA" style="
-      background:${tint};
-      transform:rotate(${rot}deg);
-      width:${w}px;
-      padding:10px 10px 12px;
-      box-shadow:2px 4px 12px rgba(0,0,0,.5),inset 0 0 0 1px rgba(0,0,0,.04);
-      flex-shrink:0;cursor:pointer;
-      margin:${7+Math.abs(rot)}px ${5+Math.abs(rot)*.4}px;
-      position:relative;
-      border-bottom:2px solid rgba(0,0,0,.08);
-      transition:transform .15s,box-shadow .15s;">
-      <div style="position:absolute;top:-8px;left:50%;transform:translateX(-50%);
-        width:24px;height:14px;border:2.5px solid #aaa;border-bottom:none;border-radius:5px 5px 0 0;"></div>
-      <div style="font-size:6.5px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;
-        color:#999;margin-bottom:4px;">${icon} news clip</div>
-      <div style="height:1.5px;background:rgba(0,0,0,.12);margin-bottom:5px;"></div>
-      <div style="font-size:9.5px;font-weight:700;color:#2c1f0e;line-height:1.35;margin-bottom:5px;">${esc(clip.title)}</div>
-      <div style="height:1px;background:rgba(0,0,0,.07);margin-bottom:3px;"></div>
-      <div style="height:1px;background:rgba(0,0,0,.05);width:65%;margin-bottom:4px;"></div>
-      <div style="font-size:7.5px;color:#888;line-height:1.4;">${esc(clip.uploaderName||'').split(' ')[0]}</div>
-      <div style="font-size:7px;color:#b84c1a;font-weight:700;margin-top:3px;">Expires in ${daysLeft}d</div>
-      ${clip.uploadedBy===currentUser?.uid?`<button onclick="event.stopPropagation();deleteNewsClip('${clip.id}','${clip.storagePath||''}')"
-        style="font-size:7px;background:rgba(180,76,26,.15);border:1px solid rgba(180,76,26,.25);
-               color:#b84c1a;border-radius:3px;padding:1px 5px;cursor:pointer;margin-top:4px;
-               display:block;">✕ remove</button>`:''}
-    </div>`;
-  }
-
-  function newsDesignB(clip, rot, w, col) {
-    // Coloured sticky note — landscape orientation for variety
-    const daysLeft = clip.expiresAt?.toDate ? Math.ceil((clip.expiresAt.toDate() - new Date()) / 86400000) : '?';
-    return `<div class="lp-newsB" style="
-      background:${col.bg};
-      transform:rotate(${rot}deg);
-      width:${w}px;
-      padding:8px 9px 9px;
-      box-shadow:2px 3px 10px rgba(0,0,0,.45);
-      flex-shrink:0;cursor:pointer;
-      margin:${9+Math.abs(rot)}px ${4+Math.abs(rot)*.5}px;
-      position:relative;
-      transition:transform .15s,box-shadow .15s;">
-      <div style="width:11px;height:11px;border-radius:50%;background:${col.pin};
-        position:absolute;top:-5px;left:50%;transform:translateX(-50%);
-        border:1.5px solid rgba(0,0,0,.2);box-shadow:0 1px 3px rgba(0,0,0,.3);"></div>
-      <div style="font-size:9px;font-weight:700;color:${col.text};line-height:1.4;
-        margin-bottom:3px;">${esc(clip.title)}</div>
-      <div style="font-size:7.5px;color:${col.text};opacity:.55;line-height:1.5;">
-        ${esc(clip.uploaderName||'').split(' ')[0]} · ${daysLeft}d left</div>
-      ${clip.uploadedBy===currentUser?.uid?`<button onclick="event.stopPropagation();deleteNewsClip('${clip.id}','${clip.storagePath||''}')"
-        style="font-size:7px;background:rgba(0,0,0,.1);border:1px solid rgba(0,0,0,.15);
-               color:${col.text};opacity:.7;border-radius:3px;padding:1px 5px;cursor:pointer;
-               margin-top:5px;display:block;">✕</button>`:''}
-    </div>`;
-  }
-
-  function newsDesignC(clip, rot, w, tint) {
-    // Index card with ruled lines — portrait
-    const daysLeft = clip.expiresAt?.toDate ? Math.ceil((clip.expiresAt.toDate() - new Date()) / 86400000) : '?';
-    const accentColors = ['#e11d48','#0284c7','#16a34a','#9333ea','#ea580c'];
-    const accent = accentColors[Math.floor(seededRand() * accentColors.length)];
-    return `<div class="lp-newsC" style="
-      background:${tint};
-      transform:rotate(${rot}deg);
-      width:${w}px;
-      padding:6px 8px 9px;
-      box-shadow:1px 2px 9px rgba(0,0,0,.4);
-      flex-shrink:0;cursor:pointer;
-      margin:${6+Math.abs(rot)}px ${3+Math.abs(rot)*.4}px;
-      position:relative;
-      border-top:3px solid ${accent};
-      transition:transform .15s,box-shadow .15s;">
-      <div style="font-size:6.5px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;
-        color:${accent};margin-bottom:4px;">news clip</div>
-      <div style="font-size:9px;font-weight:700;color:#1c1917;line-height:1.3;margin-bottom:5px;">
-        ${esc(clip.title)}</div>
-      ${[0,1,2].map(i=>`<div style="height:${i===0?'1.5px':'1px'};background:rgba(0,0,0,${i===0?.1:.05});margin-bottom:3px;"></div>`).join('')}
-      <div style="font-size:7px;color:#78716c;margin-top:3px;">
-        ${esc(clip.uploaderName||'').split(' ')[0]} · expires ${daysLeft}d</div>
-      ${clip.uploadedBy===currentUser?.uid?`<button onclick="event.stopPropagation();deleteNewsClip('${clip.id}','${clip.storagePath||''}')"
-        style="font-size:7px;background:rgba(0,0,0,.08);border:1px solid rgba(0,0,0,.12);
-               color:#78716c;border-radius:3px;padding:1px 5px;cursor:pointer;
-               margin-top:4px;display:block;">✕</button>`:''}
-    </div>`;
-  }
-
+  // Interleave requests (stickies) and news (papers) with random-ish layout
   const items = [];
-  requests.forEach((r, i) => items.push({ type:'request', data:{...r,_idx:i}, idx:i }));
+  requests.forEach((r, i) => items.push({ type:'request', data:{...r, _idx:i}, idx:i }));
   newsClips.forEach((n, i) => items.push({ type:'news', data:n, idx:i }));
 
-  // Shuffle items slightly for organic mixing (stable per session)
-  const shuffled = [...items].sort(() => seededRand() - 0.5);
-
-  grid.innerHTML = shuffled.map(({ type, data, idx }) => {
+  grid.innerHTML = items.map(({ type, data, idx }) => {
     const rot = ROTATIONS[idx % ROTATIONS.length];
     const isMine = data.authorId === currentUser?.uid || data.uploadedBy === currentUser?.uid;
 
     if(type === 'request') {
       const col = data.type === 'broadcast'
-        ? {bg:'#fee2e2',pin:'#ef4444',text:'#450a0a'}
+        ? { bg:'#fee2e2', pin:'#ef4444' }
         : STICKY_COLORS[idx % STICKY_COLORS.length];
       const commentCount = data.commentCount || 0;
-      const w = WIDTHS_SM[idx % WIDTHS_SM.length];
-      return `<div class="lounge-sticky" data-reqid="${data.id}" style="
-        background:${col.bg};transform:rotate(${rot}deg);
-        margin:${8+Math.abs(rot)}px ${5+Math.abs(rot)*.5}px;
-        width:${w}px;max-width:none;">
+      return `<div class="lounge-sticky" data-reqid="${data.id}" style="background:${col.bg};transform:rotate(${rot}deg);margin:${8+Math.abs(rot)}px ${6+Math.abs(rot)*0.5}px;width:calc(50% - 20px);max-width:155px;">
         <div class="ls-pin" style="background:${col.pin};"></div>
-        <div class="ls-label" style="${data.type==='broadcast'?'color:#ef4444;opacity:.7;':''}">${data.type==='broadcast'?'📢 broadcast':'📚 request'}</div>
-        <div class="ls-text" style="color:${col.text}">${esc(data.title)}</div>
-        ${data.description?`<div style="font-size:7.5px;opacity:.45;margin-top:3px;font-style:italic;line-height:1.4;">${esc(data.description.slice(0,55))}${data.description.length>55?'…':''}</div>`:''}
-        <div class="ls-meta" style="color:${col.text};opacity:.4;">${esc((data.authorName||'').split(' ')[0])} · ${data.createdAt?.toDate?.()?timeAgo(data.createdAt.toDate()):''}</div>
-        ${commentCount?`<div style="font-size:7.5px;opacity:.4;margin-top:3px;">💬 ${commentCount}</div>`:''}
-        ${(isMine||isAdmin)?`<div style="display:flex;gap:3px;margin-top:4px;">
-          <button onclick="event.stopPropagation();showLoungeRequestModal({id:'${data.id}',title:'${esc(data.title)}',description:'${esc(data.description||'')}'})"
-            style="font-size:7px;background:rgba(0,0,0,.08);border:none;border-radius:3px;padding:1px 5px;cursor:pointer;color:${col.text};">✎</button>
-          <button onclick="event.stopPropagation();deleteRequest('${data.id}')"
-            style="font-size:7px;background:rgba(0,0,0,.08);border:none;border-radius:3px;padding:1px 5px;cursor:pointer;color:#b84c1a;">✕</button>
-        </div>`:''}
-      </div>`;
+        <div class="ls-label" style="${data.type==='broadcast'?'color:#ef4444;opacity:.7;':''}">${data.type==='broadcast'?'📢 broadcast':data.description?.toLowerCase().includes('challenge')?'challenge':'request'}</div>
+        <div class="ls-text">${esc(data.title)}</div>
+        ${data.description?`<div style="font-size:8px;opacity:.45;margin-top:3px;font-style:italic;">${esc(data.description.slice(0,60))}${data.description.length>60?'…':''}</div>`:''}
+        <div class="ls-meta">${esc((data.authorName||'').split(' ')[0])} · ${data.createdAt?.toDate?.()?timeAgo(data.createdAt.toDate()):''}</div>
+        ${commentCount?`<div style="font-size:7.5px;opacity:.4;margin-top:4px;">💬 ${commentCount} comment${commentCount!==1?'s':''}</div>`:''}
+        ${(isMine||isAdmin)?`<div style="display:flex;gap:3px;margin-top:4px;"><button onclick="event.stopPropagation();showLoungeRequestModal({id:'${data.id}',title:'${esc(data.title)}',description:'${esc(data.description||'')}'} )" style="font-size:7px;background:rgba(0,0,0,.08);border:none;border-radius:3px;padding:1px 5px;cursor:pointer;">✎</button><button onclick="event.stopPropagation();deleteRequest('${data.id}')" style="font-size:7px;background:rgba(0,0,0,.08);border:none;border-radius:3px;padding:1px 5px;cursor:pointer;color:#b84c1a;">✕</button></div>`:''}
+        </div>`;
     } else {
-      // News clip — pick a design based on seeded random
-      const designChoice = Math.floor(seededRand() * 3);
-      const w = designChoice === 1
-        ? WIDTHS_LG[idx % WIDTHS_LG.length]   // sticky wider
-        : WIDTHS_SM[idx % WIDTHS_SM.length];   // paper/card narrower
-      const tint = PAPER_TINTS[idx % PAPER_TINTS.length];
-      const col = STICKY_COLORS[(idx + 2) % STICKY_COLORS.length];
-
-      let html;
-      if(designChoice === 0)      html = newsDesignA(data, rot, w, tint);
-      else if(designChoice === 1) html = newsDesignB(data, rot, w, col);
-      else                        html = newsDesignC(data, rot, w, tint);
-
-      return `<div onclick="window.open('${data.url}','_blank')"
-        style="display:contents">${html}</div>`;
+      // News paper
+      const icon = data.fileType?.includes('pdf') ? '📄' : data.fileType?.startsWith('image') ? '🖼️' : '📎';
+      const expires = data.expiresAt?.toDate?.();
+      const daysLeft = expires ? Math.ceil((expires - new Date()) / 86400000) : '?';
+      return `<div class="lounge-paper" onclick="window.open('${data.url}','_blank')" style="transform:rotate(${rot}deg);margin:${10+Math.abs(rot)}px ${6+Math.abs(rot)*0.5}px;width:calc(50% - 20px);max-width:155px;">
+        <div class="lp-clip"></div>
+        <div class="lp-title">${esc(data.title)}</div>
+        <div class="lp-line"></div><div class="lp-line" style="width:70%"></div>
+        <div class="lp-meta">${icon} ${esc((data.uploaderName||'').split(' ')[0])}</div>
+        <div class="lp-exp">Expires in ${daysLeft} day${daysLeft!==1?'s':''}</div>
+        ${isMine?`<button onclick="event.stopPropagation();deleteNewsClip('${data.id}','${data.storagePath||''}')" style="font-size:7px;background:rgba(180,76,26,.15);border:1px solid rgba(180,76,26,.25);color:#b84c1a;border-radius:3px;padding:1px 5px;cursor:pointer;margin-top:4px;">✕ remove</button>`:''}
+      </div>`;
     }
   }).join('');
 
-  // Tap to open requests
-  grid.querySelectorAll('[data-reqid]').forEach(el => {
-    el.addEventListener('click', () => {
-      const req = requests.find(r => r.id === el.dataset.reqid);
-      if(req) showLoungeRequestDetail({...req, _idx: requests.indexOf(req)});
-    });
-  });
-
-  // Hover lift effect for all paper items
-  grid.querySelectorAll('.lp-newsA,.lp-newsB,.lp-newsC').forEach(el => {
-    const origTransform = el.style.transform;
-    el.addEventListener('mouseenter', () => {
-      el.style.transform = origTransform.replace(/rotate\(([^)]+)\)/, m => {
-        const deg = parseFloat(m.match(/-?[\d.]+/)[0]);
-        return `rotate(${deg*0.25}deg) scale(1.05)`;
+  // Sticky tap → open request modal for comments
+    grid.querySelectorAll('[data-reqid]').forEach((el, i) => {
+      el.addEventListener('click', () => {
+        const req = requests.find(r => r.id === el.dataset.reqid);
+        if(req) showLoungeRequestDetail({...req, _idx: requests.indexOf(req)});
       });
-      el.style.boxShadow = '4px 7px 18px rgba(0,0,0,.6)';
-      el.style.zIndex = '5';
     });
-    el.addEventListener('mouseleave', () => {
-      el.style.transform = origTransform;
-      el.style.boxShadow = '';
-      el.style.zIndex = '';
-    });
-  });
 }
 
 function loungeReact(reqId) {
