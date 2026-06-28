@@ -4288,7 +4288,6 @@ async function removeReaderBookmark(bookId) {
 }
 
 function renderReaderBookmarkTab() {
-  // Remove any existing tab first
   document.getElementById('readerBookmarkTab')?.remove();
 
   const content = document.getElementById('readerContent');
@@ -4296,7 +4295,10 @@ function renderReaderBookmarkTab() {
 
   const bm = getReaderBookmark(readerBookId);
   const isPlaced = bm && bm.chapterIdx === readerChapter && bm.pageIdx === readerPage;
-  const isOtherPage = bm && !(bm.chapterIdx === readerChapter && bm.pageIdx === readerPage);
+  const isOtherPage = bm && !isPlaced;
+
+  // If bookmark exists but is on a different page — hide entirely, don't render
+  if(isOtherPage) return;
 
   const bmTpl = {
     shape: 'classic',
@@ -4307,12 +4309,13 @@ function renderReaderBookmarkTab() {
 
   const tab = document.createElement('div');
   tab.id = 'readerBookmarkTab';
-  tab.className = 'reader-bookmark-tab' + (isPlaced ? ' placed' : '') +
-    (isOtherPage && !isPlaced ? ' reader-bookmark-ghost' : '');
-  tab.title = isPlaced ? 'Remove bookmark' : bm ? 'Move bookmark here' : 'Place bookmark here';
+  tab.className = 'reader-bookmark-tab' + (isPlaced ? ' placed' : '');
+
+  // When not placed: show very faint so user knows they can tap to place
+  tab.style.opacity = isPlaced ? '1' : '0.15';
+  tab.title = isPlaced ? 'Tap to remove bookmark' : 'Tap to place bookmark here';
   tab.innerHTML = renderBookmarkSVG(bmTpl, 28, 88, 'rdrbm', true);
 
-  // Position it relative to the reader content container
   content.style.position = 'relative';
   content.appendChild(tab);
 
@@ -4326,7 +4329,6 @@ function renderReaderBookmarkTab() {
       showToast('Bookmark placed 🔖');
     }
     renderReaderBookmarkTab();
-    // Refresh card ribbons
     renderAll();
   });
 }
