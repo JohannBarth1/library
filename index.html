@@ -4804,39 +4804,55 @@ function renderBookmarkSVG(template, w=36, h=56, uid='bm', verticalLabel=false) 
   const accent = template.colors?.accent || '#2a7c8a';
   const textCol= template.colors?.text   || '#ffffff';
   const stripeH = h * 0.10;
-  const iconFs  = Math.round(w * 0.48);
-  const labelFs = Math.round(w * 0.17);
+  const iconFs  = Math.round(w * 0.52);   // slightly larger icon
+  const labelFs = Math.round(w * 0.22);   // bigger label text (was 0.17)
 
-  // Split label on '|' for two lines, e.g. "Ghost|Reader"
-  const labelParts = (template.label || '').split('|').map(s => s.trim()).filter(Boolean);
+  // Split label on '|' for two lines e.g. "Ghost|Reader"
+  // Also auto-split single long words at mid-point if > 8 chars and no '|' given
+  let rawLabel = template.label || '';
+  if(!rawLabel.includes('|') && rawLabel.length > 8 && verticalLabel) {
+    const mid = Math.ceil(rawLabel.length / 2);
+    // Find nearest space to mid, else hard-split
+    let splitAt = mid;
+    for(let i = 0; i <= 3; i++) {
+      if(rawLabel[mid + i] === ' ') { splitAt = mid + i; break; }
+      if(rawLabel[mid - i] === ' ') { splitAt = mid - i; break; }
+    }
+    rawLabel = rawLabel.slice(0, splitAt).trim() + '|' + rawLabel.slice(splitAt).trim();
+  }
+  const labelParts = rawLabel.split('|').map(s => s.trim()).filter(Boolean);
 
   let labelHtml = '';
   if(labelParts.length && verticalLabel) {
-    // Vertical mode: rotate each line 90° and stack them side by side along the bookmark
-    // Line 1 sits closer to icon, line 2 below
-    const spacing = labelFs * 1.4;
-    const startY  = h * 0.52;
+    // Vertical: each line rotated 90°, stacked down the bookmark body
+    // Two lines are spaced so both fit comfortably above the pointed tip
+    const lineGap   = labelFs * 1.5;
+    // Centre the block of lines in the lower 60% of the bookmark body
+    const bodyEnd   = h * 0.80;   // above the pointed tip
+    const blockH    = (labelParts.length - 1) * lineGap;
+    const startY    = h * 0.48 + (bodyEnd - h * 0.48 - blockH) / 2;
     labelHtml = labelParts.map((line, i) =>
-      `<text transform="translate(${w/2},${startY + i * spacing}) rotate(90)"
+      `<text transform="translate(${w / 2},${startY + i * lineGap}) rotate(90)"
         text-anchor="middle" dominant-baseline="middle"
         font-size="${labelFs}" fill="${textCol}"
-        font-family="system-ui,sans-serif" font-weight="600"
-        letter-spacing="0.07em">${esc(line)}</text>`
+        font-family="system-ui,sans-serif" font-weight="700"
+        letter-spacing="0.06em">${esc(line)}</text>`
     ).join('');
   } else if(labelParts.length) {
-    // Horizontal mode: stack lines centred
-    const totalH   = labelParts.length * labelFs * 1.35;
-    const startY   = h * 0.62 - totalH / 2 + labelFs * 0.5;
+    // Horizontal: centred lines stacked in lower portion
+    const lineGap = labelFs * 1.35;
+    const blockH  = (labelParts.length - 1) * lineGap;
+    const startY  = h * 0.65 - blockH / 2;
     labelHtml = labelParts.map((line, i) =>
-      `<text x="${w/2}" y="${startY + i * labelFs * 1.35}"
+      `<text x="${w / 2}" y="${startY + i * lineGap}"
         text-anchor="middle" dominant-baseline="middle"
         font-size="${labelFs}" fill="${textCol}"
-        font-family="system-ui,sans-serif" font-weight="500">${esc(line)}</text>`
+        font-family="system-ui,sans-serif" font-weight="600">${esc(line)}</text>`
     ).join('');
   }
 
-  // Icon sits just below the stripe; nudge down a little more when there are label lines
-  const iconY = h * (labelParts.length ? 0.28 : 0.40);
+  // Icon: lower when there are label lines below it
+  const iconY = h * (labelParts.length ? 0.26 : 0.42);
 
   return `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}"
     xmlns="http://www.w3.org/2000/svg" style="display:block;flex-shrink:0">
@@ -7961,8 +7977,9 @@ function showBookmarkEditor(templateId, preselectedBookId) {
 
       // Award if a user was selected
         if(awardUserId && (condType === 'manual' || condType === 'seasonal')) {
+          const everyoneList = await loadAllUsersIncludingSelf();
           const targets = awardUserId === '__all__'
-            ? allUsers.map(u => u.uid)
+            ? everyoneList.map(u => u.uid)
             : [awardUserId];
         
           for(const uid of targets) {
@@ -7990,6 +8007,7 @@ function showBookmarkEditor(templateId, preselectedBookId) {
       hideLoading();
       showToast('Failed: ' + e.message);
       console.error(e);
+      return;
     }
     hideLoading();
   });
