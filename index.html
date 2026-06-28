@@ -2326,14 +2326,9 @@ async function renderDeskHome(){
   } else recSection.style.display='none';
 
   // Signed out books
+  // Hide the checkout section — "Currently Reading" list covers this use case
   const checkoutSection=document.getElementById('deskHomeCheckoutSection');
-  const checkoutGrid=document.getElementById('deskHomeCheckoutGrid');
-  const checkedOutBooks=[...myCheckedOutIds].map(id=>[...library,...communityLib].find(b=>b.id===id)).filter(Boolean);
-  if(checkedOutBooks.length){
-    checkoutSection.style.display='';
-    checkoutGrid.innerHTML = checkedOutBooks.map(b=>bookCardHtml(b, communityLib.some(x=>x.id===b.id), true)).join('');
-    checkoutGrid.querySelectorAll('.book-card[data-bookid]').forEach(c=>c.addEventListener('click',()=>{hideDeskHome();showBookById(c.dataset.bookid);}));
-  } else checkoutSection.style.display='none';
+  if(checkoutSection) checkoutSection.style.display='none';
 
   // Books I have shared privately with others
   const sharedByMe=library.filter(b=>b.allowedUsers&&b.allowedUsers.length>0);
@@ -3335,72 +3330,62 @@ async function renderMobHome(){
       </div>
     </div>`;
 
-  const bookGrid = (books, showProg=false) => {
-    if(!books.length) return `<div style="font-size:.82rem;color:var(--muted);
-      padding:.3rem 0">Nothing here yet</div>`;
-    return `<div style="${GRID_STYLE}">
-      ${books.map(b => uniformBookCard(b, showProg)).join('')}
-    </div>`;
+  const bookGrid = (books) => {
+    if(!books.length) return `<div style="font-size:.82rem;color:var(--muted);padding:.3rem 0">Nothing here yet</div>`;
+    return `<div style="${GRID_STYLE}">${books.map(b => uniformBookCard(b)).join('')}</div>`;
   };
 
-  // Data
-  const checkedOutBooks = [...myCheckedOutIds]
-    .map(id => [...library,...communityLib].find(b=>b.id===id)).filter(Boolean);
+  // ── Data ──────────────────────────────────────────────────────────────────
 
-  const recommended = [...library,...communityLib]
-    .filter(b=>b.recommended)
-    .filter((b,i,arr)=>arr.findIndex(x=>x.id===b.id)===i);
-
-  const sharedByMe = library.filter(b=>b.allowedUsers&&b.allowedUsers.length>0);
-
-  const sharedWithMe = communityLib.filter(b=>
-    b.ownerId!==currentUser?.uid &&
-    b.allowedUsers?.includes(currentUser?.uid)
-  );
-
-  const awardedBookmarks = _myBookmarks.filter(b=>b.type==='award'&&b.displayed!==false);
-
-  const recent = library.slice(0,12);
-
-  // Build sections
-  let html = '';
-
+  // 1. Currently Reading list
   const currentlyReading = (_userLists.find(l => l.id === 'currently-reading')?.bookIds || [])
     .map(id => [...library, ...communityLib].find(b => b.id === id))
     .filter(Boolean);
-  
-  if(currentlyReading.length) html += section(
-    '📖 Currently Reading',
-    'home_reading',
-    bookGrid(currentlyReading, true),
-    true
-  );
-  
-  if(checkedOutBooks.length) html += section(
-    '🕐 Recently Opened',
-    'home_opened',
-    bookGrid(checkedOutBooks, true),
-    false
+
+  // 2. Recommended (deduplicated across own + community)
+  const recommended = [...library, ...communityLib]
+    .filter(b => b.recommended)
+    .filter((b,i,arr) => arr.findIndex(x => x.id === b.id) === i);
+
+  // 3. Award bookmarks earned
+  const awardedBookmarks = _myBookmarks.filter(b => b.type === 'award' && b.displayed !== false);
+
+  // 4. Privately shared
+  const sharedByMe = library.filter(b => b.allowedUsers && b.allowedUsers.length > 0);
+  const sharedWithMe = communityLib.filter(b =>
+    b.ownerId !== currentUser?.uid && b.allowedUsers?.includes(currentUser?.uid)
   );
 
-  if(recommended.length) html += section(
-    '⭐ Recommended',
-    'home_rec',
-    bookGrid(recommended),
-    true
+  // 5. Custom lists (non-system, non-empty; exclude currently-reading already shown above)
+  const customLists = _userLists.filter(l =>
+    !l.system && (l.bookIds || []).length > 0
   );
+
+  // 6. Recently added to my library
+  const recent = library.slice(0, 12);
+
+  // ── Render ────────────────────────────────────────────────────────────────
+  let html = '';
+
+  if(currentlyReading.length) {
+    html += section('📖 Currently Reading', 'home_reading', bookGrid(currentlyReading), true);
+  }
+
+  if(recommended.length) {
+    html += section('⭐ Recommended', 'home_rec', bookGrid(recommended), true);
+  }
 
   if(awardedBookmarks.length) {
     const bmHtml = `<div style="display:flex;flex-wrap:wrap;gap:.6rem;padding:.1rem 0">
       ${awardedBookmarks.map(ub => {
-        const t = _bookmarkTemplates.find(x=>x.id===ub.bookmarkId);
+        const t = _bookmarkTemplates.find(x => x.id === ub.bookmarkId);
         if(!t) return '';
-        const book = [...library,...communityLib].find(b=>b.id===ub.bookId);
+        const book = [...library, ...communityLib].find(b => b.id === ub.bookId);
         return `<div style="display:flex;flex-direction:column;align-items:center;
                             gap:3px;cursor:pointer"
-                  onclick="${book?`mob_showBook('${book.id}')`:''}"
-                  title="${esc(t.name)}${ub.note?' — '+ub.note:''}">
-          ${renderBookmarkSVG(t,32,50,'home'+ub.id)}
+                  onclick="${book ? `mob_showBook('${book.id}')` : ''}"
+                  title="${esc(t.name)}${ub.note ? ' — ' + ub.note : ''}">
+          ${renderBookmarkSVG(t, 32, 50, 'home'+ub.id)}
           <div style="font-size:.58rem;color:var(--muted);text-align:center;
                       max-width:42px;overflow:hidden;text-overflow:ellipsis;
                       white-space:nowrap">${esc(t.name)}</div>
@@ -3410,41 +3395,38 @@ async function renderMobHome(){
     html += section('🎖 My Bookmarks', 'home_bm', bmHtml, true);
   }
 
-  if(sharedByMe.length) html += section(
-    '🔒 Shared by Me',
-    'home_sharedby',
-    bookGrid(sharedByMe),
-    false
-  );
+  if(sharedByMe.length) {
+    html += section('🔒 Shared by Me', 'home_sharedby', bookGrid(sharedByMe), false);
+  }
 
-  if(sharedWithMe.length) html += section(
-    '🔒 Shared with Me',
-    'home_sharedwith',
-    bookGrid(sharedWithMe),
-    false
-  );
+  if(sharedWithMe.length) {
+    html += section('🔒 Shared with Me', 'home_sharedwith', bookGrid(sharedWithMe), false);
+  }
 
-  // Lists
-  const nonEmptyLists = _userLists.filter(l=>(l.bookIds||[]).length>0);
-  for(const list of nonEmptyLists) {
-    const books = (list.bookIds||[])
-      .map(id=>[...library,...communityLib].find(b=>b.id===id))
+  // Custom user-created lists
+  for(const list of customLists) {
+    const books = (list.bookIds || [])
+      .map(id => [...library, ...communityLib].find(b => b.id === id))
       .filter(Boolean);
     if(!books.length) continue;
     html += section(
-      `${list.icon||'📚'} ${esc(list.name)}`,
-      'home_list_'+list.id,
+      `${list.icon || '📚'} ${esc(list.name)}`,
+      'home_list_' + list.id,
       bookGrid(books),
       false
     );
   }
 
-  html += section(
-    '🕐 Recently Added',
-    'home_recent',
-    bookGrid(recent),
-    false
-  );
+  if(recent.length) {
+    html += section('🕐 Recently Added', 'home_recent', bookGrid(recent), false);
+  }
+
+  if(!html) {
+    html = `<div style="text-align:center;padding:3rem 1rem;color:var(--muted)">
+      <div style="font-size:2.5rem;opacity:.2;margin-bottom:.8rem">📚</div>
+      <div style="font-size:.9rem">Upload books to get started</div>
+    </div>`;
+  }
 
   document.getElementById('mobHomeContent').innerHTML = html;
 
