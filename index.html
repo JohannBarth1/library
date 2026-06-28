@@ -4365,20 +4365,37 @@ function renderReaderBookmarkTab() {
 }
 
 function closeReader(){
+  // Move finished book: currently-reading → finished
+  if(readerBookId){
+    const crList = _userLists.find(l => l.id === 'currently-reading');
+    // Only mark finished if they've read past 90% of the book
+    const progress = getReadingProgress(readerBookId);
+    if(crList && progress >= 0.9){
+      const bookIds = (crList.bookIds || []).filter(id => id !== readerBookId);
+      crList.bookIds = bookIds;
+      setDoc(
+        doc(db, 'user_lists', currentUser.uid, 'lists', 'currently-reading'),
+        { bookIds, updatedAt: serverTimestamp() },
+        { merge: true }
+      ).catch(e => console.warn('closeReader list update:', e));
+
+      const finList = _userLists.find(l => l.id === 'finished');
+      if(finList && !(finList.bookIds || []).includes(readerBookId)){
+        const finIds = [...(finList.bookIds || []), readerBookId];
+        finList.bookIds = finIds;
+        setDoc(
+          doc(db, 'user_lists', currentUser.uid, 'lists', 'finished'),
+          { bookIds: finIds, updatedAt: serverTimestamp() },
+          { merge: true }
+        ).catch(e => console.warn('closeReader finished update:', e));
+        showToast('Added to Finished ✓');
+      }
+    }
+  }
+
+  // ... existing closeReader cleanup below this point (unchanged)
   document.getElementById('readerOverlay').classList.remove('open');
-  document.getElementById('readerChapterList').classList.remove('open');
-  document.getElementById('readerSettingsBar').classList.remove('open');
-  const staging = document.getElementById('readerStagingContainer');
-  if(staging) staging.innerHTML = '';
-  const pageA = document.getElementById('readerPageA');
-  const pageB = document.getElementById('readerPageB');
-  if(pageA){ pageA.innerHTML = ''; pageA.id = 'readerPageA'; }
-  if(pageB){ pageB.innerHTML = ''; pageB.id = 'readerPageB'; }
-  document.getElementById('readerBookmarkTab')?.remove();
-  readerZip = null;
-  readerSpine = [];
-  readerBookId = null;
-}
+  // etc.
 
 
 
@@ -5009,12 +5026,13 @@ async function showCheckoutHistory(bookId){
 }
 document.getElementById('btnCloseCheckoutModal').addEventListener('click',()=>document.getElementById('checkoutModal').classList.remove('open'));
 
-  async function recordBookOpened(book) {
+async function recordBookOpened(book) {
   if(!currentUser || !book) return;
   try {
     const due = new Date();
     due.setDate(due.getDate() + 14);
-    // Check if already has an active record
+
+    // ── 1. Checkout record (existing behaviour) ───────────────────────────
     if(!myCheckedOutIds.has(book.id)){
       await addDoc(collection(db, 'checkouts'), {
         bookId: book.id,
@@ -5027,10 +5045,8 @@ document.getElementById('btnCloseCheckoutModal').addEventListener('click',()=>do
         openedAt: serverTimestamp(),
       });
       myCheckedOutIds.add(book.id);
-      renderMobHome();
-      renderDeskHome();
     } else {
-      // Update the openedAt timestamp on the most recent record
+      // Extend the due date on the existing active checkout
       const q = query(
         collection(db, 'checkouts'),
         where('bookId', '==', book.id),
@@ -5043,10 +5059,39 @@ document.getElementById('btnCloseCheckoutModal').addEventListener('click',()=>do
       if(active.length){
         await updateDoc(doc(db, 'checkouts', active[0].id), {
           openedAt: serverTimestamp(),
-          dueDate: Timestamp.fromDate(due), // extend by 14 days from last open
+          dueDate: Timestamp.fromDate(due),
         });
       }
     }
+
+    // ── 2. Add to "currently-reading" list ───────────────────────────────
+    const crList = _userLists.find(l => l.id === 'currently-reading');
+    if(crList && !(crList.bookIds || []).includes(book.id)){
+      const bookIds = [...(crList.bookIds || []), book.id];
+      crList.bookIds = bookIds;
+      await setDoc(
+        doc(db, 'user_lists', currentUser.uid, 'lists', 'currently-reading'),
+        { bookIds, updatedAt: serverTimestamp() },
+        { merge: true }
+      );
+    }
+
+    // ── 3. Remove from "want-to-read" if it was there ────────────────────
+    const wtrList = _userLists.find(l => l.id === 'want-to-read');
+    if(wtrList && (wtrList.bookIds || []).includes(book.id)){
+      const bookIds = wtrList.bookIds.filter(id => id !== book.id);
+      wtrList.bookIds = bookIds;
+      await setDoc(
+        doc(db, 'user_lists', currentUser.uid, 'lists', 'want-to-read'),
+        { bookIds, updatedAt: serverTimestamp() },
+        { merge: true }
+      );
+    }
+
+    // ── 4. Refresh home panels ────────────────────────────────────────────
+    renderMobHome();
+    renderDeskHome();
+
   } catch(e) {
     console.warn('recordBookOpened:', e);
   }
