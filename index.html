@@ -522,6 +522,33 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .btn-kobo{background:transparent;color:var(--teal);border-color:var(--teal);}
 .btn-kobo:hover{background:var(--teal-light);}
 
+  /* ── IN-READER BOOKMARK TAB ── */
+.reader-bookmark-tab {
+  position: absolute;
+  top: 0;
+  right: clamp(12px, 4vw, 48px);
+  width: 28px;
+  z-index: 10;
+  cursor: pointer;
+  filter: drop-shadow(1px 3px 4px rgba(0,0,0,0.35));
+  transition: transform .15s, filter .15s;
+  -webkit-tap-highlight-color: transparent;
+}
+.reader-bookmark-tab:hover {
+  transform: translateY(4px);
+  filter: drop-shadow(1px 5px 6px rgba(0,0,0,0.45));
+}
+.reader-bookmark-tab.placed {
+  transform: translateY(0);
+}
+.reader-bookmark-ghost {
+  opacity: 0.25;
+  transition: opacity .2s;
+}
+.reader-bookmark-ghost:hover {
+  opacity: 0.55;
+}
+
   <div style="margin-top:1rem;padding-top:.8rem;border-top:1px solid var(--border)">
   <div style="font-family:'Playfair Display',serif;font-size:.9rem;color:var(--navy2);margin-bottom:.7rem">🏷 Categories &amp; Tags</div>
   <button class="btn-save" style="width:100%;margin-bottom:.4rem;font-size:.72rem;padding:.45rem" id="deskManageCatsBtn">Manage Categories</button>
@@ -3194,10 +3221,15 @@ function matchesQ(b,q){return(b.title||'').toLowerCase().includes(q)||(b.author|
   const coverSrc = getCoverSrc(b);
   const isComm = communityLib.some(x=>x.id===b.id);
   const avg = isComm ? getAvgRating(b) : 0;
-  const awardBookmarks = getAwardBookmarksForBook(b.id);
+const awardBookmarks = getAwardBookmarksForBook(b.id);
   const awardTemplate = awardBookmarks[0]
     ? _bookmarkTemplates.find(t=>t.id===awardBookmarks[0].bookmarkId)
     : null;
+
+  // Reading-position bookmark (top-right)
+  const isCurrentlyReading = (_userLists.find(l => l.id === 'currently-reading')?.bookIds || []).includes(b.id);
+  const hasProgress = getReadingProgress(b.id) > 0;
+  const _readingBmTpl = { shape:'classic', icon:'📖', label:'', colors:{ body:'#0f1a2e', accent:'#c8952a', text:'#faf7f2' } };
 
   const coverHtml = coverSrc
     ? `<img src="${coverSrc}" alt="" loading="lazy"
@@ -3213,12 +3245,19 @@ function matchesQ(b,q){return(b.title||'').toLowerCase().includes(q)||(b.author|
                     overflow:hidden;padding:0 .2rem">${esc(b.title)}</div>
       </div>`;
 
-  const ribbonHtml = awardTemplate
-    ? `<div style="position:absolute;top:0;right:3px;z-index:3;
+const awardRibbonHtml = awardTemplate
+    ? `<div style="position:absolute;top:0;left:3px;z-index:3;
                    filter:drop-shadow(1px 2px 2px rgba(0,0,0,0.3))">
-        ${renderBookmarkSVG(awardTemplate,18,28,'uc'+b.id)}
+        ${renderBookmarkSVG(awardTemplate, 16, 26, 'uca'+b.id)}
        </div>`
     : '';
+  const readingRibbonHtml = (isCurrentlyReading || hasProgress)
+    ? `<div style="position:absolute;top:0;right:3px;z-index:3;
+                   filter:drop-shadow(1px 2px 2px rgba(0,0,0,0.35))">
+        ${renderBookmarkSVG(_readingBmTpl, 16, 46, 'ucr'+b.id)}
+       </div>`
+    : '';
+  const ribbonHtml = awardRibbonHtml + readingRibbonHtml;
 
   const prog = getReadingProgress(b.id);
   const progBar = prog > 0
@@ -3432,16 +3471,34 @@ function bookCardHtml(b, isComm, showProgress=false){
   const isMyPublicBook = b.ownerId===currentUser?.uid && b.visibility==='public';
 
   // Award bookmark ribbon (top-right)
+// Award bookmark (top-left ribbon)
   const awardBookmarks = getAwardBookmarksForBook(b.id);
   const topAward = awardBookmarks[0];
   const awardTemplate = topAward
     ? _bookmarkTemplates.find(t => t.id === topAward.bookmarkId)
     : null;
-  const ribbonHtml = awardTemplate
-    ? `<div style="position:absolute;top:0;right:4px;z-index:3;filter:drop-shadow(1px 2px 3px rgba(0,0,0,0.3))">
-        ${renderBookmarkSVG(awardTemplate, 22, 34, 'card'+b.id)}
+  const awardRibbonHtml = awardTemplate
+    ? `<div style="position:absolute;top:0;left:4px;z-index:3;filter:drop-shadow(1px 2px 3px rgba(0,0,0,0.3))">
+        ${renderBookmarkSVG(awardTemplate, 20, 32, 'carda'+b.id)}
        </div>`
     : '';
+
+  // Reading-position bookmark (top-right) — shown when book is in currently-reading list or has progress
+  const isCurrentlyReading = (_userLists.find(l => l.id === 'currently-reading')?.bookIds || []).includes(b.id);
+  const hasProgress = getReadingProgress(b.id) > 0;
+  const readingBmTemplate = {
+    shape: 'classic',
+    icon: '📖',
+    label: '',
+    colors: { body: '#0f1a2e', accent: '#c8952a', text: '#faf7f2' }
+  };
+  const readingRibbonHtml = (isCurrentlyReading || hasProgress)
+    ? `<div style="position:absolute;top:0;right:4px;z-index:3;filter:drop-shadow(1px 2px 3px rgba(0,0,0,0.35))">
+        ${renderBookmarkSVG(readingBmTemplate, 18, 52, 'cardr'+b.id)}
+       </div>`
+    : '';
+
+  const ribbonHtml = awardRibbonHtml + readingRibbonHtml;
 
   // Reading position tab (bottom of cover)
   const prog = getReadingProgress(b.id);
@@ -4074,6 +4131,7 @@ function updatePaginationUI(){
   document.querySelectorAll('.chapter-item').forEach((el,i)=>el.classList.toggle('active', i===readerChapter));
   const prog = (readerChapter + (readerPage/Math.max(readerPageCount,1))) / Math.max(readerSpine.length,1);
   document.getElementById('readerProgressBar').style.width = (Math.min(prog,1)*100)+'%';
+  renderReaderBookmarkTab();
 }
 
 function recalcReaderHeight(){
@@ -4203,6 +4261,94 @@ async function inlineImagesInHtml(html, base, chapterHref) {
   return html;
 }
 
+  // ── IN-READER BOOKMARK ────────────────────────────────────────────────────────
+// A reader_page bookmark stores { chapterIdx, pageIdx } for a specific spot.
+// Distinct from reading_position (which is auto-saved progress).
+
+function getReaderBookmark(bookId) {
+  return _myBookmarks.find(b =>
+    b.bookId === bookId && b.type === 'reader_bookmark'
+  );
+}
+
+async function saveReaderBookmark(bookId, chapterIdx, pageIdx) {
+  if(!currentUser || !bookId) return;
+  const existing = getReaderBookmark(bookId);
+  const data = {
+    userId: currentUser.uid,
+    bookId,
+    type: 'reader_bookmark',
+    chapterIdx,
+    pageIdx,
+    chapterLabel: readerSpine[chapterIdx]?.label || '',
+    updatedAt: serverTimestamp(),
+  };
+  try {
+    if(existing) {
+      await updateDoc(doc(db, 'user_bookmarks', existing.id), data);
+      Object.assign(existing, data);
+    } else {
+      const ref = await addDoc(collection(db, 'user_bookmarks'), {
+        ...data, createdAt: serverTimestamp(),
+      });
+      _myBookmarks.push({ id: ref.id, ...data });
+    }
+  } catch(e) { console.warn('saveReaderBookmark:', e); }
+}
+
+async function removeReaderBookmark(bookId) {
+  const existing = getReaderBookmark(bookId);
+  if(!existing) return;
+  try {
+    await deleteDoc(doc(db, 'user_bookmarks', existing.id));
+    _myBookmarks = _myBookmarks.filter(b => b.id !== existing.id);
+  } catch(e) { console.warn('removeReaderBookmark:', e); }
+}
+
+function renderReaderBookmarkTab() {
+  // Remove any existing tab first
+  document.getElementById('readerBookmarkTab')?.remove();
+
+  const content = document.getElementById('readerContent');
+  if(!content || !readerBookId) return;
+
+  const bm = getReaderBookmark(readerBookId);
+  const isPlaced = bm && bm.chapterIdx === readerChapter && bm.pageIdx === readerPage;
+  const isOtherPage = bm && !(bm.chapterIdx === readerChapter && bm.pageIdx === readerPage);
+
+  const bmTpl = {
+    shape: 'classic',
+    icon: '🔖',
+    label: '',
+    colors: { body: '#c8952a', accent: '#0f1a2e', text: '#faf7f2' }
+  };
+
+  const tab = document.createElement('div');
+  tab.id = 'readerBookmarkTab';
+  tab.className = 'reader-bookmark-tab' + (isPlaced ? ' placed' : '') +
+    (isOtherPage && !isPlaced ? ' reader-bookmark-ghost' : '');
+  tab.title = isPlaced ? 'Remove bookmark' : bm ? 'Move bookmark here' : 'Place bookmark here';
+  tab.innerHTML = renderBookmarkSVG(bmTpl, 28, 88, 'rdrbm', true);
+
+  // Position it relative to the reader content container
+  content.style.position = 'relative';
+  content.appendChild(tab);
+
+  tab.addEventListener('click', async e => {
+    e.stopPropagation();
+    if(isPlaced) {
+      await removeReaderBookmark(readerBookId);
+      showToast('Bookmark removed');
+    } else {
+      await saveReaderBookmark(readerBookId, readerChapter, readerPage);
+      showToast('Bookmark placed 🔖');
+    }
+    renderReaderBookmarkTab();
+    // Refresh card ribbons
+    renderAll();
+  });
+}
+
 function closeReader(){
   document.getElementById('readerOverlay').classList.remove('open');
   document.getElementById('readerChapterList').classList.remove('open');
@@ -4213,8 +4359,10 @@ function closeReader(){
   const pageB = document.getElementById('readerPageB');
   if(pageA){ pageA.innerHTML = ''; pageA.id = 'readerPageA'; }
   if(pageB){ pageB.innerHTML = ''; pageB.id = 'readerPageB'; }
+  document.getElementById('readerBookmarkTab')?.remove();
   readerZip = null;
   readerSpine = [];
+  readerBookId = null;
 }
 
 
@@ -4676,18 +4824,30 @@ const BOOKMARK_SHAPES = {
   ribbon:  (w,h) => `M${w*0.1},0 H${w-w*0.1} L${w},${h*0.12} V${h} L${w/2},${h-w*0.28} L0,${h} V${h*0.12} Z`,
 };
 
-function renderBookmarkSVG(template, w=36, h=56, uid='bm') {
+function renderBookmarkSVG(template, w=36, h=56, uid='bm', verticalLabel=false) {
   if(!template) return '';
   const shapeFn = BOOKMARK_SHAPES[template.shape] || BOOKMARK_SHAPES.classic;
   const p = shapeFn(w, h);
   const body = template.colors?.body || '#1e3a5f';
   const accent = template.colors?.accent || '#2a7c8a';
   const textCol = template.colors?.text || '#ffffff';
-  const stripeH = h * 0.12;
-  const iconY = h * 0.42;
-  const labelY = h * 0.62;
-  const iconFs = Math.round(w * 0.42);
-  const labelFs = Math.round(w * 0.16);
+  const stripeH = h * 0.10;
+  const iconY = verticalLabel ? h * 0.28 : h * 0.42;
+  const iconFs = Math.round(w * 0.48);
+  const labelFs = Math.round(w * 0.18);
+  // Vertical label: rotated text running down the body
+  const labelHtml = template.label && verticalLabel
+    ? `<text transform="translate(${w/2},${h*0.56}) rotate(90)"
+        text-anchor="middle" dominant-baseline="middle"
+        font-size="${labelFs}" fill="${textCol}"
+        font-family="system-ui,sans-serif" font-weight="600"
+        letter-spacing="0.08em">${esc(template.label)}</text>`
+    : template.label
+      ? `<text x="${w/2}" y="${h*0.65}" text-anchor="middle"
+          dominant-baseline="middle" font-size="${labelFs}"
+          fill="${textCol}" font-family="system-ui,sans-serif"
+          font-weight="500">${esc(template.label)}</text>`
+      : '';
 
   return `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}"
     xmlns="http://www.w3.org/2000/svg" style="display:block;flex-shrink:0">
@@ -4697,10 +4857,7 @@ function renderBookmarkSVG(template, w=36, h=56, uid='bm') {
       fill="${accent}" clip-path="url(#${uid}clip)"/>
     <text x="${w/2}" y="${iconY}" text-anchor="middle"
       dominant-baseline="middle" font-size="${iconFs}">${template.icon || '🔖'}</text>
-    ${template.label ? `<text x="${w/2}" y="${labelY}" text-anchor="middle"
-      dominant-baseline="middle" font-size="${labelFs}"
-      fill="${textCol}" font-family="system-ui,sans-serif"
-      font-weight="500">${esc(template.label)}</text>` : ''}
+    ${labelHtml}
   </svg>`;
 }
 function esc(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
