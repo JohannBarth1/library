@@ -4389,9 +4389,10 @@ function renderReaderBookmarkTab() {
   tab.className = 'reader-bookmark-tab' + (isPlaced ? ' placed' : '');
 
   if(isOtherPage) {
-    // Bookmark exists but belongs to a different page — fully hidden
-    tab.style.opacity = '0';
-    tab.style.pointerEvents = 'none';
+    // Bookmark is on a different page — show as ghost so user can tap to move it here
+    tab.style.opacity = '0.25';
+    tab.style.pointerEvents = 'auto';
+    tab.title = 'Tap to move bookmark to this page';
   } else if(isPlaced) {
     // Bookmark is right here — fully visible
     tab.style.opacity = '1';
@@ -4407,18 +4408,23 @@ function renderReaderBookmarkTab() {
   content.appendChild(tab);
 
   tab.addEventListener('click', async e => {
-    e.stopPropagation();
-    if(isOtherPage) return; // shouldn't be reachable but guard anyway
-    if(isPlaced) {
-      await removeReaderBookmark(readerBookId);
-      showToast('Bookmark removed');
-    } else {
-      await saveReaderBookmark(readerBookId, readerChapter, readerPage);
-      showToast('Bookmark placed 🔖');
-    }
-    renderReaderBookmarkTab();
-    renderAll();
-  });
+      e.stopPropagation();
+      if(isOtherPage || isPlaced) {
+        // Move (or remove if already here): save to current position
+        if(isPlaced) {
+          await removeReaderBookmark(readerBookId);
+          showToast('Bookmark removed');
+        } else {
+          await saveReaderBookmark(readerBookId, readerChapter, readerPage);
+          showToast('Bookmark moved here 🔖');
+        }
+      } else {
+        await saveReaderBookmark(readerBookId, readerChapter, readerPage);
+        showToast('Bookmark placed 🔖');
+      }
+      renderReaderBookmarkTab();
+      renderAll();
+    });
 }
 
 function closeReader(){
@@ -5444,16 +5450,18 @@ function getDisplayBookmarkTemplate(bookId) {
   });
   if(seasonal) return seasonal;
 
-  // 4. Default — only shown if THIS user has a saved reading position for this book
-  const myPosition = getReadingPositionBookmark(bookId);
-  if(myPosition) {
-    return {
-      shape: 'classic',
-      icon: '📖',
-      label: '',
-      colors: { body: '#0f1a2e', accent: '#c8952a', text: '#faf7f2' }
-    };
-  }
+    // 4. Default — only shown if book is in the "Currently Reading" list
+      const currentlyReadingList = _userLists.find(l => l.id === 'currently-reading');
+      if(currentlyReadingList && (currentlyReadingList.bookIds || []).includes(bookId)) {
+        return {
+          shape: 'classic',
+          icon: '📖',
+          label: '',
+          colors: { body: '#0f1a2e', accent: '#c8952a', text: '#faf7f2' }
+        };
+      }
+    
+      return null;
 
   return null;
 }
