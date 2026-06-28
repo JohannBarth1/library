@@ -3216,16 +3216,14 @@ function matchesQ(b,q){return(b.title||'').toLowerCase().includes(q)||(b.author|
   const coverSrc = getCoverSrc(b);
   const isComm = communityLib.some(x=>x.id===b.id);
   const avg = isComm ? getAvgRating(b) : 0;
-const awardBookmarks = getAwardBookmarksForBook(b.id);
-  const awardTemplate = awardBookmarks[0]
-    ? _bookmarkTemplates.find(t=>t.id===awardBookmarks[0].bookmarkId)
-    : null;
-
-  // Reading-position bookmark (top-right)
-  const isCurrentlyReading = (_userLists.find(l => l.id === 'currently-reading')?.bookIds || []).includes(b.id);
-  const hasProgress = getReadingProgress(b.id) > 0;
-  const _readingBmTpl = { shape:'classic', icon:'📖', label:'', colors:{ body:'#0f1a2e', accent:'#c8952a', text:'#faf7f2' } };
-
+// Single bookmark — priority-resolved, top-right only
+  const _bmTpl = getDisplayBookmarkTemplate(b.id);
+  const ribbonHtml = _bmTpl
+    ? `<div style="position:absolute;top:0;right:3px;z-index:3;
+                   filter:drop-shadow(1px 2px 2px rgba(0,0,0,0.35))">
+        ${renderBookmarkSVG(_bmTpl, 16, 48, 'uc'+b.id)}
+       </div>`
+    : '';
   const coverHtml = coverSrc
     ? `<img src="${coverSrc}" alt="" loading="lazy"
         style="width:100%;aspect-ratio:2/3;object-fit:cover;display:block;
@@ -3240,19 +3238,7 @@ const awardBookmarks = getAwardBookmarksForBook(b.id);
                     overflow:hidden;padding:0 .2rem">${esc(b.title)}</div>
       </div>`;
 
-const awardRibbonHtml = awardTemplate
-    ? `<div style="position:absolute;top:0;left:3px;z-index:3;
-                   filter:drop-shadow(1px 2px 2px rgba(0,0,0,0.3))">
-        ${renderBookmarkSVG(awardTemplate, 16, 26, 'uca'+b.id)}
-       </div>`
-    : '';
-  const readingRibbonHtml = (isCurrentlyReading || hasProgress)
-    ? `<div style="position:absolute;top:0;right:3px;z-index:3;
-                   filter:drop-shadow(1px 2px 2px rgba(0,0,0,0.35))">
-        ${renderBookmarkSVG(_readingBmTpl, 16, 46, 'ucr'+b.id)}
-       </div>`
-    : '';
-  const ribbonHtml = awardRibbonHtml + readingRibbonHtml;
+
 
   const prog = getReadingProgress(b.id);
   const progBar = prog > 0
@@ -3452,35 +3438,13 @@ function bookCardHtml(b, isComm, showProgress=false){
   const tagsHtml = (b.tags||[]).slice(0,2).map(t=>`<span class="tag-pill" style="font-size:.55rem;padding:1px 5px">${esc(t)}</span>`).join('');
   const isMyPublicBook = b.ownerId===currentUser?.uid && b.visibility==='public';
 
-  // Award bookmark ribbon (top-right)
-// Award bookmark (top-left ribbon)
-  const awardBookmarks = getAwardBookmarksForBook(b.id);
-  const topAward = awardBookmarks[0];
-  const awardTemplate = topAward
-    ? _bookmarkTemplates.find(t => t.id === topAward.bookmarkId)
-    : null;
-  const awardRibbonHtml = awardTemplate
-    ? `<div style="position:absolute;top:0;left:4px;z-index:3;filter:drop-shadow(1px 2px 3px rgba(0,0,0,0.3))">
-        ${renderBookmarkSVG(awardTemplate, 20, 32, 'carda'+b.id)}
-       </div>`
-    : '';
-
-  // Reading-position bookmark (top-right) — shown when book is in currently-reading list or has progress
-  const isCurrentlyReading = (_userLists.find(l => l.id === 'currently-reading')?.bookIds || []).includes(b.id);
-  const hasProgress = getReadingProgress(b.id) > 0;
-  const readingBmTemplate = {
-    shape: 'classic',
-    icon: '📖',
-    label: '',
-    colors: { body: '#0f1a2e', accent: '#c8952a', text: '#faf7f2' }
-  };
-  const readingRibbonHtml = (isCurrentlyReading || hasProgress)
+// Single bookmark — priority-resolved, top-right only
+  const _bmTpl = getDisplayBookmarkTemplate(b.id);
+  const ribbonHtml = _bmTpl
     ? `<div style="position:absolute;top:0;right:4px;z-index:3;filter:drop-shadow(1px 2px 3px rgba(0,0,0,0.35))">
-        ${renderBookmarkSVG(readingBmTemplate, 18, 52, 'cardr'+b.id)}
+        ${renderBookmarkSVG(_bmTpl, 18, 52, 'card'+b.id)}
        </div>`
     : '';
-
-  const ribbonHtml = awardRibbonHtml + readingRibbonHtml;
 
   // Reading position tab (bottom of cover)
   const prog = getReadingProgress(b.id);
@@ -4297,10 +4261,20 @@ function renderReaderBookmarkTab() {
   const isPlaced = bm && bm.chapterIdx === readerChapter && bm.pageIdx === readerPage;
   const isOtherPage = bm && !isPlaced;
 
-  // If bookmark exists but is on a different page — hide entirely, don't render
-  if(isOtherPage) return;
-
-  const bmTpl = {
+  // Resolve which visual template to use for the in-reader bookmark
+  // Priority: award for this book → seasonal → default gold
+  const awardBm = _myBookmarks.find(b =>
+    b.type === 'award' && b.bookId === readerBookId
+  );
+  const awardTpl = awardBm ? _bookmarkTemplates.find(t => t.id === awardBm.bookmarkId) : null;
+  const now = new Date();
+  const seasonalTpl = _bookmarkTemplates.find(t => {
+    if(t.condition?.type !== 'seasonal') return false;
+    const from = t.condition.startsAt?.toDate?.();
+    const to   = t.condition.endsAt?.toDate?.();
+    return from && to && now >= from && now <= to;
+  });
+  const bmTpl = awardTpl || seasonalTpl || {
     shape: 'classic',
     icon: '🔖',
     label: '',
@@ -4311,16 +4285,27 @@ function renderReaderBookmarkTab() {
   tab.id = 'readerBookmarkTab';
   tab.className = 'reader-bookmark-tab' + (isPlaced ? ' placed' : '');
 
-  // When not placed: show very faint so user knows they can tap to place
-  tab.style.opacity = isPlaced ? '1' : '0.15';
-  tab.title = isPlaced ? 'Tap to remove bookmark' : 'Tap to place bookmark here';
-  tab.innerHTML = renderBookmarkSVG(bmTpl, 28, 88, 'rdrbm', true);
+  if(isOtherPage) {
+    // Bookmark exists but belongs to a different page — fully hidden
+    tab.style.opacity = '0';
+    tab.style.pointerEvents = 'none';
+  } else if(isPlaced) {
+    // Bookmark is right here — fully visible
+    tab.style.opacity = '1';
+    tab.title = 'Tap to remove bookmark';
+  } else {
+    // No bookmark saved yet — ghost hint so user knows the corner is tappable
+    tab.style.opacity = '0.15';
+    tab.title = 'Tap to place bookmark here';
+  }
 
+  tab.innerHTML = renderBookmarkSVG(bmTpl, 28, 88, 'rdrbm', true);
   content.style.position = 'relative';
   content.appendChild(tab);
 
   tab.addEventListener('click', async e => {
     e.stopPropagation();
+    if(isOtherPage) return; // shouldn't be reachable but guard anyway
     if(isPlaced) {
       await removeReaderBookmark(readerBookId);
       showToast('Bookmark removed');
@@ -5276,6 +5261,59 @@ function getReadingPositionBookmark(bookId) {
 
 function getAwardBookmarksForBook(bookId) {
   return _myBookmarks.filter(b => b.bookId === bookId && b.type === 'award');
+}
+
+  // ── BOOKMARK PRIORITY RESOLVER ────────────────────────────────────────────────
+// Returns the single bookmark template to display for a given book tile,
+// following the priority chain:
+//   1. User-specific award for this book
+//   2. Any award for this book (other users — visible in community view)
+//   3. Active seasonal template
+//   4. Default reading bookmark (if book has saved progress)
+// Returns null if the book has no saved reading position AND no award.
+
+function getDisplayBookmarkTemplate(bookId) {
+  const now = new Date();
+
+  // 1. User-specific award for this specific book
+  const userBookAward = _myBookmarks.find(b =>
+    b.type === 'award' && b.bookId === bookId && b.userId === currentUser?.uid
+  );
+  if(userBookAward) {
+    const t = _bookmarkTemplates.find(x => x.id === userBookAward.bookmarkId);
+    if(t) return t;
+  }
+
+  // 2. Any award bookmark for this book
+  const anyBookAward = _myBookmarks.find(b =>
+    b.type === 'award' && b.bookId === bookId
+  );
+  if(anyBookAward) {
+    const t = _bookmarkTemplates.find(x => x.id === anyBookAward.bookmarkId);
+    if(t) return t;
+  }
+
+  // 3. Active seasonal bookmark (overrides default for all books)
+  const seasonal = _bookmarkTemplates.find(t => {
+    if(t.condition?.type !== 'seasonal') return false;
+    const from = t.condition.startsAt?.toDate?.();
+    const to   = t.condition.endsAt?.toDate?.();
+    return from && to && now >= from && now <= to;
+  });
+  if(seasonal) return seasonal;
+
+  // 4. Default — only shown if this book has a saved reading position
+  const hasProgress = getReadingProgress(bookId) > 0;
+  if(hasProgress) {
+    return {
+      shape: 'classic',
+      icon: '📖',
+      label: '',
+      colors: { body: '#0f1a2e', accent: '#c8952a', text: '#faf7f2' }
+    };
+  }
+
+  return null;
 }
   
 // ── LOAD KOBO DEVICES ────────────────────────────────────────────────────────
