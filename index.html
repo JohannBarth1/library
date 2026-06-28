@@ -3426,12 +3426,21 @@ async function renderMobHome(){
       ${shelfSection('home_fin',     '✓ Finished',           '#276749',      finBooks,   false)}
     </div>`;
 
-  // ── Bind book taps ────────────────────────────────────────────────────
+// ── Bind book taps ────────────────────────────────────────────────────
   container.querySelectorAll('.home-shelf-book[data-bookid]').forEach(el => {
     if(!el.dataset.bookid) return;
     el.addEventListener('click', () => {
       mobPrevPanel = 'mobPanelHome';
-      mob_showBook(el.dataset.bookid);
+      const bookId = el.dataset.bookid;
+      // If this book is in the currently-reading shelf, go straight to reader
+      const shelf = el.closest('.home-shelf-section');
+      const isReadingShelf = shelf?.id === 'homeSection_home_reading';
+      if(isReadingShelf){
+        currentId = bookId;
+        readCurrentBook();
+      } else {
+        mob_showBook(bookId);
+      }
     });
   });
 }
