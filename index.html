@@ -5441,9 +5441,9 @@ function getDisplayBookmarkTemplate(bookId) {
   });
   if(seasonal) return seasonal;
 
-  // 4. Default — only shown if this book has a saved reading position
-  const hasProgress = getReadingProgress(bookId) > 0;
-  if(hasProgress) {
+  // 4. Default — only shown if THIS user has a saved reading position for this book
+  const myPosition = getReadingPositionBookmark(bookId);
+  if(myPosition) {
     return {
       shape: 'classic',
       icon: '📖',
