@@ -5452,15 +5452,19 @@ function getDisplayBookmarkTemplate(bookId) {
   });
   if(seasonal) return seasonal;
 
-  // 4. Reading position — only if book is in "Currently Reading" list
+// 4: book is in Currently Reading list
   const currentlyReadingList = _userLists.find(l => l.id === 'currently-reading');
   if(currentlyReadingList && (currentlyReadingList.bookIds || []).includes(bookId)) {
-    return {
-      shape: 'classic',
-      icon: '📖',
-      label: '',
-      colors: { body: '#0f1a2e', accent: '#c8952a', text: '#faf7f2' }
-    };
+    // Prefer seasonal visual if one is active, otherwise default
+    const seasonal = _bookmarkTemplates.find(t => {
+      if(t.condition?.type !== 'seasonal') return false;
+      const from = t.condition.startsAt?.toDate?.();
+      const to   = t.condition.endsAt?.toDate?.();
+      if(!from || !to) return false;
+      return now >= from && now <= to;
+    });
+    return seasonal || { shape:'classic', icon:'📖', label:'',
+      colors:{ body:'#0f1a2e', accent:'#c8952a', text:'#faf7f2' } };
   }
 
   return null;
