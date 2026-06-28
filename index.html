@@ -2015,6 +2015,16 @@ async function loadAllUsers(){
   catch(e){console.error('Load users:',e);showToast('Could not load users');return[];}
 }
 
+  async function loadAllUsersIncludingSelf(){
+  try {
+    const snap = await getDocs(collection(db,'users'));
+    return snap.docs.map(d=>({...d.data()})).filter(u=>u.uid);
+  } catch(e) {
+    console.error('Load users:', e);
+    return [];
+  }
+}
+
 // ── RATINGS ───────────────────────────────────────────────────────────────────
 async function submitRating(bookId, rating) {
   if (!currentUser) { showToast('Sign in to rate'); return; }
@@ -2613,7 +2623,7 @@ async function showPrivateShare(){
   document.getElementById('privateShareTitle').textContent=`"${book.title}"`;
   document.getElementById('privateShareLinkWrap').style.display='none';
   document.getElementById('privateShareModal').classList.add('open');
-  const users=await loadAllUsers();
+  const users=await loadAllUsersIncludingSelf();
   const sel=document.getElementById('privateShareUserSelect');
   if(!users.length){sel.innerHTML='<option value="">No other users found yet</option>';return;}
   sel.innerHTML='<option value="">— Select a user —</option>'+users.map(u=>`<option value="${u.uid}">${esc(u.displayName||u.email||u.uid)}</option>`).join('');
@@ -7536,8 +7546,10 @@ function showBookmarkEditor(templateId, preselectedBookId) {
           <select id="bmEdAwardUser">
             <option value="">— Save template only, award later —</option>
             <option value="__all__">Everyone</option>
-            ${(allUsers.length ? allUsers : []).map(u =>
-              `<option value="${u.uid}">${esc(u.displayName||u.email||u.uid)}</option>`
+            ${users.map(u =>
+              `<option value="${u.uid}" ${u.uid===currentUser?.uid?'selected':''}>
+                ${esc(u.displayName||u.email||u.uid)}${u.uid===currentUser?.uid?' (you)':''}
+              </option>`
             ).join('')}
           </select>
         </div>
@@ -7672,16 +7684,15 @@ function showBookmarkEditor(templateId, preselectedBookId) {
   updatePreview();
 
   // Load users if not yet loaded
-  if(!allUsers.length) loadAllUsers().then(() => {
+  loadAllUsersIncludingSelf().then(users => {
     const sel = overlay.querySelector('#bmEdAwardUser');
     if(!sel) return;
-    const current = sel.value;
     sel.innerHTML = `
       <option value="">— Save template only, award later —</option>
       <option value="__all__">Everyone</option>
-      ${allUsers.map(u =>
-        `<option value="${u.uid}" ${current===u.uid?'selected':''}>
-          ${esc(u.displayName||u.email||u.uid)}</option>`
+      ${users.map(u =>
+        `<option value="${u.uid}">
+          ${esc(u.displayName||u.email||u.uid)}${u.uid===currentUser?.uid?' (you)':''}</option>`
       ).join('')}`;
   });
 
