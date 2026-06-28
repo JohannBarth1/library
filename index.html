@@ -126,9 +126,41 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .book-card-cover-ph .ph-icon{font-size:2rem;opacity:.6;}
 .book-card-cover-ph .ph-title{font-family:'Playfair Display',serif;font-size:.62rem;color:rgba(200,180,140,0.8);text-align:center;line-height:1.3;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;padding:0 .3rem;}
 .book-card-cover-ph .ph-author{font-size:.55rem;color:rgba(200,180,140,0.5);text-align:center;}
-.book-card-body{padding:.5rem .55rem .6rem;background:var(--warm-white);border:1px solid var(--border);border-top:none;border-radius:0 0 4px 4px;}
-.book-card-title{font-family:'Playfair Display',serif;font-size:.78rem;line-height:1.3;color:var(--navy2);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;margin-bottom:.15rem;}
-.book-card-author{font-size:.68rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.book-card-body{
+  padding:.45rem .5rem .5rem;
+  background:var(--warm-white);
+  border:1px solid var(--border);
+  border-top:none;
+  border-radius:0 0 4px 4px;
+  height:54px;          /* fixed: 2-line title + 1-line author */
+  overflow:hidden;
+  display:flex;
+  flex-direction:column;
+  justify-content:flex-start;
+}
+.book-card-title{
+  font-family:'Playfair Display',serif;
+  font-size:.78rem;
+  line-height:1.25;
+  color:var(--navy2);
+  display:-webkit-box;
+  -webkit-line-clamp:2;
+  -webkit-box-orient:vertical;
+  overflow:hidden;
+  margin-bottom:.15rem;
+  max-height:1.95rem;   /* exactly 2 lines at 1.25 line-height × .78rem */
+}
+.book-card-author{
+  font-size:.66rem;
+  color:var(--muted);
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  flex-shrink:0;
+}
+/* Remove stars and shared-by from tiles entirely */
+.book-card-stars,
+.book-card-shared-by{ display:none; }
 .book-card-shared-by{font-size:.63rem;color:var(--teal);font-weight:700;margin-top:.2rem;}
 .book-card-stars{display:flex;gap:1px;margin-top:.25rem;}
 .bcs{font-size:.65rem;color:#ccc;}
@@ -3212,68 +3244,8 @@ function matchesQ(b,q){return(b.title||'').toLowerCase().includes(q)||(b.author|
 
 
 // ── HOME PANEL (mobile) ───────────────────────────────────────────────────────
-  function uniformBookCard(b, showProg=false) {
-  const coverSrc = getCoverSrc(b);
-  const isComm = communityLib.some(x=>x.id===b.id);
-  const avg = isComm ? getAvgRating(b) : 0;
-// Single bookmark — priority-resolved, top-right only
-    const _bmTpl = (_bookmarkTemplates.length && _myBookmarks !== undefined)
-    ? getDisplayBookmarkTemplate(b.id)
-    : null;
-  const ribbonHtml = _bmTpl
-    ? `<div style="position:absolute;top:0;right:3px;z-index:3;
-                   filter:drop-shadow(1px 2px 2px rgba(0,0,0,0.35))">
-        ${renderBookmarkSVG(_bmTpl, 16, 64, 'uc'+b.id, true)}
-       </div>`
-    : '';
-  const coverHtml = coverSrc
-    ? `<img src="${coverSrc}" alt="" loading="lazy"
-        style="width:100%;aspect-ratio:2/3;object-fit:cover;display:block;
-               border-radius:4px 4px 0 0;background:var(--navy2)"/>`
-    : `<div style="width:100%;aspect-ratio:2/3;background:linear-gradient(145deg,var(--navy2),#2a3d5a);
-                   border-radius:4px 4px 0 0;display:flex;flex-direction:column;
-                   align-items:center;justify-content:center;gap:.3rem;padding:.4rem">
-        <div style="font-size:1.6rem;opacity:.6">📖</div>
-        <div style="font-family:'Playfair Display',serif;font-size:.58rem;
-                    color:rgba(200,180,140,0.8);text-align:center;line-height:1.3;
-                    display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;
-                    overflow:hidden;padding:0 .2rem">${esc(b.title)}</div>
-      </div>`;
-
-
-
-  const prog = getReadingProgress(b.id);
-  const progBar = prog > 0
-    ? `<div style="height:3px;background:var(--border);border-radius:0">
-        <div style="height:3px;background:var(--teal);width:${Math.round(prog*100)}%;
-                    border-radius:0;transition:width .3s"></div>
-       </div>`
-    : '';
-
-  const starsHtml = isComm && avg > 0
-    ? `<div style="display:flex;gap:1px;margin-top:2px">
-        ${[1,2,3,4,5].map(n=>`<span style="font-size:.55rem;color:${n<=Math.round(avg)?'var(--gold)':'#ccc'}">★</span>`).join('')}
-       </div>`
-    : '';
-
-  return `<div class="book-card" data-bookid="${b.id}"
-    style="border-radius:4px;overflow:hidden;position:relative;
-           background:var(--warm-white);border:1px solid var(--border);
-           cursor:pointer;transition:transform .15s,box-shadow .15s"
-    onmouseenter="this.style.transform='translateY(-2px)';this.style.boxShadow='0 4px 12px rgba(0,0,0,0.1)'"
-    onmouseleave="this.style.transform='';this.style.boxShadow=''">
-    ${coverHtml}
-    ${ribbonHtml}
-    <div style="padding:.4rem .45rem .5rem">
-      <div style="font-family:'Playfair Display',serif;font-size:.7rem;line-height:1.25;
-                  color:var(--navy2);display:-webkit-box;-webkit-line-clamp:2;
-                  -webkit-box-orient:vertical;overflow:hidden">${esc(b.title)}</div>
-      <div style="font-size:.62rem;color:var(--muted);white-space:nowrap;
-                  overflow:hidden;text-overflow:ellipsis;margin-top:1px">${esc(b.author)}</div>
-      ${starsHtml}
-    </div>
-    ${progBar}
-  </div>`;
+function uniformBookCard(b) {
+  return bookCardHtml(b, communityLib.some(x => x.id === b.id));
 }
 
 function toggleHomeSection(id) {
@@ -3527,50 +3499,44 @@ async function renderMobHome(){
 }
 
 function bookCardHtml(b, isComm, showProgress=false){
-  const avg = isComm ? getAvgRating(b) : 0;
-  const starsHtml = isComm
-    ? [1,2,3,4,5].map(n=>`<span class="bcs ${n<=Math.round(avg)?'filled':''}">★</span>`).join('')
-    : '';
   const coverSrc = getCoverSrc(b);
   const coverHtml = coverSrc
     ? `<img class="book-card-cover" src="${coverSrc}" alt="" loading="lazy"/>`
-    : `<div class="book-card-cover-ph"><div class="ph-icon">📖</div><div class="ph-title">${esc(b.title)}</div><div class="ph-author">${esc(b.author)}</div></div>`;
-  const tagsHtml = (b.tags||[]).slice(0,2).map(t=>`<span class="tag-pill" style="font-size:.55rem;padding:1px 5px">${esc(t)}</span>`).join('');
-  const isMyPublicBook = b.ownerId===currentUser?.uid && b.visibility==='public';
+    : `<div class="book-card-cover-ph">
+        <div class="ph-icon">📖</div>
+        <div class="ph-title">${esc(b.title)}</div>
+        <div class="ph-author">${esc(b.author)}</div>
+       </div>`;
 
-// Single bookmark — priority-resolved, top-right only
-    const _bmTpl = (_bookmarkTemplates.length && _myBookmarks !== undefined)
-    ? getDisplayBookmarkTemplate(b.id)
-    : null;
+  const isMyPublicBook = b.ownerId === currentUser?.uid && b.visibility === 'public';
+
+  const _bmTpl = (_bookmarkTemplates.length && _myBookmarks !== undefined)
+    ? getDisplayBookmarkTemplate(b.id) : null;
   const ribbonHtml = _bmTpl
-    ? `<div style="position:absolute;top:0;right:4px;z-index:3;filter:drop-shadow(1px 2px 3px rgba(0,0,0,0.35))">
+    ? `<div style="position:absolute;top:0;right:4px;z-index:3;
+                   filter:drop-shadow(1px 2px 3px rgba(0,0,0,0.35))">
         ${renderBookmarkSVG(_bmTpl, 18, 68, 'card'+b.id, true)}
-       </div>`
-    : '';
+       </div>` : '';
 
-  // Reading position tab (bottom of cover)
   const prog = getReadingProgress(b.id);
-  let progBar = '';
-  if(prog > 0) {
-    const pct = Math.round(prog * 100);
-    const posBookmark = getReadingPositionBookmark(b.id);
-    const chLabel = posBookmark?.chapterLabel || '';
-    progBar = `<div class="book-card-progress" title="${chLabel ? chLabel + ' · ' : ''}${pct}% read">
-      <div class="book-card-progress-bar" style="width:${pct}%"></div>
-    </div>`;
-  }
+  const progBar = prog > 0
+    ? `<div class="book-card-progress">
+        <div class="book-card-progress-bar" style="width:${Math.round(prog*100)}%"></div>
+       </div>` : '';
 
-  return `<div class="book-card" data-bookid="${b.id}">${coverHtml}
-    ${b.recommended?'<span class="rec-badge">⭐ Pick</span>':''}
-    ${isMyPublicBook?'<span class="community-badge">Shared</span>':''}
-    ${ribbonHtml}
+  return `<div class="book-card" data-bookid="${b.id}">
+    <div style="position:relative">
+      ${coverHtml}
+      ${b.recommended ? '<span class="rec-badge">⭐ Pick</span>' : ''}
+      ${isMyPublicBook ? '<span class="community-badge">Public</span>' : ''}
+      ${ribbonHtml}
+    </div>
     <div class="book-card-body">
       <div class="book-card-title">${esc(b.title)}</div>
       <div class="book-card-author">${esc(b.author)}</div>
-      ${isComm&&b.ownerId!==currentUser?.uid&&b.allowedUsers?.includes(currentUser?.uid)?`<div class="book-card-shared-by">Shared by ${esc(b.ownerName||'')}</div>`:''}
-      ${isComm?`<div class="book-card-stars">${starsHtml}</div>`:''}
-      ${tagsHtml}
-    </div>${progBar}</div>`;
+    </div>
+    ${progBar}
+  </div>`;
 }
 
 // ── EPUB READER ───────────────────────────────────────────────────────────────
