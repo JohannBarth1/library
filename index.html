@@ -7269,32 +7269,37 @@ async function adminLoadTags() {
       btn.addEventListener('click', () => showBookmarkEditor(btn.dataset.bmEdit, null));
     });
 el.querySelectorAll('[data-bm-delete]').forEach(btn => {
-  btn.addEventListener('click', async () => {
-    const t = templates.find(x => x.id === btn.dataset.bmDelete);
-    if(!t || !confirm(`Delete "${t.name}"?\n\nThis will also remove it from all users who have been awarded it.`)) return;
-    showLoading('Deleting…');
-    try {
-      // Hard delete the template
-      await deleteDoc(doc(db, 'bookmarks', t.id));
-      // Remove all user_bookmarks referencing this template
-      const ubSnap = await getDocs(
-        query(collection(db, 'user_bookmarks'), where('bookmarkId', '==', t.id))
-      );
-      for(const d of ubSnap.docs) await deleteDoc(d.ref);
-      // Refresh local state
-      await loadBookmarkTemplates();
-      await loadMyBookmarks();
-      hideLoading();
-      showToast('Bookmark deleted ✓');
-      adminLoadBookmarks();
-      renderAll();
-    } catch(e) {
-      hideLoading();
-      showToast('Delete failed: ' + e.message);
-      console.error(e);
-    }
-  });
-});
+      btn.addEventListener('click', async () => {
+        const t = templates.find(x => x.id === btn.dataset.bmDelete);
+        if(!t || !confirm(`Delete "${t.name}"?\n\nThis will also remove it from all users who have been awarded it.`)) return;
+        showLoading('Deleting…');
+        try {
+          await deleteDoc(doc(db, 'bookmarks', t.id));
+          const ubSnap = await getDocs(
+            query(collection(db, 'user_bookmarks'), where('bookmarkId', '==', t.id))
+          );
+          for(const d of ubSnap.docs) await deleteDoc(d.ref);
+          await loadBookmarkTemplates();
+          await loadMyBookmarks();
+          hideLoading();
+          showToast('Bookmark deleted ✓');
+          adminLoadBookmarks();
+          renderAll();
+        } catch(e) {
+          hideLoading();
+          showToast('Delete failed: ' + e.message);
+          console.error(e);
+        }
+      });
+    });
+
+    el.querySelector('#adminBmNewBtn')?.addEventListener('click', () => showBookmarkEditor(null, null));
+
+  } catch(e) {
+    el.innerHTML = `<div style="color:var(--danger);font-size:.82rem">Failed to load: ${e.message}</div>`;
+    console.error(e);
+  }
+}
 
 function buildAdminSections() {
   const panel = document.getElementById('mobPanelAdmin');
@@ -7775,7 +7780,6 @@ function showBookmarkEditor(templateId, preselectedBookId) {
   });
 }
 
-  
 renderAll();
 </script>
 </body>
