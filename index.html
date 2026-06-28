@@ -3280,18 +3280,15 @@ async function renderMobHome(){
   document.getElementById('mobHomeGreeting').textContent = `Hello, ${name}`;
   const container = document.getElementById('mobHomeContent');
 
-  // ── Fix 1: ensure lists are loaded before rendering ───────────────────
   if(!_userLists.length) {
     await loadUserLists();
   }
 
   const allBooks = dedupe([...library, ...communityLib]);
-  const GRID = `display:grid;grid-template-columns:repeat(auto-fill,minmax(90px,1fr));gap:.6rem;`;
 
-  // ── Shelf section builder ─────────────────────────────────────────────
   function shelfSection(id, label, color, books, defaultOpen=true) {
     if(!books.length) return '';
-    const coverRow = books.slice(0, 8).map(b => {
+    const coverRow = books.slice(0, 12).map(b => {
       const src = getCoverSrc(b);
       return `<div class="home-shelf-book" data-bookid="${b.id}" style="
         flex-shrink:0;width:64px;cursor:pointer;position:relative;">
@@ -3307,7 +3304,8 @@ async function renderMobHome(){
               line-height:1.2;">${esc(b.title)}</div>`
         }
         <div style="position:absolute;bottom:0;left:0;right:0;height:28px;
-          background:linear-gradient(transparent,rgba(0,0,0,.55));border-radius:0 0 4px 2px;"></div>
+          background:linear-gradient(transparent,rgba(0,0,0,.55));
+          border-radius:0 0 4px 2px;pointer-events:none;"></div>
       </div>`;
     }).join('');
 
@@ -3330,90 +3328,122 @@ async function renderMobHome(){
       </div>
 
       <div id="${id}_body" style="overflow:hidden;
-        max-height:${defaultOpen?'500px':'0'};
+        max-height:${defaultOpen?'600px':'0'};
         transition:max-height .3s ease;">
-
-        <!-- Shelf plank -->
         <div style="position:relative;padding:0 .9rem .6rem;">
-          <!-- Wood plank behind books -->
           <div style="position:absolute;bottom:0;left:0;right:0;height:14px;
             background:linear-gradient(180deg,#8B6914 0%,#7a5c10 60%,#6b4f0c 100%);
             box-shadow:0 3px 6px rgba(0,0,0,.4);z-index:0;"></div>
-          <!-- Books row -->
           <div style="display:flex;gap:3px;overflow-x:auto;padding-bottom:14px;
             -webkit-overflow-scrolling:touch;scrollbar-width:none;
-            position:relative;z-index:1;padding-top:6px;"
-            id="${id}_shelf">
+            position:relative;z-index:1;padding-top:6px;">
             ${coverRow}
-            ${books.length > 8
+            ${books.length > 12
               ? `<div style="flex-shrink:0;width:48px;height:96px;display:flex;
                   align-items:center;justify-content:center;font-size:.65rem;
-                  color:var(--muted);font-weight:700;text-align:center;line-height:1.4;">
-                  +${books.length - 8}<br>more</div>` : ''}
+                  color:rgba(200,180,140,0.6);font-weight:700;text-align:center;
+                  line-height:1.4;">+${books.length - 12}<br>more</div>`
+              : ''}
           </div>
         </div>
+      </div>
+    </div>`;
+  }
 
-        <!-- Book titles below shelf (tap to open) -->
-        <div style="padding:.4rem .9rem .2rem;${GRID}" id="${id}_grid">
-          ${books.slice(0,8).map(b => `
-            <div class="home-shelf-book" data-bookid="${b.id}"
-              style="cursor:pointer;padding:.2rem 0;">
-              <div style="font-size:.68rem;font-weight:700;color:var(--navy2);
-                line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;
-                -webkit-box-orient:vertical;overflow:hidden;">${esc(b.title)}</div>
-              <div style="font-size:.6rem;color:var(--muted);margin-top:1px;
-                white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
-                ${esc(b.author||'')}</div>
-            </div>`).join('')}
+  // ── Bookmarks section ─────────────────────────────────────────────────
+  function bookmarksSection() {
+    const awarded = _myBookmarks.filter(b => b.type === 'award');
+    if(!awarded.length) return '';
+
+    const bmHtml = awarded.map(ub => {
+      const t = _bookmarkTemplates.find(x => x.id === ub.bookmarkId);
+      if(!t) return '';
+      const book = allBooks.find(b => b.id === ub.bookId);
+      return `<div style="display:flex;flex-direction:column;align-items:center;
+                          gap:3px;cursor:pointer;flex-shrink:0;"
+                data-bookid="${book ? book.id : ''}"
+                class="home-shelf-book"
+                title="${esc(t.name)}${ub.note ? ' — '+ub.note : ''}">
+        ${renderBookmarkSVG(t, 36, 56, 'home'+ub.id, true)}
+        <div style="font-size:.58rem;color:var(--muted);text-align:center;
+                    max-width:44px;overflow:hidden;text-overflow:ellipsis;
+                    white-space:nowrap;">${esc(t.name)}</div>
+      </div>`;
+    }).join('');
+
+    return `<div class="home-shelf-section" id="homeSection_home_bm"
+      style="margin-bottom:.9rem;">
+      <div onclick="toggleHomeShelf('home_bm')"
+        style="display:flex;align-items:center;justify-content:space-between;
+               padding:.45rem .9rem;cursor:pointer;
+               -webkit-tap-highlight-color:transparent;user-select:none;">
+        <div style="display:flex;align-items:center;gap:.5rem;">
+          <div style="width:3px;height:14px;border-radius:2px;
+            background:var(--gold);flex-shrink:0;"></div>
+          <span style="font-size:.72rem;font-weight:700;letter-spacing:.1em;
+            text-transform:uppercase;color:var(--gold);">🎖 My Bookmarks</span>
+          <span style="font-size:.65rem;color:var(--muted);font-weight:400;">
+            ${awarded.length}</span>
         </div>
-
+        <span id="home_bm_chevron" style="font-size:.8rem;color:var(--muted);
+          transition:transform .2s;">▾</span>
+      </div>
+      <div id="home_bm_body" style="overflow:hidden;max-height:600px;
+        transition:max-height .3s ease;">
+        <div style="padding:.4rem .9rem .8rem;display:flex;flex-wrap:wrap;gap:.8rem;">
+          ${bmHtml}
+        </div>
       </div>
     </div>`;
   }
 
   // ── Gather data ───────────────────────────────────────────────────────
-  const crIds    = (_userLists.find(l => l.id === 'currently-reading')?.bookIds || []);
-  const finIds   = (_userLists.find(l => l.id === 'finished')?.bookIds || []);
-  const wtrIds   = (_userLists.find(l => l.id === 'want-to-read')?.bookIds || []);
-  const favIds   = (_userLists.find(l => l.id === 'favourites')?.bookIds || []);
+  const resolve = ids => ids
+    .map(id => allBooks.find(b => b.id === id))
+    .filter(Boolean);
 
-  const resolve  = ids => ids.map(id => allBooks.find(b => b.id === id)).filter(Boolean);
-
-  const crBooks  = resolve(crIds);
-  const finBooks = resolve(finIds);
-  const wtrBooks = resolve(wtrIds);
-  const favBooks = resolve(favIds);
-  const recBooks = [...library, ...communityLib]
-    .filter(b => b.recommended)
-    .filter((b,i,a) => a.findIndex(x=>x.id===b.id)===i);
+  const crBooks     = resolve(_userLists.find(l => l.id === 'currently-reading')?.bookIds || []);
+  const finBooks    = resolve(_userLists.find(l => l.id === 'finished')?.bookIds || []);
+  const wtrBooks    = resolve(_userLists.find(l => l.id === 'want-to-read')?.bookIds || []);
+  const favBooks    = resolve(_userLists.find(l => l.id === 'favourites')?.bookIds || []);
+  const recBooks    = dedupe([...library, ...communityLib]).filter(b => b.recommended);
   const recentBooks = library.slice(0, 12);
-  const customLists = _userLists.filter(l =>
-    !l.system && (l.bookIds||[]).length > 0
-  );
+  const customLists = _userLists.filter(l => !l.system && (l.bookIds||[]).length > 0);
 
   // ── Render ────────────────────────────────────────────────────────────
-  // Fix 2: bottom padding clears the nav bar + a little breathing room
   container.innerHTML = `
     <div style="padding-bottom:calc(var(--mob-nav-h) + 1.5rem);">
-      ${shelfSection('home_reading', '📖 Currently Reading', 'var(--teal)',    crBooks,    true)}
-      ${shelfSection('home_rec',     '⭐ Recommended',        'var(--gold)',    recBooks,   true)}
-      ${shelfSection('home_fav',     '❤️ Favourites',         '#e11d48',       favBooks,   false)}
-      ${shelfSection('home_wtr',     '🔖 Want to Read',       '#7c3aed',       wtrBooks,   false)}
+      ${shelfSection('home_reading', '📖 Currently Reading', 'var(--teal)',  crBooks,    true)}
+      ${shelfSection('home_rec',     '⭐ Recommended',        'var(--gold)',  recBooks,   crBooks.length === 0)}
+      ${bookmarksSection()}
+      ${shelfSection('home_fav',     '❤️ Favourites',         '#e11d48',     favBooks,   false)}
+      ${shelfSection('home_wtr',     '🔖 Want to Read',       '#7c3aed',     wtrBooks,   false)}
       ${customLists.map(l =>
-        shelfSection('home_list_'+l.id, `${l.icon||'📚'} ${l.name}`, 'var(--teal)', resolve(l.bookIds||[]), false)
+        shelfSection('home_list_'+l.id, `${l.icon||'📚'} ${l.name}`, 'var(--teal)',
+          resolve(l.bookIds||[]), false)
       ).join('')}
-      ${shelfSection('home_recent',  '🕐 Recently Added',     'var(--muted)',  recentBooks,false)}
-      ${shelfSection('home_fin',     '✓ Finished',            '#276749',       finBooks,   false)}
+      ${shelfSection('home_recent',  '🕐 Recently Added',    'var(--muted)', recentBooks, false)}
+      ${shelfSection('home_fin',     '✓ Finished',           '#276749',      finBooks,   false)}
     </div>`;
 
   // ── Bind book taps ────────────────────────────────────────────────────
   container.querySelectorAll('.home-shelf-book[data-bookid]').forEach(el => {
+    if(!el.dataset.bookid) return;
     el.addEventListener('click', () => {
       mobPrevPanel = 'mobPanelHome';
       mob_showBook(el.dataset.bookid);
     });
   });
 }
+
+window.toggleHomeShelf = function(id) {
+  const body    = document.getElementById(id + '_body');
+  const chevron = document.getElementById(id + '_chevron');
+  if(!body || !chevron) return;
+  const isOpen  = body.style.maxHeight !== '0px' && body.style.maxHeight !== '0';
+  body.style.maxHeight    = isOpen ? '0' : '600px';
+  chevron.style.transform = isOpen ? 'rotate(-90deg)' : '';
+};
 
 window.toggleHomeShelf = function(id) {
   const body    = document.getElementById(id + '_body');
