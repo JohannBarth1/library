@@ -2838,11 +2838,6 @@ function mob_switchTab(tab) {
   const panelMap = { library:'mobPanelLibrary', home:'mobPanelHome', community:'mobPanelCommunity', settings:'mobPanelSettings' };
   mob_showPanel(panelMap[tab] || 'mobPanelHome');
   if (tab === 'home') {
-    // Show skeleton rows immediately, then render real content
-    if(!document.getElementById('mobHomeContent').children.length ||
-       document.getElementById('mobHomeContent').textContent.includes('Loading')) {
-      renderMobHomeSkeleton();
-    }
     renderMobHome();
   }
   if (tab === 'library')   renderMobLibrary();
@@ -3339,6 +3334,7 @@ async function renderMobHome(){
   document.getElementById('mobHomeGreeting').textContent = `Hello, ${name}`;
 
   const container = document.getElementById('mobHomeContent');
+  if(!_userLists.length && !library.length) { renderMobHomeSkeleton(); return; }
 
   const GRID_STYLE = `display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:.7rem;margin-bottom:.3rem;`;
 
