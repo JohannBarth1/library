@@ -5420,54 +5420,54 @@ function getAwardBookmarksForBook(bookId) {
 // Returns null if the book has no saved reading position AND no award.
 
 function getDisplayBookmarkTemplate(bookId) {
-  if(!bookId || !_bookmarkTemplates.length) return null;
+  if (!bookId || !_bookmarkTemplates.length) return null;
   console.log('templates:', _bookmarkTemplates.length, 'bookmarks:', _myBookmarks.length);
   const now = new Date();
 
-  // 1. User-specific award for this book
+  // ── GATE: Only show bookmarks for books the user is CURRENTLY READING ──
+  const currentlyReadingList = _userLists.find(l => l.id === 'currently-reading');
+  const isCurrentlyReading = currentlyReadingList && 
+    (currentlyReadingList.bookIds || []).includes(bookId);
+
+  if (!isCurrentlyReading) return null;
+
+  // ── Now pick the best bookmark for this currently-reading book ──
+
+  // 1. User-specific award for this book (highest priority)
   const userBookAward = _myBookmarks.find(b =>
     b.type === 'award' && b.bookId === bookId && b.userId === currentUser?.uid
   );
-  if(userBookAward) {
+  if (userBookAward) {
     const t = _bookmarkTemplates.find(x => x.id === userBookAward.bookmarkId);
-    if(t) return t;
+    if (t) return t;
   }
 
   // 2. Any award bookmark for this book
   const anyBookAward = _myBookmarks.find(b =>
     b.type === 'award' && b.bookId === bookId
   );
-  if(anyBookAward) {
+  if (anyBookAward) {
     const t = _bookmarkTemplates.find(x => x.id === anyBookAward.bookmarkId);
-    if(t) return t;
+    if (t) return t;
   }
 
-  // 3. Active seasonal — ONLY templates explicitly typed as seasonal with valid dates
+  // 3. Active seasonal template
   const seasonal = _bookmarkTemplates.find(t => {
-    if(t.condition?.type !== 'seasonal') return false;
+    if (t.condition?.type !== 'seasonal') return false;
     const from = t.condition.startsAt?.toDate?.();
-    const to   = t.condition.endsAt?.toDate?.();
-    if(!from || !to) return false;          // ← skip malformed seasonal templates
+    const to = t.condition.endsAt?.toDate?.();
+    if (!from || !to) return false;
     return now >= from && now <= to;
   });
-  if(seasonal) return seasonal;
+  if (seasonal) return seasonal;
 
-// 4: book is in Currently Reading list
-  const currentlyReadingList = _userLists.find(l => l.id === 'currently-reading');
-  if(currentlyReadingList && (currentlyReadingList.bookIds || []).includes(bookId)) {
-    // Prefer seasonal visual if one is active, otherwise default
-    const seasonal = _bookmarkTemplates.find(t => {
-      if(t.condition?.type !== 'seasonal') return false;
-      const from = t.condition.startsAt?.toDate?.();
-      const to   = t.condition.endsAt?.toDate?.();
-      if(!from || !to) return false;
-      return now >= from && now <= to;
-    });
-    return seasonal || { shape:'classic', icon:'📖', label:'',
-      colors:{ body:'#0f1a2e', accent:'#c8952a', text:'#faf7f2' } };
-  }
-
-  return null;
+  // 4. Default "currently reading" bookmark (no special award/seasonal)
+  return {
+    shape: 'classic',
+    icon: '📖',
+    label: '',
+    colors: { body: '#0f1a2e', accent: '#c8952a', text: '#faf7f2' }
+  };
 }
   
 // ── LOAD KOBO DEVICES ────────────────────────────────────────────────────────
