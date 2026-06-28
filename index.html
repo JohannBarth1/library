@@ -3326,11 +3326,22 @@ async function renderMobHome(){
   // Build sections
   let html = '';
 
-  html += section(
+  const currentlyReading = (_userLists.find(l => l.id === 'currently-reading')?.bookIds || [])
+    .map(id => [...library, ...communityLib].find(b => b.id === id))
+    .filter(Boolean);
+  
+  if(currentlyReading.length) html += section(
     '📖 Currently Reading',
     'home_reading',
-    bookGrid(checkedOutBooks, true),
+    bookGrid(currentlyReading, true),
     true
+  );
+  
+  if(checkedOutBooks.length) html += section(
+    '🕐 Recently Opened',
+    'home_opened',
+    bookGrid(checkedOutBooks, true),
+    false
   );
 
   if(recommended.length) html += section(
