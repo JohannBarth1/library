@@ -7580,41 +7580,41 @@ function showBookmarkEditor(templateId, preselectedBookId) {
     showLoading(existing ? 'Saving…' : 'Creating…');
 
     try {
-      let templateId = templateId;
-
-      // Save or update template
-      if(existing) {
-        await updateDoc(doc(db, 'bookmarks', existing.id), templateData);
-        templateId = existing.id;
-      } else {
-        templateData.createdAt = serverTimestamp();
-        templateData.createdBy = currentUser.uid;
-        const ref = await addDoc(collection(db, 'bookmarks'), templateData);
-        templateId = ref.id;
-      }
+        let savedTemplateId;
+        
+        // Save or update template
+        if(existing) {
+          await updateDoc(doc(db, 'bookmarks', existing.id), templateData);
+          savedTemplateId = existing.id;
+        } else {
+          templateData.createdAt = serverTimestamp();
+          templateData.createdBy = currentUser.uid;
+          const ref = await addDoc(collection(db, 'bookmarks'), templateData);
+          savedTemplateId = ref.id;
+        }
 
       // Award if a user was selected
-      if(awardUserId && (condType === 'manual' || condType === 'seasonal')) {
-        const targets = awardUserId === '__all__'
-          ? allUsers.map(u => u.uid)
-          : [awardUserId];
-
-        for(const uid of targets) {
-          await addDoc(collection(db, 'user_bookmarks'), {
-            userId: uid,
-            bookmarkId: templateId,
-            bookId: awardBookId,
-            type: 'award',
-            awardedBy: currentUser.uid,
-            awardedAt: serverTimestamp(),
-            note: awardNote,
-            displayed: true,
-          });
+        if(awardUserId && (condType === 'manual' || condType === 'seasonal')) {
+          const targets = awardUserId === '__all__'
+            ? allUsers.map(u => u.uid)
+            : [awardUserId];
+        
+          for(const uid of targets) {
+            await addDoc(collection(db, 'user_bookmarks'), {
+              userId: uid,
+              bookmarkId: savedTemplateId,
+              bookId: awardBookId,
+              type: 'award',
+              awardedBy: currentUser.uid,
+              awardedAt: serverTimestamp(),
+              note: awardNote,
+              displayed: true,
+            });
+          }
+          showToast(`Created and awarded to ${targets.length} user${targets.length!==1?'s':''} ✓`);
+        } else {
+          showToast(`Bookmark ${existing?'updated':'created'} ✓`);
         }
-        showToast(`Created and awarded to ${targets.length} user${targets.length!==1?'s':''} ✓`);
-      } else {
-        showToast(`Bookmark ${existing?'updated':'created'} ✓`);
-      }
 
       await loadBookmarkTemplates();
       await loadMyBookmarks();
