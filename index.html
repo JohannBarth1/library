@@ -3279,196 +3279,150 @@ async function renderMobHome(){
   const name = (currentUser?.displayName||'').split(' ')[0] || 'Reader';
   document.getElementById('mobHomeGreeting').textContent = `Hello, ${name}`;
   const container = document.getElementById('mobHomeContent');
-  if(!library.length && !communityLib.length) return;
-  container.innerHTML = '';
-  if(!_userLists.length && !library.length) { renderMobHomeSkeleton(); return; }
 
-  const GRID_STYLE = `display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:.7rem;margin-bottom:.3rem;`;
+  // ── Fix 1: ensure lists are loaded before rendering ───────────────────
+  if(!_userLists.length) {
+    await loadUserLists();
+  }
 
-  // ── Helpers ───────────────────────────────────────────────────────────────
+  const allBooks = dedupe([...library, ...communityLib]);
+  const GRID = `display:grid;grid-template-columns:repeat(auto-fill,minmax(90px,1fr));gap:.6rem;`;
 
-  function sectionHtml(label, id, innerHtml, defaultOpen=true) {
-    return `
-      <div style="margin-bottom:.8rem;border:1px solid var(--border);border-radius:6px;overflow:hidden"
-           id="homeSection_${id}">
-        <div onclick="toggleHomeSection('${id}')"
-          style="display:flex;align-items:center;justify-content:space-between;
-                 padding:.6rem .9rem;background:var(--panel);cursor:pointer;
-                 -webkit-tap-highlight-color:transparent;user-select:none">
-          <div style="font-size:.68rem;letter-spacing:.15em;text-transform:uppercase;
-                      font-weight:700;color:var(--navy2)">${label}</div>
-          <div id="${id}_chevron" style="font-size:.8rem;color:var(--muted);
-            transition:transform .2s;${defaultOpen?'':'transform:rotate(-90deg)'}">▾</div>
-        </div>
-        <div id="${id}_body" style="padding:${defaultOpen?'.8rem':'0'} .8rem;
-          max-height:${defaultOpen?'2000px':'0'};overflow:hidden;
-          transition:max-height .25s ease,padding .25s ease">
-          ${innerHtml}
-        </div>
+  // ── Shelf section builder ─────────────────────────────────────────────
+  function shelfSection(id, label, color, books, defaultOpen=true) {
+    if(!books.length) return '';
+    const coverRow = books.slice(0, 8).map(b => {
+      const src = getCoverSrc(b);
+      return `<div class="home-shelf-book" data-bookid="${b.id}" style="
+        flex-shrink:0;width:64px;cursor:pointer;position:relative;">
+        ${src
+          ? `<img src="${src}" loading="lazy" style="
+              width:64px;height:96px;object-fit:cover;border-radius:2px 4px 4px 2px;
+              display:block;box-shadow:2px 3px 8px rgba(0,0,0,.35),
+              -2px 0 0 rgba(0,0,0,.15);"/>`
+          : `<div style="width:64px;height:96px;background:linear-gradient(145deg,var(--navy2),#2a3d5a);
+              border-radius:2px 4px 4px 2px;box-shadow:2px 3px 8px rgba(0,0,0,.35),
+              -2px 0 0 rgba(0,0,0,.15);display:flex;align-items:center;justify-content:center;
+              font-size:.55rem;color:rgba(200,180,140,0.8);text-align:center;padding:4px;
+              line-height:1.2;">${esc(b.title)}</div>`
+        }
+        <div style="position:absolute;bottom:0;left:0;right:0;height:28px;
+          background:linear-gradient(transparent,rgba(0,0,0,.55));border-radius:0 0 4px 2px;"></div>
       </div>`;
-  }
+    }).join('');
 
-  function bookGrid(books) {
-    if(!books.length) return `<div style="font-size:.82rem;color:var(--muted);padding:.3rem 0">Nothing here yet</div>`;
-    return `<div style="${GRID_STYLE}">${books.map(b => uniformBookCard(b)).join('')}</div>`;
-  }
+    return `<div class="home-shelf-section" id="homeSection_${id}"
+      style="margin-bottom:.9rem;">
+      <div onclick="toggleHomeShelf('${id}')"
+        style="display:flex;align-items:center;justify-content:space-between;
+               padding:.45rem .9rem;cursor:pointer;
+               -webkit-tap-highlight-color:transparent;user-select:none;">
+        <div style="display:flex;align-items:center;gap:.5rem;">
+          <div style="width:3px;height:14px;border-radius:2px;
+            background:${color};flex-shrink:0;"></div>
+          <span style="font-size:.72rem;font-weight:700;letter-spacing:.1em;
+            text-transform:uppercase;color:${color};">${label}</span>
+          <span style="font-size:.65rem;color:var(--muted);font-weight:400;">
+            ${books.length}</span>
+        </div>
+        <span id="${id}_chevron" style="font-size:.8rem;color:var(--muted);
+          transition:transform .2s;${defaultOpen?'':'transform:rotate(-90deg)'}">▾</span>
+      </div>
 
-  function bindCards(scopeEl) {
-    scopeEl.querySelectorAll('.book-card[data-bookid]').forEach(c => {
-      c.addEventListener('click', () => {
-        mobPrevPanel = 'mobPanelHome';
-        mob_showBook(c.dataset.bookid);
-      });
-    });
-  }
+      <div id="${id}_body" style="overflow:hidden;
+        max-height:${defaultOpen?'500px':'0'};
+        transition:max-height .3s ease;">
 
-  // ── Helper: upsert a section into the container ───────────────────────────
-  // Adds it if missing, replaces inner content if already there.
-  // Sections are inserted in a fixed display order using data-order attribute.
+        <!-- Shelf plank -->
+        <div style="position:relative;padding:0 .9rem .6rem;">
+          <!-- Wood plank behind books -->
+          <div style="position:absolute;bottom:0;left:0;right:0;height:14px;
+            background:linear-gradient(180deg,#8B6914 0%,#7a5c10 60%,#6b4f0c 100%);
+            box-shadow:0 3px 6px rgba(0,0,0,.4);z-index:0;"></div>
+          <!-- Books row -->
+          <div style="display:flex;gap:3px;overflow-x:auto;padding-bottom:14px;
+            -webkit-overflow-scrolling:touch;scrollbar-width:none;
+            position:relative;z-index:1;padding-top:6px;"
+            id="${id}_shelf">
+            ${coverRow}
+            ${books.length > 8
+              ? `<div style="flex-shrink:0;width:48px;height:96px;display:flex;
+                  align-items:center;justify-content:center;font-size:.65rem;
+                  color:var(--muted);font-weight:700;text-align:center;line-height:1.4;">
+                  +${books.length - 8}<br>more</div>` : ''}
+          </div>
+        </div>
 
-  const ORDER = [
-    'home_reading', 'home_rec', 'home_bm',
-    'home_sharedby', 'home_sharedwith',
-    'home_recent'
-  ];
+        <!-- Book titles below shelf (tap to open) -->
+        <div style="padding:.4rem .9rem .2rem;${GRID}" id="${id}_grid">
+          ${books.slice(0,8).map(b => `
+            <div class="home-shelf-book" data-bookid="${b.id}"
+              style="cursor:pointer;padding:.2rem 0;">
+              <div style="font-size:.68rem;font-weight:700;color:var(--navy2);
+                line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;
+                -webkit-box-orient:vertical;overflow:hidden;">${esc(b.title)}</div>
+              <div style="font-size:.6rem;color:var(--muted);margin-top:1px;
+                white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+                ${esc(b.author||'')}</div>
+            </div>`).join('')}
+        </div>
 
-  function upsertSection(id, label, innerHtml, defaultOpen=true) {
-    const existing = document.getElementById('homeSection_' + id);
-    if(existing) {
-      // Just update the body content, preserving open/closed state
-      const body = document.getElementById(id + '_body');
-      if(body) {
-        body.innerHTML = innerHtml;
-        bindCards(body);
-      }
-      return;
-    }
-    // Build and insert in correct order
-    const html = sectionHtml(label, id, innerHtml, defaultOpen);
-    const div = document.createElement('div');
-    div.innerHTML = html;
-    const newEl = div.firstElementChild;
-
-    // Find the right insertion point
-    const myOrder = ORDER.indexOf(id);
-    const siblings = [...container.children];
-    let inserted = false;
-    for(const sib of siblings) {
-      const sibId = sib.id?.replace('homeSection_', '');
-      if(ORDER.indexOf(sibId) > myOrder) {
-        container.insertBefore(newEl, sib);
-        inserted = true;
-        break;
-      }
-    }
-    if(!inserted) container.appendChild(newEl);
-    bindCards(newEl);
-  }
-
-  function removeSection(id) {
-    document.getElementById('homeSection_' + id)?.remove();
-  }
-
-  // ── Section 1: Currently Reading — instant (lists already loaded) ─────────
-
-  const currentlyReading = (_userLists.find(l => l.id === 'currently-reading')?.bookIds || [])
-    .map(id => [...library, ...communityLib].find(b => b.id === id))
-    .filter(Boolean);
-
-  if(currentlyReading.length) {
-    upsertSection('home_reading', '📖 Currently Reading', bookGrid(currentlyReading), true);
-  } else {
-    removeSection('home_reading');
-  }
-
-  // ── Section 2: Recommended — instant ─────────────────────────────────────
-
-  const recommended = [...library, ...communityLib]
-    .filter(b => b.recommended)
-    .filter((b,i,arr) => arr.findIndex(x => x.id === b.id) === i);
-
-  if(recommended.length) {
-    upsertSection('home_rec', '⭐ Recommended', bookGrid(recommended), true);
-  } else {
-    removeSection('home_rec');
-  }
-
-  // ── Section 3: Recently Added — instant ───────────────────────────────────
-
-  const recent = library.slice(0, 12);
-  if(recent.length) {
-    upsertSection('home_recent', '🕐 Recently Added', bookGrid(recent), false);
-  } else {
-    removeSection('home_recent');
-  }
-
-  // ── Section 4: Award Bookmarks — needs _myBookmarks + _bookmarkTemplates ──
-  // These may still be loading on first render; update when ready.
-
-  const renderBmSection = () => {
-    const awarded = _myBookmarks.filter(b => b.type === 'award' && b.displayed !== false);
-    if(!awarded.length) { removeSection('home_bm'); return; }
-    const bmHtml = `<div style="display:flex;flex-wrap:wrap;gap:.6rem;padding:.1rem 0">
-      ${awarded.map(ub => {
-        const t = _bookmarkTemplates.find(x => x.id === ub.bookmarkId);
-        if(!t) return '';
-        const book = [...library, ...communityLib].find(b => b.id === ub.bookId);
-        return `<div style="display:flex;flex-direction:column;align-items:center;
-                            gap:3px;cursor:pointer"
-                  onclick="${book ? `mob_showBook('${book.id}')` : ''}"
-                  title="${esc(t.name)}${ub.note ? ' — '+ub.note : ''}">
-          ${renderBookmarkSVG(t, 32, 50, 'home'+ub.id)}
-          <div style="font-size:.58rem;color:var(--muted);text-align:center;
-                      max-width:42px;overflow:hidden;text-overflow:ellipsis;
-                      white-space:nowrap">${esc(t.name)}</div>
-        </div>`;
-      }).join('')}
+      </div>
     </div>`;
-    upsertSection('home_bm', '🎖 My Bookmarks', bmHtml, true);
-  };
-  renderBmSection();
+  }
 
-  // ── Section 5: Shared — instant ───────────────────────────────────────────
+  // ── Gather data ───────────────────────────────────────────────────────
+  const crIds    = (_userLists.find(l => l.id === 'currently-reading')?.bookIds || []);
+  const finIds   = (_userLists.find(l => l.id === 'finished')?.bookIds || []);
+  const wtrIds   = (_userLists.find(l => l.id === 'want-to-read')?.bookIds || []);
+  const favIds   = (_userLists.find(l => l.id === 'favourites')?.bookIds || []);
 
-  const sharedByMe = library.filter(b => b.allowedUsers && b.allowedUsers.length > 0);
-  const sharedWithMe = communityLib.filter(b =>
-    b.ownerId !== currentUser?.uid && b.allowedUsers?.includes(currentUser?.uid)
+  const resolve  = ids => ids.map(id => allBooks.find(b => b.id === id)).filter(Boolean);
+
+  const crBooks  = resolve(crIds);
+  const finBooks = resolve(finIds);
+  const wtrBooks = resolve(wtrIds);
+  const favBooks = resolve(favIds);
+  const recBooks = [...library, ...communityLib]
+    .filter(b => b.recommended)
+    .filter((b,i,a) => a.findIndex(x=>x.id===b.id)===i);
+  const recentBooks = library.slice(0, 12);
+  const customLists = _userLists.filter(l =>
+    !l.system && (l.bookIds||[]).length > 0
   );
 
-  if(sharedByMe.length) {
-    upsertSection('home_sharedby', '🔒 Shared by Me', bookGrid(sharedByMe), false);
-  } else {
-    removeSection('home_sharedby');
-  }
-
-  if(sharedWithMe.length) {
-    upsertSection('home_sharedwith', '🔒 Shared with Me', bookGrid(sharedWithMe), false);
-  } else {
-    removeSection('home_sharedwith');
-  }
-
-  // ── Custom lists — instant ────────────────────────────────────────────────
-
-  const customLists = _userLists.filter(l => !l.system && (l.bookIds||[]).length > 0);
-  for(const list of customLists) {
-    const books = (list.bookIds||[])
-      .map(id => [...library,...communityLib].find(b => b.id === id))
-      .filter(Boolean);
-    if(!books.length) continue;
-    const listId = 'home_list_' + list.id;
-    ORDER.splice(ORDER.indexOf('home_recent'), 0, listId); // insert before recently added
-    upsertSection(listId, `${list.icon||'📚'} ${esc(list.name)}`, bookGrid(books), false);
-  }
-
-  // ── Empty state ───────────────────────────────────────────────────────────
-
-  if(!container.children.length) {
-    container.innerHTML = `<div style="text-align:center;padding:3rem 1rem;color:var(--muted)">
-      <div style="font-size:2.5rem;opacity:.2;margin-bottom:.8rem">📚</div>
-      <div style="font-size:.9rem">Upload books to get started</div>
+  // ── Render ────────────────────────────────────────────────────────────
+  // Fix 2: bottom padding clears the nav bar + a little breathing room
+  container.innerHTML = `
+    <div style="padding-bottom:calc(var(--mob-nav-h) + 1.5rem);">
+      ${shelfSection('home_reading', '📖 Currently Reading', 'var(--teal)',    crBooks,    true)}
+      ${shelfSection('home_rec',     '⭐ Recommended',        'var(--gold)',    recBooks,   true)}
+      ${shelfSection('home_fav',     '❤️ Favourites',         '#e11d48',       favBooks,   false)}
+      ${shelfSection('home_wtr',     '🔖 Want to Read',       '#7c3aed',       wtrBooks,   false)}
+      ${customLists.map(l =>
+        shelfSection('home_list_'+l.id, `${l.icon||'📚'} ${l.name}`, 'var(--teal)', resolve(l.bookIds||[]), false)
+      ).join('')}
+      ${shelfSection('home_recent',  '🕐 Recently Added',     'var(--muted)',  recentBooks,false)}
+      ${shelfSection('home_fin',     '✓ Finished',            '#276749',       finBooks,   false)}
     </div>`;
-  }
+
+  // ── Bind book taps ────────────────────────────────────────────────────
+  container.querySelectorAll('.home-shelf-book[data-bookid]').forEach(el => {
+    el.addEventListener('click', () => {
+      mobPrevPanel = 'mobPanelHome';
+      mob_showBook(el.dataset.bookid);
+    });
+  });
 }
+
+window.toggleHomeShelf = function(id) {
+  const body    = document.getElementById(id + '_body');
+  const chevron = document.getElementById(id + '_chevron');
+  if(!body || !chevron) return;
+  const isOpen  = body.style.maxHeight !== '0px' && body.style.maxHeight !== '0';
+  body.style.maxHeight    = isOpen ? '0' : '500px';
+  chevron.style.transform = isOpen ? 'rotate(-90deg)' : '';
+};
 
 function bookCardHtml(b, isComm, showProgress=false){
   const coverSrc = getCoverSrc(b);
