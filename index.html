@@ -1410,22 +1410,23 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 <div class="mob-panel" id="mobPanelCommunity">
   <div style="display:flex;flex-direction:column;height:100%;overflow:hidden;position:relative;">
 
-    <!-- Header -->
-    <div style="background:#1e1610;flex-shrink:0;padding:8px 12px 10px;position:relative;">
-      <div id="loungeWallTexture" style="position:absolute;inset:0;pointer-events:none;overflow:hidden;opacity:.07;"></div>
-      <div style="font-family:'Playfair Display',serif;font-size:1rem;color:#c8a060;position:relative;z-index:1;">🛋️ The Lounge</div>
-      <!-- Presence shelf -->
-      <div style="font-size:8px;letter-spacing:.2em;text-transform:uppercase;color:#c8a060;opacity:.6;margin-top:8px;margin-bottom:5px;">In the lounge</div>
-      <div id="loungeShelf" style="background:#2e1c08;border:1px solid #5a3a18;border-bottom:3px solid #4a2a10;border-radius:3px;padding:6px 8px;display:flex;gap:8px;align-items:flex-start;flex-wrap:wrap;min-height:52px;">
-        <div style="font-size:.78rem;color:rgba(200,149,42,.35);align-self:center;font-style:italic;">Nobody here yet…</div>
-      </div>
-    </div>
-
-    <!-- Action buttons -->
-    <div style="background:#2c1f0e;border-top:1px solid #5a3a18;border-bottom:2px solid #4a2a10;padding:6px 10px;display:flex;gap:6px;align-items:center;flex-shrink:0;">
-      <button onclick="showLoungeRequestModal()" style="font-size:9px;background:rgba(254,243,199,.12);border:1px solid rgba(254,243,199,.25);color:#fef3c7;border-radius:20px;padding:4px 10px;font-family:'Lato',sans-serif;font-weight:700;cursor:pointer;">+ Request</button>
-      <button id="loungeBroadcastBtn" onclick="showBroadcastModal()" style="display:none;font-size:9px;background:rgba(248,113,113,.15);border:1px solid rgba(248,113,113,.35);color:#fca5a5;border-radius:20px;padding:4px 10px;font-family:'Lato',sans-serif;font-weight:700;cursor:pointer;">📢 Broadcast</button>
-      <button id="loungeNewsUploadBtn" style="font-size:9px;background:rgba(250,247,239,.1);border:1px solid rgba(250,247,239,.2);color:#faf7ef;border-radius:20px;padding:4px 10px;font-family:'Lato',sans-serif;font-weight:700;cursor:pointer;">+ News clip</button>
+    <div style="background:#2c1f0e;border-bottom:2px solid #4a2a10;padding:8px 10px;
+                display:flex;gap:6px;align-items:center;flex-shrink:0;">
+      <div style="font-family:'Playfair Display',serif;font-size:.9rem;color:#c8a060;
+                  margin-right:auto;">🛋️ The Lounge</div>
+      <button onclick="showLoungeRequestModal()"
+        style="font-size:9px;background:rgba(254,243,199,.12);border:1px solid rgba(254,243,199,.25);
+               color:#fef3c7;border-radius:20px;padding:4px 10px;font-family:'Lato',sans-serif;
+               font-weight:700;cursor:pointer;">+ Request</button>
+      <button id="loungeBroadcastBtn" onclick="showBroadcastModal()"
+        style="display:none;font-size:9px;background:rgba(248,113,113,.15);
+               border:1px solid rgba(248,113,113,.35);color:#fca5a5;border-radius:20px;
+               padding:4px 10px;font-family:'Lato',sans-serif;font-weight:700;cursor:pointer;">
+        📢 Broadcast</button>
+      <button id="loungeNewsUploadBtn"
+        style="font-size:9px;background:rgba(250,247,239,.1);border:1px solid rgba(250,247,239,.2);
+               color:#faf7ef;border-radius:20px;padding:4px 10px;font-family:'Lato',sans-serif;
+               font-weight:700;cursor:pointer;">+ News clip</button>
     </div>
 
     <!-- Table: scrollable notes + news -->
@@ -1437,35 +1438,6 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
     </div>
 
   </div>
-
-  <!-- FLOATING MESSAGE OVERLAY (kept for background chat infra) -->
-  <div id="loungeFloatingMsg" style="position:fixed;top:70px;right:10px;z-index:25;
-    max-width:200px;pointer-events:none;opacity:0;transition:opacity .3s;"></div>
-</div>
-
-<!-- CHAT OVERLAY -->
-<div id="loungeChatOverlay" style="position:fixed;top:0;left:0;right:0;bottom:var(--mob-nav-h);background:#0d0805;z-index:100;display:flex;flex-direction:column;opacity:0;pointer-events:none;transition:opacity .3s;">
-  <!-- Header -->
-  <div style="background:#1e1610;border-bottom:1px solid #5a3a18;padding:8px 12px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;">
-    <div style="font-family:'Playfair Display',serif;font-size:14px;color:#c8a060;">🛋️ Lounge chat</div>
-    <button onclick="closeLoungeChat()" style="background:none;border:none;color:#c8a060;font-size:18px;cursor:pointer;opacity:.6;line-height:1;padding:0 4px;">✕</button>
-  </div>
-  <!-- Campfire room -->
-  <div id="loungeCampfire" style="flex:1;overflow:hidden;position:relative;"></div>
-  <!-- Input -->
-  <div style="border-top:1px solid #5a3a18;padding:8px 10px;display:flex;gap:6px;align-items:center;flex-shrink:0;">
-    <input id="loungeChatInput" placeholder="say something…"
-      style="flex:1;background:#1e1610;border:1px solid #5a3a18;border-radius:16px;
-             padding:7px 12px;font-size:16px;color:#d8c8a0;outline:none;
-             font-family:'Lato',sans-serif;"
-      onkeydown="if(event.key==='Enter')sendLoungeChat()"/>
-    <button onclick="sendLoungeChat()" style="background:#c8a060;border:none;border-radius:50%;width:30px;height:30px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:11px;color:#2c1f0e;flex-shrink:0;">➤</button>
-  </div>
-</div>
-
-<!-- FLOATING MESSAGE OVERLAY -->
-<div id="loungeFloatingMsg" style="position:fixed;top:70px;right:10px;z-index:25;
-  max-width:200px;pointer-events:none;opacity:0;transition:opacity .3s;"></div>
 
   <!-- ── BOOK DETAIL PANEL ── -->
   <div class="mob-panel" id="mobPanelDetail">
@@ -1951,7 +1923,6 @@ onAuthStateChanged(auth,async user=>{
       startNotifListener(),
       loungeJoinPassive(),
       startPresenceHeartbeat(),
-      startPresenceListener(),
     ]).then(()=>{
       renderMobHome();
       renderDeskHome();
@@ -6192,26 +6163,6 @@ document.getElementById('mobNavSettings').onclick  = () => mob_switchTab('settin
 let loungeChatLastSeen = parseInt(localStorage.getItem('elib_chat_seen') || '0');
 let loungeRequestsLastSeen = parseInt(localStorage.getItem('elib_lounge_seen') || '0');
 
-// ── WALL TEXTURES (generated once) ───────────────────────────────────────────
-function buildLoungeTextures() {
-  const wallTex = document.getElementById('loungeWallTexture');
-  if(wallTex && !wallTex.children.length) {
-    for(let i=0;i<24;i++){
-      const d=document.createElement('div');
-      d.style.cssText=`position:absolute;left:0;right:0;height:1px;background:#c8a060;top:${i*14+Math.random()*6}px;opacity:${0.3+Math.random()*0.4}`;
-      wallTex.appendChild(d);
-    }
-  }
-  const tg = document.getElementById('loungeTableGrain');
-  if(tg && !tg.children.length) {
-    for(let i=0;i<28;i++){
-      const d=document.createElement('div');
-      d.style.cssText=`position:absolute;left:0;right:0;height:1px;background:#c8a060;bottom:${i*12+Math.random()*5}px;opacity:${0.3+Math.random()*0.5}`;
-      tg.appendChild(d);
-    }
-  }
-}
-
 // ── PRESENCE ──────────────────────────────────────────────────────────────────
 let loungeReadingBookId = null;
 let loungeStatus = 'browsing'; // 'active' | 'browsing'
@@ -6382,120 +6333,6 @@ document.addEventListener('visibilitychange', () => {
   }
 });
 
-function startPresenceListener() {
-  if(loungePresenceUnsub) return;
-  loungePresenceUnsub = onSnapshot(collection(db, 'lounge_presence'), snap => {
-    const now = Date.now();
-    const people = snap.docs
-      .map(d => d.data())
-      .filter(p => (p.expiresAt?.toMillis?.() || 0) > now);
-    renderLoungeShelf(people);
-  }, e => console.warn('Presence listener:', e));
-}
-
-  function renderLoungeShelf(people) {
-  const shelf = document.getElementById('loungeShelf');
-  if(!shelf) return;
-  if(!people.length) {
-    shelf.innerHTML = `<div style="font-size:.78rem;color:rgba(200,149,42,.35);
-      align-self:center;font-style:italic;">Nobody here yet…</div>`;
-    return;
-  }
-
-  const colors = ['#2a7c8a','#5a48b0','#b84c1a','#276749','#c8952a'];
-
-  shelf.innerHTML = people.map((p, i) => {
-    const isMe = p.userId === currentUser?.uid;
-    const isActive = p.status === 'active';
-    const isBrowsing = p.status === 'browsing';
-    const initials = (p.displayName||'?').split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
-
-    const dotColor = isActive ? '#4ade80' : '#6b7280';
-    const avatarBorder = isActive ? '#c8a060' : '#4b5563';
-    const avatarBg = isBrowsing && !isActive ? '#4b5563' : colors[i % colors.length];
-    const nameColor = isActive ? '#c8a060' : '#6b7280';
-    const opacity = isBrowsing && !isActive ? '.6' : '1';
-
-    const avatarHtml = p.photoURL
-      ? `<img src="${p.photoURL}" style="width:34px;height:34px;border-radius:50%;
-           object-fit:cover;border:2px solid ${avatarBorder};
-           ${isBrowsing && !isActive ? 'filter:grayscale(1);' : ''}"/>`
-      : `<div style="width:34px;height:34px;border-radius:50%;background:${avatarBg};
-           border:2px solid ${avatarBorder};display:flex;align-items:center;
-           justify-content:center;font-size:11px;font-weight:700;color:#fff;
-           opacity:${opacity};">${initials}</div>`;
-
-    const bookBadge = p.currentlyReading
-      ? `<div data-booklink="${p.currentlyReadingBookId||''}"
-            style="font-size:7.5px;background:rgba(245,158,11,.15);color:#f59e0b;
-                   border:1px solid rgba(245,158,11,${p.currentlyReadingBookId?'.4':'.25'});
-                   border-radius:3px;padding:1px 4px;max-width:64px;overflow:hidden;
-                   text-overflow:ellipsis;white-space:nowrap;
-                   ${p.currentlyReadingBookId?'cursor:pointer;text-decoration:underline dotted;':''}"
-            title="${p.currentlyReadingBookId?'Tap to view book':''}">
-            ${esc(p.currentlyReading)}</div>`
-      : '';
-
-    const statusLabel = isMe
-      ? `<div style="font-size:7px;color:#c8a060;opacity:.5;cursor:pointer;"
-             onclick="event.stopPropagation();showReadingEditSheet()">✎ edit</div>`
-      : `<div style="font-size:7px;color:${nameColor};opacity:.5;">
-             ${isActive ? 'in lounge' : 'browsing'}</div>`;
-
-    return `<div class="presence-avatar-wrap" data-userid="${p.userId}"
-        data-isme="${isMe}" style="display:flex;flex-direction:column;
-        align-items:center;gap:2px;position:relative;cursor:pointer;">
-      ${avatarHtml}
-      <div style="position:absolute;top:0;right:0;width:9px;height:9px;border-radius:50%;
-                  background:${dotColor};border:2px solid #2e1c08;"></div>
-      <div style="font-size:8px;color:${nameColor};">
-        ${isMe ? 'You' : esc(p.displayName?.split(' ')[0]||'?')}</div>
-      ${bookBadge}
-      ${statusLabel}
-    </div>`;
-  }).join('');
-
-  // Tap own avatar → edit reading status
-  shelf.querySelectorAll('.presence-avatar-wrap[data-isme="true"]').forEach(el => {
-    el.addEventListener('click', e => {
-      if(e.target.closest('[onclick]')) return;
-      showReadingEditSheet();
-    });
-  });
-
-  // Tap book badge with bookId → open book
-  shelf.querySelectorAll('[data-booklink]').forEach(el => {
-    if(!el.dataset.booklink) return;
-    el.addEventListener('click', e => {
-      e.stopPropagation();
-      showBookById(el.dataset.booklink);
-    });
-  });
-
-  // Tap other user's avatar → targeted knock
-  shelf.querySelectorAll('.presence-avatar-wrap[data-isme="false"]').forEach(el => {
-    el.addEventListener('click', async e => {
-      if(e.target.closest('[data-booklink]')) return;
-      const userId = el.dataset.userid;
-      const person = people.find(p => p.userId === userId);
-      if(!person) return;
-      // Show targeted knock for just this person
-      if(!confirm(`Knock on ${person.displayName?.split(' ')[0]}'s door?`)) return;
-      try {
-        await addDoc(collection(db, 'lounge_notifications'), {
-          toUserId: userId,
-          fromUserId: currentUser.uid,
-          fromName: currentUser.displayName || currentUser.email,
-          type: 'knock',
-          read: false,
-          createdAt: serverTimestamp(),
-        });
-        showToast(`🔔 Knocked on ${person.displayName?.split(' ')[0]}'s door!`);
-      } catch(e) { showToast('Failed: ' + e.message); }
-    });
-  });
-}
-
 // ── NOTIFICATIONS LISTENER ────────────────────────────────────────────────────
 function startNotifListener() {
   if(loungeNotifsUnsub || !currentUser) return;
@@ -6541,30 +6378,6 @@ function updateLoungeBadge() {
     badge.textContent = total > 9 ? '9+' : total;
     document.getElementById('mobNavCommunity')?.appendChild(badge);
   }
-}
-
-
-// Close chat when tapping the message area background
-document.getElementById('loungeChatMessages')?.addEventListener('click', function(e) {
-  if(e.target === this) closeLoungeChat();
-});
-
-// ── SEND + OPEN/CLOSE ─────────────────────────────────────────────────────────
-async function sendLoungeChat() {
-  const input = document.getElementById('loungeChatInput');
-  if(!input) return;
-  const text = input.value.trim();
-  if(!text || !currentUser) return;
-  input.value = '';
-  try {
-    await addDoc(collection(db, 'lounge_chat'), {
-      text,
-      authorId: currentUser.uid,
-      authorName: currentUser.displayName || currentUser.email,
-      authorPhoto: currentUser.photoURL || null,
-      createdAt: serverTimestamp(),
-    });
-  } catch(e) { showToast('Failed: ' + e.message); }
 }
 
 // ── REQUESTS AS STICKY NOTES ──────────────────────────────────────────────────
@@ -6735,24 +6548,10 @@ window.showBookById = showBookById;
 
 // ── ENTRY POINT: open lounge tab ──────────────────────────────────────────────
 function openLoungePanel() {
-  buildLoungeTextures();
-  startPresenceListener();
   startRequestsListener();
   startNotifListener();
   markNotifsRead();
   updateLoungeBadge();
-  // Force shelf re-render in case listener fired before panel was visible
-  const shelf = document.getElementById('loungeShelf');
-  if(shelf && shelf.innerHTML.includes('Nobody')) {
-    // Listener already ran but shelf wasn't in DOM yet — re-read presence
-    getDocs(collection(db, 'lounge_presence')).then(snap => {
-      const now = Date.now();
-      const people = snap.docs
-        .map(d => d.data())
-        .filter(p => (p.expiresAt?.toMillis?.() || 0) > now);
-      renderLoungeShelf(people);
-    }).catch(() => {});
-  }
 }
 
 async function deleteNewsClip(clipId, path) {
@@ -6910,6 +6709,56 @@ async function adminLoadKoboDevices() {
 
 document.getElementById('adminKoboRefresh')?.addEventListener('click', adminLoadKoboDevices);
 
+  // ── ADMIN LOAD CURRENT USERS ──────────────────────────────────────────────────
+async function adminLoadPresence() {
+  const el = document.getElementById('adminPresenceBody');
+  if(!el) return;
+  el.innerHTML = '<div style="color:var(--muted);font-size:.85rem">Loading…</div>';
+  try {
+    const snap = await getDocs(collection(db, 'lounge_presence'));
+    const now = Date.now();
+    const all = snap.docs.map(d => d.data())
+      .sort((a,b) => (b.lastSeen?.toMillis?.() || 0) - (a.lastSeen?.toMillis?.() || 0));
+
+    if(!all.length) {
+      el.innerHTML = '<div style="color:var(--muted);font-size:.85rem">No presence data yet</div>';
+      return;
+    }
+
+    el.innerHTML = all.map(p => {
+      const isActive = (p.expiresAt?.toMillis?.() || 0) > now;
+      const lastSeen = p.lastSeen?.toDate?.();
+      const initials = (p.displayName||'?').split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
+      return `<div class="admin-card">
+        <div style="display:flex;align-items:center;gap:.6rem">
+          ${p.photoURL
+            ? `<img src="${p.photoURL}" style="width:28px;height:28px;border-radius:50%;
+                object-fit:cover;border:1px solid var(--border);flex-shrink:0"/>`
+            : `<div style="width:28px;height:28px;border-radius:50%;background:var(--teal);
+                color:#fff;display:flex;align-items:center;justify-content:center;
+                font-size:.65rem;font-weight:700;flex-shrink:0">${initials}</div>`}
+          <div style="flex:1;min-width:0">
+            <div class="admin-card-title">${esc(p.displayName||'Unknown')}</div>
+            <div style="font-size:.7rem;color:var(--muted)">${esc(p.email||'')}</div>
+            ${p.currentlyReading
+              ? `<div style="font-size:.7rem;color:var(--gold);margin-top:1px">
+                  📖 ${esc(p.currentlyReading)}</div>` : ''}
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px;flex-shrink:0">
+            <span class="admin-badge ${isActive ? 'active' : 'returned'}">
+              ${isActive ? 'Online' : 'Offline'}</span>
+            ${lastSeen
+              ? `<span style="font-size:.6rem;color:var(--muted)">${timeAgo(lastSeen)}</span>`
+              : ''}
+          </div>
+        </div>
+      </div>`;
+    }).join('');
+  } catch(e) {
+    el.innerHTML = `<div style="color:var(--danger);font-size:.82rem">Failed: ${e.message}</div>`;
+    console.error(e);
+  }
+}
 // ── USERS ─────────────────────────────────────────────────────────────────────
 async function adminLoadUsers() {
   const el = document.getElementById('adminUsersList');
@@ -7674,11 +7523,31 @@ function buildAdminSections() {
     </div>
 
     <div class="admin-section">
+      <div class="admin-section-header" data-admin-section="presence">
+        <span class="admin-section-title">🟢 Active Users</span>
+        <span class="admin-section-chevron">▾</span>
+      </div>
+      <div class="admin-section-body" id="adminPresenceBody">
+        <div style="color:var(--muted);font-size:.85rem">Open to load…</div>
+      </div>
+    </div>
+
+    <div class="admin-section">
       <div class="admin-section-header" data-admin-section="categories">
         <span class="admin-section-title">🏷 Categories</span>
         <span class="admin-section-chevron">▾</span>
       </div>
       <div class="admin-section-body" id="adminCatBody">
+        <div style="color:var(--muted);font-size:.85rem">Open to load…</div>
+      </div>
+    </div>
+
+        <div class="admin-section">
+      <div class="admin-section-header" data-admin-section="tags">
+        <span class="admin-section-title">🔖 Tags</span>
+        <span class="admin-section-chevron">▾</span>
+      </div>
+      <div class="admin-section-body" id="adminTagBody">
         <div style="color:var(--muted);font-size:.85rem">Open to load…</div>
       </div>
     </div>
@@ -7689,16 +7558,6 @@ function buildAdminSections() {
         <span class="admin-section-chevron">▾</span>
       </div>
       <div class="admin-section-body" id="adminBookmarkBody">
-        <div style="color:var(--muted);font-size:.85rem">Open to load…</div>
-      </div>
-    </div>
-
-    <div class="admin-section">
-      <div class="admin-section-header" data-admin-section="tags">
-        <span class="admin-section-title">🔖 Tags</span>
-        <span class="admin-section-chevron">▾</span>
-      </div>
-      <div class="admin-section-body" id="adminTagBody">
         <div style="color:var(--muted);font-size:.85rem">Open to load…</div>
       </div>
     </div>`;
@@ -7718,6 +7577,7 @@ function buildAdminSections() {
         if(section === 'categories') adminLoadCategories();
         if(section === 'bookmarks') adminLoadBookmarks();
         if(section === 'tags')      adminLoadTags();
+        if(section === 'presence')  adminLoadPresence();
       }
     });
   });
