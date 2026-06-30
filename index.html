@@ -2457,57 +2457,54 @@ function showBookById(id){
   document.getElementById('bookDrawer').classList.add('open');
 }
 
-  function renderDetailActionRows(container, book, isMine){
+function renderDetailActionRows(container, book, isMine){
   const btn = (icon, label, action, opts={}) => {
-    const { danger=false, active=false, small=false } = opts;
-    const pad = small ? '.4rem .3rem' : '.55rem .4rem';
-    const fs  = small ? '.66rem' : '.78rem';
-    const iconFs = small ? '.95rem' : '1.15rem';
+    const { danger=false, active=false } = opts;
     let bg = 'transparent', col = 'var(--navy2)', border = 'var(--border)';
     if(danger){ col = 'var(--danger)'; border = '#e0b0b0'; }
     if(active){ bg = 'rgba(200,149,42,.12)'; col = 'var(--gold)'; border = 'var(--gold)'; }
     return `<button class="detail-row-btn" data-action="${action}" style="
-      flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;
-      padding:${pad};border-radius:10px;border:1px solid ${border};
-      background:${bg};color:${col};cursor:pointer;min-width:0;">
-      <span style="font-size:${iconFs};line-height:1">${icon}</span>
-      <span style="font-size:${fs};font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%">${label}</span>
+      display:flex;align-items:center;gap:.35rem;
+      padding:.4rem .65rem;border-radius:20px;border:1px solid ${border};
+      background:${bg};color:${col};cursor:pointer;white-space:nowrap;flex-shrink:0;">
+      <span style="font-size:.85rem;line-height:1">${icon}</span>
+      <span style="font-size:.68rem;font-weight:700;line-height:1">${label}</span>
     </button>`;
   };
 
   // ── Row 1: primary actions ──────────────────────────────────────────────
-  let html = `<div style="display:flex;gap:.5rem;margin-bottom:.5rem;">
+  let html = `<div style="display:flex;gap:.4rem;margin-bottom:.5rem;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:2px;">
     ${btn('📖','Read','read')}
     ${btn('📚','Send to Kobo','sendtokobo')}
     ${btn('🗂','Lists','addtolist')}
   </div>`;
 
   // ── Row 2: everyone ──────────────────────────────────────────────────────
-  html += `<div style="display:flex;gap:.4rem;margin-bottom:.5rem;">
-    ${btn('🏷','Tags','tags',{small:true})}
-    ${btn(book.recommended?'☆':'⭐', book.recommended?'Unrec':'Recommend', 'recommend', {small:true, active:book.recommended})}
-    ${btn('📎','Copy Link','link',{small:true})}
-    ${btn('⬇','Download','download',{small:true})}
+  html += `<div style="display:flex;gap:.35rem;margin-bottom:.5rem;flex-wrap:wrap;">
+    ${btn('🏷','Tags','tags')}
+    ${btn(book.recommended?'☆':'⭐', book.recommended?'Unrec':'Recommend', 'recommend', {active:book.recommended})}
+    ${btn('📎','Copy Link','link')}
+    ${btn('⬇','Download','download')}
   </div>`;
 
   // ── Row 3: owner / admin actions ─────────────────────────────────────────
   if(isMine || isAdmin){
     const rowBtns = [];
     if(isMine){
-      if(book.visibility !== 'public') rowBtns.push(btn('🌐','Publish','share',{small:true}));
-      else rowBtns.push(btn('🔒','Unpublish','unpublish',{small:true}));
-      rowBtns.push(btn('🔗','Share','shareprivate',{small:true}));
-      rowBtns.push(btn('✎','Edit','editmeta',{small:true}));
-      rowBtns.push(btn('📑','Chapters','chapters',{small:true}));
+      if(book.visibility !== 'public') rowBtns.push(btn('🌐','Publish','share'));
+      else rowBtns.push(btn('🔒','Unpublish','unpublish'));
+      rowBtns.push(btn('🔗','Share','shareprivate'));
+      rowBtns.push(btn('✎','Edit','editmeta'));
+      rowBtns.push(btn('📑','Chapters','chapters'));
     }
     if(isAdmin){
-      rowBtns.push(btn('📋','History','history',{small:true}));
+      rowBtns.push(btn('📋','History','history'));
     }
     if(isMine){
-      rowBtns.push(btn('✕','Delete','delete',{small:true, danger:true}));
+      rowBtns.push(btn('✕','Delete','delete',{danger:true}));
     }
     if(rowBtns.length){
-      html += `<div style="display:flex;gap:.4rem;flex-wrap:wrap;">${rowBtns.join('')}</div>`;
+      html += `<div style="display:flex;gap:.35rem;flex-wrap:wrap;">${rowBtns.join('')}</div>`;
     }
   }
 
