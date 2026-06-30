@@ -5719,14 +5719,14 @@ function _showKoboSetupModal(device) {
   h.textContent = `📖 ${device.name}`;
   p.innerHTML = `
     <strong>1.</strong> Connect your Kobo via USB and add <a href="https://github.com/JohannBarth1/firebase-kobocloud/releases/download/KoboRoot/KoboRoot.tgz">this file</a> to the .Kobo folder.<br><br>
-    <strong>2.</strong> Disconnect your device (remember to eject it properly, and let the update run.<br><br>
+    <strong>2.</strong> Disconnect your device (remember to eject it properly), and let the update run.<br><br>
     <strong>3.</strong> Copy the config line below.<br><br>
     <strong>4.</strong> Connect your Kobo via USB again, and open
     <code style="font-size:.82rem">.add/kobocloud/kobocloudrc</code>
     in a plain text editor.<br><br>
     <strong>5.</strong> Add the copied line to the file, replacing the existing Firebase line,
     and save.<br><br>
-    <strong>6.</strong> Eject and toggle WiFi off/on on the Kobo to sync.<br><br>
+    <strong>6.</strong> Eject and restart the device.<br><br>
     <span style="font-size:.75rem;color:var(--muted)">
       Keep this line private — it is this device's access credential.
     </span>`;
