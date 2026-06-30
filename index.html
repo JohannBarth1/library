@@ -3326,7 +3326,7 @@ function shelfSection(id, label, icon, color, books, opts={}) {
       ${shelfSection('home_reading', 'Currently reading', '📖', 'var(--teal)', crBooks, {defaultOpen:true, alwaysShow:true})}
       ${shelfSection('home_rec', 'Recommended', '⭐', 'var(--gold)', recBooks, {defaultOpen: crBooks.length === 0})}
       ${bookmarksSection()}
-      ${shelfSection('home_fav', 'Favourites', '❤️', '#e11d48', favBooks, {defaultOpen:false})}
+      ${shelfSection('home_fav', 'Favourites', '❤️', '#e11d48', favBooks, {defaultOpen:false, showAddTile:true, listId:'favourites', alwaysShow:true})}
       ${shelfSection('home_wtr', 'Want to read', '🔖', '#7c3aed', wtrBooks, {defaultOpen:false})}
       ${customLists.map(l =>
         shelfSection('home_list_'+l.id, l.name, l.icon||'📚', 'var(--teal)',
@@ -7134,7 +7134,7 @@ const SYSTEM_LISTS = [
   { id: 'want-to-read',      name: 'Want to Read',       icon: '📖', system: true  },
   { id: 'currently-reading', name: 'Currently Reading',  icon: '🔖', system: true  },
   { id: 'finished',          name: 'Finished',           icon: '✓',  system: true  },
-  { id: 'favourites',        name: 'Favourites',         icon: '⭐', system: true  },
+  { id: 'favourites',        name: 'Favourites',         icon: '❤️', system: true  },
 ];
 
 async function loadUserLists() {
