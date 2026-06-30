@@ -2457,6 +2457,64 @@ function showBookById(id){
   document.getElementById('bookDrawer').classList.add('open');
 }
 
+  function renderDetailActionRows(container, book, isMine){
+  const btn = (icon, label, action, opts={}) => {
+    const { danger=false, active=false, small=false } = opts;
+    const pad = small ? '.4rem .3rem' : '.55rem .4rem';
+    const fs  = small ? '.66rem' : '.78rem';
+    const iconFs = small ? '.95rem' : '1.15rem';
+    let bg = 'transparent', col = 'var(--navy2)', border = 'var(--border)';
+    if(danger){ col = 'var(--danger)'; border = '#e0b0b0'; }
+    if(active){ bg = 'rgba(200,149,42,.12)'; col = 'var(--gold)'; border = 'var(--gold)'; }
+    return `<button class="detail-row-btn" data-action="${action}" style="
+      flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;
+      padding:${pad};border-radius:10px;border:1px solid ${border};
+      background:${bg};color:${col};cursor:pointer;min-width:0;">
+      <span style="font-size:${iconFs};line-height:1">${icon}</span>
+      <span style="font-size:${fs};font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%">${label}</span>
+    </button>`;
+  };
+
+  // ── Row 1: primary actions ──────────────────────────────────────────────
+  let html = `<div style="display:flex;gap:.5rem;margin-bottom:.5rem;">
+    ${btn('📖','Read','read')}
+    ${btn('📚','Send to Kobo','sendtokobo')}
+    ${btn('🗂','Lists','addtolist')}
+  </div>`;
+
+  // ── Row 2: everyone ──────────────────────────────────────────────────────
+  html += `<div style="display:flex;gap:.4rem;margin-bottom:.5rem;">
+    ${btn('🏷','Tags','tags',{small:true})}
+    ${btn(book.recommended?'☆':'⭐', book.recommended?'Unrec':'Recommend', 'recommend', {small:true, active:book.recommended})}
+    ${btn('📎','Copy Link','link',{small:true})}
+    ${btn('⬇','Download','download',{small:true})}
+  </div>`;
+
+  // ── Row 3: owner / admin actions ─────────────────────────────────────────
+  if(isMine || isAdmin){
+    const rowBtns = [];
+    if(isMine){
+      if(book.visibility !== 'public') rowBtns.push(btn('🌐','Publish','share',{small:true}));
+      else rowBtns.push(btn('🔒','Unpublish','unpublish',{small:true}));
+      rowBtns.push(btn('🔗','Share','shareprivate',{small:true}));
+      rowBtns.push(btn('✎','Edit','editmeta',{small:true}));
+      rowBtns.push(btn('📑','Chapters','chapters',{small:true}));
+    }
+    if(isAdmin){
+      rowBtns.push(btn('📋','History','history',{small:true}));
+    }
+    if(isMine){
+      rowBtns.push(btn('✕','Delete','delete',{small:true, danger:true}));
+    }
+    if(rowBtns.length){
+      html += `<div style="display:flex;gap:.4rem;flex-wrap:wrap;">${rowBtns.join('')}</div>`;
+    }
+  }
+
+  container.innerHTML = html;
+  container.querySelectorAll('[data-action]').forEach(b => b.addEventListener('click', handleAction));
+}
+
 function buildDrawerIconBar(book, isMine){
   const bar = document.getElementById('drawerIconBar');
 
@@ -2664,14 +2722,15 @@ function mob_showBook(id){
   const isMine=book.ownerId===currentUser?.uid;
   const isComm=communityLib.some(b=>b.id===id);
 
-  // Cover
+  const favList = _userLists.find(l => l.id === 'favourites');
+  book.__isFav = !!(favList?.bookIds || []).includes(id);
+
   const img=document.getElementById('mobDetailCoverImg');
   const ph=document.getElementById('mobDetailCoverPh');
   const coverSrc=getCoverSrc(book);
   if(coverSrc){img.src=coverSrc;img.style.display='block';ph.style.display='none';}
   else{img.style.display='none';ph.style.display='flex';}
 
-  // Cover tap = read
   const coverEl = coverSrc ? img : ph;
   coverEl.style.cursor='pointer';
   coverEl.onclick=()=>{ const b=[...library,...communityLib].find(x=>x.id===currentId); if(b&&(b.ownerId===currentUser?.uid||myCheckedOutIds.has(b.id))) readCurrentBook(); else showToast('Sign out this book to read it'); };
@@ -2687,10 +2746,7 @@ function mob_showBook(id){
 
   document.getElementById('mobDetailDesc').textContent=stripHtml(book.description||'');
 
-  // Replace action buttons with single Actions button
-  const actEl=document.getElementById('mobDetailActions');
-  actEl.innerHTML=`<button class="btn-action" style="background:var(--navy2);color:var(--gold);border-color:var(--navy2);padding:.5rem 1.2rem" id="btnMobActions">⋯ Actions</button>`;
-  document.getElementById('btnMobActions').addEventListener('click',()=>showBottomSheet(book, isMine));
+  renderDetailActionRows(document.getElementById('mobDetailActions'), book, isMine);
 
   if(isComm)renderStars('mobStars','mobRatingCount',id,true);
   else document.getElementById('mobStarRating').style.display='none';
@@ -2698,76 +2754,6 @@ function mob_showBook(id){
   mob_showPanel('mobPanelDetail');
 }
 
-function showBottomSheet(book, isMine){
-  const isMyBook = book.ownerId === currentUser?.uid;
-  document.getElementById('bsTitle').textContent = book.title || '';
-
-const row = (icon, label, action, danger=false) =>
-    `<button class="btn-action" style="
-      background:transparent;
-      color:${danger ? 'var(--danger)' : 'var(--navy2)'};
-      border-color:${danger ? '#e0b0b0' : 'var(--border)'};
-      padding:.38rem .85rem;
-      font-size:.72rem;
-      border-radius:20px;
-      margin:.2rem .3rem;" data-action="${action}">
-      ${icon} ${label}
-    </button>`;
-
-  let html = '';
-
-  // Hero actions
-  html += `<div style="display:flex;gap:.5rem;padding:.7rem 1.2rem;border-bottom:1px solid var(--border)">
-    <button class="btn-action btn-read" style="flex:1;justify-content:center;padding:.55rem 1rem;font-size:.82rem;border-radius:20px" data-action="read">
-      📖 Read
-    </button>
-    <button class="btn-action btn-kobo" style="flex:1;justify-content:center;padding:.55rem 1rem;font-size:.82rem;border-radius:20px" data-action="sendtokobo">
-      📲 Send to Kobo
-    </button>
-  </div>`;
-
-// Secondary actions
-  html += `<div style="display:flex;flex-wrap:wrap;padding:.5rem 1rem .3rem;gap:.3rem;border-bottom:1px solid var(--border)">`;
-  html += row('📚','Lists','addtolist');
-  html += row('🏷','Tags','tags');
-  html += row('⭐', book.recommended ? 'Unrecommend' : 'Recommend','recommend');
-  html += row('📎','Copy Link','link');
-  html += `</div>`;
-
-if(isMyBook){
-    html += `<div style="display:flex;flex-wrap:wrap;padding:.5rem 1rem .3rem;gap:.3rem">`;
-    if(book.visibility !== 'public') html += row('🌐','Publish','share');
-    else html += row('🔒','Unpublish','unpublish');
-    html += row('🔗','Share Privately','shareprivate');
-    html += row('✎','Edit Details','editmeta');
-    html += row('📑','Edit Chapters','chapters');
-    html += row('⬇','Download','download');
-    html += row('📋','History','history');
-    html += `</div>`;
-    html += `<div style="display:flex;flex-wrap:wrap;padding:.2rem 1rem .6rem;gap:.3rem;border-top:1px solid var(--border)">`;
-    html += row('✕','Delete','delete',true);
-    html += `</div>`;
-  }
-
-  const bsBody = document.getElementById('bsBody');
-  bsBody.innerHTML = html;
-  bsBody.querySelectorAll('[data-action]').forEach(b => {
-    b.addEventListener('click', e => {
-      closeBottomSheet();
-      handleAction(e);
-    });
-  });
-
-  document.getElementById('bsOverlay').classList.add('open');
-  document.getElementById('bottomSheet').classList.add('open');
-}
-
-function closeBottomSheet(){
-  document.getElementById('bsOverlay').classList.remove('open');
-  document.getElementById('bottomSheet').classList.remove('open');
-}
-
-document.getElementById('bsOverlay').addEventListener('click', closeBottomSheet);
 document.getElementById('btnMobBack').addEventListener('click',()=>mob_showPanel(mobPrevPanel||'mobPanelHome'));
 function mob_showPanel(id){document.querySelectorAll('.mob-panel').forEach(p=>p.classList.remove('active'));document.getElementById(id)?.classList.add('active');}
 
@@ -3614,11 +3600,7 @@ async function readCurrentBook(){
     staging._usableHeight = usableH;
     const saved = loadReadingProgress(book.id);
     if(saved && saved.chapterIdx < readerSpine.length && saved.chapterIdx > 0){
-      if(confirm(`Resume at ${readerSpine[saved.chapterIdx]?.label || 'last position'}?`)){
-        readerGoToChapter(saved.chapterIdx, saved.pageIdx);
-      } else {
-        readerGoToChapter(0);
-      }
+      readerGoToChapter(saved.chapterIdx, saved.pageIdx);
     } else {
       readerGoToChapter(0);
     }
