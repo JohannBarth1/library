@@ -4487,6 +4487,20 @@ function closeReader(){
         ).catch(e => console.warn('closeReader finished update:', e));
         showToast('Added to Finished ✓');
       }
+
+      // Remove the reading-position bookmark so it drops off the Home tab.
+      // Any awarded bookmark for this book is left untouched.
+      const posBookmark = _myBookmarks.find(b =>
+        b.type === 'reading_position' && b.bookId === readerBookId
+      );
+      if(posBookmark){
+        deleteDoc(doc(db, 'user_bookmarks', posBookmark.id))
+          .then(() => {
+            _myBookmarks = _myBookmarks.filter(b => b.id !== posBookmark.id);
+            renderMobHome();
+          })
+          .catch(e => console.warn('closeReader bookmark removal:', e));
+      }
     }
   }
   document.getElementById('readerOverlay').classList.remove('open');
