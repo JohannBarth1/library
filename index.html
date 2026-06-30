@@ -3163,97 +3163,101 @@ async function renderMobHome(){
   document.getElementById('mobHomeGreeting').textContent = `Hello, ${name}`;
   const container = document.getElementById('mobHomeContent');
 
+  if(!currentUser) return;
   if(!_userLists.length) {
     await loadUserLists();
   }
 
   const allBooks = dedupe([...library, ...communityLib]);
 
-  function shelfSection(id, label, icon, color, books, opts={}) {
-    const { defaultOpen=true, editable=false, listId=null, showAddTile=false } = opts;
-    if(!books.length && !showAddTile) return '';
+function shelfSection(id, label, icon, color, books, opts={}) {
+  const { defaultOpen=true, editable=false, listId=null, showAddTile=false, alwaysShow=false } = opts;
+  if(!books.length && !showAddTile && !alwaysShow) return '';
 
-    const coverRow = books.slice(0, 12).map(b => {
-      const src = getCoverSrc(b);
-      const bmTpl = (_bookmarkTemplates.length && _myBookmarks !== undefined)
-        ? getDisplayBookmarkTemplate(b.id) : null;
-      const ribbonHtml = bmTpl
-        ? `<div style="position:absolute;top:0;right:0;z-index:3;
-                       filter:drop-shadow(1px 2px 3px rgba(0,0,0,0.5))">
-            ${renderBookmarkSVG(bmTpl, 18, 28, 'shelf'+b.id, true)}
-           </div>`
-        : '';
+  const coverRow = books.length
+    ? books.slice(0, 12).map(b => {
+        const src = getCoverSrc(b);
+        const bmTpl = (_bookmarkTemplates.length && _myBookmarks !== undefined)
+          ? getDisplayBookmarkTemplate(b.id) : null;
+        const ribbonHtml = bmTpl
+          ? `<div style="position:absolute;top:0;right:0;z-index:3;
+                         filter:drop-shadow(1px 2px 3px rgba(0,0,0,0.5))">
+              ${renderBookmarkSVG(bmTpl, 18, 28, 'shelf'+b.id, true)}
+             </div>`
+          : '';
 
-      return `<div class="home-shelf-book" data-bookid="${b.id}" style="
-        flex-shrink:0;width:64px;cursor:pointer;position:relative;">
-        ${src
-          ? `<img src="${src}" loading="lazy" style="
-              width:64px;height:96px;object-fit:cover;border-radius:2px 4px 4px 2px;
-              display:block;box-shadow:2px 3px 8px rgba(0,0,0,.3);"/>`
-          : `<div style="width:64px;height:96px;background:linear-gradient(145deg,var(--navy2),#2a3d5a);
-              border-radius:2px 4px 4px 2px;box-shadow:2px 3px 8px rgba(0,0,0,.3);
-              display:flex;align-items:center;justify-content:center;
-              font-size:.55rem;color:rgba(200,180,140,0.8);text-align:center;padding:4px;
-              line-height:1.2;">${esc(b.title)}</div>`
-        }
-        ${ribbonHtml}
-      </div>`;
-    }).join('');
+        return `<div class="home-shelf-book" data-bookid="${b.id}" style="
+          flex-shrink:0;width:64px;cursor:pointer;position:relative;">
+          ${src
+            ? `<img src="${src}" loading="lazy" style="
+                width:64px;height:96px;object-fit:cover;border-radius:2px 4px 4px 2px;
+                display:block;box-shadow:2px 3px 8px rgba(0,0,0,.3);"/>`
+            : `<div style="width:64px;height:96px;background:linear-gradient(145deg,var(--navy2),#2a3d5a);
+                border-radius:2px 4px 4px 2px;box-shadow:2px 3px 8px rgba(0,0,0,.3);
+                display:flex;align-items:center;justify-content:center;
+                font-size:.55rem;color:rgba(200,180,140,0.8);text-align:center;padding:4px;
+                line-height:1.2;">${esc(b.title)}</div>`
+          }
+          ${ribbonHtml}
+        </div>`;
+      }).join('')
+    : `<div style="font-size:.78rem;color:var(--muted);padding:.5rem 0;font-style:italic;">
+        Open any book to start reading — it'll show up here.</div>`;
 
-    const addTileHtml = showAddTile
-      ? `<div class="home-shelf-addtile" data-listid="${listId}" style="
-          flex-shrink:0;width:48px;height:72px;align-self:center;
-          border:1px dashed var(--border);border-radius:6px;
-          display:flex;align-items:center;justify-content:center;
-          font-size:1.3rem;color:var(--muted);cursor:pointer;">+</div>`
-      : '';
+  const addTileHtml = showAddTile
+    ? `<div class="home-shelf-addtile" data-listid="${listId}" style="
+        flex-shrink:0;width:48px;height:72px;align-self:center;
+        border:1px dashed var(--border);border-radius:6px;
+        display:flex;align-items:center;justify-content:center;
+        font-size:1.3rem;color:var(--muted);cursor:pointer;">+</div>`
+    : '';
 
-    const menuHtml = editable
-      ? `<button class="home-shelf-menu-btn" data-listid="${listId}" data-listname="${esc(label)}"
-          style="background:none;border:none;font-size:.95rem;color:var(--muted);
-                 cursor:pointer;padding:.1rem .3rem;line-height:1;">⋯</button>`
-      : '';
+  const menuHtml = editable
+    ? `<button class="home-shelf-menu-btn" data-listid="${listId}" data-listname="${esc(label)}"
+        style="background:none;border:none;font-size:.95rem;color:var(--muted);
+               cursor:pointer;padding:.1rem .3rem;line-height:1;">⋯</button>`
+    : '';
 
-    return `<div class="home-shelf-section" id="homeSection_${id}"
-      style="margin-bottom:1.2rem;">
-      <div style="display:flex;align-items:center;justify-content:space-between;
-                  padding:.1rem 0 .45rem;-webkit-tap-highlight-color:transparent;">
-        <div onclick="toggleHomeShelf('${id}')"
-          style="display:flex;align-items:center;gap:.5rem;cursor:pointer;
-                 user-select:none;flex:1;min-width:0;">
-          <span style="font-size:.95rem;flex-shrink:0;">${icon}</span>
-          <span style="font-size:.74rem;font-weight:700;letter-spacing:.04em;
-            color:${color};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(label)}</span>
-          <span style="font-size:.65rem;color:var(--muted);font-weight:400;flex-shrink:0;">
-            ${books.length}</span>
-        </div>
-        <div style="display:flex;align-items:center;gap:.2rem;flex-shrink:0;">
-          ${menuHtml}
-          <span id="${id}_chevron" onclick="toggleHomeShelf('${id}')"
-            style="font-size:.75rem;color:var(--muted);cursor:pointer;padding:.1rem .3rem;
-            transition:transform .2s;${defaultOpen?'':'transform:rotate(-90deg)'}">▾</span>
-        </div>
+  return `<div class="home-shelf-section" id="homeSection_${id}"
+    style="margin-bottom:1.2rem;">
+    <div style="display:flex;align-items:center;justify-content:space-between;
+                padding:.1rem 0 .45rem;-webkit-tap-highlight-color:transparent;">
+      <div onclick="toggleHomeShelf('${id}')"
+        style="display:flex;align-items:center;gap:.5rem;cursor:pointer;
+               user-select:none;flex:1;min-width:0;">
+        <span style="font-size:.95rem;flex-shrink:0;">${icon}</span>
+        <span style="font-size:.74rem;font-weight:700;letter-spacing:.04em;
+          color:${color};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(label)}</span>
+        <span style="font-size:.65rem;color:var(--muted);font-weight:400;flex-shrink:0;">
+          ${books.length}</span>
       </div>
-      <div style="height:2px;border-radius:1px;margin-bottom:.65rem;
-        background:linear-gradient(90deg,${color},${color} 40px,transparent 40px);"></div>
-
-      <div id="${id}_body" style="overflow:hidden;
-        max-height:${defaultOpen?'600px':'0'};
-        transition:max-height .3s ease;">
-        <div style="display:flex;gap:8px;overflow-x:auto;padding-bottom:6px;
-          -webkit-overflow-scrolling:touch;scrollbar-width:none;">
-          ${coverRow}
-          ${addTileHtml}
-          ${books.length > 12
-            ? `<div style="flex-shrink:0;width:48px;height:96px;display:flex;
-                align-items:center;justify-content:center;font-size:.65rem;
-                color:var(--muted);font-weight:700;text-align:center;
-                line-height:1.4;">+${books.length - 12}<br>more</div>`
-            : ''}
-        </div>
+      <div style="display:flex;align-items:center;gap:.2rem;flex-shrink:0;">
+        ${menuHtml}
+        <span id="${id}_chevron" onclick="toggleHomeShelf('${id}')"
+          style="font-size:.75rem;color:var(--muted);cursor:pointer;padding:.1rem .3rem;
+          transition:transform .2s;${defaultOpen?'':'transform:rotate(-90deg)'}">▾</span>
       </div>
-    </div>`;
-  }
+    </div>
+    <div style="height:2px;border-radius:1px;margin-bottom:.65rem;
+      background:linear-gradient(90deg,${color},${color} 40px,transparent 40px);"></div>
+
+    <div id="${id}_body" style="overflow:hidden;
+      max-height:${defaultOpen?'600px':'0'};
+      transition:max-height .3s ease;">
+      <div style="display:flex;gap:8px;overflow-x:auto;padding-bottom:6px;
+        -webkit-overflow-scrolling:touch;scrollbar-width:none;">
+        ${coverRow}
+        ${addTileHtml}
+        ${books.length > 12
+          ? `<div style="flex-shrink:0;width:48px;height:96px;display:flex;
+              align-items:center;justify-content:center;font-size:.65rem;
+              color:var(--muted);font-weight:700;text-align:center;
+              line-height:1.4;">+${books.length - 12}<br>more</div>`
+          : ''}
+      </div>
+    </div>
+  </div>`;
+}
 
   // ── Bookmarks section ─────────────────────────────────────────────────
   function bookmarksSection() {
@@ -3319,7 +3323,7 @@ async function renderMobHome(){
   // ── Render ────────────────────────────────────────────────────────────
   container.innerHTML = `
     <div style="padding-bottom:calc(var(--mob-nav-h) + 1.5rem);">
-      ${shelfSection('home_reading', 'Currently reading', '📖', 'var(--teal)', crBooks, {defaultOpen:true})}
+      ${shelfSection('home_reading', 'Currently reading', '📖', 'var(--teal)', crBooks, {defaultOpen:true, alwaysShow:true})}
       ${shelfSection('home_rec', 'Recommended', '⭐', 'var(--gold)', recBooks, {defaultOpen: crBooks.length === 0})}
       ${bookmarksSection()}
       ${shelfSection('home_fav', 'Favourites', '❤️', '#e11d48', favBooks, {defaultOpen:false})}
