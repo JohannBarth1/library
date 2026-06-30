@@ -3217,7 +3217,7 @@ function shelfSection(id, label, icon, color, books, opts={}) {
         const ribbonHtml = bmTpl
           ? `<div style="position:absolute;top:0;right:0;z-index:3;
                          filter:drop-shadow(1px 2px 3px rgba(0,0,0,0.5))">
-              ${renderBookmarkSVG(bmTpl, 18, 28, 'shelf'+b.id, true)}
+              ${renderBookmarkSVG(bmTpl, 20, 32, 'shelf'+b.id, true)}
              </div>`
           : '';
 
@@ -3328,7 +3328,7 @@ function shelfSection(id, label, icon, color, books, opts={}) {
       return `<div class="home-bookmark-item" data-ubid="${ub.id}" style="
         display:flex;flex-direction:column;align-items:center;gap:3px;
         cursor:pointer;flex-shrink:0;">
-        ${renderBookmarkSVG(tpl, 36, 56, 'home'+ub.id, true)}
+        ${renderBookmarkSVG(tpl, 36, 58, 'home'+ub.id, true)}
         <div style="font-size:.58rem;color:var(--muted);text-align:center;max-width:48px;
           overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(book.title)}</div>
       </div>`;
@@ -3588,7 +3588,7 @@ function bookCardHtml(b, isComm, showProgress=false){
   const ribbonHtml = _bmTpl
     ? `<div style="position:absolute;top:0;right:4px;z-index:3;
                    filter:drop-shadow(1px 2px 3px rgba(0,0,0,0.35))">
-        ${renderBookmarkSVG(_bmTpl, 18, 68, 'card'+b.id, true)}
+        ${renderBookmarkSVG(_bmTpl, 20, 32, 'card'+b.id, true)}
        </div>` : '';
 
   const prog = getReadingProgress(b.id);
@@ -4974,15 +4974,13 @@ function renderBookmarkSVG(template, w=36, h=56, uid='bm', verticalLabel=false) 
   const accent = template.colors?.accent || '#2a7c8a';
   const textCol= template.colors?.text   || '#ffffff';
   const stripeH = h * 0.10;
-  const iconFs  = Math.round(w * 0.52);   // slightly larger icon
-  const labelFs = Math.round(w * 0.22);   // bigger label text (was 0.17)
+  const iconFs  = Math.round(w * 0.62);   // bigger icon
+  const labelFs = Math.round(w * 0.20);
 
   // Split label on '|' for two lines e.g. "Ghost|Reader"
-  // Also auto-split single long words at mid-point if > 8 chars and no '|' given
   let rawLabel = template.label || '';
   if(!rawLabel.includes('|') && rawLabel.length > 8 && verticalLabel) {
     const mid = Math.ceil(rawLabel.length / 2);
-    // Find nearest space to mid, else hard-split
     let splitAt = mid;
     for(let i = 0; i <= 3; i++) {
       if(rawLabel[mid + i] === ' ') { splitAt = mid + i; break; }
@@ -4992,40 +4990,44 @@ function renderBookmarkSVG(template, w=36, h=56, uid='bm', verticalLabel=false) 
   }
   const labelParts = rawLabel.split('|').map(s => s.trim()).filter(Boolean);
 
+  // Icon sits near the bottom of the bookmark, above the pointed notch.
+  // Label lines occupy the band above it, stacked top-to-bottom in
+  // correct reading order (first line nearer the top).
+  const iconY = h * 0.74;
+  const labelTop = h * 0.18;
+  const labelBottom = h * 0.62;
+  const lineGap = labelParts.length > 1
+    ? (labelBottom - labelTop) / labelParts.length
+    : 0;
+
   let labelHtml = '';
   if(labelParts.length && verticalLabel) {
-    // In vertical mode each <text> is rotated 90° around its translate origin.
-    // After rotation, the visual "rows" run down the bookmark — so stacking
-    // multiple lines means shifting the translate X (which becomes the visual
-    // vertical axis after rotation), not Y.
-    // We divide the bookmark width into lanes, one per line.
-    const laneW     = w / (labelParts.length + 1);  // even lanes across width
-    const textY     = h * 0.60;   // how far down the bookmark the text runs to
-    const textStart = h * 0.44;   // where the text starts (below icon)
-    const textMid   = (textStart + textY) / 2;      // centre of text region
+    // Each line is its own rotated <text> so the word itself reads
+    // downward; successive lines get a larger y (further down the
+    // bookmark) so order is always correct — never reversed.
     labelHtml = labelParts.map((line, i) => {
-      const laneX = laneW * (i + 1);   // x position for this lane
-      return `<text transform="translate(${laneX},${textMid}) rotate(90)"
+      const ly = labelParts.length > 1
+        ? labelTop + lineGap * (i + 0.5)
+        : (labelTop + labelBottom) / 2;
+      return `<text transform="translate(${w/2},${ly}) rotate(90)"
         text-anchor="middle" dominant-baseline="middle"
         font-size="${labelFs}" fill="${textCol}"
         font-family="system-ui,sans-serif" font-weight="700"
         letter-spacing="0.06em">${esc(line)}</text>`;
     }).join('');
   } else if(labelParts.length) {
-    // Horizontal: centred lines stacked in lower portion
-    const lineGap = labelFs * 1.35;
-    const blockH  = (labelParts.length - 1) * lineGap;
-    const startY  = h * 0.65 - blockH / 2;
+    // Horizontal mode (rare) — centered lines stacked normally, kept
+    // clear of the icon which now sits lower.
+    const hLineGap = labelFs * 1.35;
+    const blockH  = (labelParts.length - 1) * hLineGap;
+    const startY  = h * 0.34 - blockH / 2;
     labelHtml = labelParts.map((line, i) =>
-      `<text x="${w / 2}" y="${startY + i * lineGap}"
+      `<text x="${w / 2}" y="${startY + i * hLineGap}"
         text-anchor="middle" dominant-baseline="middle"
         font-size="${labelFs}" fill="${textCol}"
         font-family="system-ui,sans-serif" font-weight="600">${esc(line)}</text>`
     ).join('');
   }
-
-  // Icon: lower when there are label lines below it
-  const iconY = h * (labelParts.length ? 0.26 : 0.42);
 
   return `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}"
     xmlns="http://www.w3.org/2000/svg" style="display:block;flex-shrink:0">
@@ -5033,9 +5035,9 @@ function renderBookmarkSVG(template, w=36, h=56, uid='bm', verticalLabel=false) 
     <path d="${p}" fill="${body}"/>
     <rect x="0" y="0" width="${w}" height="${stripeH}"
       fill="${accent}" clip-path="url(#${uid}clip)"/>
+    ${labelHtml}
     <text x="${w/2}" y="${iconY}" text-anchor="middle"
       dominant-baseline="middle" font-size="${iconFs}">${template.icon || '🔖'}</text>
-    ${labelHtml}
   </svg>`;
 }
 function esc(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
