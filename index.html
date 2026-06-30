@@ -2458,58 +2458,124 @@ function showBookById(id){
 }
 
 function renderDetailActionRows(container, book, isMine){
-  const btn = (icon, label, action, opts={}) => {
-    const { danger=false, active=false } = opts;
-    let bg = 'transparent', col = 'var(--navy2)', border = 'var(--border)';
-    if(danger){ col = 'var(--danger)'; border = '#e0b0b0'; }
-    if(active){ bg = 'rgba(200,149,42,.12)'; col = 'var(--gold)'; border = 'var(--gold)'; }
-    return `<button class="detail-row-btn" data-action="${action}" style="
-      display:flex;align-items:center;gap:.35rem;
-      padding:.4rem .65rem;border-radius:20px;border:1px solid ${border};
-      background:${bg};color:${col};cursor:pointer;white-space:nowrap;flex-shrink:0;">
+  const bigBtn = (icon, label, action, bg, col) => `
+    <button class="detail-row-btn" data-action="${action}" style="
+      flex:1;display:flex;align-items:center;justify-content:center;gap:.4rem;
+      padding:.65rem .5rem;border-radius:24px;border:none;
+      background:${bg};color:${col};cursor:pointer;
+      font-size:.8rem;font-weight:700;">
+      <span style="font-size:1rem;line-height:1">${icon}</span>
+      <span>${label}</span>
+    </button>`;
+
+  const medBtn = (icon, label, action, col, border) => `
+    <button class="detail-row-btn" data-action="${action}" style="
+      flex:1;display:flex;align-items:center;justify-content:center;gap:.3rem;
+      padding:.45rem .4rem;border-radius:18px;border:1px solid ${border};
+      background:transparent;color:${col};cursor:pointer;
+      font-size:.7rem;font-weight:700;">
       <span style="font-size:.85rem;line-height:1">${icon}</span>
-      <span style="font-size:.68rem;font-weight:700;line-height:1">${label}</span>
+      <span>${label}</span>
+    </button>`;
+
+  const smBtn = (icon, label, action, opts={}) => {
+    const { danger=false } = opts;
+    const col = danger ? 'var(--danger)' : 'var(--navy2)';
+    const border = danger ? '#e0b0b0' : 'var(--border)';
+    return `<button class="detail-row-btn" data-action="${action}" style="
+      display:flex;align-items:center;gap:.3rem;
+      padding:.38rem .65rem;border-radius:16px;border:1px solid ${border};
+      background:transparent;color:${col};cursor:pointer;white-space:nowrap;
+      font-size:.66rem;font-weight:700;">
+      <span style="font-size:.78rem;line-height:1">${icon}</span><span>${label}</span>
     </button>`;
   };
 
-  // ── Row 1: primary actions ──────────────────────────────────────────────
-  let html = `<div style="display:flex;gap:.4rem;margin-bottom:.5rem;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:2px;">
-    ${btn('📖','Read','read')}
-    ${btn('🔲','Send to Kobo','sendtokobo')}
-    ${btn('🗂️','Lists','addtolist')}
+  // ── Row 1: primary, large ──────────────────────────────────────────────
+  let html = `<div style="display:flex;gap:.5rem;margin-bottom:.55rem;">
+    ${bigBtn('📖','Read','read','var(--navy2)','var(--gold)')}
+    ${bigBtn('📲','Send to Kobo','sendtokobo','var(--teal)','var(--gold)')}
   </div>`;
 
-  // ── Row 2: everyone ──────────────────────────────────────────────────────
-  html += `<div style="display:flex;gap:.35rem;margin-bottom:.5rem;flex-wrap:wrap;">
-    ${btn('🏷','Tags','tags')}
-    ${btn(book.recommended?'☆':'⭐', book.recommended?'Unrec':'Recommend', 'recommend', {active:book.recommended})}
-    ${btn('📎','Copy Link','link')}
-    ${btn('⬇','Download','download')}
+  // ── Row 2: secondary, medium ─────────────────────────────────────────────
+  html += `<div style="display:flex;gap:.4rem;margin-bottom:.6rem;">
+    ${medBtn('🗂','Lists','addtolist','#5a48b0','#d0c8f0')}
+    ${medBtn('🏷','Tags','tags','var(--teal)','var(--teal)')}
+    ${medBtn('📚','Category','category','var(--gold)','rgba(200,149,42,.4)')}
   </div>`;
 
-  // ── Row 3: owner / admin actions ─────────────────────────────────────────
-  if(isMine || isAdmin){
-    const rowBtns = [];
-    if(isMine){
-      if(book.visibility !== 'public') rowBtns.push(btn('🌐','Publish','share'));
-      else rowBtns.push(btn('🔒','Unpublish','unpublish'));
-      rowBtns.push(btn('🔗','Share','shareprivate'));
-      rowBtns.push(btn('✎','Edit','editmeta'));
-      rowBtns.push(btn('📑','Chapters','chapters'));
-    }
-    if(isAdmin){
-      rowBtns.push(btn('📋','History','history'));
-    }
-    if(isMine){
-      rowBtns.push(btn('✕','Delete','delete',{danger:true}));
-    }
-    if(rowBtns.length){
-      html += `<div style="display:flex;gap:.35rem;flex-wrap:wrap;">${rowBtns.join('')}</div>`;
-    }
+  // ── General small actions (always visible, everyone) ────────────────────
+  const generalBtns = [
+    smBtn(book.recommended?'☆':'⭐', book.recommended?'Unrecommend':'Recommend', 'recommend'),
+    smBtn('📎','Copy Link','link'),
+    smBtn('⬇','Download','download'),
+  ];
+  html += `<div style="display:flex;flex-wrap:wrap;gap:.35rem;margin-bottom:.3rem;">
+    ${generalBtns.join('')}
+  </div>`;
+
+  // ── Collapsed: Share / Edit / Delete+History ─────────────────────────────
+  const shareBtns = [];
+  const editBtns = [];
+  const bottomBtns = [];
+
+  if(isMine){
+    if(book.visibility !== 'public') shareBtns.push(smBtn('🌐','Publish','share'));
+    else shareBtns.push(smBtn('🔒','Unpublish','unpublish'));
+    shareBtns.push(smBtn('🔗','Share Privately','shareprivate'));
+
+    editBtns.push(smBtn('✎','Edit Details','editmeta'));
+    editBtns.push(smBtn('📑','Chapters','chapters'));
+  }
+  if(isAdmin) bottomBtns.push(smBtn('📋','History','history'));
+  if(isMine)  bottomBtns.push(smBtn('✕','Delete','delete',{danger:true}));
+
+  const moreId = 'detailMoreOptions';
+  if(shareBtns.length || editBtns.length || bottomBtns.length){
+    html += `
+    <button id="${moreId}Toggle" style="
+      width:100%;text-align:left;background:none;border:none;
+      font-size:.66rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
+      color:var(--muted);cursor:pointer;padding:.5rem 0;display:flex;
+      align-items:center;justify-content:space-between;
+      border-top:1px solid var(--border);margin-top:.3rem;">
+      <span>More options</span>
+      <span id="${moreId}Chevron" style="transition:transform .2s;display:inline-block">▾</span>
+    </button>
+    <div id="${moreId}Body" style="display:none;padding-top:.3rem;">
+      ${shareBtns.length ? `
+        <div style="font-size:.6rem;letter-spacing:.15em;text-transform:uppercase;
+                    color:var(--muted);font-weight:700;margin-bottom:.3rem;">Share</div>
+        <div style="display:flex;flex-wrap:wrap;gap:.35rem;margin-bottom:.7rem;">
+          ${shareBtns.join('')}
+        </div>` : ''}
+      ${editBtns.length ? `
+        <div style="font-size:.6rem;letter-spacing:.15em;text-transform:uppercase;
+                    color:var(--muted);font-weight:700;margin-bottom:.3rem;">Edit</div>
+        <div style="display:flex;flex-wrap:wrap;gap:.35rem;margin-bottom:.7rem;">
+          ${editBtns.join('')}
+        </div>` : ''}
+      ${bottomBtns.length ? `
+        <div style="display:flex;flex-wrap:wrap;gap:.35rem;
+                    border-top:1px solid var(--border);padding-top:.6rem;">
+          ${bottomBtns.join('')}
+        </div>` : ''}
+    </div>`;
   }
 
   container.innerHTML = html;
   container.querySelectorAll('[data-action]').forEach(b => b.addEventListener('click', handleAction));
+
+  const toggleBtn = container.querySelector('#'+moreId+'Toggle');
+  if(toggleBtn){
+    toggleBtn.addEventListener('click', () => {
+      const body = container.querySelector('#'+moreId+'Body');
+      const chevron = container.querySelector('#'+moreId+'Chevron');
+      const isOpen = body.style.display !== 'none';
+      body.style.display = isOpen ? 'none' : 'block';
+      chevron.style.transform = isOpen ? '' : 'rotate(180deg)';
+    });
+  }
 }
 
 function buildDrawerIconBar(book, isMine){
@@ -2592,6 +2658,7 @@ function handleAction(e){
   if(a==='delete')       deleteCurrentBook();
   if(a==='sendtokobo') { loadKoboDevices().then(()=>showKoboDevicePicker(currentId)); }
   if(a==='addtolist') showListPicker(currentId);
+  if(a==='category')     showQuickCategoryModal();
 }
 
 // ── UNPUBLISH and DELETE functions ─────────────────────────────────────────────────────────────────
@@ -7210,6 +7277,55 @@ function populateCategoryDatalist(datalistId) {
   const dl = document.getElementById(datalistId);
   if(!dl) return;
   dl.innerHTML = _categories.map(c => `<option value="${esc(c)}">`).join('');
+}
+
+function showQuickCategoryModal() {
+  if(!currentId) return;
+  const book = library.find(b => b.id === currentId);
+  if(!book) { showToast('Only the owner can change category'); return; }
+
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay open';
+  overlay.innerHTML = `
+    <div class="modal" style="max-width:360px">
+      <h3>📚 Category</h3>
+      <p style="font-size:.82rem;color:var(--muted);margin-bottom:.8rem;line-height:1.5">
+        Set the category for <strong>${esc(book.title)}</strong>.
+      </p>
+      <div class="form-row">
+        <select id="quickCatSelect" style="width:100%;padding:.6rem .85rem;
+          font-family:'Lato',sans-serif;font-size:.95rem;color:var(--navy);
+          background:var(--cream);border:1px solid var(--border);border-radius:3px;outline:none">
+          ${_categories.map(c =>
+            `<option value="${esc(c)}" ${(book.category||'Uncategorised')===c?'selected':''}>${esc(c)}</option>`
+          ).join('')}
+        </select>
+      </div>
+      <div class="modal-actions">
+        <button class="btn-cancel" id="quickCatCancel">Cancel</button>
+        <button class="btn-save" id="quickCatSave">Save</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click', e => { if(e.target === overlay) overlay.remove(); });
+  overlay.querySelector('#quickCatCancel').addEventListener('click', () => overlay.remove());
+  overlay.querySelector('#quickCatSave').addEventListener('click', async () => {
+    const newCat = overlay.querySelector('#quickCatSelect').value;
+    overlay.remove();
+    showLoading('Saving…');
+    try {
+      await updateDoc(doc(db, 'books', currentId), { category: newCat, updatedAt: serverTimestamp() });
+      book.category = newCat;
+      hideLoading();
+      renderAll();
+      if(window.innerWidth > 768) showBookById(currentId);
+      else mob_showBook(currentId);
+      showToast('Category updated ✓');
+    } catch(e) {
+      hideLoading();
+      showToast('Failed: ' + e.message);
+    }
+  });
 }
 
 // ── LISTS ────────────────────────────────────────────────────────────────────
