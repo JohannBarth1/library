@@ -2534,9 +2534,9 @@ function renderDetailActionRows(container, book, isMine){
     <button id="${moreId}Toggle" style="
       width:100%;text-align:left;background:none;border:none;
       font-size:.66rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
-      color:var(--muted);cursor:pointer;padding:.5rem 0;display:flex;
+      color:var(--muted);cursor:pointer;padding:.75rem 0 .5rem;display:flex;
       align-items:center;justify-content:space-between;
-      border-top:1px solid var(--border);margin-top:.3rem;">
+      border-top:1px solid var(--border);margin-top:.4rem;">
       <span>More options</span>
       <span id="${moreId}Chevron" style="transition:transform .2s;display:inline-block">▾</span>
     </button>
@@ -3552,7 +3552,7 @@ function showReadingBookmarkSheet(ub) {
         ${isReadingPos ? `<button id="bmMarkCompleteBtn" style="width:100%;padding:.5rem;
           border-radius:24px;border:1px solid #86efac;background:transparent;color:#276749;
           font-family:'Lato',sans-serif;font-size:.76rem;font-weight:700;cursor:pointer;">
-          ✓ Mark as Complete</button>` : ''}
+          ✓ Mark Complete</button>` : ''}
       </div>
     </div>`;
 
