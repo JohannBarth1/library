@@ -2494,12 +2494,12 @@ function renderDetailActionRows(container, book, isMine){
   // ── Row 1: primary, large ──────────────────────────────────────────────
   let html = `<div style="display:flex;gap:.5rem;margin-bottom:.55rem;">
     ${bigBtn('📖','Read','read','var(--navy2)','var(--gold)')}
-    ${bigBtn('📲','Send to Kobo','sendtokobo','var(--teal)','var(--gold)')}
+    ${bigBtn('🔲','Send to Kobo','sendtokobo','var(--teal)','var(--gold)')}
   </div>`;
 
   // ── Row 2: secondary, medium ─────────────────────────────────────────────
   html += `<div style="display:flex;gap:.4rem;margin-bottom:.6rem;">
-    ${medBtn('🗂','Lists','addtolist','#5a48b0','#d0c8f0')}
+    ${medBtn('🗂️','Lists','addtolist','#5a48b0','#d0c8f0')}
     ${medBtn('🏷','Tags','tags','var(--teal)','var(--teal)')}
     ${medBtn('📚','Category','category','var(--gold)','rgba(200,149,42,.4)')}
   </div>`;
@@ -3309,60 +3309,92 @@ function shelfSection(id, label, icon, color, books, opts={}) {
   </div>`;
 }
 
-// ── Bookmarks section ─────────────────────────────────────────────────
+// ── Bookmarks section — emphasis on "pick up where you left off" ────────
   function bookmarksSection() {
-    const awarded = _myBookmarks.filter(b => b.type === 'award');
-    if(!awarded.length) return '';
+    const allBooks = dedupe([...library, ...communityLib]);
 
-    // Group awards by bookmarkId — a user can earn the same bookmark
-    // for multiple books (or just once with no book attached)
-    const grouped = {};
-    awarded.forEach(ub => {
-      if(!grouped[ub.bookmarkId]) grouped[ub.bookmarkId] = [];
-      grouped[ub.bookmarkId].push(ub);
-    });
+    // Books with an active reading position
+    const readingPosBookmarks = _myBookmarks
+      .filter(b => b.type === 'reading_position' && b.bookId)
+      .sort((a,b) => (b.updatedAt?.toMillis?.()||0) - (a.updatedAt?.toMillis?.()||0));
 
-    const bmHtml = Object.entries(grouped).map(([bookmarkId, awards]) => {
-      const t = _bookmarkTemplates.find(x => x.id === bookmarkId);
-      if(!t) return '';
-      // Use the most recent award's note/date for the tile tooltip
-      const latest = awards.slice().sort((a,b) =>
-        (b.awardedAt?.toMillis?.()||0) - (a.awardedAt?.toMillis?.()||0))[0];
-      return `<div style="display:flex;flex-direction:column;align-items:center;
-                          gap:3px;cursor:pointer;flex-shrink:0;"
-                data-bookmarkid="${bookmarkId}"
-                class="home-bookmark-item"
-                title="${esc(t.name)}">
-        ${renderBookmarkSVG(t, 36, 56, 'home'+bookmarkId, true)}
-        <div style="font-size:.58rem;color:var(--muted);text-align:center;
-                    max-width:44px;overflow:hidden;text-overflow:ellipsis;
-                    white-space:nowrap;">${esc(t.name)}</div>
+    // Pure awards not tied to a book that already has a reading-position tile
+    const trackedBookIds = new Set(readingPosBookmarks.map(b => b.bookId));
+    const pureAwards = _myBookmarks.filter(b => b.type === 'award' && !trackedBookIds.has(b.bookId));
+
+    if(!readingPosBookmarks.length && !pureAwards.length) return '';
+
+    const tileFor = (ub, isReading) => {
+      const book = allBooks.find(b => b.id === ub.bookId);
+      if(!book) return '';
+      const award = _myBookmarks.find(b => b.type === 'award' && b.bookId === ub.bookId);
+      const tAward = award ? _bookmarkTemplates.find(t => t.id === award.bookmarkId) : null;
+      const now = new Date();
+      const seasonal = _bookmarkTemplates.find(t => {
+        if(t.condition?.type !== 'seasonal') return false;
+        const from = t.condition.startsAt?.toDate?.();
+        const to = t.condition.endsAt?.toDate?.();
+        return from && to && now >= from && now <= to;
+      });
+      const tpl = tAward || seasonal || {
+        shape: 'classic', icon: isReading ? '📖' : '🎖', label: '',
+        colors: { body: '#0f1a2e', accent: '#c8952a', text: '#faf7f2' }
+      };
+      return `<div class="home-bookmark-item" data-ubid="${ub.id}" style="
+        display:flex;flex-direction:column;align-items:center;gap:3px;
+        cursor:pointer;flex-shrink:0;">
+        ${renderBookmarkSVG(tpl, 36, 56, 'home'+ub.id, true)}
+        <div style="font-size:.58rem;color:var(--muted);text-align:center;max-width:48px;
+          overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(book.title)}</div>
+      </div>`;
+    };
+
+    const html = readingPosBookmarks.map(ub => tileFor(ub, true)).join('')
+               + pureAwards.map(ub => tileFor(ub, false)).join('');
+
+    return `<div style="margin-bottom:1.4rem;">
+      <div style="display:flex;align-items:center;gap:.5rem;padding:.1rem 0 .5rem;">
+        <span style="font-size:.95rem;">🔖</span>
+        <span style="font-size:.74rem;font-weight:700;letter-spacing:.04em;color:var(--gold);">
+          My bookmarks</span>
+      </div>
+      <div style="height:2px;border-radius:1px;margin-bottom:.7rem;
+        background:linear-gradient(90deg,var(--gold),var(--gold) 40px,transparent 40px);"></div>
+      <div style="display:flex;gap:.8rem;overflow-x:auto;padding-bottom:.3rem;
+        -webkit-overflow-scrolling:touch;">
+        ${html}
+      </div>
+    </div>`;
+  }
+
+  function recommendedSection(books) {
+    if(!books.length) return '';
+    const coverRow = books.slice(0, 12).map(b => {
+      const src = getCoverSrc(b);
+      return `<div class="home-shelf-book" data-bookid="${b.id}" style="flex-shrink:0;width:64px;cursor:pointer;">
+        ${src
+          ? `<img src="${src}" loading="lazy" style="width:64px;height:96px;object-fit:cover;
+              border-radius:2px 4px 4px 2px;display:block;box-shadow:2px 3px 8px rgba(0,0,0,.3);"/>`
+          : `<div style="width:64px;height:96px;background:linear-gradient(145deg,var(--navy2),#2a3d5a);
+              border-radius:2px 4px 4px 2px;box-shadow:2px 3px 8px rgba(0,0,0,.3);
+              display:flex;align-items:center;justify-content:center;font-size:.55rem;
+              color:rgba(200,180,140,0.8);text-align:center;padding:4px;line-height:1.2;">
+              ${esc(b.title)}</div>`}
       </div>`;
     }).join('');
 
-    return `<div class="home-shelf-section" id="homeSection_home_bm"
-      style="margin-bottom:1.2rem;">
-      <div onclick="toggleHomeShelf('home_bm')"
-        style="display:flex;align-items:center;justify-content:space-between;
-               padding:.1rem 0 .45rem;cursor:pointer;
-               -webkit-tap-highlight-color:transparent;user-select:none;">
-        <div style="display:flex;align-items:center;gap:.5rem;">
-          <span style="font-size:.95rem;">🎖</span>
-          <span style="font-size:.74rem;font-weight:700;letter-spacing:.04em;
-            color:var(--gold);">My bookmarks</span>
-          <span style="font-size:.65rem;color:var(--muted);font-weight:400;">
-            ${Object.keys(grouped).length}</span>
-        </div>
-        <span id="home_bm_chevron" style="font-size:.75rem;color:var(--muted);
-          transition:transform .2s;">▾</span>
+    return `<div style="margin-bottom:1.4rem;padding:.8rem .8rem .7rem;
+      background:linear-gradient(135deg, rgba(200,149,42,.07), rgba(200,149,42,.015));
+      border:1px solid rgba(200,149,42,.25);border-radius:10px;">
+      <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.65rem;">
+        <span style="font-size:.95rem;">⭐</span>
+        <span style="font-size:.74rem;font-weight:700;letter-spacing:.04em;color:var(--gold);">
+          Recommended</span>
+        <span style="font-size:.65rem;color:var(--muted);font-weight:400;">${books.length}</span>
       </div>
-      <div style="height:2px;border-radius:1px;margin-bottom:.65rem;
-        background:linear-gradient(90deg,var(--gold),var(--gold) 40px,transparent 40px);"></div>
-      <div id="home_bm_body" style="overflow:hidden;max-height:600px;
-        transition:max-height .3s ease;">
-        <div style="display:flex;flex-wrap:wrap;gap:.8rem;padding-bottom:.3rem;">
-          ${bmHtml}
-        </div>
+      <div style="display:flex;gap:8px;overflow-x:auto;padding-bottom:6px;
+        -webkit-overflow-scrolling:touch;">
+        ${coverRow}
       </div>
     </div>`;
   }
@@ -3372,7 +3404,6 @@ function shelfSection(id, label, icon, color, books, opts={}) {
     .map(id => allBooks.find(b => b.id === id))
     .filter(Boolean);
 
-  const crBooks     = resolve(_userLists.find(l => l.id === 'currently-reading')?.bookIds || []);
   const finBooks    = resolve(_userLists.find(l => l.id === 'finished')?.bookIds || []);
   const wtrBooks    = resolve(_userLists.find(l => l.id === 'want-to-read')?.bookIds || []);
   const favBooks    = resolve(_userLists.find(l => l.id === 'favourites')?.bookIds || []);
@@ -3383,9 +3414,8 @@ function shelfSection(id, label, icon, color, books, opts={}) {
   // ── Render ────────────────────────────────────────────────────────────
   container.innerHTML = `
     <div style="padding-bottom:calc(var(--mob-nav-h) + 1.5rem);">
-      ${shelfSection('home_reading', 'Currently reading', '📖', 'var(--teal)', crBooks, {defaultOpen:true, alwaysShow:true})}
-      ${shelfSection('home_rec', 'Recommended', '⭐', 'var(--gold)', recBooks, {defaultOpen: crBooks.length === 0})}
       ${bookmarksSection()}
+      ${recommendedSection(recBooks)}
       ${shelfSection('home_fav', 'Favourites', '❤️', '#e11d48', favBooks, {defaultOpen:false, showAddTile:true, listId:'favourites', alwaysShow:true})}
       ${shelfSection('home_wtr', 'Want to read', '🔖', '#7c3aed', wtrBooks, {defaultOpen:false})}
       ${customLists.map(l =>
@@ -3418,10 +3448,19 @@ function shelfSection(id, label, icon, color, books, opts={}) {
     });
   });
 
-  // ── Bind bookmark tile taps → open bookmark detail sheet ────────────────
-  container.querySelectorAll('.home-bookmark-item[data-bookmarkid]').forEach(el => {
+// ── Bind book taps (favourites / want-to-read / lists / recent / finished / recommended) ──
+  container.querySelectorAll('.home-shelf-book[data-bookid]').forEach(el => {
     el.addEventListener('click', () => {
-      showBookmarkDetailSheet(el.dataset.bookmarkid);
+      mobPrevPanel = 'mobPanelHome';
+      mob_showBook(el.dataset.bookid);
+    });
+  });
+
+  // ── Bind bookmark tile taps → open reading-position sheet ───────────────
+  container.querySelectorAll('.home-bookmark-item[data-ubid]').forEach(el => {
+    el.addEventListener('click', () => {
+      const ub = _myBookmarks.find(b => b.id === el.dataset.ubid);
+      if(ub) showReadingBookmarkSheet(ub);
     });
   });
 
@@ -3446,45 +3485,15 @@ function shelfSection(id, label, icon, color, books, opts={}) {
   });
 }
 
-  function showBookmarkDetailSheet(bookmarkId) {
-  const t = _bookmarkTemplates.find(x => x.id === bookmarkId);
-  if(!t) return;
-
-  const awards = _myBookmarks
-    .filter(b => b.type === 'award' && b.bookmarkId === bookmarkId)
-    .sort((a,b) => (b.awardedAt?.toMillis?.()||0) - (a.awardedAt?.toMillis?.()||0));
-
-  const allBooks = dedupe([...library, ...communityLib]);
-
-  const awardRowHtml = awards.map(a => {
-    const book = a.bookId ? allBooks.find(x => x.id === a.bookId) : null;
-    const awardedAt = a.awardedAt?.toDate?.();
-    const dateStr = awardedAt ? awardedAt.toLocaleDateString() : '—';
-
-    const bookHtml = book
-      ? `<div class="bm-detail-book" data-bookid="${book.id}"
-           style="display:flex;align-items:center;gap:.5rem;cursor:pointer;margin-top:.4rem;">
-           ${getCoverSrc(book)
-             ? `<img src="${getCoverSrc(book)}" style="width:26px;height:38px;object-fit:cover;
-                 border-radius:2px;border:1px solid var(--border);flex-shrink:0"/>`
-             : `<div style="width:26px;height:38px;background:var(--navy2);border-radius:2px;
-                 flex-shrink:0;display:flex;align-items:center;justify-content:center;
-                 font-size:.7rem;color:rgba(200,180,140,.7)">📖</div>`}
-           <span style="font-size:.78rem;color:var(--teal);font-weight:700;
-             text-decoration:underline;text-decoration-color:rgba(42,124,138,.3);">
-             ${esc(book.title)}</span>
-         </div>`
-      : '';
-
-    return `<div style="padding:.7rem 0;border-bottom:1px solid var(--border);">
-      <div style="font-size:.72rem;color:var(--muted);">
-        Awarded ${dateStr}
-      </div>
-      ${a.note ? `<div style="font-size:.85rem;color:var(--navy2);margin-top:.3rem;
-        line-height:1.5;font-style:italic;">"${esc(a.note)}"</div>` : ''}
-      ${bookHtml}
-    </div>`;
-  }).join('');
+function showReadingBookmarkSheet(ub) {
+  const book = dedupe([...library, ...communityLib]).find(b => b.id === ub.bookId);
+  if(!book) return;
+  const isReadingPos = ub.type === 'reading_position';
+  const progress = ub.progress || 0;
+  const chapterLabel = ub.chapterLabel || '';
+  const updatedAt = ub.updatedAt?.toDate?.();
+  const award = _myBookmarks.find(b => b.type === 'award' && b.bookId === ub.bookId);
+  const tAward = award ? _bookmarkTemplates.find(t => t.id === award.bookmarkId) : null;
 
   const overlay = document.createElement('div');
   overlay.className = 'modal-overlay open';
@@ -3492,44 +3501,70 @@ function shelfSection(id, label, icon, color, books, opts={}) {
   overlay.innerHTML = `
     <div style="width:100%;background:var(--warm-white);border-radius:16px 16px 0 0;
                 box-shadow:0 -4px 24px rgba(0,0,0,.2);overflow:hidden;
-                padding-bottom:env(safe-area-inset-bottom);max-height:80vh;
-                display:flex;flex-direction:column;">
-      <div style="width:36px;height:4px;background:var(--border);border-radius:2px;
-                  margin:.75rem auto .5rem;flex-shrink:0;"></div>
-
-      <div style="display:flex;align-items:center;gap:.9rem;padding:.4rem 1.2rem .9rem;
-                  border-bottom:1px solid var(--border);flex-shrink:0;">
-        ${renderBookmarkSVG(t, 44, 68, 'bmdetail', true)}
+                padding-bottom:env(safe-area-inset-bottom);">
+      <div style="width:36px;height:4px;background:var(--border);border-radius:2px;margin:.75rem auto .5rem;"></div>
+      <div style="display:flex;gap:.9rem;padding:.4rem 1.2rem 1rem;">
+        ${getCoverSrc(book)
+          ? `<img src="${getCoverSrc(book)}" style="width:64px;height:94px;object-fit:cover;
+              border-radius:3px;border:1px solid var(--border);flex-shrink:0"/>`
+          : `<div style="width:64px;height:94px;background:var(--navy2);border-radius:3px;flex-shrink:0"></div>`}
         <div style="flex:1;min-width:0;">
-          <div style="font-family:'Playfair Display',serif;font-size:1.1rem;
-                      color:var(--navy2);line-height:1.2;">${esc(t.name)}</div>
-          ${t.description ? `<div style="font-size:.78rem;color:var(--muted);
-            margin-top:.25rem;line-height:1.5;">${esc(t.description)}</div>` : ''}
+          <div style="font-family:'Playfair Display',serif;font-size:1.05rem;color:var(--navy2);
+            line-height:1.25">${esc(book.title)}</div>
+          <div style="font-size:.78rem;color:var(--muted);font-style:italic;margin-top:.15rem">
+            ${esc(book.author||'')}</div>
+          ${isReadingPos ? `<div style="margin-top:.5rem">
+            <div style="height:5px;background:var(--border);border-radius:3px;overflow:hidden;">
+              <div style="height:5px;width:${Math.round(progress*100)}%;background:var(--teal);"></div>
+            </div>
+            <div style="font-size:.7rem;color:var(--muted);margin-top:.3rem;">
+              ${Math.round(progress*100)}% · ${esc(chapterLabel)}
+            </div>
+          </div>` : ''}
         </div>
-        <button onclick="this.closest('.modal-overlay').remove()"
-          style="background:none;border:none;font-size:1.2rem;cursor:pointer;
-                 color:var(--muted);line-height:1;flex-shrink:0;align-self:flex-start;">✕</button>
+        <button onclick="this.closest('.modal-overlay').remove()" style="background:none;
+          border:none;font-size:1.2rem;cursor:pointer;color:var(--muted);line-height:1;
+          align-self:flex-start;">✕</button>
       </div>
-
-      <div style="overflow-y:auto;padding:.2rem 1.2rem 1rem;flex:1;">
-        <div style="font-size:.6rem;letter-spacing:.15em;text-transform:uppercase;
-                    color:var(--muted);font-weight:700;margin:.7rem 0 .2rem;">
-          ${awards.length} award${awards.length !== 1 ? 's' : ''}
+      ${tAward ? `<div style="display:flex;align-items:center;gap:.6rem;padding:.6rem 1.2rem;
+        border-top:1px solid var(--border);background:var(--panel);">
+        ${renderBookmarkSVG(tAward, 24, 38, 'rbm'+ub.id)}
+        <div>
+          <div style="font-size:.78rem;font-weight:700;color:var(--navy2)">${esc(tAward.name)}</div>
+          ${award?.note ? `<div style="font-size:.72rem;color:var(--muted);font-style:italic">
+            "${esc(award.note)}"</div>` : ''}
+          ${award?.awardedAt?.toDate?.()
+            ? `<div style="font-size:.65rem;color:var(--muted);margin-top:2px;">
+                Awarded ${award.awardedAt.toDate().toLocaleDateString()}</div>` : ''}
         </div>
-        ${awardRowHtml}
+      </div>` : ''}
+      <div style="padding:.6rem 1.2rem .9rem;display:flex;flex-direction:column;gap:.5rem;">
+        ${updatedAt ? `<div style="font-size:.7rem;color:var(--muted);">
+          Last read ${timeAgo(updatedAt)}</div>` : ''}
+        <button id="bmContinueBtn" style="width:100%;padding:.65rem;border-radius:24px;border:none;
+          background:var(--navy2);color:var(--gold);font-family:'Lato',sans-serif;font-size:.85rem;
+          font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:.4rem;">
+          📖 ${isReadingPos && progress > 0 ? 'Continue Reading' : 'Open Book'}
+        </button>
+        <button id="bmViewDetailsBtn" style="width:100%;padding:.55rem;border-radius:24px;
+          border:1px solid var(--border);background:transparent;color:var(--navy2);
+          font-family:'Lato',sans-serif;font-size:.78rem;font-weight:700;cursor:pointer;">
+          View Book Details</button>
       </div>
     </div>`;
 
   document.body.appendChild(overlay);
   overlay.addEventListener('click', e => { if(e.target === overlay) overlay.remove(); });
 
-  // Tapping a book row navigates to its detail page
-  overlay.querySelectorAll('.bm-detail-book[data-bookid]').forEach(el => {
-    el.addEventListener('click', () => {
-      overlay.remove();
-      mobPrevPanel = 'mobPanelHome';
-      mob_showBook(el.dataset.bookid);
-    });
+  overlay.querySelector('#bmContinueBtn').addEventListener('click', () => {
+    overlay.remove();
+    currentId = book.id;
+    readCurrentBook();
+  });
+  overlay.querySelector('#bmViewDetailsBtn').addEventListener('click', () => {
+    overlay.remove();
+    mobPrevPanel = 'mobPanelHome';
+    mob_showBook(book.id);
   });
 }
 
