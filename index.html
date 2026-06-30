@@ -3312,9 +3312,18 @@ function shelfSection(id, label, icon, color, books, opts={}) {
   function bookmarksSection() {
     const allBooks = dedupe([...library, ...communityLib, ..._bookmarkBookCache]);
 
-    // Books with an active reading position
-    const readingPosBookmarks = _myBookmarks
+    // Books with an active reading position — if duplicates exist for
+    // the same book, keep only the one with the furthest progress.
+    const readingPosByBook = {};
+    _myBookmarks
       .filter(b => b.type === 'reading_position' && b.bookId)
+      .forEach(b => {
+        const existing = readingPosByBook[b.bookId];
+        if(!existing || (b.progress||0) > (existing.progress||0)){
+          readingPosByBook[b.bookId] = b;
+        }
+      });
+    const readingPosBookmarks = Object.values(readingPosByBook)
       .sort((a,b) => (b.updatedAt?.toMillis?.()||0) - (a.updatedAt?.toMillis?.()||0));
 
     // Pure awards not tied to a book that already has a reading-position tile
@@ -4378,15 +4387,23 @@ async function inlineImagesInHtml(html, base, chapterHref) {
 // A reader_page bookmark stores { chapterIdx, pageIdx } for a specific spot.
 // Distinct from reading_position (which is auto-saved progress).
 
-function getReaderBookmark(bookId) {
+// Returns the bookmark at this exact chapter+page, if one exists
+function getReaderBookmarkAt(bookId, chapterIdx, pageIdx) {
   return _myBookmarks.find(b =>
-    b.bookId === bookId && b.type === 'reader_bookmark'
+    b.bookId === bookId && b.type === 'reader_bookmark' &&
+    b.chapterIdx === chapterIdx && b.pageIdx === pageIdx
   );
 }
 
-async function saveReaderBookmark(bookId, chapterIdx, pageIdx) {
+// Returns all manual bookmarks placed in this book, sorted by position
+function getReaderBookmarksForBook(bookId) {
+  return _myBookmarks
+    .filter(b => b.bookId === bookId && b.type === 'reader_bookmark')
+    .sort((a,b) => (a.chapterIdx - b.chapterIdx) || (a.pageIdx - b.pageIdx));
+}
+
+async function placeReaderBookmark(bookId, chapterIdx, pageIdx) {
   if(!currentUser || !bookId) return;
-  const existing = getReaderBookmark(bookId);
   const data = {
     userId: currentUser.uid,
     bookId,
@@ -4394,28 +4411,22 @@ async function saveReaderBookmark(bookId, chapterIdx, pageIdx) {
     chapterIdx,
     pageIdx,
     chapterLabel: readerSpine[chapterIdx]?.label || '',
+    createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   };
   try {
-    if(existing) {
-      await updateDoc(doc(db, 'user_bookmarks', existing.id), data);
-      Object.assign(existing, data);
-    } else {
-      const ref = await addDoc(collection(db, 'user_bookmarks'), {
-        ...data, createdAt: serverTimestamp(),
-      });
-      _myBookmarks.push({ id: ref.id, ...data });
-    }
-  } catch(e) { console.warn('saveReaderBookmark:', e); }
+    const ref = await addDoc(collection(db, 'user_bookmarks'), data);
+    _myBookmarks.push({ id: ref.id, ...data });
+  } catch(e) { console.warn('placeReaderBookmark:', e); }
 }
 
-async function removeReaderBookmark(bookId) {
-  const existing = getReaderBookmark(bookId);
+async function removeReaderBookmarkAt(bookId, chapterIdx, pageIdx) {
+  const existing = getReaderBookmarkAt(bookId, chapterIdx, pageIdx);
   if(!existing) return;
   try {
     await deleteDoc(doc(db, 'user_bookmarks', existing.id));
     _myBookmarks = _myBookmarks.filter(b => b.id !== existing.id);
-  } catch(e) { console.warn('removeReaderBookmark:', e); }
+  } catch(e) { console.warn('removeReaderBookmarkAt:', e); }
 }
 
 function renderReaderBookmarkTab() {
@@ -4424,9 +4435,8 @@ function renderReaderBookmarkTab() {
   const content = document.getElementById('readerContent');
   if(!content || !readerBookId) return;
 
-  const bm = getReaderBookmark(readerBookId);
-  const isPlaced = bm && bm.chapterIdx === readerChapter && bm.pageIdx === readerPage;
-  const isOtherPage = bm && !isPlaced;
+  const bm = getReaderBookmarkAt(readerBookId, readerChapter, readerPage);
+  const isPlaced = !!bm;
 
   // Resolve which visual template to use for the in-reader bookmark
   // Priority: award for this book → seasonal → default gold
@@ -4452,19 +4462,12 @@ function renderReaderBookmarkTab() {
   tab.id = 'readerBookmarkTab';
   tab.className = 'reader-bookmark-tab' + (isPlaced ? ' placed' : '');
 
-  if(isOtherPage) {
-    // Bookmark is on a different page — show as ghost so user can tap to move it here
-    tab.style.opacity = '0.25';
-    tab.style.pointerEvents = 'auto';
-    tab.title = 'Tap to move bookmark to this page';
-  } else if(isPlaced) {
-    // Bookmark is right here — fully visible
+  if(isPlaced) {
     tab.style.opacity = '1';
-    tab.title = 'Tap to remove bookmark';
+    tab.title = 'Tap to remove this bookmark';
   } else {
-    // No bookmark saved yet — ghost hint so user knows the corner is tappable
-    tab.style.opacity = '0.15';
-    tab.title = 'Tap to place bookmark here';
+    tab.style.opacity = '0.18';
+    tab.title = 'Tap to bookmark this page';
   }
 
   tab.innerHTML = renderBookmarkSVG(bmTpl, 28, 120, 'rdrbm', true);
@@ -4472,23 +4475,17 @@ function renderReaderBookmarkTab() {
   content.appendChild(tab);
 
   tab.addEventListener('click', async e => {
-      e.stopPropagation();
-      if(isOtherPage || isPlaced) {
-        // Move (or remove if already here): save to current position
-        if(isPlaced) {
-          await removeReaderBookmark(readerBookId);
-          showToast('Bookmark removed');
-        } else {
-          await saveReaderBookmark(readerBookId, readerChapter, readerPage);
-          showToast('Bookmark moved here 🔖');
-        }
-      } else {
-        await saveReaderBookmark(readerBookId, readerChapter, readerPage);
-        showToast('Bookmark placed 🔖');
-      }
-      renderReaderBookmarkTab();
-      renderAll();
-    });
+    e.stopPropagation();
+    if(isPlaced) {
+      await removeReaderBookmarkAt(readerBookId, readerChapter, readerPage);
+      showToast('Bookmark removed');
+    } else {
+      await placeReaderBookmark(readerBookId, readerChapter, readerPage);
+      showToast('Bookmark placed 🔖');
+    }
+    renderReaderBookmarkTab();
+    renderAll();
+  });
 }
 
 function closeReader(){
