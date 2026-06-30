@@ -3535,6 +3535,10 @@ function showReadingBookmarkSheet(ub) {
           border:1px solid var(--border);background:transparent;color:var(--navy2);
           font-family:'Lato',sans-serif;font-size:.78rem;font-weight:700;cursor:pointer;">
           View Book Details</button>
+        ${isReadingPos ? `<button id="bmMarkCompleteBtn" style="width:100%;padding:.5rem;
+          border-radius:24px;border:1px solid #86efac;background:transparent;color:#276749;
+          font-family:'Lato',sans-serif;font-size:.76rem;font-weight:700;cursor:pointer;">
+          ✓ Mark as Complete</button>` : ''}
       </div>
     </div>`;
 
@@ -3550,6 +3554,18 @@ function showReadingBookmarkSheet(ub) {
     overlay.remove();
     mobPrevPanel = 'mobPanelHome';
     mob_showBook(book.id);
+  });
+  overlay.querySelector('#bmMarkCompleteBtn')?.addEventListener('click', async () => {
+    overlay.remove();
+    showLoading('Marking as finished…');
+    try {
+      await markBookFinished(book.id);
+      hideLoading();
+      showToast('Marked as Finished ✓');
+    } catch(e) {
+      hideLoading();
+      showToast('Failed: ' + e.message);
+    }
   });
 }
 
@@ -4462,45 +4478,10 @@ function renderReaderBookmarkTab() {
 }
 
 function closeReader(){
-    // Move finished book: currently-reading → finished
   if(readerBookId){
-    const crList = _userLists.find(l => l.id === 'currently-reading');
-    // Only mark finished if they've read past 90% of the book
     const progress = getReadingProgress(readerBookId);
-    if(crList && progress >= 0.9){
-      const bookIds = (crList.bookIds || []).filter(id => id !== readerBookId);
-      crList.bookIds = bookIds;
-      setDoc(
-        doc(db, 'user_lists', currentUser.uid, 'lists', 'currently-reading'),
-        { bookIds, updatedAt: serverTimestamp() },
-        { merge: true }
-      ).catch(e => console.warn('closeReader list update:', e));
-
-      const finList = _userLists.find(l => l.id === 'finished');
-      if(finList && !(finList.bookIds || []).includes(readerBookId)){
-        const finIds = [...(finList.bookIds || []), readerBookId];
-        finList.bookIds = finIds;
-        setDoc(
-          doc(db, 'user_lists', currentUser.uid, 'lists', 'finished'),
-          { bookIds: finIds, updatedAt: serverTimestamp() },
-          { merge: true }
-        ).catch(e => console.warn('closeReader finished update:', e));
-        showToast('Added to Finished ✓');
-      }
-
-      // Remove the reading-position bookmark so it drops off the Home tab.
-      // Any awarded bookmark for this book is left untouched.
-      const posBookmark = _myBookmarks.find(b =>
-        b.type === 'reading_position' && b.bookId === readerBookId
-      );
-      if(posBookmark){
-        deleteDoc(doc(db, 'user_bookmarks', posBookmark.id))
-          .then(() => {
-            _myBookmarks = _myBookmarks.filter(b => b.id !== posBookmark.id);
-            renderMobHome();
-          })
-          .catch(e => console.warn('closeReader bookmark removal:', e));
-      }
+    if(progress >= 0.9){
+      markBookFinished(readerBookId).then(() => showToast('Added to Finished ✓'));
     }
   }
   document.getElementById('readerOverlay').classList.remove('open');
@@ -4518,7 +4499,45 @@ function closeReader(){
   readerBookId = null;
 }
 
+async function markBookFinished(bookId){
+  if(!bookId || !currentUser) return;
 
+  const crList = _userLists.find(l => l.id === 'currently-reading');
+  if(crList){
+    const bookIds = (crList.bookIds || []).filter(id => id !== bookId);
+    crList.bookIds = bookIds;
+    await setDoc(
+      doc(db, 'user_lists', currentUser.uid, 'lists', 'currently-reading'),
+      { bookIds, updatedAt: serverTimestamp() },
+      { merge: true }
+    ).catch(e => console.warn('markBookFinished crList:', e));
+  }
+
+  const finList = _userLists.find(l => l.id === 'finished');
+  if(finList && !(finList.bookIds || []).includes(bookId)){
+    const finIds = [...(finList.bookIds || []), bookId];
+    finList.bookIds = finIds;
+    await setDoc(
+      doc(db, 'user_lists', currentUser.uid, 'lists', 'finished'),
+      { bookIds: finIds, updatedAt: serverTimestamp() },
+      { merge: true }
+    ).catch(e => console.warn('markBookFinished finList:', e));
+  }
+
+  // Remove the reading-position bookmark so it drops off the Home tab.
+  // Any awarded bookmark for this book is left untouched.
+  const posBookmark = _myBookmarks.find(b =>
+    b.type === 'reading_position' && b.bookId === bookId
+  );
+  if(posBookmark){
+    await deleteDoc(doc(db, 'user_bookmarks', posBookmark.id))
+      .catch(e => console.warn('markBookFinished bookmark removal:', e));
+    _myBookmarks = _myBookmarks.filter(b => b.id !== posBookmark.id);
+  }
+
+  renderMobHome();
+  renderDeskHome();
+}
 
 // Override the prev/next chapter buttons to be prev/next PAGE instead
 document.getElementById('btnReaderPrev').addEventListener('click',()=>goToPage(readerPage-1));
