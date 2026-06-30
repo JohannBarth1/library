@@ -2475,8 +2475,8 @@ function renderDetailActionRows(container, book, isMine){
   // ── Row 1: primary actions ──────────────────────────────────────────────
   let html = `<div style="display:flex;gap:.4rem;margin-bottom:.5rem;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:2px;">
     ${btn('📖','Read','read')}
-    ${btn('📚','Send to Kobo','sendtokobo')}
-    ${btn('🗂','Lists','addtolist')}
+    ${btn('🔲','Send to Kobo','sendtokobo')}
+    ${btn('🗂️','Lists','addtolist')}
   </div>`;
 
   // ── Row 2: everyone ──────────────────────────────────────────────────────
@@ -7191,6 +7191,8 @@ function showListPicker(bookId) {
   overlay.className = 'modal-overlay open';
   overlay.style.cssText = 'align-items:flex-end;padding:0;';
 
+  let didChange = false; // track whether anything changed while open
+
   const renderItems = () => {
     return _userLists.map(l => {
       const inList = (l.bookIds || []).includes(bookId);
@@ -7203,6 +7205,15 @@ function showListPicker(bookId) {
     }).join('');
   };
 
+  // Called whenever the sheet is dismissed (✕ button, backdrop tap, or after "create new list")
+  const closeAndRefresh = () => {
+    overlay.remove();
+    if(didChange){
+      renderMobHome();
+      renderDeskHome();
+    }
+  };
+
   overlay.innerHTML = `
     <div style="width:100%;background:var(--warm-white);border-radius:16px 16px 0 0;
                 box-shadow:0 -4px 24px rgba(0,0,0,.2);overflow:hidden;
@@ -7212,7 +7223,7 @@ function showListPicker(bookId) {
                   padding:.25rem 1.2rem .75rem;border-bottom:1px solid var(--border);
                   display:flex;align-items:center;justify-content:space-between;">
         <span>Add to List</span>
-        <button onclick="this.closest('.modal-overlay').remove()"
+        <button id="listPickerCloseBtn"
           style="background:none;border:none;font-size:1.2rem;cursor:pointer;
                  color:var(--muted);line-height:1;">✕</button>
       </div>
@@ -7230,21 +7241,22 @@ function showListPicker(bookId) {
     </div>`;
 
   document.body.appendChild(overlay);
-  overlay.addEventListener('click', e => { if(e.target === overlay) overlay.remove(); });
+  overlay.addEventListener('click', e => { if(e.target === overlay) closeAndRefresh(); });
+  overlay.querySelector('#listPickerCloseBtn').addEventListener('click', closeAndRefresh);
 
-  // Toggle list membership
+  // Toggle list membership — update Firestore + local list immediately,
+  // but don't touch the home grids until the sheet closes
   overlay.querySelectorAll('.list-picker-item').forEach(item => {
     item.addEventListener('click', async () => {
       await toggleBookInList(item.dataset.listid, bookId);
       item.classList.toggle('in-list');
-      renderMobHome();
-      renderDeskHome();
+      didChange = true;
     });
   });
 
   // Create new list
   overlay.querySelector('#btnNewListInPicker').addEventListener('click', () => {
-    overlay.remove();
+    overlay.remove(); // no flag needed here, showCreateListModal does its own refresh on save
     showCreateListModal(bookId);
   });
 }
