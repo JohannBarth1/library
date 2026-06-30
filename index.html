@@ -1362,7 +1362,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 <div class="mob-panels">
 
   <!-- ── LIBRARY PANEL (all books: private + public + shared) ── -->
-  <div class="mob-panel active" id="mobPanelLibrary">
+  <div class="mob-panel" id="mobPanelLibrary">
     <div class="mob-lib-top">
       <div class="mob-search-bar">
         <input type="text" id="mobSearchLibrary" placeholder="Search books…"/>
@@ -1396,7 +1396,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
   </div>
 
   <!-- ── HOME PANEL ── -->
-  <div class="mob-panel" id="mobPanelHome">
+  <div class="mob-panel active" id="mobPanelHome">
     <div class="mob-grid-scroll" style="padding:1rem">
       <div style="font-family:'Playfair Display',serif;font-size:1.3rem;color:var(--navy2);margin-bottom:.2rem" id="mobHomeGreeting">Welcome</div>
       <div style="font-size:.8rem;color:var(--muted);margin-bottom:1.2rem">Your reading at a glance</div>
@@ -1589,7 +1589,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 <nav class="mob-nav">
   <div class="mob-nav-bg"></div>
   <div class="mob-nav-inner">
-    <button class="mob-tab" id="mobNavHome">
+    <button class="mob-tab active" id="mobNavHome">
       <span class="tab-icon">🏠</span><span>Home</span>
     </button>
     <button class="mob-tab" id="mobNavLibrary">
@@ -1898,35 +1898,41 @@ onAuthStateChanged(auth,async user=>{
     // Fire-and-forget lastSeen update — doesn't block UI
     setDoc(doc(db,'users',user.uid),{displayName:user.displayName||'',email:user.email,uid:user.uid,lastSeen:serverTimestamp()},{merge:true}).catch(e=>console.warn(e));
 
-    // ── PRIORITY 1: Get Home tab visible as fast as possible ──────────────
+    // ── PRIORITY 1: Lists + config (needed before anything else) ──────────
     showLoading('Loading…');
     await Promise.all([
       loadUserLists(),
       loadConfig(),
     ]);
+
+    // ── PRIORITY 2: Bookmarks — show these first on Home ───────────────────
+    await Promise.all([
+      loadBookmarkTemplates(),
+      loadMyBookmarks(),
+    ]);
     hideLoading();
     mob_switchTab('home');
     showDeskHome();
+    renderMobHome();
+    renderDeskHome();
 
-    // ── PRIORITY 2: Library (private books first, public/shared in background) ──
+    // ── PRIORITY 3: Other home elements (ratings, checkouts, kobo, presence) ──
+    await Promise.all([
+      loadUserRatings(),
+      loadMyCheckouts(),
+      loadKoboDevices(),
+      startNotifListener(),
+      loungeJoinPassive(),
+      startPresenceHeartbeat(),
+    ]);
+    renderMobHome();
+    renderDeskHome();
+
+    // ── PRIORITY 4: Library loads last ──────────────────────────────────────
     await loadLibrary();
     checkUrlHash();
     checkAdminStatus();
 
-    // ── PRIORITY 3: Everything else, non-blocking ──────────────────────────
-    Promise.all([
-      loadUserRatings(),
-      loadMyCheckouts(),
-      loadKoboDevices(),
-      loadBookmarkTemplates(),
-      loadMyBookmarks(),
-      startNotifListener(),
-      loungeJoinPassive(),
-      startPresenceHeartbeat(),
-    ]).then(()=>{
-      renderMobHome();
-      renderDeskHome();
-    });
   } else {
     document.getElementById('authScreen').classList.remove('hidden');
   }
@@ -3328,7 +3334,7 @@ function shelfSection(id, label, icon, color, books, opts={}) {
       return `<div class="home-bookmark-item" data-ubid="${ub.id}" style="
         display:flex;flex-direction:column;align-items:center;gap:3px;
         cursor:pointer;flex-shrink:0;">
-        ${renderBookmarkSVG(tpl, 36, 58, 'home'+ub.id, false)}
+        ${renderBookmarkSVG(tpl, 36, 68, 'home'+ub.id, false)}
         <div style="font-size:.58rem;color:var(--muted);text-align:center;max-width:48px;
           overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(book.title)}</div>
       </div>`;
