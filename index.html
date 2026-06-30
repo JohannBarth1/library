@@ -1910,6 +1910,7 @@ onAuthStateChanged(auth,async user=>{
       loadBookmarkTemplates(),
       loadMyBookmarks(),
     ]);
+    await preloadBookmarkBooks();
     hideLoading();
     mob_switchTab('home');
     showDeskHome();
@@ -2496,11 +2497,17 @@ function renderDetailActionRows(container, book, isMine){
   </div>`;
 
   // ── General small actions (always visible, everyone) ────────────────────
+  const hasReadingBookmark = _myBookmarks.some(b =>
+    b.type === 'reading_position' && b.bookId === book.id
+  );
   const generalBtns = [
     smBtn(book.recommended?'☆':'⭐', book.recommended?'Unrecommend':'Recommend', 'recommend'),
     smBtn('📎','Copy Link','link'),
     smBtn('⬇','Download','download'),
   ];
+  if(hasReadingBookmark){
+    generalBtns.push(smBtn('✓','Mark Finished','markfinished'));
+  }
   html += `<div style="display:flex;flex-wrap:wrap;gap:.35rem;margin-bottom:.3rem;">
     ${generalBtns.join('')}
   </div>`;
@@ -2650,6 +2657,7 @@ function handleAction(e){
   if(a==='sendtokobo') { loadKoboDevices().then(()=>showKoboDevicePicker(currentId)); }
   if(a==='addtolist') showListPicker(currentId);
   if(a==='category')     showQuickCategoryModal();
+  if(a==='markfinished')  doMarkFinishedFromDetail();
 }
 
 // ── UNPUBLISH and DELETE functions ─────────────────────────────────────────────────────────────────
@@ -3302,7 +3310,7 @@ function shelfSection(id, label, icon, color, books, opts={}) {
 
 // ── Bookmarks section — emphasis on "pick up where you left off" ────────
   function bookmarksSection() {
-    const allBooks = dedupe([...library, ...communityLib]);
+    const allBooks = dedupe([...library, ...communityLib, ..._bookmarkBookCache]);
 
     // Books with an active reading position
     const readingPosBookmarks = _myBookmarks
@@ -3477,7 +3485,7 @@ function shelfSection(id, label, icon, color, books, opts={}) {
 }
 
 function showReadingBookmarkSheet(ub) {
-  const book = dedupe([...library, ...communityLib]).find(b => b.id === ub.bookId);
+  const book = dedupe([...library, ...communityLib, ..._bookmarkBookCache]).find(b => b.id === ub.bookId);
   if(!book) return;
   const isReadingPos = ub.type === 'reading_position';
   const progress = ub.progress || 0;
@@ -4545,6 +4553,21 @@ async function markBookFinished(bookId){
   renderDeskHome();
 }
 
+async function doMarkFinishedFromDetail(){
+  if(!currentId) return;
+  showLoading('Marking as finished…');
+  try {
+    await markBookFinished(currentId);
+    hideLoading();
+    showToast('Marked as Finished ✓');
+    if(window.innerWidth > 768) showBookById(currentId);
+    else mob_showBook(currentId);
+  } catch(e) {
+    hideLoading();
+    showToast('Failed: ' + e.message);
+  }
+}
+
 // Override the prev/next chapter buttons to be prev/next PAGE instead
 document.getElementById('btnReaderPrev').addEventListener('click',()=>goToPage(readerPage-1));
 document.getElementById('btnReaderNext').addEventListener('click',()=>goToPage(readerPage+1));
@@ -5051,13 +5074,13 @@ function renderBookmarkSVG(template, w=36, h=56, uid='bm', verticalLabel=false) 
         letter-spacing="0.06em">${esc(line)}</text>`;
     }).join('');
   } else if(labelParts.length) {
-    // Horizontal mode — lines stacked normally, confined to the same
-    // band above the icon so there's never overlap.
+    // Horizontal mode — top-align under the stripe; any extra vertical
+    // space (from a taller tile) falls between the label and the icon,
+    // not above the label.
     const hLineGap = labelFs * 1.3;
-    const blockH  = (labelParts.length - 1) * hLineGap;
-    const startY  = (labelTop + labelBottom) / 2 - blockH / 2;
+    const topPad = stripeH + h * 0.10;
     labelHtml = labelParts.map((line, i) =>
-      `<text x="${w / 2}" y="${startY + i * hLineGap}"
+      `<text x="${w / 2}" y="${topPad + i * hLineGap + labelFs*0.5}"
         text-anchor="middle" dominant-baseline="middle"
         font-size="${labelFs}" fill="${textCol}"
         font-family="system-ui,sans-serif" font-weight="700">${esc(line)}</text>`
@@ -5506,6 +5529,24 @@ async function loadBookmarkTemplates() {
   } catch(e) {
     console.warn('loadBookmarkTemplates:', e);
     _bookmarkTemplates = [];
+  }
+}
+
+  let _bookmarkBookCache = [];
+
+async function preloadBookmarkBooks() {
+  const ids = [...new Set(_myBookmarks.filter(b => b.bookId).map(b => b.bookId))];
+  if(!ids.length) return;
+  try {
+    const results = [];
+    for(let i = 0; i < ids.length; i += 10) {
+      const chunk = ids.slice(i, i + 10);
+      const snap = await getDocs(query(collection(db, 'books'), where('__name__', 'in', chunk)));
+      snap.docs.forEach(d => results.push({ id: d.id, ...d.data() }));
+    }
+    _bookmarkBookCache = results;
+  } catch(e) {
+    console.warn('preloadBookmarkBooks:', e);
   }
 }
 
