@@ -3242,21 +3242,31 @@ function shelfSection(id, label, icon, color, books, opts={}) {
   </div>`;
 }
 
-  // ── Bookmarks section ─────────────────────────────────────────────────
+// ── Bookmarks section ─────────────────────────────────────────────────
   function bookmarksSection() {
     const awarded = _myBookmarks.filter(b => b.type === 'award');
     if(!awarded.length) return '';
 
-    const bmHtml = awarded.map(ub => {
-      const t = _bookmarkTemplates.find(x => x.id === ub.bookmarkId);
+    // Group awards by bookmarkId — a user can earn the same bookmark
+    // for multiple books (or just once with no book attached)
+    const grouped = {};
+    awarded.forEach(ub => {
+      if(!grouped[ub.bookmarkId]) grouped[ub.bookmarkId] = [];
+      grouped[ub.bookmarkId].push(ub);
+    });
+
+    const bmHtml = Object.entries(grouped).map(([bookmarkId, awards]) => {
+      const t = _bookmarkTemplates.find(x => x.id === bookmarkId);
       if(!t) return '';
-      const book = allBooks.find(b => b.id === ub.bookId);
+      // Use the most recent award's note/date for the tile tooltip
+      const latest = awards.slice().sort((a,b) =>
+        (b.awardedAt?.toMillis?.()||0) - (a.awardedAt?.toMillis?.()||0))[0];
       return `<div style="display:flex;flex-direction:column;align-items:center;
                           gap:3px;cursor:pointer;flex-shrink:0;"
-                data-bookid="${book ? book.id : ''}"
-                class="home-shelf-book"
-                title="${esc(t.name)}${ub.note ? ' — '+ub.note : ''}">
-        ${renderBookmarkSVG(t, 36, 56, 'home'+ub.id, true)}
+                data-bookmarkid="${bookmarkId}"
+                class="home-bookmark-item"
+                title="${esc(t.name)}">
+        ${renderBookmarkSVG(t, 36, 56, 'home'+bookmarkId, true)}
         <div style="font-size:.58rem;color:var(--muted);text-align:center;
                     max-width:44px;overflow:hidden;text-overflow:ellipsis;
                     white-space:nowrap;">${esc(t.name)}</div>
@@ -3274,7 +3284,7 @@ function shelfSection(id, label, icon, color, books, opts={}) {
           <span style="font-size:.74rem;font-weight:700;letter-spacing:.04em;
             color:var(--gold);">My bookmarks</span>
           <span style="font-size:.65rem;color:var(--muted);font-weight:400;">
-            ${awarded.length}</span>
+            ${Object.keys(grouped).length}</span>
         </div>
         <span id="home_bm_chevron" style="font-size:.75rem;color:var(--muted);
           transition:transform .2s;">▾</span>
@@ -3341,6 +3351,13 @@ function shelfSection(id, label, icon, color, books, opts={}) {
     });
   });
 
+  // ── Bind bookmark tile taps → open bookmark detail sheet ────────────────
+  container.querySelectorAll('.home-bookmark-item[data-bookmarkid]').forEach(el => {
+    el.addEventListener('click', () => {
+      showBookmarkDetailSheet(el.dataset.bookmarkid);
+    });
+  });
+
   // ── Bind "+" add tiles on custom lists ───────────────────────────────
   container.querySelectorAll('.home-shelf-addtile[data-listid]').forEach(el => {
     el.addEventListener('click', () => {
@@ -3359,6 +3376,93 @@ function shelfSection(id, label, icon, color, books, opts={}) {
   // ── Bind "Create new list" ───────────────────────────────────────────
   document.getElementById('btnHomeNewList')?.addEventListener('click', () => {
     showCreateListModal(null);
+  });
+}
+
+  function showBookmarkDetailSheet(bookmarkId) {
+  const t = _bookmarkTemplates.find(x => x.id === bookmarkId);
+  if(!t) return;
+
+  const awards = _myBookmarks
+    .filter(b => b.type === 'award' && b.bookmarkId === bookmarkId)
+    .sort((a,b) => (b.awardedAt?.toMillis?.()||0) - (a.awardedAt?.toMillis?.()||0));
+
+  const allBooks = dedupe([...library, ...communityLib]);
+
+  const awardRowHtml = awards.map(a => {
+    const book = a.bookId ? allBooks.find(x => x.id === a.bookId) : null;
+    const awardedAt = a.awardedAt?.toDate?.();
+    const dateStr = awardedAt ? awardedAt.toLocaleDateString() : '—';
+
+    const bookHtml = book
+      ? `<div class="bm-detail-book" data-bookid="${book.id}"
+           style="display:flex;align-items:center;gap:.5rem;cursor:pointer;margin-top:.4rem;">
+           ${getCoverSrc(book)
+             ? `<img src="${getCoverSrc(book)}" style="width:26px;height:38px;object-fit:cover;
+                 border-radius:2px;border:1px solid var(--border);flex-shrink:0"/>`
+             : `<div style="width:26px;height:38px;background:var(--navy2);border-radius:2px;
+                 flex-shrink:0;display:flex;align-items:center;justify-content:center;
+                 font-size:.7rem;color:rgba(200,180,140,.7)">📖</div>`}
+           <span style="font-size:.78rem;color:var(--teal);font-weight:700;
+             text-decoration:underline;text-decoration-color:rgba(42,124,138,.3);">
+             ${esc(book.title)}</span>
+         </div>`
+      : '';
+
+    return `<div style="padding:.7rem 0;border-bottom:1px solid var(--border);">
+      <div style="font-size:.72rem;color:var(--muted);">
+        Awarded ${dateStr}
+      </div>
+      ${a.note ? `<div style="font-size:.85rem;color:var(--navy2);margin-top:.3rem;
+        line-height:1.5;font-style:italic;">"${esc(a.note)}"</div>` : ''}
+      ${bookHtml}
+    </div>`;
+  }).join('');
+
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay open';
+  overlay.style.cssText = 'align-items:flex-end;padding:0;';
+  overlay.innerHTML = `
+    <div style="width:100%;background:var(--warm-white);border-radius:16px 16px 0 0;
+                box-shadow:0 -4px 24px rgba(0,0,0,.2);overflow:hidden;
+                padding-bottom:env(safe-area-inset-bottom);max-height:80vh;
+                display:flex;flex-direction:column;">
+      <div style="width:36px;height:4px;background:var(--border);border-radius:2px;
+                  margin:.75rem auto .5rem;flex-shrink:0;"></div>
+
+      <div style="display:flex;align-items:center;gap:.9rem;padding:.4rem 1.2rem .9rem;
+                  border-bottom:1px solid var(--border);flex-shrink:0;">
+        ${renderBookmarkSVG(t, 44, 68, 'bmdetail', true)}
+        <div style="flex:1;min-width:0;">
+          <div style="font-family:'Playfair Display',serif;font-size:1.1rem;
+                      color:var(--navy2);line-height:1.2;">${esc(t.name)}</div>
+          ${t.description ? `<div style="font-size:.78rem;color:var(--muted);
+            margin-top:.25rem;line-height:1.5;">${esc(t.description)}</div>` : ''}
+        </div>
+        <button onclick="this.closest('.modal-overlay').remove()"
+          style="background:none;border:none;font-size:1.2rem;cursor:pointer;
+                 color:var(--muted);line-height:1;flex-shrink:0;align-self:flex-start;">✕</button>
+      </div>
+
+      <div style="overflow-y:auto;padding:.2rem 1.2rem 1rem;flex:1;">
+        <div style="font-size:.6rem;letter-spacing:.15em;text-transform:uppercase;
+                    color:var(--muted);font-weight:700;margin:.7rem 0 .2rem;">
+          ${awards.length} award${awards.length !== 1 ? 's' : ''}
+        </div>
+        ${awardRowHtml}
+      </div>
+    </div>`;
+
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click', e => { if(e.target === overlay) overlay.remove(); });
+
+  // Tapping a book row navigates to its detail page
+  overlay.querySelectorAll('.bm-detail-book[data-bookid]').forEach(el => {
+    el.addEventListener('click', () => {
+      overlay.remove();
+      mobPrevPanel = 'mobPanelHome';
+      mob_showBook(el.dataset.bookid);
+    });
   });
 }
 
