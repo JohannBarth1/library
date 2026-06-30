@@ -1884,8 +1884,6 @@ let loungePresenceUnsub = null;
 let loungeChatUnsub = null;
 let loungeRequestsUnsub = null;
 let loungeNotifsUnsub = null;
-let loungeVisible = false;
-let loungePresenceTimer = null;
 let loungeUnreadKnocks = 0;
 
 // Reader state
@@ -1907,14 +1905,26 @@ onAuthStateChanged(auth,async user=>{
     updateUserUI(user);
     renderSkeleton('deskBookGrid',16);
     renderSkeleton('mobGridLibrary',12);
-    try{await setDoc(doc(db,'users',user.uid),{displayName:user.displayName||'',email:user.email,uid:user.uid,lastSeen:serverTimestamp()},{merge:true});}catch(e){console.warn(e);}
+
+    // Fire-and-forget lastSeen update — doesn't block UI
+    setDoc(doc(db,'users',user.uid),{displayName:user.displayName||'',email:user.email,uid:user.uid,lastSeen:serverTimestamp()},{merge:true}).catch(e=>console.warn(e));
+
+    // ── PRIORITY 1: Get Home tab visible as fast as possible ──────────────
+    showLoading('Loading…');
+    await Promise.all([
+      loadUserLists(),
+      loadConfig(),
+    ]);
+    hideLoading();
+    mob_switchTab('home');
+    showDeskHome();
+
+    // ── PRIORITY 2: Library (private books first, public/shared in background) ──
     await loadLibrary();
     checkUrlHash();
-    showDeskHome();
     checkAdminStatus();
-    await loadConfig();
-    await loadUserLists();
-    // Load secondary data in background — doesn't block UI
+
+    // ── PRIORITY 3: Everything else, non-blocking ──────────────────────────
     Promise.all([
       loadUserRatings(),
       loadMyCheckouts(),
@@ -2504,77 +2514,9 @@ function buildDrawerIconBar(book, isMine){
   bar.style.border = 'none';
   bar.querySelectorAll('[data-action]').forEach(b => b.addEventListener('click', handleAction));
 }
-
-function showDrawerMoreMenu(book, isMine){
-  const existing = document.getElementById('drawerMoreMenu');
-  if(existing){ existing.remove(); return; }
-
-  const menu = document.createElement('div');
-  menu.id = 'drawerMoreMenu';
-  menu.style.cssText = `position:absolute;bottom:calc(100% + 6px);right:1.5rem;
-    background:var(--warm-white);border:1px solid var(--border);border-radius:6px;
-    padding:.4rem 0;min-width:200px;z-index:200;box-shadow:0 4px 16px rgba(0,0,0,0.15)`;
-
-  const item = (icon, label, action, danger=false) =>
-    `<button class="action-dropdown-item ${danger?'danger':''}" data-action="${action}">
-      ${icon} ${label}
-    </button>`;
-
-  let html = '';
-  if(isMine){
-    html += `<div style="font-size:.6rem;letter-spacing:.15em;text-transform:uppercase;color:var(--muted);font-weight:700;padding:.5rem 1rem .2rem">Share</div>`;
-    if(book.visibility !== 'public') html += item('🌐','Publish to Library','share');
-    else html += item('🔒','Unpublish','unpublish');
-    html += item('🔗','Share Privately','shareprivate');
-    html += item('📎','Copy Link','link');
-    html += `<div style="height:1px;background:var(--border);margin:.3rem 0"></div>`;
-    html += `<div style="font-size:.6rem;letter-spacing:.15em;text-transform:uppercase;color:var(--muted);font-weight:700;padding:.5rem 1rem .2rem">Manage</div>`;
-    html += item('✎','Edit Details','editmeta');
-    html += item('🏷','Tags','tags');
-    html += item('📑','Chapters','chapters');
-    html += item('⭐', book.recommended ? 'Remove Recommendation' : 'Recommend','recommend');
-    html += `<div style="height:1px;background:var(--border);margin:.3rem 0"></div>`;
-    html += item('✕','Delete','delete',true);
-  }
-
-  menu.innerHTML = html;
-  menu.querySelectorAll('[data-action]').forEach(b => {
-    b.addEventListener('click', e => {
-      menu.remove();
-      handleAction(e);
-    });
-  });
-
-  const bar = document.getElementById('drawerIconBar');
-  bar.style.position = 'relative';
-  bar.appendChild(menu);
-
-  setTimeout(() => {
-    document.addEventListener('click', function close(){
-      menu.remove();
-      document.removeEventListener('click', close);
-    });
-  }, 0);
-}
   
 function closeDrawer(){document.getElementById('bookDrawer').classList.remove('open');document.querySelectorAll('.book-card').forEach(c=>c.classList.remove('active'));currentId=null;}
 document.getElementById('drawerClose').addEventListener('click',closeDrawer);
-
-function bindActionDropdowns(container){
-  container.querySelectorAll('[data-dd]').forEach(btn=>{
-    btn.addEventListener('click',e=>{
-      e.stopPropagation();
-      const menuId=btn.dataset.dd+'Menu';
-      const menu=document.getElementById(menuId);
-      document.querySelectorAll('.action-dropdown-menu.open').forEach(m=>{if(m.id!==menuId)m.classList.remove('open');});
-      menu?.classList.toggle('open');
-    });
-  });
-  // Also bind handleAction to each dropdown menu directly
-  container.querySelectorAll('.action-dropdown-menu').forEach(menu=>{
-    menu.addEventListener('click', handleAction);
-  });
-}
 
 function handleAction(e){
   const btn=e.target.closest('[data-action]');if(!btn)return;
@@ -2847,7 +2789,6 @@ function mob_switchTab(tab) {
   if (tab === 'library')   renderMobLibrary();
   if (tab === 'settings')  renderKoboSettings(document.getElementById('mobKoboSettings'));
 }
-mob_switchTab('home');
 
 // ── MOBILE LIBRARY PANEL ─────────────────────────────────────────────────────
 // Source filter pills
@@ -3216,64 +3157,6 @@ function matchesQ(b,q){return(b.title||'').toLowerCase().includes(q)||(b.author|
 
 
 // ── HOME PANEL (mobile) ───────────────────────────────────────────────────────
-function uniformBookCard(b) {
-  return bookCardHtml(b, communityLib.some(x => x.id === b.id));
-}
-
-function toggleHomeSection(id) {
-  const body = document.getElementById(id+'_body');
-  const chevron = document.getElementById(id+'_chevron');
-  if(!body||!chevron) return;
-  const isOpen = body.style.maxHeight !== '0px' && body.style.maxHeight !== '0';
-  if(isOpen) {
-    body.style.maxHeight = '0';
-    body.style.padding = '0 .8rem';
-    chevron.style.transform = 'rotate(-90deg)';
-  } else {
-    body.style.maxHeight = '2000px';
-    body.style.padding = '.8rem';
-    chevron.style.transform = '';
-  }
-}
-
-window.toggleHomeSection = toggleHomeSection;
-
-  function renderMobHomeSkeleton() {
-  const GRID = `display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:.7rem;`;
-  const skeletonCard = `
-    <div style="border-radius:4px;overflow:hidden;background:var(--warm-white);
-                border:1px solid var(--border);">
-      <div style="width:100%;aspect-ratio:2/3;background:linear-gradient(90deg,
-        var(--panel) 25%,var(--light-blue) 50%,var(--panel) 75%);
-        background-size:200% 100%;animation:shimmer 1.4s infinite;"></div>
-      <div style="padding:.4rem .45rem .5rem">
-        <div style="height:.65rem;border-radius:3px;margin-bottom:.35rem;
-          background:linear-gradient(90deg,var(--panel) 25%,var(--light-blue) 50%,var(--panel) 75%);
-          background-size:200% 100%;animation:shimmer 1.4s infinite;"></div>
-        <div style="height:.55rem;border-radius:3px;width:60%;
-          background:linear-gradient(90deg,var(--panel) 25%,var(--light-blue) 50%,var(--panel) 75%);
-          background-size:200% 100%;animation:shimmer 1.4s infinite;"></div>
-      </div>
-    </div>`;
-
-  const skeletonSection = (label) => `
-    <div style="margin-bottom:.8rem;border:1px solid var(--border);border-radius:6px;overflow:hidden">
-      <div style="display:flex;align-items:center;justify-content:space-between;
-                  padding:.6rem .9rem;background:var(--panel);">
-        <div style="font-size:.68rem;letter-spacing:.15em;text-transform:uppercase;
-                    font-weight:700;color:var(--navy2)">${label}</div>
-        <div style="font-size:.8rem;color:var(--muted);">▾</div>
-      </div>
-      <div style="padding:.8rem">
-        <div style="${GRID}">${Array(4).fill(skeletonCard).join('')}</div>
-      </div>
-    </div>`;
-
-  document.getElementById('mobHomeContent').innerHTML =
-    skeletonSection('📖 Currently Reading') +
-    skeletonSection('⭐ Recommended') +
-    skeletonSection('🕐 Recently Added');
-}
   
 async function renderMobHome(){
   const name = (currentUser?.displayName||'').split(' ')[0] || 'Reader';
@@ -3461,15 +3344,6 @@ window.toggleHomeShelf = function(id) {
   if(!body || !chevron) return;
   const isOpen  = body.style.maxHeight !== '0px' && body.style.maxHeight !== '0';
   body.style.maxHeight    = isOpen ? '0' : '600px';
-  chevron.style.transform = isOpen ? 'rotate(-90deg)' : '';
-};
-
-window.toggleHomeShelf = function(id) {
-  const body    = document.getElementById(id + '_body');
-  const chevron = document.getElementById(id + '_chevron');
-  if(!body || !chevron) return;
-  const isOpen  = body.style.maxHeight !== '0px' && body.style.maxHeight !== '0';
-  body.style.maxHeight    = isOpen ? '0' : '500px';
   chevron.style.transform = isOpen ? 'rotate(-90deg)' : '';
 };
 
@@ -5312,7 +5186,7 @@ function renderChapterMgrList(){
   document.getElementById('chapterMgrInfo').textContent=`${active.length} chapter${active.length!==1?'s':''} · ${chapterMgrSpine.filter(c=>c.deleted).length} marked for deletion`;
   list.querySelectorAll('.chapter-mgr-input').forEach(inp=>{inp.addEventListener('change',e=>{chapterMgrSpine[parseInt(e.target.dataset.idx)].label=e.target.value;});inp.addEventListener('input',e=>{chapterMgrSpine[parseInt(e.target.dataset.idx)].label=e.target.value;});});
   list.querySelectorAll('[data-delete]').forEach(btn=>{btn.addEventListener('click',e=>{const idx=parseInt(e.target.dataset.delete);if(chapterMgrSpine.filter(c=>!c.deleted).length<=1){showToast("Can't delete the last chapter");return;}chapterMgrSpine[idx].deleted=true;renderChapterMgrList();});});
-  list.querySelectorAll('[data-restore]').forEach(btn=>{btn.addEventListener('click',e=>{const idx=parseInt(e.target.dataset.restore??e.target.dataset.restore);chapterMgrSpine[idx].deleted=false;renderChapterMgrList();});});
+  list.querySelectorAll('[data-restore]').forEach(btn=>{btn.addEventListener('click',e=>{const idx=parseInt(e.target.dataset.restore);chapterMgrSpine[idx].deleted=false;renderChapterMgrList();});});
   let dragSrc=null;
   list.querySelectorAll('.chapter-mgr-row[draggable="true"]').forEach(row=>{
     row.addEventListener('dragstart',e=>{dragSrc=parseInt(row.dataset.idx);row.style.opacity='.4';});
@@ -5394,16 +5268,8 @@ async function loadMyBookmarks() {
   }
 }
 
-function getBookmarksForBook(bookId) {
-  return _myBookmarks.filter(b => b.bookId === bookId);
-}
-
 function getReadingPositionBookmark(bookId) {
   return _myBookmarks.find(b => b.bookId === bookId && b.type === 'reading_position');
-}
-
-function getAwardBookmarksForBook(bookId) {
-  return _myBookmarks.filter(b => b.bookId === bookId && b.type === 'award');
 }
 
   // ── BOOKMARK PRIORITY RESOLVER ────────────────────────────────────────────────
@@ -5417,7 +5283,6 @@ function getAwardBookmarksForBook(bookId) {
 
 function getDisplayBookmarkTemplate(bookId) {
   if (!bookId || !_bookmarkTemplates.length) return null;
-  console.log('templates:', _bookmarkTemplates.length, 'bookmarks:', _myBookmarks.length);
   const now = new Date();
 
   // ── PRIORITY 1: User-specific award for THIS book (always show, even if not reading) ──
@@ -5479,18 +5344,6 @@ async function loadKoboDevices() {
   }
 }
 
-// ── CREATE SETUP FILE IN FIREBASE STORAGE ────────────────────────────────────
-// Writes "Firebase:DEVICE_FIRESTORE_ID:TOKEN" to Storage at setup/{token}.txt
-// udev_mount.sh on the Kobo fetches this on first connect to configure itself.
-
-async function createSetupFile(device) {
-  const configLine = `Firebase:${device.id}:${device.token}`;
-  const blob = new Blob([configLine], { type: 'text/plain' });
-  const path = `setup/${device.token}.txt`;
-  const ref = storageRef(storage, path);
-  await uploadBytes(ref, blob);
-}
-
 // ── DELETE SETUP FILE FROM STORAGE ───────────────────────────────────────────
 // Called when a device is removed. Cleans up the setup file — good hygiene
 // even if the Kobo has already consumed it (in which case the delete is a no-op).
@@ -5521,9 +5374,7 @@ async function saveKoboDevice(name) {
 // ── DELETE KOBO DEVICE ────────────────────────────────────────────────────────
 
 async function deleteKoboDevice(deviceId) {
-  const device = koboDevices.find(d => d.id === deviceId);
   await deleteDoc(doc(db, 'kobo_devices', deviceId));
-  if (device) await deleteSetupFile(device);
   koboDevices = koboDevices.filter(d => d.id !== deviceId);
 }
 
@@ -6205,8 +6056,6 @@ function timeAgo(date) {
 }
 
 // ── START LOUNGE WHEN TAB IS OPENED ──────────────────────────────────────────
-const _origMobSwitchTab = mob_switchTab;
-// Patch mob_switchTab to start listener when Lounge is opened
 document.getElementById('mobNavLibrary').onclick  = () => mob_switchTab('library');
 document.getElementById('mobNavHome').onclick      = () => mob_switchTab('home');
 document.getElementById('mobNavCommunity').onclick = () => {
@@ -6216,11 +6065,6 @@ document.getElementById('mobNavCommunity').onclick = () => {
   loungeSetActive();
 };
 document.getElementById('mobNavSettings').onclick  = () => mob_switchTab('settings');
-
-// ── LOUNGE ────────────────────────────────────────────────────────────────────
-
-let loungeChatLastSeen = parseInt(localStorage.getItem('elib_chat_seen') || '0');
-let loungeRequestsLastSeen = parseInt(localStorage.getItem('elib_lounge_seen') || '0');
 
 // ── PRESENCE ──────────────────────────────────────────────────────────────────
 let loungeReadingBookId = null;
@@ -6379,18 +6223,6 @@ function showReadingEditSheet() {
     }, 150);
   });
 }
-
-// Visibility API — start countdown when app hidden, cancel when returned
-document.addEventListener('visibilitychange', () => {
-  if(document.hidden) {
-    if(loungeVisible) startPresenceCountdown();
-  } else {
-    if(loungeVisible) {
-      cancelPresenceCountdown();
-      enterLounge(); // refresh TTL
-    }
-  }
-});
 
 // ── NOTIFICATIONS LISTENER ────────────────────────────────────────────────────
 function startNotifListener() {
