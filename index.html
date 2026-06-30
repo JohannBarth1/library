@@ -7841,6 +7841,124 @@ async function adminLoadTags() {
   addInput?.addEventListener('keydown', e => { if(e.key === 'Enter') doAdd(); });
 }
 
+  async function adminLoadAwards() {
+  const el = document.getElementById('adminAwardsList');
+  if(!el) return;
+  el.innerHTML = '<div style="color:var(--muted);font-size:.85rem">Loading…</div>';
+
+  try {
+    // Load all award records and all users in parallel
+    const [awardsSnap, usersSnap, templatesSnap] = await Promise.all([
+      getDocs(query(collection(db, 'user_bookmarks'), where('type', '==', 'award'))),
+      getDocs(collection(db, 'users')),
+      getDocs(collection(db, 'bookmarks')),
+    ]);
+
+    const awards = awardsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+    const userMap = {};
+    usersSnap.docs.forEach(d => {
+      const u = d.data();
+      userMap[d.id] = u.displayName || u.email || d.id;
+    });
+    const templateMap = {};
+    templatesSnap.docs.forEach(d => {
+      templateMap[d.id] = { id: d.id, ...d.data() };
+    });
+
+    if(!awards.length) {
+      el.innerHTML = '<div style="color:var(--muted);font-size:.85rem;padding:.5rem 0">No bookmark awards yet</div>';
+      return;
+    }
+
+    // Group by userId
+    const byUser = {};
+    awards.forEach(a => {
+      const uid = a.userId || 'unknown';
+      if(!byUser[uid]) byUser[uid] = [];
+      byUser[uid].push(a);
+    });
+
+    el.innerHTML = Object.entries(byUser).map(([uid, userAwards]) => {
+      const userName = userMap[uid] || uid;
+      const rowsHtml = userAwards.map(a => {
+        const t = templateMap[a.bookmarkId];
+        const tName = t ? t.name : `Unknown (${a.bookmarkId})`;
+        const book = [...library, ...communityLib].find(b => b.id === a.bookId);
+        const bookName = book ? book.title : (a.bookId ? `Book ID: ${a.bookId}` : '—');
+        const awardedAt = a.awardedAt?.toDate?.()?.toLocaleDateString() || '—';
+        const awardedBy = userMap[a.awardedBy] || a.awardedBy || '—';
+        const svgHtml = t ? renderBookmarkSVG(t, 20, 32, 'adma'+a.id) : '🔖';
+
+        return `<div style="display:flex;align-items:center;gap:.6rem;
+                            padding:.45rem .5rem;border-bottom:1px solid var(--border);
+                            background:var(--warm-white);">
+          <div style="flex-shrink:0">${svgHtml}</div>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:.8rem;font-weight:700;color:var(--navy2);
+                        white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
+              ${esc(tName)}</div>
+            <div style="font-size:.68rem;color:var(--muted);margin-top:1px">
+              📖 ${esc(bookName)}</div>
+            <div style="font-size:.65rem;color:var(--muted);margin-top:1px">
+              Awarded ${awardedAt} by ${esc(awardedBy)}
+              ${a.note ? ` · <em>${esc(a.note)}</em>` : ''}</div>
+          </div>
+          <button data-delete-award="${a.id}"
+            style="flex-shrink:0;background:transparent;border:1px solid #e0b0b0;
+                   color:var(--danger);font-family:'Lato',sans-serif;font-size:.65rem;
+                   font-weight:700;padding:.25rem .5rem;border-radius:3px;
+                   cursor:pointer;white-space:nowrap">✕ Delete</button>
+        </div>`;
+      }).join('');
+
+      return `<div style="margin-bottom:.8rem;border:1px solid var(--border);border-radius:4px;overflow:hidden;">
+        <div style="padding:.45rem .7rem;background:var(--panel);
+                    font-size:.72rem;font-weight:700;color:var(--navy2);
+                    border-bottom:1px solid var(--border);
+                    display:flex;align-items:center;gap:.4rem;">
+          <div style="width:24px;height:24px;border-radius:50%;background:var(--teal);
+                      color:#fff;display:flex;align-items:center;justify-content:center;
+                      font-size:.6rem;font-weight:700;flex-shrink:0;">
+            ${userName.slice(0,2).toUpperCase()}</div>
+          ${esc(userName)}
+          <span style="font-size:.65rem;color:var(--muted);font-weight:400;margin-left:auto">
+            ${userAwards.length} award${userAwards.length !== 1 ? 's' : ''}</span>
+        </div>
+        ${rowsHtml}
+      </div>`;
+    }).join('');
+
+    // Bind delete buttons
+    el.querySelectorAll('[data-delete-award]').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        if(!confirm('Delete this bookmark award? The user will lose it immediately.')) return;
+        const awardId = btn.dataset.deleteAward;
+        btn.textContent = '…';
+        btn.disabled = true;
+        try {
+          await deleteDoc(doc(db, 'user_bookmarks', awardId));
+          // Reload section
+          await adminLoadAwards();
+          // Refresh local bookmarks if this was ours
+          await loadMyBookmarks();
+          renderAll();
+          renderMobHome();
+          showToast('Award deleted ✓');
+        } catch(e) {
+          showToast('Delete failed: ' + e.message);
+          btn.textContent = '✕ Delete';
+          btn.disabled = false;
+        }
+      });
+    });
+
+  } catch(e) {
+    el.innerHTML = `<div style="color:var(--danger);font-size:.82rem">Failed: ${e.message}</div>`;
+    console.error(e);
+  }
+}
+  
+
   async function adminLoadBookmarks() {
   const el = document.getElementById('adminBookmarkBody');
   if(!el) return;
@@ -7973,6 +8091,20 @@ function buildAdminSections() {
     </div>
 
     <div class="admin-section">
+      <div class="admin-section-header" data-admin-section="awardsAdmin">
+        <span class="admin-section-title">🎖 Bookmark Awards</span>
+        <span class="admin-section-chevron">▾</span>
+      </div>
+      <div class="admin-section-body" id="adminAwardsBody">
+        <button class="btn-save" style="font-size:.72rem;padding:.4rem .8rem;margin-bottom:.8rem"
+          id="adminAwardsRefresh">↻ Refresh</button>
+        <div id="adminAwardsList">
+          <div style="color:var(--muted);font-size:.85rem">Open to load…</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="admin-section">
       <div class="admin-section-header" data-admin-section="presence">
         <span class="admin-section-title">🟢 Active Users</span>
         <span class="admin-section-chevron">▾</span>
@@ -8021,13 +8153,13 @@ function buildAdminSections() {
       body.classList.toggle('open', !isOpen);
       header.classList.toggle('open', !isOpen);
       if(!isOpen) {
-        if(section === 'checkouts') adminLoadCheckouts();
-        if(section === 'kobo')      adminLoadKoboDevices();
-        if(section === 'users')     adminLoadUsers();
-        if(section === 'categories') adminLoadCategories();
-        if(section === 'bookmarks') adminLoadBookmarks();
-        if(section === 'tags')      adminLoadTags();
-        if(section === 'presence')  adminLoadPresence();
+        if(section === 'checkouts')   adminLoadCheckouts();
+        if(section === 'kobo')        adminLoadKoboDevices();
+        if(section === 'users')       adminLoadUsers();
+        if(section === 'categories')  adminLoadCategories();
+        if(section === 'bookmarks')   adminLoadBookmarks();
+        if(section === 'tags')        adminLoadTags();
+        if(section === 'awardsAdmin') adminLoadAwards();
       }
     });
   });
@@ -8045,6 +8177,8 @@ function buildAdminSections() {
     ?.addEventListener('click', adminLoadKoboDevices);
   scroll.querySelector('#adminUsersRefresh')
     ?.addEventListener('click', adminLoadUsers);
+  scroll.querySelector('#adminAwardsRefresh')
+    ?.addEventListener('click', adminLoadAwards);
 }
 
 document.getElementById('mobNavAdmin')?.addEventListener('click', () => {
