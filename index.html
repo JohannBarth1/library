@@ -2460,9 +2460,9 @@ function showBookById(id){
 function renderDetailActionRows(container, book, isMine){
   const bigBtn = (icon, label, action, bg, col) => `
     <button class="detail-row-btn" data-action="${action}" style="
-      flex:1;display:flex;align-items:center;justify-content:center;gap:.4rem;
-      padding:.65rem .5rem;border-radius:24px;border:none;
-      background:${bg};color:${col};cursor:pointer;
+      display:inline-flex;align-items:center;justify-content:center;gap:.4rem;
+      padding:.65rem 1rem;border-radius:24px;border:none;
+      background:${bg};color:${col};cursor:pointer;white-space:nowrap;
       font-size:.8rem;font-weight:700;">
       <span style="font-size:1rem;line-height:1">${icon}</span>
       <span>${label}</span>
@@ -2492,7 +2492,7 @@ function renderDetailActionRows(container, book, isMine){
   };
 
   // ── Row 1: primary, large ──────────────────────────────────────────────
-  let html = `<div style="display:flex;gap:.5rem;margin-bottom:.55rem;">
+  let html = `<div style="display:flex;gap:.5rem;margin-bottom:.55rem;flex-wrap:wrap;">
     ${bigBtn('📖','Read','read','var(--navy2)','var(--gold)')}
     ${bigBtn('🔲','Send to Kobo','sendtokobo','var(--teal)','var(--gold)')}
   </div>`;
@@ -2501,7 +2501,7 @@ function renderDetailActionRows(container, book, isMine){
   html += `<div style="display:flex;gap:.4rem;margin-bottom:.6rem;">
     ${medBtn('🗂️','Lists','addtolist','#5a48b0','#d0c8f0')}
     ${medBtn('🏷','Tags','tags','var(--teal)','var(--teal)')}
-    ${medBtn('📚','Category','category','var(--gold)','rgba(200,149,42,.4)')}
+    ${medBtn('🚪','Shelf','category','var(--gold)','rgba(200,149,42,.4)')}
   </div>`;
 
   // ── General small actions (always visible, everyone) ────────────────────
@@ -7323,7 +7323,7 @@ function showQuickCategoryModal() {
   overlay.className = 'modal-overlay open';
   overlay.innerHTML = `
     <div class="modal" style="max-width:360px">
-      <h3>📚 Category</h3>
+      <h3>📚 Shelf</h3>
       <p style="font-size:.82rem;color:var(--muted);margin-bottom:.8rem;line-height:1.5">
         Set the category for <strong>${esc(book.title)}</strong>.
       </p>
