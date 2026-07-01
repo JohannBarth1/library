@@ -1899,52 +1899,74 @@ let _bookmarkTemplates = [];
 let _myBookmarks = [];
 
 // ── AUTH ──────────────────────────────────────────────────────────────────────
-onAuthStateChanged(auth,async user=>{
-  currentUser=user;
+onAuthStateChanged(auth, async user => {
+  currentUser = user;
   if(user){
     document.getElementById('authScreen').classList.add('hidden');
     updateUserUI(user);
-    renderSkeleton('deskBookGrid',16);
-    renderSkeleton('mobGridLibrary',12);
 
-    // Fire-and-forget lastSeen update — doesn't block UI
-    setDoc(doc(db,'users',user.uid),{displayName:user.displayName||'',email:user.email,uid:user.uid,lastSeen:serverTimestamp()},{merge:true}).catch(e=>console.warn(e));
-
-    // ── PRIORITY 1: Lists + config (needed before anything else) ──────────
-    showLoading('Loading…');
-    await Promise.all([
-      loadUserLists(),
-      loadConfig(),
-    ]);
-
-    // ── PRIORITY 2: Bookmarks — show these first on Home ───────────────────
-    await Promise.all([
-      loadBookmarkTemplates(),
-      loadMyBookmarks(),
-    ]);
-    await preloadBookmarkBooks();
-    hideLoading();
+    // Show Home tab immediately with empty/skeleton state —
+    // no await, no loading spinner, no waiting
     mob_switchTab('home');
     showDeskHome();
     renderMobHome();
     renderDeskHome();
 
-    // ── PRIORITY 3: Other home elements (ratings, checkouts, kobo, presence) ──
-    await Promise.all([
-      loadUserRatings(),
-      loadMyCheckouts(),
-      loadKoboDevices(),
-      startNotifListener(),
-      loungeJoinPassive(),
-      startPresenceHeartbeat(),
-    ]);
-    renderMobHome();
-    renderDeskHome();
+    // Fire-and-forget lastSeen — never blocks anything
+    setDoc(doc(db,'users',user.uid), {
+      displayName: user.displayName||'',
+      email: user.email,
+      uid: user.uid,
+      lastSeen: serverTimestamp()
+    }, {merge:true}).catch(e => console.warn(e));
 
-    // ── PRIORITY 4: Library loads last ──────────────────────────────────────
-    await loadLibrary();
-    checkUrlHash();
-    checkAdminStatus();
+    // ── WAVE 1: minimum needed to paint the Home tab meaningfully ──────
+    // Run in parallel, re-render Home as each one lands
+    Promise.all([
+      loadUserLists(),
+      loadConfig(),
+    ]).then(() => {
+      renderMobHome();
+      renderDeskHome();
+    });
+
+    Promise.all([
+      loadBookmarkTemplates(),
+      loadMyBookmarks(),
+    ]).then(async () => {
+      await preloadBookmarkBooks();
+      renderMobHome();
+      renderDeskHome();
+    });
+
+    // ── WAVE 2: library — loads in background, renders when ready ───────
+    // Slight delay so wave 1 fetches get priority on the connection
+    setTimeout(() => {
+      loadLibrary().then(() => {
+        checkUrlHash();
+        renderSkeleton('deskBookGrid', 0);
+      });
+    }, 100);
+
+    // ── WAVE 3: everything else — pure background, no UI blocking ───────
+    setTimeout(() => {
+      Promise.all([
+        loadUserRatings(),
+        loadMyCheckouts(),
+        loadKoboDevices(),
+        loadBookmarkTemplates(),
+        loadMyBookmarks(),
+      ]).then(() => {
+        renderMobHome();
+        renderDeskHome();
+        renderAll();
+      });
+
+      startNotifListener();
+      loungeJoinPassive();
+      startPresenceHeartbeat();
+      checkAdminStatus();
+    }, 400);
 
   } else {
     document.getElementById('authScreen').classList.remove('hidden');
