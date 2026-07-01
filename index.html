@@ -4082,7 +4082,7 @@ html {
 }
 body {
   overflow: visible;  /* let columns extend rightward so they actually render */
-  column-width: ${actualW}px;
+  column-width: ${actualW - 2 * padding}px;
   column-gap: 0;
   column-fill: auto;
   height: ${h}px;
@@ -4207,6 +4207,7 @@ function recalcReaderHeight() {
   if(!_readerIframe) return;
 
   const { w, h } = _getReaderDimensions();
+  const padding = Math.max(16, Math.min(48, Math.round(w * 0.06)));
   const content = document.getElementById('readerContent');
   content.style.height = h + 'px';
 
