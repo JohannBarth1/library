@@ -5730,17 +5730,16 @@ async function loadBookmarkTemplates() {
 async function preloadBookmarkBooks() {
   const ids = [...new Set(_myBookmarks.filter(b => b.bookId).map(b => b.bookId))];
   if(!ids.length) return;
-  try {
-    const results = [];
-    for(let i = 0; i < ids.length; i += 10) {
-      const chunk = ids.slice(i, i + 10);
-      const snap = await getDocs(query(collection(db, 'books'), where('__name__', 'in', chunk)));
-      snap.docs.forEach(d => results.push({ id: d.id, ...d.data() }));
+  const results = [];
+  for(const id of ids){
+    try {
+      const snap = await getDoc(doc(db, 'books', id));
+      if(snap.exists()) results.push({ id: snap.id, ...snap.data() });
+    } catch(e) {
+      // skip — no permission for this book
     }
-    _bookmarkBookCache = results;
-  } catch(e) {
-    console.warn('preloadBookmarkBooks:', e);
   }
+  _bookmarkBookCache = results;
 }
 
 async function loadMyBookmarks() {
@@ -5775,9 +5774,10 @@ function getReadingPositionBookmark(bookId) {
 function getDisplayBookmarkTemplate(bookId) {
   if(!bookId || !_bookmarkTemplates.length) return null;
   const now = new Date();
-  const book = [...library, ...communityLib, ..._bookmarkBookCache].find(b => b.id === bookId);
+  const book = [...library, ...communityLib, ..._bookmarkBookCache]
+    .find(b => b.id === bookId);
 
-  // ── PRIORITY 1: Personal award for this specific book ──────────────────
+  // ── PRIORITY 1: Personal award for this specific book — always show ────
   const userBookAward = _myBookmarks.find(b =>
     b.type === 'award' &&
     b.bookId === bookId &&
@@ -5789,19 +5789,14 @@ function getDisplayBookmarkTemplate(bookId) {
     if(t) return t;
   }
 
-  // ── GATE: Everything below only shows if currently reading ─────────────
-  const crList = _userLists.find(l => l.id === 'currently-reading');
-  const isCurrentlyReading = crList && (crList.bookIds || []).includes(bookId);
-  if(!isCurrentlyReading) return null;
-
-  // ── PRIORITY 2: Global bookmark assigned to this specific book ──────────
+  // ── PRIORITY 2: Global bookmark assigned to this exact book — always show
   const bookSpecific = _bookmarkTemplates.find(t =>
     t.scope === 'global' &&
     (t.assignedBookIds || []).includes(bookId)
   );
   if(bookSpecific) return bookSpecific;
 
-  // ── PRIORITY 3: Global bookmark assigned to this book's category ────────
+  // ── PRIORITY 3: Global bookmark assigned to this book's category — always
   if(book?.category){
     const catSpecific = _bookmarkTemplates.find(t =>
       t.scope === 'global' &&
@@ -5810,7 +5805,12 @@ function getDisplayBookmarkTemplate(bookId) {
     if(catSpecific) return catSpecific;
   }
 
-  // ── PRIORITY 4: Active seasonal global bookmark ─────────────────────────
+  // ── GATE: below here only shows if actively reading ────────────────────
+  const crList = _userLists.find(l => l.id === 'currently-reading');
+  const isCurrentlyReading = crList && (crList.bookIds || []).includes(bookId);
+  if(!isCurrentlyReading) return null;
+
+  // ── PRIORITY 4: Seasonal global bookmark ──────────────────────────────
   const seasonal = _bookmarkTemplates.find(t => {
     if(t.scope !== 'global' || t.condition?.type !== 'seasonal') return false;
     const from = t.condition.startsAt?.toDate?.();
@@ -5819,7 +5819,7 @@ function getDisplayBookmarkTemplate(bookId) {
   });
   if(seasonal) return seasonal;
 
-  // ── PRIORITY 5: Default reading bookmark ───────────────────────────────
+  // ── PRIORITY 5: Default reading bookmark ──────────────────────────────
   return {
     shape: 'classic', icon: '📖', label: '',
     colors: { body: '#0f1a2e', accent: '#c8952a', text: '#faf7f2' }
