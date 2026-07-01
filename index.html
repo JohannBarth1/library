@@ -3374,16 +3374,7 @@ function bookmarksSection() {
       const progress = ub.progress || 0;
 
       // Resolve bookmark visual template
-      const award = _myBookmarks.find(b => b.type === 'award' && b.bookId === ub.bookId);
-      const tAward = award ? _bookmarkTemplates.find(t => t.id === award.bookmarkId) : null;
-      const now = new Date();
-      const seasonal = _bookmarkTemplates.find(t => {
-        if(t.condition?.type !== 'seasonal') return false;
-        const from = t.condition.startsAt?.toDate?.();
-        const to   = t.condition.endsAt?.toDate?.();
-        return from && to && now >= from && now <= to;
-      });
-      const tpl = tAward || seasonal || {
+      const tpl = getDisplayBookmarkTemplate(ub.bookId) || {
         shape: 'classic', icon: isReadingPos ? '📖' : '🎖', label: '',
         colors: { body: '#0f1a2e', accent: '#c8952a', text: '#faf7f2' }
       };
@@ -4637,21 +4628,8 @@ function renderReaderBookmarkTab() {
 
   // Resolve which visual template to use for the in-reader bookmark
   // Priority: award for this book → seasonal → default gold
-  const awardBm = _myBookmarks.find(b =>
-    b.type === 'award' && b.bookId === readerBookId
-  );
-  const awardTpl = awardBm ? _bookmarkTemplates.find(t => t.id === awardBm.bookmarkId) : null;
-  const now = new Date();
-  const seasonalTpl = _bookmarkTemplates.find(t => {
-    if(t.condition?.type !== 'seasonal') return false;
-    const from = t.condition.startsAt?.toDate?.();
-    const to   = t.condition.endsAt?.toDate?.();
-    return from && to && now >= from && now <= to;
-  });
-  const bmTpl = awardTpl || seasonalTpl || {
-    shape: 'classic',
-    icon: '🔖',
-    label: '',
+  const bmTpl = getDisplayBookmarkTemplate(readerBookId) || {
+    shape: 'classic', icon: '🔖', label: '',
     colors: { body: '#c8952a', accent: '#0f1a2e', text: '#faf7f2' }
   };
 
