@@ -304,7 +304,18 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .rs-theme-btn.night.active{background:#1a1a2e;color:#c8c8d8;border-color:#4444aa;outline:2px solid var(--gold);outline-offset:1px;}
 .reader-page-info{font-size:.75rem;opacity:.6;white-space:nowrap;}
 
-  
+.reader-settings-bar{
+  display:none;
+  flex-direction:column;
+  gap:.6rem;
+  padding:.8rem 1rem;
+  border-bottom:1px solid rgba(128,128,128,.2);
+  flex-shrink:0;
+}
+.reader-settings-bar.open{ display:flex; }
+.reader-overlay.theme-day   .reader-settings-bar{ background:#f4f4f4; }
+.reader-overlay.theme-sepia .reader-settings-bar{ background:#e0d0b8; }
+.reader-overlay.theme-night .reader-settings-bar{ background:#12122a; }
 .reader-progress{height:3px;flex-shrink:0;}
 .reader-overlay.theme-day .reader-progress{background:#ddd;}
 .reader-overlay.theme-sepia .reader-progress{background:#d4c4a8;}
@@ -1770,10 +1781,6 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
     <h3>Contents</h3>
     <div id="readerChapterItems"></div>
   </div>
-  <div class="reader-chapter-list" id="readerChapterList">
-    <h3>Contents</h3>
-    <div id="readerChapterItems"></div>
-  </div>
   <div class="reader-chapter-list" id="readerBookmarkListPanel">
     <h3>🔖 Bookmarks</h3>
     <div id="readerBookmarkListItems"></div>
@@ -1786,12 +1793,13 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
     <button class="reader-btn" id="btnToggleChapters" title="Contents">☰</button>
     <div class="reader-title" id="readerTitle">Reading…</div>
     <div class="reader-nav">
-      <button class="reader-btn" id="btnReaderPrev">‹</button>
-      <span class="reader-page-info" id="readerPageInfo">1/1</span>
-      <button class="reader-btn" id="btnReaderNext">›</button>
-      <button class="reader-btn" id="btnToggleReaderSettings" title="Settings">Aa</button>
-      <button class="reader-btn reader-btn-close" id="btnCloseReader" title="Close">✕</button>
-    </div>
+  <button class="reader-btn" id="btnReaderPrev">‹</button>
+  <span class="reader-page-info" id="readerPageInfo">1/1</span>
+  <button class="reader-btn" id="btnReaderNext">›</button>
+  <button class="reader-btn" id="btnToggleBookmarkList" title="Bookmarks">🔖</button>
+  <button class="reader-btn" id="btnToggleReaderSettings" title="Settings">Aa</button>
+  <button class="reader-btn reader-btn-close" id="btnCloseReader" title="Close">✕</button>
+  </div>
   </div>
 
 <!-- TTS Audio Bar -->
