@@ -246,6 +246,17 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
   flex-shrink: 0;
   border-top: 2px solid var(--gold);
 }
+  .reader-overlay{
+  display:none;
+  position:fixed;
+  inset:0;
+  z-index:150;
+  flex-direction:column;
+  background:#fff;
+}
+.reader-overlay.open{
+  display:flex;
+}
 .reader-overlay.theme-day   .reader-toolbar { background: #f4f4f4; }
 .reader-overlay.theme-sepia .reader-toolbar { background: #e0d0b8; }
 .reader-overlay.theme-night .reader-toolbar { background: #12122a; }
