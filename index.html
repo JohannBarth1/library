@@ -4039,20 +4039,33 @@ function _themeStyles() {
 
 async function renderChapterPaged(bodyHtml) {
   const { w, h } = _getReaderDimensions();
-
   // Resize the content area
   const content = document.getElementById('readerContent');
   content.style.height = h + 'px';
   content.style.overflow = 'hidden';
-
   // Remove old iframe if present
   if (_readerIframe) {
     _readerIframe.remove();
     _readerIframe = null;
   }
-
   const t = _themeStyles();
   const padding = Math.max(16, Math.min(48, Math.round(w * 0.06)));
+
+  // Create + append iframe FIRST so we can measure its real width
+  const iframe = document.createElement('iframe');
+  iframe.setAttribute('sandbox', 'allow-same-origin');
+  iframe.style.cssText = `
+    position: absolute; inset: 0;
+    width: ${w}px; height: ${h}px;
+    border: none; background: ${t.bg};
+    display: block;
+  `;
+  content.style.position = 'relative';
+  content.appendChild(iframe);
+  _readerIframe = iframe;
+
+  // Measure actual rendered width to avoid column-width drift
+  const actualW = Math.round(iframe.getBoundingClientRect().width);
 
   // Column gap is zero — we fake the gap using padding so text never falls in a gutter
   const css = `
@@ -4072,11 +4085,9 @@ async function renderChapterPaged(bodyHtml) {
       height: ${h}px;
       box-sizing: border-box;
       padding: 0.4rem ${padding}px 0.6rem;
-      /* Prevent content from being split mid-element */
       orphans: 3;
       widows: 3;
     }
-    /* Images: never overflow a column, never be chopped */
     img {
       max-width: 100%;
       max-height: ${Math.round(h * 0.82)}px;
@@ -4086,7 +4097,6 @@ async function renderChapterPaged(bodyHtml) {
       break-inside: avoid;
       page-break-inside: avoid;
     }
-    /* Headings never orphaned at column bottom */
     h1, h2, h3, h4, h5, h6 {
       font-family: 'Playfair Display', Georgia, serif;
       color: ${t.headingFg};
@@ -4095,35 +4105,16 @@ async function renderChapterPaged(bodyHtml) {
       margin: 1.4em 0 0.4em;
     }
     p { margin: 0 0 0.9em; }
-    /* Tables, figures, blockquotes: keep together */
     table, figure, blockquote, pre {
       break-inside: avoid;
       page-break-inside: avoid;
     }
     a { color: ${t.linkFg}; text-decoration: none; }
-    /* SVG/figure images */
     svg { max-width: 100%; height: auto; }
-    /* Prevent very tall elements from sticking out */
     * { max-width: 100%; box-sizing: border-box; }
   `;
 
   return new Promise(resolve => {
-    const iframe = document.createElement('iframe');
-    iframe.setAttribute('sandbox', 'allow-same-origin');
-    iframe.style.cssText = `
-      position: absolute; inset: 0;
-      width: ${w}px; height: ${h}px;
-      border: none; background: ${t.bg};
-      display: block;
-    `;
-
-    content.style.position = 'relative';
-    content.appendChild(iframe);
-    _readerIframe = iframe;
-
-    // Measure actual rendered width to avoid column-width drift
-    const actualW = Math.round(iframe.getBoundingClientRect().width);
-
     // Write content into iframe after it's attached to DOM
     const doc = iframe.contentDocument || iframe.contentWindow.document;
     doc.open();
@@ -4136,6 +4127,7 @@ async function renderChapterPaged(bodyHtml) {
 <body>${bodyHtml}</body>
 </html>`);
     doc.close();
+
     doc.addEventListener('click', e => {
       const link = e.target.closest('[data-navchapter]');
       if(link){
@@ -4155,7 +4147,6 @@ async function renderChapterPaged(bodyHtml) {
 
     Promise.all(imgPromises).then(() => {
       requestAnimationFrame(() => {
-        // scrollWidth of the body tells us total column content width
         _readerColW   = actualW;
         _readerTotalW = doc.body.scrollWidth;
         readerPageCount = Math.max(1, Math.round(_readerTotalW / _readerColW));
