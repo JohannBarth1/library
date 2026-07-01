@@ -1781,6 +1781,14 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
     <h3>Contents</h3>
     <div id="readerChapterItems"></div>
   </div>
+  <div class="reader-chapter-list" id="readerChapterList">
+    <h3>Contents</h3>
+    <div id="readerChapterItems"></div>
+  </div>
+  <div class="reader-chapter-list" id="readerBookmarkListPanel">
+    <h3>🔖 Bookmarks</h3>
+    <div id="readerBookmarkListItems"></div>
+  </div>
   <div class="reader-content" id="readerContent">
     <div class="reader-page-slice" id="readerPageA"></div>
     <div class="reader-page-slice" id="readerPageB"></div>
@@ -1796,6 +1804,10 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
       <button class="reader-btn" id="btnReaderNext">Next ›</button>
       <button class="reader-btn close-btn" id="btnCloseReader">✕</button>
     </div>
+    <div class="reader-toolbar">
+    <button class="reader-btn" id="btnToggleChapters">☰</button>
+    <button class="reader-btn" id="btnToggleBookmarkList">🔖</button>
+    <div class="reader-title" id="readerTitle">Reading…</div>
   </div>
 </div>
 
@@ -3719,15 +3731,25 @@ document.getElementById('btnToggleReaderSettings').addEventListener('click', e =
   document.getElementById('readerSettingsBar').classList.toggle('open');
   recalcReaderHeight();
 });
-document.getElementById('btnToggleChapters').addEventListener('click',()=>document.getElementById('readerChapterList').classList.toggle('open'));
+document.getElementById('btnToggleChapters').addEventListener('click',()=>{
+  document.getElementById('readerBookmarkListPanel').classList.remove('open');
+  document.getElementById('readerChapterList').classList.toggle('open');
+});
 document.getElementById('readerOverlay').addEventListener('click', e => {
   const list = document.getElementById('readerChapterList');
+  const bmPanel = document.getElementById('readerBookmarkListPanel');
   const settingsBar = document.getElementById('readerSettingsBar');
 
   if(list.classList.contains('open') &&
      !e.target.closest('#readerChapterList') &&
      !e.target.closest('#btnToggleChapters')){
     list.classList.remove('open');
+  }
+
+  if(bmPanel.classList.contains('open') &&
+     !e.target.closest('#readerBookmarkListPanel') &&
+     !e.target.closest('#btnToggleBookmarkList')){
+    bmPanel.classList.remove('open');
   }
 
   if(settingsBar.classList.contains('open') &&
@@ -4429,6 +4451,72 @@ async function removeReaderBookmarkAt(bookId, chapterIdx, pageIdx) {
   } catch(e) { console.warn('removeReaderBookmarkAt:', e); }
 }
 
+  function renderReaderBookmarkList() {
+  const container = document.getElementById('readerBookmarkListItems');
+  if(!container || !readerBookId) return;
+
+  const bookmarks = getReaderBookmarksForBook(readerBookId);
+
+  if(!bookmarks.length) {
+    container.innerHTML = `<div style="padding:1.2rem;font-size:.82rem;
+      color:var(--muted);line-height:1.6;text-align:center;">
+      No bookmarks yet — tap the ribbon in the top corner of any page to place one.
+    </div>`;
+    return;
+  }
+
+  container.innerHTML = bookmarks.map((bm, i) => {
+    const isCurrent = bm.chapterIdx === readerChapter && bm.pageIdx === readerPage;
+    const placedAt = bm.createdAt?.toDate?.();
+    const dateStr = placedAt ? placedAt.toLocaleDateString() : '';
+    return `<div class="chapter-item ${isCurrent ? 'active' : ''}"
+      data-bmidx="${i}" style="display:flex;align-items:center;
+      justify-content:space-between;gap:.5rem;">
+      <div style="min-width:0;flex:1;">
+        <div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+          ${esc(bm.chapterLabel || ('Chapter ' + (bm.chapterIdx+1)))}
+        </div>
+        <div style="font-size:.65rem;opacity:.55;margin-top:2px;">
+          Page ${bm.pageIdx + 1}${dateStr ? ' · ' + dateStr : ''}
+        </div>
+      </div>
+      <button data-bmremove="${i}" title="Remove bookmark"
+        style="background:none;border:none;cursor:pointer;font-size:.85rem;
+               opacity:.45;padding:.2rem .3rem;flex-shrink:0;">✕</button>
+    </div>`;
+  }).join('');
+
+  // Tap row → jump to that bookmark
+  container.querySelectorAll('.chapter-item[data-bmidx]').forEach(el => {
+    el.addEventListener('click', e => {
+      if(e.target.closest('[data-bmremove]')) return; // handled separately
+      const bm = bookmarks[parseInt(el.dataset.bmidx)];
+      document.getElementById('readerBookmarkListPanel').classList.remove('open');
+      readerGoToChapter(bm.chapterIdx, bm.pageIdx);
+    });
+  });
+
+  // Tap ✕ → remove that specific bookmark
+  container.querySelectorAll('[data-bmremove]').forEach(btn => {
+    btn.addEventListener('click', async e => {
+      e.stopPropagation();
+      const bm = bookmarks[parseInt(btn.dataset.bmremove)];
+      await removeReaderBookmarkAt(readerBookId, bm.chapterIdx, bm.pageIdx);
+      renderReaderBookmarkList();
+      renderReaderBookmarkTab();
+      renderAll();
+    });
+  });
+}
+
+document.getElementById('btnToggleBookmarkList').addEventListener('click', () => {
+  const panel = document.getElementById('readerBookmarkListPanel');
+  document.getElementById('readerChapterList').classList.remove('open'); // mutually exclusive
+  const willOpen = !panel.classList.contains('open');
+  panel.classList.toggle('open');
+  if(willOpen) renderReaderBookmarkList();
+});
+
 function renderReaderBookmarkTab() {
   document.getElementById('readerBookmarkTab')?.remove();
 
@@ -4478,12 +4566,11 @@ function renderReaderBookmarkTab() {
     e.stopPropagation();
     if(isPlaced) {
       await removeReaderBookmarkAt(readerBookId, readerChapter, readerPage);
-      showToast('Bookmark removed');
     } else {
       await placeReaderBookmark(readerBookId, readerChapter, readerPage);
-      showToast('Bookmark placed 🔖');
     }
     renderReaderBookmarkTab();
+    renderReaderBookmarkList();
     renderAll();
   });
 }
@@ -4584,7 +4671,7 @@ document.getElementById('btnReaderNext').addEventListener('click',()=>goToPage(r
       else goToPage(readerPage-1);     // swipe right → prev
     } else if(Math.abs(dx)<10&&Math.abs(dy)<10){
       // Tap — ignore if on toolbar, settings, or bookmark tab
-      const tgt=e.target.closest('.reader-toolbar,.readerSettingsBar,.chapter-list,#readerBookmarkTab');
+      const tgt=e.target.closest('.reader-toolbar,.readerSettingsBar,.chapter-list,#readerBookmarkTab,#readerBookmarkListPanel,#btnToggleBookmarkList');
       if(tgt)return;
       const x=e.changedTouches[0].clientX;
       const y=e.changedTouches[0].clientY;
