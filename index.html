@@ -3447,7 +3447,6 @@ function bookmarksSection() {
 
     return `<div style="margin-bottom:1.4rem;">
       <div style="display:flex;align-items:center;gap:.5rem;padding:.1rem 0 .5rem;">
-        <span style="font-size:.95rem;"></span>
         <span style="font-size:.74rem;font-weight:700;letter-spacing:.04em;color:var(--gold);">
           Current Reads</span>
       </div>
@@ -4141,7 +4140,10 @@ async function renderChapterPaged(bodyHtml) {
     const imgPromises = imgs.map(img => {
       if(img.complete) return Promise.resolve();
       return new Promise(res => {
-        img.onload = img.onerror = res;
+        const done = () => res();
+        img.onload = done;
+        img.onerror = done;
+        setTimeout(done, 3000); // never block pagination indefinitely
       });
     });
 
@@ -4232,6 +4234,24 @@ function updatePaginationUI(){
   document.getElementById('readerProgressBar').style.width = (Math.min(prog,1)*100)+'%';
   renderReaderBookmarkTab();
 }
+
+  function sanitizeChapterHtml(bodyHtml){
+  const container = document.createElement('div');
+  container.innerHTML = bodyHtml;
+  container.querySelectorAll('script').forEach(el => el.remove());
+  container.querySelectorAll('*').forEach(el => {
+    [...el.attributes].forEach(attr => {
+      const name = attr.name.toLowerCase();
+      const value = attr.value.trim().toLowerCase();
+      if(name.startsWith('on')){
+        el.removeAttribute(attr.name);
+      } else if((name === 'href' || name === 'xlink:href' || name === 'src') && value.startsWith('javascript:')){
+        el.setAttribute(attr.name, '#');
+      }
+    });
+  });
+  return container.innerHTML;
+}
   
 async function readerGoToChapter(idx, startPage=0){
   if(idx<0||idx>=readerSpine.length)return;
@@ -4245,11 +4265,7 @@ async function readerGoToChapter(idx, startPage=0){
     html=await inlineImagesInHtml(html,readerOpfBase,ch.href);
     const bodyMatch=html.match(/<body[^>]*>([\s\S]*)<\/body>/i);
     let bodyHtml=bodyMatch?bodyMatch[1]:html;
-    bodyHtml=bodyHtml.replace(/<script[\s\S]*?<\/script>/gi,'');
-    bodyHtml=bodyHtml.replace(/<script[^>]*\/?>/gi,''); // self-closing/empty <script> tags
-    bodyHtml=bodyHtml.replace(/\son\w+="[^"]*"/gi,'');   // strip all inline on* handlers (onclick, onload, onerror…)
-    bodyHtml=bodyHtml.replace(/\son\w+='[^']*'/gi,'');   // same, single-quoted
-    bodyHtml=bodyHtml.replace(/href\s*=\s*"javascript:[^"]*"/gi,'href="#"'); // stray javascript: urls
+    bodyHtml=sanitizeChapterHtml(bodyHtml);
     bodyHtml=bodyHtml.replace(/href="([^"#]+)(#[^"]+)?"/g,(_,href)=>{
       const si=readerSpine.findIndex(s=>s.href===href||s.href.endsWith('/'+href));
       return si>=0?`href="#" data-navchapter="${si}"`:`href="#"`;
@@ -4324,9 +4340,10 @@ async function inlineImagesInHtml(html, base, chapterHref) {
       if(match) blob = await readerZip.file(match).async('blob');
     }
 
+    const TRANSPARENT_PIXEL = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==';
     const replacement = blob
       ? `src="${await blobToDataUrl(blob)}"`
-      : `src="" style="display:none"`;
+      : `src="${TRANSPARENT_PIXEL}" style="display:none"`;
 
     // Replace data-lazysrc back with real src
     html = html.replace(
