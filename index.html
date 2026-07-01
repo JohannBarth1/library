@@ -4083,7 +4083,7 @@ html {
 body {
   overflow: visible;  /* let columns extend rightward so they actually render */
   column-width: ${actualW - 2 * padding}px;
-  column-gap: 0;
+  column-gap: ${padding * 2}px;
   column-fill: auto;
   height: ${h}px;
   box-sizing: border-box;
@@ -4139,6 +4139,25 @@ body {
       }
     });
 
+    let _ifTx0 = 0, _ifTy0 = 0;
+    doc.addEventListener('touchstart', e => {
+      _ifTx0 = e.touches[0].clientX;
+      _ifTy0 = e.touches[0].clientY;
+    }, {passive:true});
+    doc.addEventListener('touchend', e => {
+      const dx = e.changedTouches[0].clientX - _ifTx0;
+      const dy = e.changedTouches[0].clientY - _ifTy0;
+      if(Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 40){
+        if(dx < 0) goToPage(readerPage + 1);
+        else goToPage(readerPage - 1);
+      } else if(Math.abs(dx) < 10 && Math.abs(dy) < 10){
+        const x = e.changedTouches[0].clientX;
+        const w = doc.defaultView.innerWidth;
+        if(x < w * 0.3) goToPage(readerPage - 1);
+        else if(x > w * 0.7) goToPage(readerPage + 1);
+      }
+    }, {passive:true});
+
     // Wait for images to load before measuring column count
     const imgs = Array.from(doc.querySelectorAll('img'));
     const imgPromises = imgs.map(img => {
@@ -4155,7 +4174,7 @@ body {
       requestAnimationFrame(() => {
       const actualW = Math.round(_readerIframe.getBoundingClientRect().width);
       const pad = Math.max(16, Math.min(48, Math.round(actualW * 0.06)));
-      _readerColW   = actualW - 2 * pad;
+      _readerColW   = actualW;
       _readerTotalW = doc.body.scrollWidth;
         readerPageCount = Math.max(1, Math.round(_readerTotalW / _readerColW));
         readerPage      = 0;
@@ -4222,7 +4241,7 @@ function recalcReaderHeight() {
 
   requestAnimationFrame(() => {
     const actualW = Math.round(_readerIframe.getBoundingClientRect().width);
-    _readerColW   = actualW - 2 * padding;
+    _readerColW   = actualW;
     _readerTotalW = doc.body.scrollWidth;
     readerPageCount = Math.max(1, Math.round(_readerTotalW / _readerColW));
     readerPage      = Math.min(readerPage, readerPageCount - 1);
