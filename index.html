@@ -3784,17 +3784,6 @@ function setReaderFont(size) {
   }
 }
   
-function setReaderFont(size){
-  readerFontSize = size;
-  localStorage.setItem('elib_reader_font', size);
-  document.querySelectorAll('#readerSettingsBar [data-size]')
-    .forEach(b => b.classList.toggle('active', parseInt(b.dataset.size) === size));
-  const staging = document.getElementById('readerStagingContainer');
-  if(staging) staging.style.fontSize = size + 'px';
-  if(document.getElementById('readerOverlay').classList.contains('open')){
-    recalcReaderHeight(); // re-paginate at new font size without full chapter reload
-  }
-}
 // Font size buttons
 document.getElementById('readerSettingsBar').addEventListener('click', e => {
   const sizeBtn = e.target.closest('[data-size]');
