@@ -4133,6 +4133,13 @@ async function renderChapterPaged(bodyHtml) {
 <body>${bodyHtml}</body>
 </html>`);
     doc.close();
+    doc.addEventListener('click', e => {
+      const link = e.target.closest('[data-navchapter]');
+      if(link){
+        e.preventDefault();
+        readerGoToChapter(parseInt(link.dataset.navchapter), 0);
+      }
+    });
 
     // Wait for images to load before measuring column count
     const imgs = Array.from(doc.querySelectorAll('img'));
@@ -4246,7 +4253,7 @@ async function readerGoToChapter(idx, startPage=0){
     bodyHtml=bodyHtml.replace(/<script[\s\S]*?<\/script>/gi,'');
     bodyHtml=bodyHtml.replace(/href="([^"#]+)(#[^"]+)?"/g,(_,href)=>{
       const si=readerSpine.findIndex(s=>s.href===href||s.href.endsWith('/'+href));
-      return si>=0?`href="javascript:void(0)" onclick="readerGoToChapterGlobal(${si})"`:`href="javascript:void(0)"`;
+      return si>=0?`href="#" data-navchapter="${si}"`:`href="#"`;
     });
     await renderChapterPaged(bodyHtml);
 
