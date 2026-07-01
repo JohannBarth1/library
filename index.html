@@ -4036,6 +4036,58 @@ function _themeStyles() {
   return themes[readerTheme] || themes.day;
 }
 
+function _ensureReaderTapLayer() {
+  let layer = document.getElementById('readerTapLayer');
+  if (layer) return layer;
+
+  layer = document.createElement('div');
+  layer.id = 'readerTapLayer';
+  layer.style.cssText = `
+    position:absolute; inset:0; z-index:5;
+    background:transparent; touch-action:manipulation;
+  `;
+  document.getElementById('readerContent').appendChild(layer);
+
+  let tx0 = 0, ty0 = 0;
+  layer.addEventListener('touchstart', e => {
+    tx0 = e.touches[0].clientX;
+    ty0 = e.touches[0].clientY;
+  }, { passive: true });
+
+  layer.addEventListener('touchend', e => {
+    const dx = e.changedTouches[0].clientX - tx0;
+    const dy = e.changedTouches[0].clientY - ty0;
+
+    if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 40) {
+      if (dx < 0) goToPage(readerPage + 1);
+      else        goToPage(readerPage - 1);
+      return;
+    }
+
+    if (Math.abs(dx) < 10 && Math.abs(dy) < 10) {
+      const x = e.changedTouches[0].clientX;
+      const w = layer.getBoundingClientRect().width;
+      if (x < w * 0.3) { goToPage(readerPage - 1); return; }
+      if (x > w * 0.7) { goToPage(readerPage + 1); return; }
+
+      // Middle zone: forward the tap to any in-book chapter link underneath
+      if (_readerIframe) {
+        const rect = _readerIframe.getBoundingClientRect();
+        const doc = _readerIframe.contentDocument;
+        if (doc) {
+          const localX = x - rect.left;
+          const localY = e.changedTouches[0].clientY - rect.top;
+          const el = doc.elementFromPoint(localX, localY);
+          const link = el?.closest?.('[data-navchapter]');
+          if (link) readerGoToChapter(parseInt(link.dataset.navchapter));
+        }
+      }
+    }
+  }, { passive: true });
+
+  return layer;
+}
+
 async function renderChapterPaged(bodyHtml) {
   const { w, h } = _getReaderDimensions();
   // Resize the content area
@@ -4062,6 +4114,7 @@ async function renderChapterPaged(bodyHtml) {
   content.style.position = 'relative';
   content.appendChild(iframe);
   _readerIframe = iframe;
+  _ensureReaderTapLayer();
 
   // Measure actual rendered width to avoid column-width drift
   const actualW = Math.round(iframe.getBoundingClientRect().width);
@@ -4138,25 +4191,6 @@ body {
         readerGoToChapter(parseInt(link.dataset.navchapter), 0);
       }
     });
-
-    let _ifTx0 = 0, _ifTy0 = 0;
-    doc.addEventListener('touchstart', e => {
-      _ifTx0 = e.touches[0].clientX;
-      _ifTy0 = e.touches[0].clientY;
-    }, {passive:true});
-    doc.addEventListener('touchend', e => {
-      const dx = e.changedTouches[0].clientX - _ifTx0;
-      const dy = e.changedTouches[0].clientY - _ifTy0;
-      if(Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 40){
-        if(dx < 0) goToPage(readerPage + 1);
-        else goToPage(readerPage - 1);
-      } else if(Math.abs(dx) < 10 && Math.abs(dy) < 10){
-        const x = e.changedTouches[0].clientX;
-        const w = doc.defaultView.innerWidth;
-        if(x < w * 0.3) goToPage(readerPage - 1);
-        else if(x > w * 0.7) goToPage(readerPage + 1);
-      }
-    }, {passive:true});
 
     // Wait for images to load before measuring column count
     const imgs = Array.from(doc.querySelectorAll('img'));
@@ -4569,6 +4603,7 @@ function closeReader(){
   _readerColW = 0; _readerTotalW = 0;
 
   document.getElementById('readerBookmarkTab')?.remove();
+  document.getElementById('readerTapLayer')?.remove();
   readerZip = null; readerSpine = []; readerBookId = null;
 }
 
