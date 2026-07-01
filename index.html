@@ -5316,16 +5316,24 @@ async function toggleRecommended() {
   if (!book) return;
   const rec = !book.recommended;
   book.recommended = rec;
-  await updateDoc(doc(db, 'books', currentId), {
-    recommended: rec,
-    updatedAt: serverTimestamp()
-  });
-  // Keep communityLib in sync (same object reference if public)
-  const commBook = communityLib.find(b => b.id === currentId);
-  if (commBook) commBook.recommended = rec;
-  renderAll();
-  showBookById(currentId);
-  showToast(rec ? 'Marked as Recommended ⭐' : 'Removed from Recommended');
+  try {
+    await updateDoc(doc(db, 'books', currentId), {
+      recommended: rec,
+      updatedAt: serverTimestamp()
+    });
+    const commBook = communityLib.find(b => b.id === currentId);
+    if (commBook) commBook.recommended = rec;
+    renderAll();
+    renderMobHome();
+    renderDeskHome();
+    if(window.innerWidth > 768) showBookById(currentId);
+    else mob_showBook(currentId);
+    showToast(rec ? 'Marked as Recommended ⭐' : 'Removed from Recommended');
+  } catch(e) {
+    // Roll back optimistic update if Firestore write failed
+    book.recommended = !rec;
+    showToast('Failed: ' + e.message);
+  }
 }
 
 // ── CHECKOUT SYSTEM ───────────────────────────────────────────────────────────
