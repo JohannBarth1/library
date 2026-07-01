@@ -3465,29 +3465,18 @@ function bookmarksSection() {
 function recommendedSection(books) {
     if(!books.length) return '';
 
-    const COVER_W = 80;
-    const COVER_H = 120;
-    const SPINE_W = 6;
-
     const tileHtml = books.map(b => {
       const src = getCoverSrc(b);
-      const avg = getAvgRating(b);
-      const avgRounded = Math.round(avg);
-      const starsHtml = b.ratingCount
-        ? `<div style="display:flex;gap:1px;justify-content:center;">
-            ${[1,2,3,4,5].map(n =>
-              `<span style="font-size:7px;color:${n<=avgRounded?'var(--gold)':'rgba(255,255,255,.3)'};">★</span>`
-            ).join('')}
-           </div>`
-        : '';
 
       const coverContent = src
         ? `<img src="${src}" loading="lazy" style="
-              width:${COVER_W}px;height:${COVER_H}px;
-              object-fit:cover;display:block;"/>`
+              width:100%;aspect-ratio:2/3;
+              object-fit:cover;display:block;
+              border-radius:4px;"/>`
         : `<div style="
-              width:${COVER_W}px;height:${COVER_H}px;
+              width:100%;aspect-ratio:2/3;
               background:linear-gradient(160deg,#2a3d5a,var(--navy2));
+              border-radius:4px;
               display:flex;align-items:center;justify-content:center;
               padding:8px;text-align:center;">
               <span style="font-size:.55rem;color:rgba(200,180,140,.85);
@@ -3495,37 +3484,12 @@ function recommendedSection(books) {
             </div>`;
 
       return `<div class="home-shelf-book" data-bookid="${b.id}" style="
-        cursor:pointer;flex-shrink:0;display:flex;position:relative;">
-        <!-- Spine -->
-        <div style="
-          width:${SPINE_W}px;height:${COVER_H}px;flex-shrink:0;
-          background:linear-gradient(to right,
-            rgba(0,0,0,.55) 0%,
-            rgba(0,0,0,.25) 60%,
-            rgba(0,0,0,.05) 100%);
-          border-radius:1px 0 0 1px;"></div>
-        <!-- Cover face -->
-        <div style="position:relative;overflow:hidden;
-          border-radius:0 3px 3px 0;
-          box-shadow:
-            3px 5px 18px rgba(0,0,0,.45),
-            0 1px 0 rgba(255,255,255,.08) inset;">
-          ${coverContent}
-          <!-- Top-edge highlight simulating open pages -->
-          <div style="
-            position:absolute;top:0;left:0;right:0;height:3px;
-            background:linear-gradient(to bottom,
-              rgba(255,255,255,.18),transparent);
-            pointer-events:none;"></div>
-          <!-- Bottom overlay: stars -->
-          ${starsHtml ? `<div style="
-            position:absolute;bottom:0;left:0;right:0;
-            padding:8px 4px 4px;
-            background:linear-gradient(to top,rgba(0,0,0,.65),transparent);
-            pointer-events:none;">
-            ${starsHtml}
-          </div>` : ''}
-        </div>
+        cursor:pointer;
+        box-shadow:0 4px 16px rgba(200,149,42,.18),
+                   0 1px 4px rgba(200,149,42,.12);
+        border-radius:4px;
+        transition:transform .15s,box-shadow .15s;">
+        ${coverContent}
       </div>`;
     }).join('');
 
@@ -3551,7 +3515,9 @@ function recommendedSection(books) {
         <span style="font-size:.8rem;opacity:.5;">⭐</span>
       </div>
       <div style="
-        display:flex;flex-wrap:wrap;gap:.65rem;align-items:flex-end;">
+        display:grid;
+        grid-template-columns:repeat(auto-fill,minmax(80px,1fr));
+        gap:.65rem;">
         ${tileHtml}
       </div>
     </div>`;
