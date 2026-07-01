@@ -3869,16 +3869,6 @@ if(isAndroidChrome){
   });
 }
 
-  // ══════════════════════════════════════════════════════════════════
-// IFRAME-BASED PAGINATION ENGINE
-// Replaces initPagination() + goToPage() + the pagination section
-// of readerGoToChapter(). Chapter HTML is written into an iframe's
-// own document, where CSS columns lay out cleanly without fighting
-// the parent page's box model, fonts, or other DOM siblings.
-// ══════════════════════════════════════════════════════════════════
-
-
-
 
 async function readCurrentBook(){
   if(!currentId)return;
