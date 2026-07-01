@@ -4153,8 +4153,10 @@ body {
 
     Promise.all(imgPromises).then(() => {
       requestAnimationFrame(() => {
-        _readerColW   = actualW;
-        _readerTotalW = doc.body.scrollWidth;
+      const actualW = Math.round(_readerIframe.getBoundingClientRect().width);
+      const pad = Math.max(16, Math.min(48, Math.round(actualW * 0.06)));
+      _readerColW   = actualW - 2 * pad;
+      _readerTotalW = doc.body.scrollWidth;
         readerPageCount = Math.max(1, Math.round(_readerTotalW / _readerColW));
         readerPage      = 0;
         _scrollIframeTo(0, false);
@@ -4219,7 +4221,7 @@ function recalcReaderHeight() {
 
   requestAnimationFrame(() => {
     const actualW = Math.round(_readerIframe.getBoundingClientRect().width);
-    _readerColW   = actualW;
+    _readerColW   = actualW - 2 * padding;
     _readerTotalW = doc.body.scrollWidth;
     readerPageCount = Math.max(1, Math.round(_readerTotalW / _readerColW));
     readerPage      = Math.min(readerPage, readerPageCount - 1);
