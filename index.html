@@ -236,32 +236,61 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .rating-count{font-size:.75rem;color:var(--muted);}
 
 /* ── EPUB READER ── */
-.reader-overlay{display:none;position:fixed;inset:0;z-index:150;flex-direction:column;}
-.reader-overlay.open{display:flex;}
-.reader-overlay.theme-day{background:#fff;color:#1a1a1a;}
-.reader-overlay.theme-sepia{background:#f4ede0;color:#3b2a1a;}
-.reader-overlay.theme-night{background:#1a1a2e;color:#c8c8d8;}
-.reader-toolbar{padding:0 1.2rem;height:52px;display:flex;align-items:center;justify-content:space-between;border-top:2px solid var(--gold);border-bottom:none;flex-shrink:0;gap:.8rem;}
-.reader-overlay.theme-day .reader-toolbar{background:#f0f0f0;}
-.reader-overlay.theme-sepia .reader-toolbar{background:#e8d9c5;}
-.reader-overlay.theme-night .reader-toolbar{background:#12122a;}
-.reader-title{font-family:'Playfair Display',serif;font-size:.95rem;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.reader-overlay.theme-day .reader-title{color:#1a1a1a;}
-.reader-overlay.theme-sepia .reader-title{color:#3b2a1a;}
-.reader-overlay.theme-night .reader-title{color:#c8c8d8;}
-.reader-nav{display:flex;gap:.4rem;align-items:center;flex-shrink:0;}
-.reader-btn{padding:.38rem .65rem;font-family:'Lato',sans-serif;font-size:.72rem;font-weight:700;border-radius:3px;cursor:pointer;transition:background .15s;white-space:nowrap;border:1px solid;}
-.reader-overlay.theme-day .reader-btn{background:rgba(0,0,0,0.06);color:#1a1a1a;border-color:rgba(0,0,0,0.15);}
-.reader-overlay.theme-sepia .reader-btn{background:rgba(59,42,26,0.08);color:#3b2a1a;border-color:rgba(59,42,26,0.2);}
-.reader-overlay.theme-night .reader-btn{background:rgba(255,255,255,0.08);color:#c8c8d8;border-color:rgba(255,255,255,0.15);}
-.reader-overlay{overflow:hidden;}
-.reader-btn:hover{opacity:.8;}
-.reader-btn.close-btn{color:#cc4444!important;border-color:rgba(204,68,68,0.4)!important;}
-.reader-settings-bar{display:none;padding:.5rem 1rem;gap:.5rem .6rem;align-items:center;flex-shrink:0;border-bottom:1px solid rgba(128,128,128,0.2);flex-wrap:wrap;}
-.reader-settings-bar.open{display:flex;}
-.reader-overlay.theme-day .reader-settings-bar{background:#f0f0f0;}
-.reader-overlay.theme-sepia .reader-settings-bar{background:#e8d9c5;}
-.reader-overlay.theme-night .reader-settings-bar{background:#12122a;}
+  .reader-toolbar {
+  padding: 0 1rem;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .6rem;
+  flex-shrink: 0;
+  border-top: 2px solid var(--gold);
+}
+.reader-overlay.theme-day   .reader-toolbar { background: #f4f4f4; }
+.reader-overlay.theme-sepia .reader-toolbar { background: #e0d0b8; }
+.reader-overlay.theme-night .reader-toolbar { background: #12122a; }
+
+.reader-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 36px;
+  height: 36px;
+  padding: 0 .6rem;
+  font-family: 'Lato', sans-serif;
+  font-size: .78rem;
+  font-weight: 700;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background .15s, color .15s;
+  white-space: nowrap;
+  border: 1px solid transparent;
+}
+.reader-overlay.theme-day   .reader-btn { background: rgba(15,26,46,.06); color: #1a1a1a; }
+.reader-overlay.theme-sepia .reader-btn { background: rgba(59,42,26,.08); color: #3b2a1a; }
+.reader-overlay.theme-night .reader-btn { background: rgba(200,149,42,.12); color: var(--gold); border-color: rgba(200,149,42,.25); }
+.reader-btn:hover { opacity: .75; }
+.reader-btn-close { color: #c0392b !important; }
+.reader-overlay.theme-night .reader-btn-close { color: #f87171 !important; border-color: rgba(248,113,113,.35) !important; }
+
+.reader-title {
+  font-family: 'Playfair Display', serif;
+  font-size: .92rem;
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.reader-overlay.theme-day   .reader-title { color: #1a1a1a; }
+.reader-overlay.theme-sepia .reader-title { color: #3b2a1a; }
+.reader-overlay.theme-night .reader-title { color: var(--cream); }
+
+.reader-nav { display: flex; gap: .3rem; align-items: center; flex-shrink: 0; }
+.reader-page-info { font-size: .72rem; opacity: .55; white-space: nowrap; min-width: 36px; text-align: center; }
+.reader-overlay.theme-night .reader-page-info { color: var(--gold); opacity: .7; }
+/* ── NEWW upto hereEPUB READER ── */
+  
+
 .rs-label{font-size:.6rem;letter-spacing:.15em;text-transform:uppercase;font-weight:700;color:var(--muted);white-space:nowrap;}
 .rs-group{display:flex;align-items:center;gap:.35rem;flex-shrink:0;}
 .rs-btn{padding:.28rem .65rem;font-size:.7rem;font-family:'Lato',sans-serif;font-weight:700;border-radius:20px;cursor:pointer;border:1px solid rgba(200,149,42,.35);background:transparent;color:var(--gold);transition:all .15s;white-space:nowrap;-webkit-tap-highlight-color:transparent;}
@@ -274,47 +303,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .rs-theme-btn.night{border-color:rgba(200,200,255,.2);color:#8888aa;}
 .rs-theme-btn.night.active{background:#1a1a2e;color:#c8c8d8;border-color:#4444aa;outline:2px solid var(--gold);outline-offset:1px;}
 .reader-page-info{font-size:.75rem;opacity:.6;white-space:nowrap;}
-.reader-page-spacer{ height: 100vh; visibility: hidden; }
-.reader-page-slice {
-  position: absolute;
-  inset: 0;
-  overflow: hidden;
-  padding: 0.3rem clamp(1rem,5vw,4rem);
-  line-height: 1.9;
-  font-family: 'Lato', sans-serif;
-  will-change: opacity, transform;
-}
-.reader-page-slice img { max-width:100%; height:auto; display:block; margin:0 auto; }
-.reader-page-slice p { margin: 0 0 1.1em; }
-.reader-page-slice h1,.reader-page-slice h2,.reader-page-slice h3 {
-  font-family: 'Playfair Display', serif;
-  margin: 1.5em 0 .5em;
-}
-.reader-overlay.theme-day .reader-page-slice { color: #1a1a1a; background: #fff; }
-.reader-overlay.theme-sepia .reader-page-slice { color: #3b2a1a; background: #ede0c4; box-shadow: inset 0 0 30px rgba(120,80,20,0.08), 0 1px 6px rgba(0,0,0,0.08); }
-.reader-overlay.theme-night .reader-page-slice { color: #c8c8d8; background: #1a1a2e; }
-.reader-overlay.theme-night .reader-page-slice h1,
-.reader-overlay.theme-night .reader-page-slice h2,
-.reader-overlay.theme-night .reader-page-slice h3 { color: #e8d8b0; }
-#readerStagingContainer {
-  position: absolute;
-  left: -9999px;
-  top: 0;
-  visibility: hidden;
-  pointer-events: none;
-  overflow: hidden;
-  padding: 1.8rem clamp(1rem,5vw,4rem);
-  line-height: 1.9;
-  font-family: 'Lato', sans-serif;
-  box-sizing: border-box;
-}
-#readerStagingContainer p,
-#readerStagingContainer h1,
-#readerStagingContainer h2,
-#readerStagingContainer h3 {
-  margin-top: 0;
-  margin-bottom: 0;
-}
+
   
 .reader-progress{height:3px;flex-shrink:0;}
 .reader-overlay.theme-day .reader-progress{background:#ddd;}
@@ -1790,26 +1779,20 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
     <div id="readerBookmarkListItems"></div>
   </div>
   <div class="reader-content" id="readerContent">
-    <div class="reader-page-slice" id="readerPageA"></div>
-    <div class="reader-page-slice" id="readerPageB"></div>
+
   </div>
   <!-- Toolbar at bottom for thumb-friendly nav -->
   <div class="reader-toolbar">
-    <button class="reader-btn" id="btnToggleChapters">☰</button>
+    <button class="reader-btn" id="btnToggleChapters" title="Contents">☰</button>
     <div class="reader-title" id="readerTitle">Reading…</div>
     <div class="reader-nav">
-      <button class="reader-btn" id="btnToggleReaderSettings">Aa</button>
-      <button class="reader-btn" id="btnReaderPrev">‹ Prev</button>
-      <span class="reader-page-info" id="readerPageInfo">Ch 1</span>
-      <button class="reader-btn" id="btnReaderNext">Next ›</button>
-      <button class="reader-btn close-btn" id="btnCloseReader">✕</button>
+      <button class="reader-btn" id="btnReaderPrev">‹</button>
+      <span class="reader-page-info" id="readerPageInfo">1/1</span>
+      <button class="reader-btn" id="btnReaderNext">›</button>
+      <button class="reader-btn" id="btnToggleReaderSettings" title="Settings">Aa</button>
+      <button class="reader-btn reader-btn-close" id="btnCloseReader" title="Close">✕</button>
     </div>
-    <div class="reader-toolbar">
-    <button class="reader-btn" id="btnToggleChapters">☰</button>
-    <button class="reader-btn" id="btnToggleBookmarkList">🔖</button>
-    <div class="reader-title" id="readerTitle">Reading…</div>
   </div>
-</div>
 
 <!-- TTS Audio Bar -->
 <div class="tts-bar" id="ttsBar">
@@ -3764,24 +3747,41 @@ function bookCardHtml(b, isComm, showProgress=false){
 }
 
 // ── EPUB READER ───────────────────────────────────────────────────────────────
-function applyReaderTheme(theme){
+function applyReaderTheme(theme) {
   const o = document.getElementById('readerOverlay');
   o.classList.remove('theme-day','theme-sepia','theme-night');
-  o.classList.add('theme-'+theme);
+  o.classList.add('theme-' + theme);
   document.querySelectorAll('#readerSettingsBar [data-theme]')
     .forEach(b => b.classList.toggle('active', b.dataset.theme === theme));
 
-  // Re-sync staging color so next pagination uses correct color
-  const staging = document.getElementById('readerStagingContainer');
-  const themeColors = { day:'#1a1a1a', sepia:'#3b2a1a', night:'#c8c8d8' };
-  const color = themeColors[theme] || '#1a1a1a';
-  if(staging) staging.style.color = color;
+  // Live-update iframe styles without reloading chapter
+  if(_readerIframe) {
+    const t = _themeStyles();
+    const doc = _readerIframe.contentDocument || _readerIframe.contentWindow?.document;
+    if(doc) {
+      doc.body.style.background = t.bg;
+      doc.body.style.color      = t.fg;
+      _readerIframe.style.background = t.bg;
+      // Headings need the CSS re-applied — easiest to re-render
+      recalcReaderHeight();
+    }
+  }
+}
 
-  // Apply color directly to visible page slices to prevent flash
-  const pageA = document.getElementById('readerPageA');
-  const pageB = document.getElementById('readerPageB');
-  if(pageA) pageA.style.color = color;
-  if(pageB) pageB.style.color = color;
+function setReaderFont(size) {
+  readerFontSize = size;
+  localStorage.setItem('elib_reader_font', size);
+  document.querySelectorAll('#readerSettingsBar [data-size]')
+    .forEach(b => b.classList.toggle('active', parseInt(b.dataset.size) === size));
+
+  if(_readerIframe) {
+    const doc = _readerIframe.contentDocument || _readerIframe.contentWindow?.document;
+    if(doc) {
+      doc.body.style.fontSize = size + 'px';
+      // Font size changes column height → recalculate page count
+      requestAnimationFrame(() => recalcReaderHeight());
+    }
+  }
 }
   
 function setReaderFont(size){
@@ -4031,377 +4031,227 @@ function getReadingProgress(bookId){
   return p ? p.progress : 0;
 }
 
-// ── BINARY-SEARCH PAGINATION ──────────────────────────────────────────────────
+// ── IFRAME-COLUMN PAGINATION ENGINE ─────────────────────────────────────────
+// Uses CSS columns inside a sandboxed iframe. The browser's own layout engine
+// handles paragraph breaks, images, margins and widows — no measurement needed.
 
-function getTextNodeSequence(container){
-  const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT, {
-    acceptNode(node){
-      return node.textContent.length ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_SKIP;
-    }
-  });
-  const nodes = [];
-  let node;
-  while(node = walker.nextNode()) nodes.push(node);
-  return nodes;
+let _readerIframe = null;      // the live iframe
+let _readerColW   = 0;         // single column width in px (= iframe client width)
+let _readerTotalW = 0;         // full scrollWidth of the iframe document
+
+function _getReaderDimensions() {
+  const overlay    = document.getElementById('readerOverlay');
+  const toolbar    = document.querySelector('.reader-toolbar');
+  const progress   = document.querySelector('.reader-progress');
+  const settings   = document.getElementById('readerSettingsBar');
+  const settingsH  = settings.classList.contains('open') ? settings.offsetHeight : 0;
+  const toolbarH   = (toolbar?.offsetHeight || 52) + (progress?.offsetHeight || 3);
+  const h = overlay.clientHeight - toolbarH - settingsH;
+  const w = overlay.clientWidth;
+  return { w, h };
 }
 
-// Given a start position in the text-node sequence, binary-searches
-// for the furthest character offset whose rendered bottom edge still
-// sits within viewportH pixels below pageTopPx.
-
-function measureParagraphMargins(container){
-  const paras = container.querySelectorAll('p, h1, h2, h3, h4, h5, h6');
-  let totalMargin = 0;
-  let maxMargin = 0;
-  let count = 0;
-  paras.forEach(el => {
-    const style = getComputedStyle(el);
-    const margin = parseFloat(style.marginTop) + parseFloat(style.marginBottom);
-    totalMargin += margin;
-    if(margin > maxMargin) maxMargin = margin;
-    count++;
-  });
-  if(!count) return 0;
-  const avg = totalMargin / count;
-  // Weight toward max to catch worst-case paragraph/heading spacing
-  return (avg + maxMargin) / 2;
+function _themeStyles() {
+  const themes = {
+    day:   { bg: '#ffffff', fg: '#1a1a1a', headingFg: '#1a1a1a', linkFg: '#2a7c8a' },
+    sepia: { bg: '#ede0c4', fg: '#3b2a1a', headingFg: '#2c1a0e', linkFg: '#7a5c3a' },
+    night: { bg: '#1a1a2e', fg: '#c8c8d8', headingFg: '#e8d8b0', linkFg: '#4a9ead' },
+  };
+  return themes[readerTheme] || themes.day;
 }
-  
-function findPageEnd(textNodes, startNodeIdx, startOffset, containerTop, viewportH, pageTopPx){
-  const staging = document.getElementById('readerStagingContainer');
-  let lastGoodNodeIdx = startNodeIdx;
-  let lastGoodOffset = startOffset;
 
-  for(let i = startNodeIdx; i < textNodes.length; i++){
-    const node = textNodes[i];
-    const len = node.textContent.length;
-    const testFrom = (i === startNodeIdx) ? startOffset : 0;
+async function renderChapterPaged(bodyHtml) {
+  const { w, h } = _getReaderDimensions();
 
-    const range = document.createRange();
-    range.setStart(textNodes[startNodeIdx], startOffset);
-    range.setEnd(node, len);
-    const rects = range.getClientRects();
-    if(!rects.length) continue;
-    const bottom = rects[rects.length-1].bottom - containerTop;
+  // Resize the content area
+  const content = document.getElementById('readerContent');
+  content.style.height = h + 'px';
+  content.style.overflow = 'hidden';
 
-    const rangeForCount = document.createRange();
-    rangeForCount.setStart(textNodes[startNodeIdx], startOffset);
-    rangeForCount.setEnd(node, len);
-    const frag = rangeForCount.cloneContents();
-    const blockCount = frag.querySelectorAll('p, h1, h2, h3, h4, h5, h6, div').length;
-
-    const lineH = readerFontSize * 1.9;
-    const paraBuffer = blockCount > 0 ? blockCount * readerFontSize * 0.55 : 0;
-    const totalBuffer = lineH + paraBuffer;
-
-    if(bottom - pageTopPx <= viewportH - totalBuffer){
-      lastGoodNodeIdx = i;
-      lastGoodOffset = len;
-      continue;
-    }
-
-    let lo = testFrom, hi = len;
-    while(lo < hi){
-      const mid = Math.ceil((lo + hi) / 2);
-      const r = document.createRange();
-      r.setStart(textNodes[startNodeIdx], startOffset);
-      r.setEnd(node, mid);
-      const rs = r.getClientRects();
-      if(!rs.length){ lo = mid; continue; }
-      const b = rs[rs.length-1].bottom - containerTop;
-
-      if(b - pageTopPx <= viewportH - totalBuffer){
-        lo = mid;
-      } else {
-        hi = mid - 1;
-      }
-    }
-
-    lastGoodNodeIdx = i;
-    lastGoodOffset = Math.max(lo, testFrom);
-    return { nodeIdx: lastGoodNodeIdx, offset: lastGoodOffset, exhausted: false };
+  // Remove old iframe if present
+  if (_readerIframe) {
+    _readerIframe.remove();
+    _readerIframe = null;
   }
 
-  return { nodeIdx: lastGoodNodeIdx, offset: lastGoodOffset, exhausted: true };
-}
+  const t = _themeStyles();
+  const padding = Math.max(16, Math.min(48, Math.round(w * 0.06)));
 
-// Walks the chapter content page by page, building an array of
-// {nodeIdx, offset} break positions using binary-search.
-function computePageBreaksV2(container){
-  const containerTop = container.getBoundingClientRect().top;
-  const viewportH = container._usableHeight || container.clientHeight;
-  const textNodes = getTextNodeSequence(container);
-
-  if(!textNodes.length) return [{nodeIdx:0, offset:0}];
-
-  const breaks = [{nodeIdx:0, offset:0}];
-  let curNodeIdx = 0;
-  let curOffset = 0;
-  let isFirstPage = true;
-
-  while(true){
-    let pageTopPx;
-if(isFirstPage){
-      isFirstPage = false;
-      try{
-        const firstRange = document.createRange();
-        firstRange.setStart(textNodes[0], 0);
-        firstRange.setEnd(textNodes[0], Math.min(1, textNodes[0].textContent.length));
-        const firstRects = firstRange.getClientRects();
-        pageTopPx = firstRects.length ? (firstRects[0].top - containerTop) : 0;
-      }catch(e){ pageTopPx = 0; }
-    } else {
-      try{
-        const topRange = document.createRange();
-        topRange.setStart(textNodes[curNodeIdx], curOffset);
-        topRange.setEnd(textNodes[curNodeIdx],
-          Math.min(curOffset+1, textNodes[curNodeIdx].textContent.length));
-        const topRects = topRange.getClientRects();
-        pageTopPx = topRects.length ? (topRects[0].top - containerTop) : 0;
-      }catch(e){ pageTopPx = 0; }
+  // Column gap is zero — we fake the gap using padding so text never falls in a gutter
+  const css = `
+    html, body {
+      margin: 0; padding: 0;
+      background: ${t.bg};
+      color: ${t.fg};
+      font-family: 'Lato', Georgia, serif;
+      font-size: ${readerFontSize}px;
+      line-height: 1.85;
+      overflow: hidden;
     }
-
-const result = findPageEnd(
-      textNodes, curNodeIdx, curOffset,
-      containerTop, viewportH, pageTopPx
-    );
-
-    if(result.exhausted) break;
-
-    if(result.nodeIdx === curNodeIdx && result.offset <= curOffset){
-      curOffset++;
-      if(curOffset > textNodes[curNodeIdx].textContent.length){
-        curNodeIdx++;
-        curOffset = 0;
-      }
-      if(curNodeIdx >= textNodes.length) break;
-      continue;
+    body {
+      column-width: ${w}px;
+      column-gap: 0;
+      column-fill: auto;
+      height: ${h}px;
+      box-sizing: border-box;
+      padding: 0.4rem ${padding}px 0.6rem;
+      /* Prevent content from being split mid-element */
+      orphans: 3;
+      widows: 3;
     }
+    /* Images: never overflow a column, never be chopped */
+    img {
+      max-width: 100%;
+      max-height: ${Math.round(h * 0.82)}px;
+      height: auto;
+      display: block;
+      margin: 0.8em auto;
+      break-inside: avoid;
+      page-break-inside: avoid;
+    }
+    /* Headings never orphaned at column bottom */
+    h1, h2, h3, h4, h5, h6 {
+      font-family: 'Playfair Display', Georgia, serif;
+      color: ${t.headingFg};
+      break-after: avoid;
+      page-break-after: avoid;
+      margin: 1.4em 0 0.4em;
+    }
+    p { margin: 0 0 0.9em; }
+    /* Tables, figures, blockquotes: keep together */
+    table, figure, blockquote, pre {
+      break-inside: avoid;
+      page-break-inside: avoid;
+    }
+    a { color: ${t.linkFg}; text-decoration: none; }
+    /* SVG/figure images */
+    svg { max-width: 100%; height: auto; }
+    /* Prevent very tall elements from sticking out */
+    * { max-width: 100%; box-sizing: border-box; }
+  `;
 
-    breaks.push({nodeIdx: result.nodeIdx, offset: result.offset});
-    curNodeIdx = result.nodeIdx;
-    curOffset = result.offset;
-  }
+  return new Promise(resolve => {
+    const iframe = document.createElement('iframe');
+    iframe.setAttribute('sandbox', 'allow-same-origin');
+    iframe.style.cssText = `
+      position: absolute; inset: 0;
+      width: ${w}px; height: ${h}px;
+      border: none; background: ${t.bg};
+      display: block;
+    `;
 
-  return breaks;
-}
+    content.style.position = 'relative';
+    content.appendChild(iframe);
+    _readerIframe = iframe;
 
-// Given two break positions, extracts the HTML content between them
-// from the ORIGINAL full chapter HTML (held in a hidden container),
-// preserving proper block structure.
-function extractPageHtml(fullContainer, breaks, pageIdx){
-  const textNodes = getTextNodeSequence(fullContainer);
-  if(!textNodes.length) return fullContainer.innerHTML;
+    // Write content into iframe after it's attached to DOM
+    const doc = iframe.contentDocument || iframe.contentWindow.document;
+    doc.open();
+    doc.write(`<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8"/>
+<style>${css}</style>
+</head>
+<body>${bodyHtml}</body>
+</html>`);
+    doc.close();
 
-  const startBreak = breaks[pageIdx];
-  const endBreak = breaks[pageIdx + 1];
-
-  if(!endBreak){
-    // Last page — take everything from start break to end
-    const range = document.createRange();
-    const startNode = textNodes[startBreak.nodeIdx];
-    if(!startNode) return '';
-    range.setStart(startNode, startBreak.offset);
-    range.setEnd(fullContainer, fullContainer.childNodes.length);
-    return rangeToHtml(range);
-  }
-
-  const range = document.createRange();
-  const startNode = textNodes[startBreak.nodeIdx];
-  const endNode = textNodes[endBreak.nodeIdx];
-  if(!startNode || !endNode) return '';
-  range.setStart(startNode, startBreak.offset);
-  range.setEnd(endNode, endBreak.offset);
-  return rangeToHtml(range);
-}
-
-// Converts a Range to an HTML string, preserving block structure.
-function rangeToHtml(range){
-  const frag = range.cloneContents();
-  const div = document.createElement('div');
-  div.appendChild(frag);
-  return div.innerHTML;
-}
-
-function renderChapterPaged(bodyHtml){
-  return new Promise(resolve=>{
-    const overlay = document.getElementById('readerOverlay');
-    const outer = document.getElementById('readerContent');
-    const settingsBar = document.getElementById('readerSettingsBar');
-    const toolbarEl = document.querySelector('.reader-toolbar');
-    const progressEl = document.querySelector('.reader-progress');
-    const actualToolbarH = (toolbarEl?.offsetHeight || 52) + (progressEl?.offsetHeight || 3);
-    const settingsH = settingsBar.classList.contains('open') ? settingsBar.offsetHeight : 0;
-    const fixedH = overlay.clientHeight - actualToolbarH - settingsH;
-    outer.style.height = fixedH + 'px';
-
-    const staging = document.getElementById('readerStagingContainer');
-    if(!staging){ resolve(); return; }
-    staging.style.width = outer.clientWidth + 'px';
-    staging.style.height = fixedH + 'px';
-    staging.style.fontSize = readerFontSize + 'px';
-    staging.style.lineHeight = '1.9';
-    staging.style.padding = '0.3rem clamp(1rem,5vw,4rem)';
-    staging.style.boxSizing = 'border-box';
-    const stagingPadV = parseFloat(getComputedStyle(staging).paddingTop)
-                      + parseFloat(getComputedStyle(staging).paddingBottom);
-    staging._usableHeight = fixedH - stagingPadV;
-    staging.innerHTML = bodyHtml;
-    const avgParaMargin = measureParagraphMargins(staging);
-    staging._avgParaMargin = avgParaMargin;
-
-    const themeColors = { day:'#1a1a1a', sepia:'#3b2a1a', night:'#c8c8d8' };
-    const themeColor = themeColors[readerTheme] || '#1a1a1a';
-    staging.style.color = themeColor;
-    document.getElementById('readerPageA').style.color = themeColor;
-    document.getElementById('readerPageB').style.color = themeColor;
-
-    const imgs = Array.from(staging.querySelectorAll('img'));
-    const imgPromises = imgs.map(img=>{
+    // Wait for images to load before measuring column count
+    const imgs = Array.from(doc.querySelectorAll('img'));
+    const imgPromises = imgs.map(img => {
       if(img.complete) return Promise.resolve();
-      return new Promise(res=>{
-        img.addEventListener('load', res, {once:true});
-        img.addEventListener('error', res, {once:true});
+      return new Promise(res => {
+        img.onload = img.onerror = res;
       });
     });
 
-    Promise.all(imgPromises).then(()=>{
-      requestAnimationFrame(()=>{
-        readerPageBreaks = computePageBreaksV2(staging);
-        readerPageCount = readerPageBreaks.length;
-        readerPage = 0;
-
-        const pageA = document.getElementById('readerPageA');
-        pageA.style.fontSize = readerFontSize + 'px';
-        pageA.innerHTML = extractPageHtml(staging, readerPageBreaks, 0);
-        pageA.style.opacity = '1';
-        pageA.style.transform = 'translateX(0)';
-        pageA.style.transition = 'none';
-        pageA.style.zIndex = '2';
-
-        const pageB = document.getElementById('readerPageB');
-        pageB.style.opacity = '0';
-        pageB.style.zIndex = '1';
-
+    Promise.all(imgPromises).then(() => {
+      requestAnimationFrame(() => {
+        // scrollWidth of the body tells us total column content width
+        _readerColW   = w;
+        _readerTotalW = doc.body.scrollWidth;
+        readerPageCount = Math.max(1, Math.round(_readerTotalW / _readerColW));
+        readerPage      = 0;
+        _scrollIframeTo(0, false);
         resolve();
       });
     });
   });
 }
 
-function goToPage(page, opts={}){
-  if(readerTransition === 'scroll'){
-    // Scroll mode: revert to free-scrolling the staging content
-    const pageA = document.getElementById('readerPageA');
-    pageA.style.overflow = 'auto';
-    pageA.innerHTML = document.getElementById('readerStagingContainer').innerHTML;
-    pageA.style.fontSize = readerFontSize + 'px';
-    updatePaginationUI();
-    return;
-  }
+function _scrollIframeTo(pageIdx, animate) {
+  if(!_readerIframe) return;
+  const doc = _readerIframe.contentDocument || _readerIframe.contentWindow?.document;
+  if(!doc) return;
 
-  if(page < 0){
-    if(readerChapter > 0) readerGoToChapter(readerChapter-1, 'last');
+  const x = pageIdx * _readerColW;
+
+  if(animate && readerTransition !== 'none') {
+    doc.body.style.transition = 'transform 0.22s cubic-bezier(0.4,0,0.2,1)';
+  } else {
+    doc.body.style.transition = 'none';
+  }
+  doc.body.style.transform = `translateX(-${x}px)`;
+}
+
+function goToPage(page, opts = {}) {
+  if(page < 0) {
+    if(readerChapter > 0) readerGoToChapter(readerChapter - 1, 'last');
     return;
   }
-  if(page >= readerPageCount){
-    if(readerChapter < readerSpine.length-1) readerGoToChapter(readerChapter+1, 0);
+  if(page >= readerPageCount) {
+    if(readerChapter < readerSpine.length - 1) readerGoToChapter(readerChapter + 1, 0);
     else showToast('End of book 📖');
     return;
   }
 
-  const direction = page > readerPage ? 1 : -1;
   readerPage = page;
-
-  const staging = document.getElementById('readerStagingContainer');
-  const pageA = document.getElementById('readerPageA');
-  const pageB = document.getElementById('readerPageB');
-
-  // Prepare the new page content in the background (B) div
-  pageB.innerHTML = extractPageHtml(staging, readerPageBreaks, page);
-  pageB.style.fontSize = readerFontSize + 'px';
-  pageB.style.opacity = '0';
-  pageB.style.transform = `translateX(${direction * 100}%)`;
-  pageB.style.transition = 'none';
-  pageB.style.zIndex = '2';
-  pageA.style.zIndex = '1';
-
-  if(opts.animate === false || readerTransition === 'none'){
-    pageB.style.opacity = '1';
-    pageB.style.transform = 'translateX(0)';
-    // Swap: A becomes the new background, B becomes the new foreground
-    pageA.style.opacity = '0';
-    // Swap IDs so future calls keep using A as "current"
-    pageA.id = 'readerPageB';
-    pageB.id = 'readerPageA';
-  } else if(readerTransition === 'slide'){
-    requestAnimationFrame(()=>requestAnimationFrame(()=>{
-      pageB.style.transition = 'transform .25s cubic-bezier(.4,0,.2,1), opacity .25s';
-      pageB.style.transform = 'translateX(0)';
-      pageB.style.opacity = '1';
-      pageA.style.transition = 'transform .25s cubic-bezier(.4,0,.2,1), opacity .25s';
-      pageA.style.transform = `translateX(${-direction * 100}%)`;
-      pageA.style.opacity = '0';
-      setTimeout(()=>{
-        pageA.style.transition = 'none';
-        pageB.style.transition = 'none';
-        pageA.id = 'readerPageB';
-        pageB.id = 'readerPageA';
-      }, 270);
-    }));
-  } else {
-    // bounce (default)
-    requestAnimationFrame(()=>requestAnimationFrame(()=>{
-      pageB.style.transition = 'opacity .16s ease-in';
-      pageB.style.opacity = '1';
-      pageB.style.transform = 'translateX(0)';
-      pageA.style.transition = 'opacity .14s ease-out';
-      pageA.style.opacity = '0';
-      setTimeout(()=>{
-        pageA.style.transition = 'none';
-        pageB.style.transition = 'none';
-        pageA.id = 'readerPageB';
-        pageB.id = 'readerPageA';
-      }, 180);
-    }));
-  }
-
+  _scrollIframeTo(page, opts.animate !== false);
   updatePaginationUI();
-  if(readerBookId) saveReadingProgress(readerBookId, readerChapter, readerPage, readerSpine.length);
+
+  if(readerBookId) {
+    saveReadingProgress(readerBookId, readerChapter, readerPage, readerSpine.length);
+  }
 }
 
+function recalcReaderHeight() {
+  const overlay = document.getElementById('readerOverlay');
+  if(!overlay.classList.contains('open')) return;
+  if(!_readerIframe) return;
+
+  const { w, h } = _getReaderDimensions();
+  const content = document.getElementById('readerContent');
+  content.style.height = h + 'px';
+
+  const doc = _readerIframe.contentDocument || _readerIframe.contentWindow?.document;
+  if(!doc) return;
+
+  // Re-apply column height and recalculate page count
+  doc.body.style.height      = h + 'px';
+  doc.body.style.columnWidth = w + 'px';
+  _readerIframe.style.width  = w + 'px';
+  _readerIframe.style.height = h + 'px';
+
+  requestAnimationFrame(() => {
+    _readerColW   = w;
+    _readerTotalW = doc.body.scrollWidth;
+    readerPageCount = Math.max(1, Math.round(_readerTotalW / _readerColW));
+    readerPage      = Math.min(readerPage, readerPageCount - 1);
+    _scrollIframeTo(readerPage, false);
+    updatePaginationUI();
+  });
+}
+
+// ── BINARY-SEARCH PAGINATION ──────────────────────────────────────────────────
+
+  
 function updatePaginationUI(){
   document.getElementById('readerPageInfo').textContent = `${readerPage+1}/${readerPageCount}`;
   document.querySelectorAll('.chapter-item').forEach((el,i)=>el.classList.toggle('active', i===readerChapter));
   const prog = (readerChapter + (readerPage/Math.max(readerPageCount,1))) / Math.max(readerSpine.length,1);
   document.getElementById('readerProgressBar').style.width = (Math.min(prog,1)*100)+'%';
   renderReaderBookmarkTab();
-}
-
-function recalcReaderHeight(){
-  const overlay = document.getElementById('readerOverlay');
-  if(!overlay.classList.contains('open')) return;
-  const staging = document.getElementById('readerStagingContainer');
-  if(!staging) return;
-  const outer = document.getElementById('readerContent');
-  const settingsBar = document.getElementById('readerSettingsBar');
-  const toolbarEl = document.querySelector('.reader-toolbar');
-  const progressEl = document.querySelector('.reader-progress');
-  const actualToolbarH = (toolbarEl?.offsetHeight || 52) + (progressEl?.offsetHeight || 3);
-  const settingsH = settingsBar.classList.contains('open') ? settingsBar.offsetHeight : 0;
-  const fixedH = overlay.clientHeight - actualToolbarH - settingsH;
-  outer.style.height = fixedH + 'px';
-
-  readerPageBreaks = computePageBreaksV2(staging);
-  readerPageCount = readerPageBreaks.length;
-  readerPage = Math.min(readerPage, readerPageCount - 1);
-
-  const pageA = document.getElementById('readerPageA');
-  pageA.innerHTML = extractPageHtml(staging, readerPageBreaks, readerPage);
-  pageA.style.fontSize = readerFontSize + 'px';
-  pageA.style.opacity = '1';
-  pageA.style.transform = 'translateX(0)';
-  updatePaginationUI();
 }
   
 async function readerGoToChapter(idx, startPage=0){
@@ -4663,25 +4513,37 @@ function renderReaderBookmarkTab() {
 }
 
 function closeReader(){
+  // Move finished book: currently-reading → finished
   if(readerBookId){
+    const crList = _userLists.find(l => l.id === 'currently-reading');
     const progress = getReadingProgress(readerBookId);
-    if(progress >= 0.9){
-      markBookFinished(readerBookId).then(() => showToast('Added to Finished ✓'));
+    if(crList && progress >= 0.9){
+      const bookIds = (crList.bookIds || []).filter(id => id !== readerBookId);
+      crList.bookIds = bookIds;
+      setDoc(doc(db, 'user_lists', currentUser.uid, 'lists', 'currently-reading'),
+        { bookIds, updatedAt: serverTimestamp() }, { merge: true }
+      ).catch(e => console.warn('closeReader list update:', e));
+      const finList = _userLists.find(l => l.id === 'finished');
+      if(finList && !(finList.bookIds || []).includes(readerBookId)){
+        const finIds = [...(finList.bookIds || []), readerBookId];
+        finList.bookIds = finIds;
+        setDoc(doc(db, 'user_lists', currentUser.uid, 'lists', 'finished'),
+          { bookIds: finIds, updatedAt: serverTimestamp() }, { merge: true }
+        ).catch(e => console.warn('closeReader finished update:', e));
+        showToast('Added to Finished ✓');
+      }
     }
   }
+
   document.getElementById('readerOverlay').classList.remove('open');
   document.getElementById('readerChapterList').classList.remove('open');
   document.getElementById('readerSettingsBar').classList.remove('open');
-  const staging = document.getElementById('readerStagingContainer');
-  if(staging) staging.innerHTML = '';
-  const pageA = document.getElementById('readerPageA');
-  const pageB = document.getElementById('readerPageB');
-  if(pageA){ pageA.innerHTML = ''; pageA.id = 'readerPageA'; }
-  if(pageB){ pageB.innerHTML = ''; pageB.id = 'readerPageB'; }
+
+  if(_readerIframe) { _readerIframe.remove(); _readerIframe = null; }
+  _readerColW = 0; _readerTotalW = 0;
+
   document.getElementById('readerBookmarkTab')?.remove();
-  readerZip = null;
-  readerSpine = [];
-  readerBookId = null;
+  readerZip = null; readerSpine = []; readerBookId = null;
 }
 
 async function markBookFinished(bookId){
@@ -4756,17 +4618,13 @@ document.getElementById('btnReaderNext').addEventListener('click',()=>goToPage(r
       // Horizontal swipe
       if(dx<0)goToPage(readerPage+1); // swipe left → next
       else goToPage(readerPage-1);     // swipe right → prev
-    } else if(Math.abs(dx)<10&&Math.abs(dy)<10){
-      // Tap — ignore if on toolbar, settings, or bookmark tab
-      const tgt=e.target.closest('.reader-toolbar,.readerSettingsBar,.chapter-list,#readerBookmarkTab,#readerBookmarkListPanel,#btnToggleBookmarkList');
-      if(tgt)return;
-      const x=e.changedTouches[0].clientX;
-      const y=e.changedTouches[0].clientY;
-      const w=overlay.clientWidth;
-      // Also exclude top-right corner (bookmark zone: top 120px, right 60px)
-      if(x > w - 60 && y < 120) return;
-      if(x<w*0.3)goToPage(readerPage-1);
-      else if(x>w*0.7)goToPage(readerPage+1);
+    } else if(Math.abs(dx)<10 && Math.abs(dy)<10){
+      const tgt = e.target.closest('.reader-toolbar,#readerChapterList,#readerSettingsBar,#readerBookmarkTab');
+      if(tgt) return;
+      const x = e.changedTouches[0].clientX;
+      const w = overlay.clientWidth;
+      if(x < w * 0.3)      goToPage(readerPage - 1);
+      else if(x > w * 0.7) goToPage(readerPage + 1);
     }
   },{passive:true});
 })();
