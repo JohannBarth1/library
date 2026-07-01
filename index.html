@@ -4068,25 +4068,29 @@ async function renderChapterPaged(bodyHtml) {
 
   // Column gap is zero — we fake the gap using padding so text never falls in a gutter
   const css = `
-    html, body {
-      margin: 0; padding: 0;
-      background: ${t.bg};
-      color: ${t.fg};
-      font-family: 'Lato', Georgia, serif;
-      font-size: ${readerFontSize}px;
-      line-height: 1.85;
-      overflow: hidden;
-    }
-    body {
-      column-width: ${actualW}px;
-      column-gap: 0;
-      column-fill: auto;
-      height: ${h}px;
-      box-sizing: border-box;
-      padding: 0.4rem ${padding}px 0.6rem;
-      orphans: 3;
-      widows: 3;
-    }
+  html, body {
+  margin: 0; padding: 0;
+  background: ${t.bg};
+  color: ${t.fg};
+  font-family: 'Lato', Georgia, serif;
+  font-size: ${readerFontSize}px;
+  line-height: 1.85;
+  /* overflow removed from here */
+}
+html {
+  overflow: hidden;   /* clips at viewport edge only */
+}
+body {
+  overflow: visible;  /* let columns extend rightward so they actually render */
+  column-width: ${actualW}px;
+  column-gap: 0;
+  column-fill: auto;
+  height: ${h}px;
+  box-sizing: border-box;
+  padding: 0.4rem ${padding}px 0.6rem;
+  orphans: 3;
+  widows: 3;
+}
     img {
       max-width: 100%;
       max-height: ${Math.round(h * 0.82)}px;
