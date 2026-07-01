@@ -3462,34 +3462,89 @@ function bookmarksSection() {
     </div>`;
   }
 
-  function recommendedSection(books) {
+function recommendedSection(books) {
     if(!books.length) return '';
-    const coverRow = books.slice(0, 12).map(b => {
+
+    const COVER_W = 80;
+    const COVER_H = 120;
+    const SPINE_W = 6;
+
+    const tileHtml = books.map(b => {
       const src = getCoverSrc(b);
-      return `<div class="home-shelf-book" data-bookid="${b.id}" style="flex-shrink:0;width:64px;cursor:pointer;">
-        ${src
-          ? `<img src="${src}" loading="lazy" style="width:64px;height:96px;object-fit:cover;
-              border-radius:2px 4px 4px 2px;display:block;box-shadow:2px 3px 8px rgba(0,0,0,.3);"/>`
-          : `<div style="width:64px;height:96px;background:linear-gradient(145deg,var(--navy2),#2a3d5a);
-              border-radius:2px 4px 4px 2px;box-shadow:2px 3px 8px rgba(0,0,0,.3);
-              display:flex;align-items:center;justify-content:center;font-size:.55rem;
-              color:rgba(200,180,140,0.8);text-align:center;padding:4px;line-height:1.2;">
-              ${esc(b.title)}</div>`}
+      const avg = getAvgRating(b);
+      const avgRounded = Math.round(avg);
+      const starsHtml = b.ratingCount
+        ? `<div style="display:flex;gap:1px;justify-content:center;">
+            ${[1,2,3,4,5].map(n =>
+              `<span style="font-size:7px;color:${n<=avgRounded?'var(--gold)':'rgba(255,255,255,.3)'};">★</span>`
+            ).join('')}
+           </div>`
+        : '';
+
+      const coverContent = src
+        ? `<img src="${src}" loading="lazy" style="
+              width:${COVER_W}px;height:${COVER_H}px;
+              object-fit:cover;display:block;"/>`
+        : `<div style="
+              width:${COVER_W}px;height:${COVER_H}px;
+              background:linear-gradient(160deg,#2a3d5a,var(--navy2));
+              display:flex;align-items:center;justify-content:center;
+              padding:8px;text-align:center;">
+              <span style="font-size:.55rem;color:rgba(200,180,140,.85);
+                line-height:1.4;">${esc(b.title)}</span>
+            </div>`;
+
+      return `<div class="home-shelf-book" data-bookid="${b.id}" style="
+        cursor:pointer;flex-shrink:0;display:flex;position:relative;">
+        <!-- Spine -->
+        <div style="
+          width:${SPINE_W}px;height:${COVER_H}px;flex-shrink:0;
+          background:linear-gradient(to right,
+            rgba(0,0,0,.55) 0%,
+            rgba(0,0,0,.25) 60%,
+            rgba(0,0,0,.05) 100%);
+          border-radius:1px 0 0 1px;"></div>
+        <!-- Cover face -->
+        <div style="position:relative;overflow:hidden;
+          border-radius:0 3px 3px 0;
+          box-shadow:
+            3px 5px 18px rgba(0,0,0,.45),
+            0 1px 0 rgba(255,255,255,.08) inset;">
+          ${coverContent}
+          <!-- Top-edge highlight simulating open pages -->
+          <div style="
+            position:absolute;top:0;left:0;right:0;height:3px;
+            background:linear-gradient(to bottom,
+              rgba(255,255,255,.18),transparent);
+            pointer-events:none;"></div>
+          <!-- Bottom overlay: stars -->
+          ${starsHtml ? `<div style="
+            position:absolute;bottom:0;left:0;right:0;
+            padding:8px 4px 4px;
+            background:linear-gradient(to top,rgba(0,0,0,.65),transparent);
+            pointer-events:none;">
+            ${starsHtml}
+          </div>` : ''}
+        </div>
       </div>`;
     }).join('');
 
-    return `<div style="margin-bottom:1.4rem;padding:.8rem .8rem .7rem;
-      background:linear-gradient(135deg, rgba(200,149,42,.07), rgba(200,149,42,.015));
-      border:1px solid rgba(200,149,42,.25);border-radius:10px;">
-      <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.65rem;">
+    return `<div style="
+      margin-bottom:1.4rem;
+      padding:.8rem .9rem .75rem;
+      background:linear-gradient(135deg,rgba(200,149,42,.07),rgba(200,149,42,.015));
+      border:1px solid rgba(200,149,42,.25);
+      border-radius:10px;">
+      <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.7rem;">
         <span style="font-size:.95rem;">⭐</span>
         <span style="font-size:.74rem;font-weight:700;letter-spacing:.04em;color:var(--gold);">
           Recommended</span>
-        <span style="font-size:.65rem;color:var(--muted);font-weight:400;">${books.length}</span>
+        <span style="font-size:.65rem;color:var(--muted);font-weight:400;">
+          ${books.length}</span>
       </div>
-      <div style="display:flex;gap:8px;overflow-x:auto;padding-bottom:6px;
-        -webkit-overflow-scrolling:touch;">
-        ${coverRow}
+      <div style="
+        display:flex;flex-wrap:wrap;gap:.65rem;align-items:flex-end;">
+        ${tileHtml}
       </div>
     </div>`;
   }
