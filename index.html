@@ -4066,7 +4066,7 @@ async function renderChapterPaged(bodyHtml) {
       overflow: hidden;
     }
     body {
-      column-width: ${w}px;
+      column-width: ${actualW}px;
       column-gap: 0;
       column-fill: auto;
       height: ${h}px;
@@ -4121,6 +4121,9 @@ async function renderChapterPaged(bodyHtml) {
     content.appendChild(iframe);
     _readerIframe = iframe;
 
+    // Measure actual rendered width to avoid column-width drift
+    const actualW = Math.round(iframe.getBoundingClientRect().width);
+
     // Write content into iframe after it's attached to DOM
     const doc = iframe.contentDocument || iframe.contentWindow.document;
     doc.open();
@@ -4153,7 +4156,7 @@ async function renderChapterPaged(bodyHtml) {
     Promise.all(imgPromises).then(() => {
       requestAnimationFrame(() => {
         // scrollWidth of the body tells us total column content width
-        _readerColW   = w;
+        _readerColW   = actualW;
         _readerTotalW = doc.body.scrollWidth;
         readerPageCount = Math.max(1, Math.round(_readerTotalW / _readerColW));
         readerPage      = 0;
@@ -4218,7 +4221,8 @@ function recalcReaderHeight() {
   _readerIframe.style.height = h + 'px';
 
   requestAnimationFrame(() => {
-    _readerColW   = w;
+    const actualW = Math.round(_readerIframe.getBoundingClientRect().width);
+    _readerColW   = actualW;
     _readerTotalW = doc.body.scrollWidth;
     readerPageCount = Math.max(1, Math.round(_readerTotalW / _readerColW));
     readerPage      = Math.min(readerPage, readerPageCount - 1);
@@ -4251,6 +4255,10 @@ async function readerGoToChapter(idx, startPage=0){
     const bodyMatch=html.match(/<body[^>]*>([\s\S]*)<\/body>/i);
     let bodyHtml=bodyMatch?bodyMatch[1]:html;
     bodyHtml=bodyHtml.replace(/<script[\s\S]*?<\/script>/gi,'');
+    bodyHtml=bodyHtml.replace(/<script[^>]*\/?>/gi,''); // self-closing/empty <script> tags
+    bodyHtml=bodyHtml.replace(/\son\w+="[^"]*"/gi,'');   // strip all inline on* handlers (onclick, onload, onerror…)
+    bodyHtml=bodyHtml.replace(/\son\w+='[^']*'/gi,'');   // same, single-quoted
+    bodyHtml=bodyHtml.replace(/href\s*=\s*"javascript:[^"]*"/gi,'href="#"'); // stray javascript: urls
     bodyHtml=bodyHtml.replace(/href="([^"#]+)(#[^"]+)?"/g,(_,href)=>{
       const si=readerSpine.findIndex(s=>s.href===href||s.href.endsWith('/'+href));
       return si>=0?`href="#" data-navchapter="${si}"`:`href="#"`;
