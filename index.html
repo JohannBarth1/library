@@ -3334,11 +3334,11 @@ function bookmarksSection() {
     if(!readingPosBookmarks.length && !pureAwards.length) return '';
 
     const COVER_W = 72;
-    const COVER_H = 108;   // 2:3 ratio, matches book-card-cover
-    const RIB_W   = 22;    // ribbon width
-    const RIB_VIS = 48;    // how much ribbon sticks above the cover
-    const RIB_H   = RIB_VIS + 40; // total ribbon height (partly behind cover)
-    const RIB_RIGHT = 10;  // distance from right edge of cover
+    const COVER_H = 108;
+    const RIB_W   = 22;
+    const RIB_VIS = 26;
+    const RIB_H   = RIB_VIS + 50;
+    const RIB_RIGHT = 10;
 
     const tileFor = (ub) => {
       const book = allBooks.find(b => b.id === ub.bookId);
@@ -3396,21 +3396,22 @@ function bookmarksSection() {
           width:${COVER_W}px;
           height:${COVER_H + RIB_VIS}px;
           display:flex;align-items:flex-end;">
-          <!-- Ribbon: sits behind cover at bottom, emerges above it -->
+          <!-- Ribbon: behind the cover, only emoji peeks above -->
           <div style="
             position:absolute;
             top:0;
             right:${RIB_RIGHT}px;
-            z-index:2;
-            filter:drop-shadow(1px 3px 5px rgba(0,0,0,.45));
+            z-index:1;
+            filter:drop-shadow(1px 2px 4px rgba(0,0,0,.4));
             pointer-events:none;">
-            ${renderBookmarkSVG(tpl, RIB_W, RIB_H, 'home'+ub.id, false)}
+            ${renderBookmarkSVG(tpl, RIB_W, RIB_H, 'home'+ub.id, false, true)}
           </div>
-          <!-- Cover sits below the ribbon top, at the bottom of the container -->
-          <div style="position:absolute;bottom:0;left:0;z-index:1;">
+          <!-- Cover in front of ribbon -->
+          <div style="position:absolute;bottom:0;left:0;z-index:2;">
             ${coverHtml}
             ${progBar}
           </div>
+        </div>
         </div>
         <!-- Title underneath -->
         <div style="
@@ -5165,7 +5166,7 @@ const BOOKMARK_SHAPES = {
   ribbon:  (w,h) => `M${w*0.1},0 H${w-w*0.1} L${w},${h*0.12} V${h} L${w/2},${h-w*0.28} L0,${h} V${h*0.12} Z`,
 };
 
-function renderBookmarkSVG(template, w=36, h=56, uid='bm', verticalLabel=false) {
+function renderBookmarkSVG(template, w=36, h=56, uid='bm', verticalLabel=false, iconAtTop=false) {
   if(!template) return '';
   const shapeFn = BOOKMARK_SHAPES[template.shape] || BOOKMARK_SHAPES.classic;
   const p = shapeFn(w, h);
@@ -5176,7 +5177,6 @@ function renderBookmarkSVG(template, w=36, h=56, uid='bm', verticalLabel=false) 
   const iconFs  = Math.round(w * 0.62);
   const labelFs = Math.round(w * (verticalLabel ? 0.20 : 0.16));
 
-  // Split label onto two lines if it's long, regardless of orientation
   let rawLabel = template.label || '';
   const splitThreshold = verticalLabel ? 8 : 7;
   if(!rawLabel.includes('|') && rawLabel.length > splitThreshold) {
@@ -5190,16 +5190,19 @@ function renderBookmarkSVG(template, w=36, h=56, uid='bm', verticalLabel=false) 
   }
   const labelParts = rawLabel.split('|').map(s => s.trim()).filter(Boolean);
 
-  // Icon sits near the bottom, above the pointed notch.
-  const iconY = h * 0.74;
-  const labelTop = h * 0.16;
-  const labelBottom = h * 0.62;
+  // Icon position: top (just below stripe) or bottom (above notch)
+  const iconY = iconAtTop
+    ? stripeH + (w * 0.62 / 2) + h * 0.04
+    : h * 0.74;
+
+  // Label band: below icon when iconAtTop, above icon when at bottom
+  const labelTop    = iconAtTop ? iconY + iconFs * 0.6 + h * 0.04 : h * 0.16;
+  const labelBottom = iconAtTop ? h * 0.88 : h * 0.62;
 
   let labelHtml = '';
   if(labelParts.length && verticalLabel) {
     const lineGap = labelParts.length > 1
-      ? (labelBottom - labelTop) / labelParts.length
-      : 0;
+      ? (labelBottom - labelTop) / labelParts.length : 0;
     labelHtml = labelParts.map((line, i) => {
       const ly = labelParts.length > 1
         ? labelTop + lineGap * (i + 0.5)
@@ -5211,13 +5214,12 @@ function renderBookmarkSVG(template, w=36, h=56, uid='bm', verticalLabel=false) 
         letter-spacing="0.06em">${esc(line)}</text>`;
     }).join('');
   } else if(labelParts.length) {
-    // Horizontal mode — top-align under the stripe; any extra vertical
-    // space (from a taller tile) falls between the label and the icon,
-    // not above the label.
     const hLineGap = labelFs * 1.3;
-    const topPad = stripeH + h * 0.10;
+    const topPad = iconAtTop
+      ? iconY + iconFs * 0.6 + h * 0.06
+      : stripeH + h * 0.10;
     labelHtml = labelParts.map((line, i) =>
-      `<text x="${w / 2}" y="${topPad + i * hLineGap + labelFs*0.5}"
+      `<text x="${w / 2}" y="${topPad + i * hLineGap + labelFs * 0.5}"
         text-anchor="middle" dominant-baseline="middle"
         font-size="${labelFs}" fill="${textCol}"
         font-family="system-ui,sans-serif" font-weight="700">${esc(line)}</text>`
@@ -5230,9 +5232,9 @@ function renderBookmarkSVG(template, w=36, h=56, uid='bm', verticalLabel=false) 
     <path d="${p}" fill="${body}"/>
     <rect x="0" y="0" width="${w}" height="${stripeH}"
       fill="${accent}" clip-path="url(#${uid}clip)"/>
-    ${labelHtml}
     <text x="${w/2}" y="${iconY}" text-anchor="middle"
       dominant-baseline="middle" font-size="${iconFs}">${template.icon || '🔖'}</text>
+    ${labelHtml}
   </svg>`;
 }
 function esc(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
