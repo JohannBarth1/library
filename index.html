@@ -247,6 +247,9 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
   flex-shrink: 0;
   border-top: 2px solid var(--gold);
 }
+.reader-overlay.toolbar-hidden .reader-toolbar {
+  display: none;
+}
   .reader-overlay{
   display:none;
   position:fixed;
@@ -272,7 +275,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
   font-family: 'Lato', sans-serif;
   font-size: .78rem;
   font-weight: 700;
-  border-radius: 6px;
+  border-radius: 20px;
   cursor: pointer;
   transition: background .15s, color .15s;
   white-space: nowrap;
@@ -1790,7 +1793,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 
   </div>
   <!-- Toolbar at bottom for thumb-friendly nav -->
-  <div class="reader-toolbar">
+  <div class="reader-toolbar" id="readerToolbar">
     <button class="reader-btn" id="btnToggleChapters" title="Contents">☰</button>
     <div class="reader-title" id="readerTitle">Reading…</div>
     <div class="reader-nav">
@@ -3762,18 +3765,26 @@ function applyReaderTheme(theme) {
   document.querySelectorAll('#readerSettingsBar [data-theme]')
     .forEach(b => b.classList.toggle('active', b.dataset.theme === theme));
 
-  // Live-update iframe styles without reloading chapter
+  // Update colors instantly via CSS custom properties — no re-render needed,
+  // so background, text, headings and links all switch together
   if(_readerIframe) {
     const t = _themeStyles();
     const doc = _readerIframe.contentDocument || _readerIframe.contentWindow?.document;
-    if(doc) {
-      doc.body.style.background = t.bg;
-      doc.body.style.color      = t.fg;
+    if(doc && doc.documentElement) {
+      const root = doc.documentElement.style;
+      root.setProperty('--r-bg', t.bg);
+      root.setProperty('--r-fg', t.fg);
+      root.setProperty('--r-heading', t.headingFg);
+      root.setProperty('--r-link', t.linkFg);
       _readerIframe.style.background = t.bg;
-      // Headings need the CSS re-applied — easiest to re-render
-      recalcReaderHeight();
     }
   }
+}
+
+  function toggleReaderToolbar() {
+  const overlay = document.getElementById('readerOverlay');
+  overlay.classList.toggle('toolbar-hidden');
+  recalcReaderHeight();
 }
 
 function setReaderFont(size) {
@@ -3912,6 +3923,7 @@ async function readCurrentBook(){
     document.querySelectorAll('#readerSettingsBar [data-size]')
       .forEach(b => b.classList.toggle('active', parseInt(b.dataset.size) === readerFontSize));
     document.getElementById('readerSettingsBar').classList.remove('open');
+    document.getElementById('readerOverlay').classList.remove('toolbar-hidden');
     document.getElementById('readerOverlay').classList.add('open');
 
     const saved = loadReadingProgress(book.id);
@@ -4056,6 +4068,20 @@ function _ensureReaderTapLayer() {
   }, { passive: true });
 
   layer.addEventListener('touchend', e => {
+    // If a popup panel is open, this tap just closes it — never turns a page
+    const list = document.getElementById('readerChapterList');
+    const bmPanel = document.getElementById('readerBookmarkListPanel');
+    const settingsBar = document.getElementById('readerSettingsBar');
+    if (list.classList.contains('open') || bmPanel.classList.contains('open') || settingsBar.classList.contains('open')) {
+      list.classList.remove('open');
+      bmPanel.classList.remove('open');
+      if (settingsBar.classList.contains('open')) {
+        settingsBar.classList.remove('open');
+        recalcReaderHeight();
+      }
+      return;
+    }
+
     const dx = e.changedTouches[0].clientX - tx0;
     const dy = e.changedTouches[0].clientY - ty0;
 
@@ -4071,7 +4097,9 @@ function _ensureReaderTapLayer() {
       if (x < w * 0.3) { goToPage(readerPage - 1); return; }
       if (x > w * 0.7) { goToPage(readerPage + 1); return; }
 
-      // Middle zone: forward the tap to any in-book chapter link underneath
+      // Middle zone: forward the tap to any in-book chapter link underneath,
+      // otherwise toggle the toolbar
+      let hitLink = false;
       if (_readerIframe) {
         const rect = _readerIframe.getBoundingClientRect();
         const doc = _readerIframe.contentDocument;
@@ -4080,9 +4108,10 @@ function _ensureReaderTapLayer() {
           const localY = e.changedTouches[0].clientY - rect.top;
           const el = doc.elementFromPoint(localX, localY);
           const link = el?.closest?.('[data-navchapter]');
-          if (link) readerGoToChapter(parseInt(link.dataset.navchapter));
+          if (link) { readerGoToChapter(parseInt(link.dataset.navchapter)); hitLink = true; }
         }
       }
+      if (!hitLink) toggleReaderToolbar();
     }
   }, { passive: true });
 
@@ -4121,10 +4150,16 @@ async function renderChapterPaged(bodyHtml) {
 
   // Column gap is zero — we fake the gap using padding so text never falls in a gutter
   const css = `
+  :root {
+    --r-bg: ${t.bg};
+    --r-fg: ${t.fg};
+    --r-heading: ${t.headingFg};
+    --r-link: ${t.linkFg};
+  }
   html, body {
   margin: 0; padding: 0;
-  background: ${t.bg};
-  color: ${t.fg};
+  background: var(--r-bg);
+  color: var(--r-fg);
   font-family: 'Lato', Georgia, serif;
   font-size: ${readerFontSize}px;
   line-height: 1.85;
@@ -4159,7 +4194,7 @@ body {
     }
     h1, h2, h3, h4, h5, h6 {
       font-family: 'Playfair Display', Georgia, serif;
-      color: ${t.headingFg};
+      color: var(--r-heading);
       break-after: avoid;
       page-break-after: avoid;
       margin: 1.4em 0 0.4em;
@@ -4169,7 +4204,7 @@ body {
       break-inside: avoid;
       page-break-inside: avoid;
     }
-    a { color: ${t.linkFg}; text-decoration: none; }
+    a { color: var(--r-link); text-decoration: none; }
     svg { max-width: 100%; height: auto; }
     * { max-width: 100%; box-sizing: border-box; }
     body { box-sizing: content-box; }
