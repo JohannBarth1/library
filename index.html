@@ -4013,20 +4013,18 @@ function _getReaderDimensions() {
   const settingsH = settings?.classList.contains('open') ? (settings.offsetHeight || 0) : 0;
   const progressH = progress?.offsetHeight || 0;
 
-  const clientH   = overlay.clientHeight;
-  const visualH   = window.visualViewport?.height ?? clientH;
+  const clientH = overlay.clientHeight;
+  const visualH = window.visualViewport?.height ?? clientH;
 
-  console.log('clientH:', clientH, 'visualH:', visualH, 
-              'toolbarH:', toolbarH, 'progressH:', progressH,
-              'settingsH:', settingsH);
+  let safeBottom = 0;
+  try {
+    const sab = getComputedStyle(document.documentElement)
+      .getPropertyValue('--sab').trim();
+    safeBottom = sab ? parseInt(sab) || 0 : 0;
+  } catch(e) { safeBottom = 0; }
 
   const h = visualH - toolbarH - settingsH - progressH - safeBottom - 4;
-  const safeBottom = parseInt(
-    getComputedStyle(document.documentElement).getPropertyValue('--sab') || '0'
-  ) || 0;
   const w = overlay.clientWidth;
-
-  console.log('final h:', h, 'w:', w);
   return { w, h };
 }
 
