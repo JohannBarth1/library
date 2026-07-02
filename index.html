@@ -3536,7 +3536,7 @@ function recommendedSection(books) {
   const finBooks    = resolve(_userLists.find(l => l.id === 'finished')?.bookIds || []);
   const wtrBooks    = resolve(_userLists.find(l => l.id === 'want-to-read')?.bookIds || []);
   const favBooks    = resolve(_userLists.find(l => l.id === 'favourites')?.bookIds || []);
-  const viewedBooks = resolve(_userLists.find(l => l.id === 'viewed')?.bookIds || []);
+  const viewedBooks = resolve([...(_userLists.find(l => l.id === 'viewed')?.bookIds || [])].reverse().slice(0, 20));
   const recBooks    = dedupe([...library, ...communityLib]).filter(b => b.recommended);
   const recentBooks = library.slice(0, 12);
   const customLists = _userLists.filter(l => !l.system);
@@ -3553,7 +3553,7 @@ function recommendedSection(books) {
           resolve(l.bookIds||[]), {defaultOpen:false, editable:true, listId:l.id, showAddTile:true})
       ).join('')}
       ${shelfSection('home_recent', 'Recently added', '🕐', 'var(--muted)', recentBooks, {defaultOpen:false})}
-      ${shelfSection('home_viewed', 'Viewed', '👁', 'var(--muted)', viewedBooks, {defaultOpen:false})}
+      ${shelfSection('home_viewed', 'Recently Viewed', '👁', 'var(--muted)', viewedBooks, {defaultOpen:false})}
       ${shelfSection('home_fin', 'Finished', '✓', '#276749', finBooks, {defaultOpen:false})}
       <div style="text-align:center;padding:.8rem 0 .4rem;border-top:1px dashed var(--border);margin-top:.4rem;">
         <button id="btnHomeNewList" style="background:none;border:none;
