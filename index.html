@@ -4259,7 +4259,7 @@ function recalcReaderHeight() {
   if(!doc) return;
 
   // Re-apply column height and recalculate page count
-  doc.body.style.height      = ${h}px;
+  doc.body.style.height = h + 'px'
   doc.body.style.columnWidth = (w - 2 * padding) + 'px';
   _readerIframe.style.width  = w + 'px';
   _readerIframe.style.height = h + 'px';
