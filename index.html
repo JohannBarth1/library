@@ -3536,6 +3536,7 @@ function recommendedSection(books) {
   const finBooks    = resolve(_userLists.find(l => l.id === 'finished')?.bookIds || []);
   const wtrBooks    = resolve(_userLists.find(l => l.id === 'want-to-read')?.bookIds || []);
   const favBooks    = resolve(_userLists.find(l => l.id === 'favourites')?.bookIds || []);
+  const viewedBooks = resolve(_userLists.find(l => l.id === 'viewed')?.bookIds || []);
   const recBooks    = dedupe([...library, ...communityLib]).filter(b => b.recommended);
   const recentBooks = library.slice(0, 12);
   const customLists = _userLists.filter(l => !l.system);
@@ -3552,6 +3553,7 @@ function recommendedSection(books) {
           resolve(l.bookIds||[]), {defaultOpen:false, editable:true, listId:l.id, showAddTile:true})
       ).join('')}
       ${shelfSection('home_recent', 'Recently added', '🕐', 'var(--muted)', recentBooks, {defaultOpen:false})}
+      ${shelfSection('home_viewed', 'Viewed', '👁', 'var(--muted)', viewedBooks, {defaultOpen:false})}
       ${shelfSection('home_fin', 'Finished', '✓', '#276749', finBooks, {defaultOpen:false})}
       <div style="text-align:center;padding:.8rem 0 .4rem;border-top:1px dashed var(--border);margin-top:.4rem;">
         <button id="btnHomeNewList" style="background:none;border:none;
@@ -4803,22 +4805,59 @@ document.getElementById('btnToggleBookmarkList').addEventListener('click', () =>
   }
 }
 
-  else if(style === 'bounce') {
-    const count = 2;
-    const landingY = h * 0.42; // where the emoji actually lands, inside the visible page
+else if(style === 'bounce') {
+    // Many emojis fall to the bottom and bounce off in random directions
+    const count = 14 + Math.floor(Math.random() * 5);
     for(let i = 0; i < count; i++) {
-      const el = mkParticle(32);
-      const x = w * 0.32 + i * w * 0.36;
-      el.style.left = x + 'px';
-      el.style.top = landingY + 'px';
+      const size = 16 + Math.random() * 18;
+      const el = mkParticle(size);
+      el.style.left = (Math.random() * Math.max(1, w - size)).toFixed(0) + 'px';
+      el.style.top = '-40px'; // start above the visible area
+
+      const delay = i * 65 + Math.random() * 380;
+      const dur   = 2100 + Math.random() * 1100;
+
+      // Distance from top:-40 to the bottom edge of the content area
+      const fallY = h + 40;
+
+      // Random bounce angle (-75° .. +75° from vertical)
+      const bAngle = (Math.random() - 0.5) * Math.PI * 0.85;
+      // Bounce power: 36–70% of content height
+      const bPower = (0.36 + Math.random() * 0.34) * h;
+
+      // First bounce: upward + sideways
+      const b1x = Math.sin(bAngle) * bPower * 0.85;
+      const b1y = -Math.cos(Math.abs(bAngle) * 0.55) * bPower; // negative = up
+
+      // Second (smaller) bounce in the same direction
+      const b2x = b1x + Math.sin(bAngle) * bPower * 0.38;
+      const b2y = b1y * 0.28;
+
+      const rot = (Math.random() - 0.5) * 260;
+
       el.animate([
-        { transform: `translateY(${-(landingY + 40)}px)`, opacity: 0 },
-        { transform: 'translateY(0)', opacity: 1, offset: 0.4 },
-        { transform: 'translateY(-14px)', offset: 0.55 },
-        { transform: 'translateY(0)', offset: 0.7 },
-        { opacity: 1, offset: 0.85 },
-        { transform: 'translateY(8px)', opacity: 0, offset: 1 }
-      ], { duration: 1400, delay: i * 200, easing: 'cubic-bezier(0.34,1.56,0.64,1)', fill: 'forwards' })
+        // Start invisible above view
+        { transform: `translate(0, 0)`,
+          opacity: 0 },
+        // Fade in at top
+        { transform: `translate(0, 0)`,
+          opacity: 1,   offset: 0.04 },
+        // Hit the bottom
+        { transform: `translate(0, ${fallY}px) rotate(${rot * 0.3}deg)`,
+          offset: 0.32 },
+        // Peak of first bounce (up + sideways)
+        { transform: `translate(${b1x}px, ${fallY + b1y}px) rotate(${rot * 0.8}deg)`,
+          offset: 0.58 },
+        // Hit bottom again
+        { transform: `translate(${b1x * 1.12}px, ${fallY + 12}px) rotate(${rot}deg)`,
+          offset: 0.75 },
+        // Mini second bounce
+        { transform: `translate(${b2x}px, ${fallY + b2y}px) rotate(${rot * 1.2}deg)`,
+          opacity: 0.65, offset: 0.87 },
+        // Fade out at bottom
+        { transform: `translate(${b2x * 1.1}px, ${fallY + 22}px) rotate(${rot * 1.4}deg)`,
+          opacity: 0 }
+      ], { duration: dur, delay, easing: 'linear', fill: 'forwards' })
         .onfinish = () => el.remove();
     }
   }
@@ -8668,16 +8707,6 @@ function buildAdminSections() {
         <div id="adminUsersList">
           <div style="color:var(--muted);font-size:.85rem">Open to load…</div>
         </div>
-      </div>
-    </div>
-
-    <div class="admin-section">
-      <div class="admin-section-header" data-admin-section="presence">
-        <span class="admin-section-title">🟢 Active Users</span>
-        <span class="admin-section-chevron">▾</span>
-      </div>
-      <div class="admin-section-body" id="adminPresenceBody">
-        <div style="color:var(--muted);font-size:.85rem">Open to load…</div>
       </div>
     </div>
 
