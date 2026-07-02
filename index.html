@@ -4663,12 +4663,14 @@ document.getElementById('btnToggleBookmarkList').addEventListener('click', () =>
   };
 
   const styles = ['rain', 'drift', 'swarm', 'spiral', 'bounce'];
-  const style = styles[Math.floor(Math.random() * styles.length)];
+  const chosen = tpl.animationStyle;
+  if(chosen === 'none') return;
+  const style = (chosen && styles.includes(chosen)) ? chosen : styles[Math.floor(Math.random() * styles.length)];
 
   if(style === 'rain') {
     const count = 10;
     for(let i = 0; i < count; i++) {
-      const el = mkParticle(14 + Math.random() * 10);
+      const el = mkParticle(18 + Math.random() * 12);
       const x = Math.random() * w;
       const drift = (Math.random() * 60 - 30);
       const dur = 1600 + Math.random() * 900;
@@ -4687,7 +4689,7 @@ document.getElementById('btnToggleBookmarkList').addEventListener('click', () =>
   else if(style === 'drift') {
     const count = 3;
     for(let i = 0; i < count; i++) {
-      const el = mkParticle(22);
+      const el = mkParticle(28);
       const y = h * 0.15 + Math.random() * h * 0.6;
       const delay = i * 450;
       el.style.top = y + 'px';
@@ -4709,7 +4711,7 @@ document.getElementById('btnToggleBookmarkList').addEventListener('click', () =>
       const dist = Math.max(w, h) * 0.65;
       const startX = cx + Math.cos(angle) * dist;
       const startY = cy + Math.sin(angle) * dist;
-      const el = mkParticle(18);
+      const el = mkParticle(24);
       el.style.left = startX + 'px';
       el.style.top = startY + 'px';
       el.animate([
@@ -4724,7 +4726,7 @@ document.getElementById('btnToggleBookmarkList').addEventListener('click', () =>
   else if(style === 'spiral') {
     const count = 6;
     for(let i = 0; i < count; i++) {
-      const el = mkParticle(20);
+      const el = mkParticle(26);
       el.style.left = cx + 'px';
       el.style.top = cy + 'px';
       const baseAngle = (i / count) * 2 * Math.PI;
@@ -4746,7 +4748,7 @@ document.getElementById('btnToggleBookmarkList').addEventListener('click', () =>
   else if(style === 'bounce') {
     const count = 2;
     for(let i = 0; i < count; i++) {
-      const el = mkParticle(26);
+      const el = mkParticle(32);
       const x = w * 0.32 + i * w * 0.36;
       el.style.left = x + 'px';
       el.style.top = '-40px';
@@ -8892,6 +8894,18 @@ function showBookmarkEditor(templateId, _unused) {
           ).join('')}
         </select>
       </div>
+      <div class="form-row"><label>Chapter Animation
+        <span style="font-size:.65rem;font-weight:400;color:var(--muted)">(plays when a chapter changes)</span></label>
+        <select id="bmEdAnimStyle">
+          <option value="random" ${(existing?.animationStyle||'random')==='random'?'selected':''}>Random (any of the 5)</option>
+          <option value="none" ${existing?.animationStyle==='none'?'selected':''}>None</option>
+          <option value="rain" ${existing?.animationStyle==='rain'?'selected':''}>Rain</option>
+          <option value="drift" ${existing?.animationStyle==='drift'?'selected':''}>Drift Across</option>
+          <option value="swarm" ${existing?.animationStyle==='swarm'?'selected':''}>Swarm</option>
+          <option value="spiral" ${existing?.animationStyle==='spiral'?'selected':''}>Spiral</option>
+          <option value="bounce" ${existing?.animationStyle==='bounce'?'selected':''}>Bounce In</option>
+        </select>
+      </div>
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:.6rem">
         <div class="form-row"><label>Body</label>
           <input type="color" id="bmEdBody" value="${existing?.colors?.body||'#1e3a5f'}"
@@ -9341,6 +9355,7 @@ function showBookmarkEditor(templateId, _unused) {
       name,
       description: overlay.querySelector('#bmEdDesc').value.trim(),
       shape:  overlay.querySelector('#bmEdShape').value,
+      animationStyle: overlay.querySelector('#bmEdAnimStyle').value,
       icon:   overlay.querySelector('#bmEdIcon').value,
       label:  overlay.querySelector('#bmEdLabel').value.trim(),
       colors: {
