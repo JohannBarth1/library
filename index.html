@@ -2538,7 +2538,7 @@ function renderDetailActionRows(container, book, isMine){
 
   // ── Row 1: primary, large ──────────────────────────────────────────────
   let html = `<div style="display:flex;gap:.5rem;margin-bottom:.55rem;flex-wrap:wrap;">
-    ${bigBtn('📖','Read','read','#3d7a96','var(--gold)')}
+    ${bigBtn('📖','Read','read','#3d7a96','#fff')}
     ${bigBtn('🔲','Send to Kobo','sendtokobo','var(--teal)','var(--gold)')}
   </div>`;
 
@@ -3680,7 +3680,7 @@ function showReadingBookmarkSheet(ub) {
         ${updatedAt ? `<div style="font-size:.7rem;color:var(--muted);">
           Last read ${timeAgo(updatedAt)}</div>` : ''}
         <button id="bmContinueBtn" style="width:100%;padding:.65rem;border-radius:24px;border:none;
-          background:#3d7a96;color:var(--gold);font-family:'Lato',sans-serif;font-size:.85rem;
+          background:#3d7a96;color:#fff;font-family:'Lato',sans-serif;font-size:.85rem;
           font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:.4rem;">
           📖 ${isReadingPos && progress > 0 ? 'Continue Reading' : 'Open Book'}
         </button>
@@ -4664,7 +4664,7 @@ document.getElementById('btnToggleBookmarkList').addEventListener('click', () =>
     return el;
   };
 
-  const styles = ['rain', 'drift', 'swarm', 'spiral', 'bounce', 'crossfire', 'cannon'];
+  const styles = ['rain', 'drift', 'swarm', 'spiral', 'bounce'];
   const chosen = tpl.animationStyle;
   if(chosen === 'none') return;
   const style = (chosen && styles.includes(chosen)) ? chosen : styles[Math.floor(Math.random() * styles.length)];
@@ -4709,22 +4709,18 @@ document.getElementById('btnToggleBookmarkList').addEventListener('click', () =>
   else if(style === 'swarm') {
     const count = 8;
     for(let i = 0; i < count; i++) {
-      // Spread starting angles around full circle, with slight randomization
-      const angle = (i / count) * 2 * Math.PI + (Math.random() * 0.4 - 0.2);
-      const dist = Math.max(w, h) * 0.7 + Math.random() * 40;
+      const angle = (i / count) * 2 * Math.PI;
+      const dist = Math.max(w, h) * 0.65;
       const startX = cx + Math.cos(angle) * dist;
       const startY = cy + Math.sin(angle) * dist;
-      const el = mkParticle(30 + Math.random() * 8); // start large
+      const el = mkParticle(24);
       el.style.left = startX + 'px';
       el.style.top = startY + 'px';
-      const dx = cx - startX;
-      const dy = cy - startY;
       el.animate([
-        { transform: 'translate(0,0) scale(1)', opacity: 0 },
-        { opacity: 1, offset: 0.15 },
-        { opacity: 1, offset: 0.7 },
-        { transform: `translate(${dx}px, ${dy}px) scale(0.15)`, opacity: 0 }
-      ], { duration: 1400, delay: i * 70, easing: 'cubic-bezier(0.3,0,0.7,1)', fill: 'forwards' })
+        { transform: 'translate(0,0) scale(0.5)', opacity: 0 },
+        { opacity: 1, offset: 0.25 },
+        { transform: `translate(${cx - startX}px, ${cy - startY}px) scale(1)`, opacity: 0 }
+      ], { duration: 1200, delay: i * 60, easing: 'ease-out', fill: 'forwards' })
         .onfinish = () => el.remove();
     }
   }
@@ -4770,59 +4766,6 @@ document.getElementById('btnToggleBookmarkList').addEventListener('click', () =>
         .onfinish = () => el.remove();
     }
   }
-
-  else if(style === 'crossfire') {
-  const count = 10;
-  const diag = Math.sqrt(w * w + h * h);
-  for(let i = 0; i < count; i++) {
-    const el = mkParticle(18 + Math.random() * 14);
-    const angle = Math.random() * 2 * Math.PI;
-    const dirX = Math.cos(angle);
-    const dirY = Math.sin(angle);
-    // perpendicular offset so paths don't all funnel through dead center
-    const perpX = -dirY, perpY = dirX;
-    const offset = (Math.random() - 0.5) * diag * 0.9;
-    const startX = cx - dirX * diag * 0.6 + perpX * offset;
-    const startY = cy - dirY * diag * 0.6 + perpY * offset;
-    const endX = cx + dirX * diag * 0.6 + perpX * offset;
-    const endY = cy + dirY * diag * 0.6 + perpY * offset;
-    el.style.left = startX + 'px';
-    el.style.top = startY + 'px';
-    const dur = 1200 + Math.random() * 800;
-    const delay = i * 90 + Math.random() * 200;
-    el.animate([
-      { transform: 'translate(0,0)', opacity: 0 },
-      { opacity: 1, offset: 0.1 },
-      { opacity: 1, offset: 0.85 },
-      { transform: `translate(${endX - startX}px, ${endY - startY}px)`, opacity: 0 }
-    ], { duration: dur, delay, easing: 'linear', fill: 'forwards' })
-      .onfinish = () => el.remove();
-  }
-}
-  
-  else if(style === 'cannon') {
-  const count = 12;
-  const originX = cx;
-  const originY = h - 10;
-  for(let i = 0; i < count; i++) {
-    const el = mkParticle(18 + Math.random() * 12);
-    el.style.left = originX + 'px';
-    el.style.top = originY + 'px';
-    const theta = (Math.random() * 1.6 - 0.8); // spread around vertical, radians
-    const power = h * 0.55 + Math.random() * h * 0.3;
-    const dx = Math.sin(theta) * power;
-    const riseY = -power; // apex height above launch point
-    const dur = 1700 + Math.random() * 700;
-    const delay = i * 70 + Math.random() * 180;
-    el.animate([
-      { transform: 'translate(0,0) rotate(0deg) scale(0.5)', opacity: 0 },
-      { transform: `translate(${dx * 0.5}px, ${riseY}px) rotate(${theta * 60}deg) scale(1)`, opacity: 1, offset: 0.45 },
-      { transform: `translate(${dx * 0.85}px, ${riseY * 0.55}px) rotate(${theta * 120}deg) scale(1)`, opacity: 1, offset: 0.7 },
-      { transform: `translate(${dx}px, 30px) rotate(${theta * 180}deg) scale(0.6)`, opacity: 0 }
-    ], { duration: dur, delay, easing: 'ease-in', fill: 'forwards' })
-      .onfinish = () => el.remove();
-  }
-}
 
   setTimeout(() => layer.remove(), 4200);
 }
@@ -8964,8 +8907,6 @@ function showBookmarkEditor(templateId, _unused) {
           <option value="swarm" ${existing?.animationStyle==='swarm'?'selected':''}>Swarm</option>
           <option value="spiral" ${existing?.animationStyle==='spiral'?'selected':''}>Spiral</option>
           <option value="bounce" ${existing?.animationStyle==='bounce'?'selected':''}>Bounce In</option>
-          <option value="crossfire" ${existing?.animationStyle==='crossfire'?'selected':''}>Crossfire</option>
-          <option value="cannon" ${existing?.animationStyle==='cannon'?'selected':''}>Cannon</option>
         </select>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:.6rem">
@@ -9126,7 +9067,6 @@ function showBookmarkEditor(templateId, _unused) {
     });
   });
 
-  
   // ── LIVE PREVIEW ──────────────────────────────────────────────────────
   function getTemplate() {
     return {
