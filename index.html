@@ -4669,31 +4669,6 @@ async function doMarkFinishedFromDetail(){
 document.getElementById('btnReaderPrev').addEventListener('click',()=>goToPage(readerPage-1));
 document.getElementById('btnReaderNext').addEventListener('click',()=>goToPage(readerPage+1));
 
-  // ── TOUCH / TAP ───────────────────────────────────────────────────────────────
-(()=>{
-  let tx0=0,ty0=0;
-  const overlay=document.getElementById('readerOverlay');
-  overlay.addEventListener('touchstart',e=>{tx0=e.touches[0].clientX;ty0=e.touches[0].clientY;},{passive:true});
-  overlay.addEventListener('touchend',e=>{
-    e.preventDefault();
-    if(!overlay.classList.contains('open'))return;
-    const dx=e.changedTouches[0].clientX-tx0;
-    const dy=e.changedTouches[0].clientY-ty0;
-    if(Math.abs(dx)>Math.abs(dy)&&Math.abs(dx)>40){
-      // Horizontal swipe
-      if(dx<0)goToPage(readerPage+1); // swipe left → next
-      else goToPage(readerPage-1);     // swipe right → prev
-    } else if(Math.abs(dx)<10 && Math.abs(dy)<10){
-      const tgt = e.target.closest('.reader-toolbar,#readerChapterList,#readerSettingsBar,#readerBookmarkTab');
-      if(tgt) return;
-      const x = e.changedTouches[0].clientX;
-      const w = overlay.clientWidth;
-      if(x < w * 0.3)      goToPage(readerPage - 1);
-      else if(x > w * 0.7) goToPage(readerPage + 1);
-    }
-  },{passive:false});
-})();
-
 window.addEventListener('resize',()=>{
   if(document.getElementById('readerOverlay').classList.contains('open')){
     recalcReaderHeight();
