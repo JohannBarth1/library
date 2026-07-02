@@ -1912,7 +1912,7 @@ let readerPageCount = 1;
 let readerFontSize=parseInt(localStorage.getItem('elib_reader_font')||'17');
 let readerTheme=localStorage.getItem('elib_reader_theme')||'day';
 let readerTransition = localStorage.getItem('elib_reader_transition') || 'bounce';
-let bookmarkAnimEnabled = localStorage.getItem('elib_bookmark_anim') !== 'off'; // default ON
+let bookmarkAnimEnabled = localStorage.getItem('elib_bookmark_anim') === 'on'; // default OFF
 let _readerIsInitialChapterLoad = true;
 let _bookmarkTemplates = [];
 let _myBookmarks = [];
@@ -4632,12 +4632,14 @@ document.getElementById('btnToggleBookmarkList').addEventListener('click', () =>
 }
 
   function triggerChapterBookmarkAnimation() {
-  if(!bookmarkAnimEnabled) return;
   if(window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
   if(!readerBookId) return;
 
   const tpl = getDisplayBookmarkTemplate(readerBookId);
   if(!tpl || !tpl.icon) return;
+
+  const isCustomBookmark = !!tpl.id; // fallback default template has no id
+  if(!isCustomBookmark && !bookmarkAnimEnabled) return;
   const icon = tpl.icon;
 
   const content = document.getElementById('readerContent');
