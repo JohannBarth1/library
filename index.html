@@ -4803,13 +4803,14 @@ document.getElementById('btnToggleBookmarkList').addEventListener('click', () =>
 
   else if(style === 'bounce') {
     const count = 2;
+    const landingY = h * 0.42; // where the emoji actually lands, inside the visible page
     for(let i = 0; i < count; i++) {
       const el = mkParticle(32);
       const x = w * 0.32 + i * w * 0.36;
       el.style.left = x + 'px';
-      el.style.top = '-40px';
+      el.style.top = landingY + 'px';
       el.animate([
-        { transform: 'translateY(-40px)', opacity: 0 },
+        { transform: `translateY(${-(landingY + 40)}px)`, opacity: 0 },
         { transform: 'translateY(0)', opacity: 1, offset: 0.4 },
         { transform: 'translateY(-14px)', offset: 0.55 },
         { transform: 'translateY(0)', offset: 0.7 },
@@ -8960,7 +8961,7 @@ function showBookmarkEditor(templateId, _unused) {
           <option value="swarm" ${existing?.animationStyle==='swarm'?'selected':''}>Swarm</option>
           <option value="spiral" ${existing?.animationStyle==='spiral'?'selected':''}>Spiral</option>
           <option value="bounce" ${existing?.animationStyle==='bounce'?'selected':''}>Bounce In</option>
-          <option value="crossfire" ${existing?.animationStyle==='crossfire'?'selected':''}>Crossfire In</option>
+          <option value="crossfire" ${existing?.animationStyle==='crossfire'?'selected':''}>Crossfire</option>
           <option value="cannon" ${existing?.animationStyle==='cannon'?'selected':''}>Cannon</option>
         </select>
       </div>
