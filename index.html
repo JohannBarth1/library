@@ -1794,6 +1794,10 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
     <button class="rs-btn" data-transition="slide">Slide</button>
     <button class="rs-btn" data-transition="scroll">Scroll</button>
   </div>
+  <div class="rs-group">
+    <span class="rs-label">Bookmark FX</span>
+    <button class="rs-btn" id="btnToggleBookmarkAnim">On</button>
+  </div>
 </div>
   <div class="reader-progress"><div class="reader-progress-bar" id="readerProgressBar" style="width:0%"></div></div>
   <div class="reader-chapter-list" id="readerChapterList">
@@ -1908,6 +1912,8 @@ let readerPageCount = 1;
 let readerFontSize=parseInt(localStorage.getItem('elib_reader_font')||'17');
 let readerTheme=localStorage.getItem('elib_reader_theme')||'day';
 let readerTransition = localStorage.getItem('elib_reader_transition') || 'bounce';
+let bookmarkAnimEnabled = localStorage.getItem('elib_bookmark_anim') !== 'off'; // default ON
+let _readerIsInitialChapterLoad = true;
 let _bookmarkTemplates = [];
 let _myBookmarks = [];
 
@@ -3805,6 +3811,19 @@ function applyReaderTheme(theme) {
   recalcReaderHeight();
 }
 
+const bmAnimBtn = document.getElementById('btnToggleBookmarkAnim');
+function refreshBmAnimBtn(){
+  bmAnimBtn.textContent = bookmarkAnimEnabled ? 'On' : 'Off';
+  bmAnimBtn.classList.toggle('active', bookmarkAnimEnabled);
+}
+bmAnimBtn.addEventListener('click', e => {
+  e.stopPropagation();
+  bookmarkAnimEnabled = !bookmarkAnimEnabled;
+  localStorage.setItem('elib_bookmark_anim', bookmarkAnimEnabled ? 'on' : 'off');
+  refreshBmAnimBtn();
+});
+refreshBmAnimBtn();
+
 function setReaderFont(size) {
   readerFontSize = size;
   localStorage.setItem('elib_reader_font', size);
@@ -3849,6 +3868,7 @@ if(themeBtn){
     recalcReaderHeight();
   }
 });  // ← closes the readerSettingsBar click listener
+
     
 document.getElementById('btnToggleReaderSettings').addEventListener('click', e => {
   e.stopPropagation();
@@ -3918,6 +3938,7 @@ async function readCurrentBook(){
     const bytes=await getBytes(storageRef(storage,storagePath));
     readerZip=await JSZip.loadAsync(bytes);readerSpine=[];readerChapter=0;
     readerBookId = book.id;
+    _readerIsInitialChapterLoad = true;
     const container=await readerZip.file('META-INF/container.xml')?.async('string');
     const opfPath=container?.match(/full-path="([^"]+\.opf)"/i)?.[1];
     if(!opfPath)throw new Error('No OPF found');
@@ -4400,6 +4421,9 @@ async function readerGoToChapter(idx, startPage=0){
 
     const target = startPage==='last' ? Math.max(0, readerPageCount-1) : (startPage||0);
     goToPage(target, { animate:false });
+
+    if(!_readerIsInitialChapterLoad) triggerChapterBookmarkAnimation();
+    _readerIsInitialChapterLoad = false;
   }catch(e){
     showToast('Error loading chapter: '+e.message);
   }
@@ -4605,6 +4629,140 @@ document.getElementById('btnToggleBookmarkList').addEventListener('click', () =>
   btn.innerHTML = renderBookmarkSVG(tpl, 15, 22, 'navbm', false, true);
   btn.style.transform = 'rotate(-10deg)';
   btn.style.padding = '0 .5rem';
+}
+
+  function triggerChapterBookmarkAnimation() {
+  if(!bookmarkAnimEnabled) return;
+  if(window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  if(!readerBookId) return;
+
+  const tpl = getDisplayBookmarkTemplate(readerBookId);
+  if(!tpl || !tpl.icon) return;
+  const icon = tpl.icon;
+
+  const content = document.getElementById('readerContent');
+  if(!content) return;
+  document.getElementById('bmAnimLayer')?.remove();
+
+  const layer = document.createElement('div');
+  layer.id = 'bmAnimLayer';
+  layer.style.cssText = 'position:absolute;inset:0;pointer-events:none;z-index:6;overflow:hidden;';
+  content.appendChild(layer);
+
+  const rect = content.getBoundingClientRect();
+  const w = rect.width, h = rect.height;
+  const cx = w / 2, cy = h / 2;
+
+  const mkParticle = (fontSize) => {
+    const el = document.createElement('span');
+    el.textContent = icon;
+    el.style.cssText = `position:absolute;pointer-events:none;user-select:none;
+      will-change:transform,opacity;line-height:1;font-size:${fontSize}px;`;
+    layer.appendChild(el);
+    return el;
+  };
+
+  const styles = ['rain', 'drift', 'swarm', 'spiral', 'bounce'];
+  const style = styles[Math.floor(Math.random() * styles.length)];
+
+  if(style === 'rain') {
+    const count = 10;
+    for(let i = 0; i < count; i++) {
+      const el = mkParticle(14 + Math.random() * 10);
+      const x = Math.random() * w;
+      const drift = (Math.random() * 60 - 30);
+      const dur = 1600 + Math.random() * 900;
+      const delay = Math.random() * 500;
+      el.style.left = x + 'px';
+      el.style.top = '-30px';
+      el.animate([
+        { transform: 'translate(0,0)', opacity: 0 },
+        { opacity: 1, offset: 0.1 },
+        { transform: `translate(${drift}px, ${h + 60}px)`, opacity: 0 }
+      ], { duration: dur, delay, easing: 'ease-in', fill: 'forwards' })
+        .onfinish = () => el.remove();
+    }
+  }
+
+  else if(style === 'drift') {
+    const count = 3;
+    for(let i = 0; i < count; i++) {
+      const el = mkParticle(22);
+      const y = h * 0.15 + Math.random() * h * 0.6;
+      const delay = i * 450;
+      el.style.top = y + 'px';
+      el.style.left = '-40px';
+      el.animate([
+        { transform: 'translateX(0)', opacity: 0 },
+        { opacity: 1, offset: 0.12 },
+        { opacity: 1, offset: 0.85 },
+        { transform: `translateX(${w + 80}px)`, opacity: 0 }
+      ], { duration: 3000, delay, easing: 'ease-in-out', fill: 'forwards' })
+        .onfinish = () => el.remove();
+    }
+  }
+
+  else if(style === 'swarm') {
+    const count = 8;
+    for(let i = 0; i < count; i++) {
+      const angle = (i / count) * 2 * Math.PI;
+      const dist = Math.max(w, h) * 0.65;
+      const startX = cx + Math.cos(angle) * dist;
+      const startY = cy + Math.sin(angle) * dist;
+      const el = mkParticle(18);
+      el.style.left = startX + 'px';
+      el.style.top = startY + 'px';
+      el.animate([
+        { transform: 'translate(0,0) scale(0.5)', opacity: 0 },
+        { opacity: 1, offset: 0.25 },
+        { transform: `translate(${cx - startX}px, ${cy - startY}px) scale(1)`, opacity: 0 }
+      ], { duration: 1200, delay: i * 60, easing: 'ease-out', fill: 'forwards' })
+        .onfinish = () => el.remove();
+    }
+  }
+
+  else if(style === 'spiral') {
+    const count = 6;
+    for(let i = 0; i < count; i++) {
+      const el = mkParticle(20);
+      el.style.left = cx + 'px';
+      el.style.top = cy + 'px';
+      const baseAngle = (i / count) * 2 * Math.PI;
+      const frames = [];
+      for(let s = 0; s <= 8; s++) {
+        const t = s / 8;
+        const radius = t * 100;
+        const angle = baseAngle + t * Math.PI * 4;
+        frames.push({
+          transform: `translate(${Math.cos(angle) * radius}px, ${Math.sin(angle) * radius}px) rotate(${angle}rad) scale(${1 - t * 0.4})`,
+          opacity: t < 0.15 ? t / 0.15 : 1 - t
+        });
+      }
+      el.animate(frames, { duration: 1600, delay: i * 80, easing: 'ease-out', fill: 'forwards' })
+        .onfinish = () => el.remove();
+    }
+  }
+
+  else if(style === 'bounce') {
+    const count = 2;
+    for(let i = 0; i < count; i++) {
+      const el = mkParticle(26);
+      const x = w * 0.32 + i * w * 0.36;
+      el.style.left = x + 'px';
+      el.style.top = '-40px';
+      el.animate([
+        { transform: 'translateY(-40px)', opacity: 0 },
+        { transform: 'translateY(0)', opacity: 1, offset: 0.4 },
+        { transform: 'translateY(-14px)', offset: 0.55 },
+        { transform: 'translateY(0)', offset: 0.7 },
+        { opacity: 1, offset: 0.85 },
+        { transform: 'translateY(8px)', opacity: 0, offset: 1 }
+      ], { duration: 1400, delay: i * 200, easing: 'cubic-bezier(0.34,1.56,0.64,1)', fill: 'forwards' })
+        .onfinish = () => el.remove();
+    }
+  }
+
+  setTimeout(() => layer.remove(), 4200);
 }
 
 function renderReaderBookmarkTab() {
