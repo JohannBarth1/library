@@ -265,6 +265,20 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .reader-overlay.theme-sepia .reader-toolbar { background: #e0d0b8; }
 .reader-overlay.theme-night .reader-toolbar { background: #12122a; }
 
+.reader-info-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .6rem;
+  padding: 0 1rem;
+  height: 30px;
+  flex-shrink: 0;
+  border-top: 1px solid rgba(128,128,128,.2);
+}
+.reader-overlay.theme-day   .reader-info-bar { background: #f4f4f4; }
+.reader-overlay.theme-sepia .reader-info-bar { background: #e0d0b8; }
+.reader-overlay.theme-night .reader-info-bar { background: #12122a; border-top-color: rgba(200,149,42,.2); }
+
 .reader-btn {
   display: flex;
   align-items: center;
@@ -290,8 +304,9 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 
 .reader-title {
   font-family: 'Playfair Display', serif;
-  font-size: .92rem;
+  font-size: .8rem;
   flex: 1;
+  min-width: 0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1792,13 +1807,16 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
   <div class="reader-content" id="readerContent">
 
   </div>
-  <!-- Toolbar at bottom for thumb-friendly nav -->
+  <!-- Info bar: always visible — chapter name + page location -->
+  <div class="reader-info-bar" id="readerInfoBar">
+    <div class="reader-title" id="readerTitle">Reading…</div>
+    <span class="reader-page-info" id="readerPageInfo">1/1</span>
+  </div>
+  <!-- Button bar — hides on center-tap -->
   <div class="reader-toolbar" id="readerToolbar">
     <button class="reader-btn" id="btnToggleChapters" title="Contents">☰</button>
-    <div class="reader-title" id="readerTitle">Reading…</div>
     <div class="reader-nav">
   <button class="reader-btn" id="btnReaderPrev">‹</button>
-  <span class="reader-page-info" id="readerPageInfo">1/1</span>
   <button class="reader-btn" id="btnReaderNext">›</button>
   <button class="reader-btn" id="btnToggleBookmarkList" title="Bookmarks">🔖</button>
   <button class="reader-btn" id="btnToggleReaderSettings" title="Settings">Aa</button>
@@ -4018,10 +4036,12 @@ let _readerTotalW = 0;         // full scrollWidth of the iframe document
 function _getReaderDimensions() {
   const overlay   = document.getElementById('readerOverlay');
   const toolbar   = document.getElementById('readerToolbar');
+  const infoBar   = document.getElementById('readerInfoBar');
   const settings  = document.getElementById('readerSettingsBar');
   const progress  = document.getElementById('readerProgress');
 
-  const toolbarH  = toolbar?.offsetHeight  || 52;
+  const toolbarH  = (toolbar && getComputedStyle(toolbar).display !== 'none') ? (toolbar.offsetHeight || 52) : 0;
+  const infoBarH  = infoBar?.offsetHeight || 0;
   const settingsH = settings?.classList.contains('open') ? (settings.offsetHeight || 0) : 0;
   const progressH = progress?.offsetHeight || 0;
 
@@ -4035,7 +4055,7 @@ function _getReaderDimensions() {
     safeBottom = sab ? parseInt(sab) || 0 : 0;
   } catch(e) { safeBottom = 0; }
 
-  const h = visualH - toolbarH - settingsH - progressH - safeBottom - 4;
+  const h = visualH - toolbarH - infoBarH - settingsH - progressH - safeBottom - 4;
   const w = overlay.clientWidth;
   return { w, h };
 }
@@ -4356,6 +4376,7 @@ async function readerGoToChapter(idx, startPage=0){
   readerChapter=idx;
   document.querySelectorAll('.chapter-item').forEach((el,i)=>el.classList.toggle('active',i===idx));
   const ch=readerSpine[idx];
+  document.getElementById('readerTitle').textContent = ch.label || ('Chapter ' + (idx+1));
 
   try{
     let html=await readerZip.file(readerOpfBase+ch.href)?.async('string');
