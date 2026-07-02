@@ -4088,9 +4088,6 @@ async function renderChapterPaged(bodyHtml) {
   }
   const t = _themeStyles();
   const padding = Math.max(16, Math.min(48, Math.round(w * 0.06)));
-  const lineHeightPx = readerFontSize * 1.85;
-  const usableH = h - 2 * 16; // rough vertical padding allowance (0.4rem + 0.6rem ≈ 16px at 16px base, adjust if needed)
-  const snappedH = Math.floor(usableH / lineHeightPx) * lineHeightPx;
   // Create + append iframe FIRST so we can measure its real width
   const iframe = document.createElement('iframe');
   iframe.setAttribute('sandbox', 'allow-same-origin');
@@ -4194,6 +4191,11 @@ body {
     });
 
     Promise.all(imgPromises).then(() => {
+      console.log('content h:', content.getBoundingClientRect().height,
+            'iframe h:', _readerIframe.getBoundingClientRect().height,
+            'body scrollHeight:', doc.body.scrollHeight,
+            'declared h:', h);
+
       requestAnimationFrame(() => {
       const actualW = Math.round(_readerIframe.getBoundingClientRect().width);
       const pad = Math.max(16, Math.min(48, Math.round(actualW * 0.06)));
