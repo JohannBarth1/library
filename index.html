@@ -4003,17 +4003,22 @@ let _readerColW   = 0;         // single column width in px (= iframe client wid
 let _readerTotalW = 0;         // full scrollWidth of the iframe document
 
 function _getReaderDimensions() {
-  const overlay  = document.getElementById('readerOverlay');
-  const toolbar  = document.getElementById('readerToolbar');   // use id, not querySelector
-  const settings = document.getElementById('readerSettingsBar');
-  const progress = document.getElementById('readerProgress');
+  const overlay   = document.getElementById('readerOverlay');
+  const toolbar   = document.getElementById('readerToolbar');
+  const settings  = document.getElementById('readerSettingsBar');
+  const progress  = document.getElementById('readerProgress');
 
-  // Only subtract elements that are physically above the content area
   const toolbarH  = toolbar?.offsetHeight  || 52;
   const settingsH = settings?.classList.contains('open') ? (settings.offsetHeight || 0) : 0;
   const progressH = progress?.offsetHeight || 0;
 
-  const h = overlay.clientHeight - toolbarH - settingsH - progressH;
+  // On iOS Safari, clientHeight includes area under browser chrome.
+  // visualViewport.height is the actual visible area.
+  const viewportH = window.visualViewport
+    ? window.visualViewport.height
+    : overlay.clientHeight;
+
+  const h = viewportH - toolbarH - settingsH - progressH;
   const w = overlay.clientWidth;
   return { w, h };
 }
@@ -4256,28 +4261,27 @@ function recalcReaderHeight() {
   if(!overlay.classList.contains('open')) return;
   if(!_readerIframe) return;
 
-  const { w, h } = _getReaderDimensions();
-  const padding = Math.max(16, Math.min(48, Math.round(w * 0.06)));
+  const { w, h } = _getReaderDimensions();  // ← must use this, not clientHeight directly
   const content = document.getElementById('readerContent');
   content.style.height = h + 'px';
 
   const doc = _readerIframe.contentDocument || _readerIframe.contentWindow?.document;
   if(!doc) return;
 
-  // Re-apply column height and recalculate page count
-  doc.body.style.height = h + 'px'
-  doc.body.style.columnWidth = (w - 2 * padding) + 'px';
+  doc.body.style.height      = h + 'px';
+  doc.body.style.columnWidth = w + 'px';
   _readerIframe.style.width  = w + 'px';
   _readerIframe.style.height = h + 'px';
 
   requestAnimationFrame(() => {
-    const actualW = Math.round(_readerIframe.getBoundingClientRect().width);
-    _readerColW   = actualW;
-    _readerTotalW = doc.body.scrollWidth;
-    readerPageCount = Math.max(1, Math.round(_readerTotalW / _readerColW));
-    readerPage      = Math.min(readerPage, readerPageCount - 1);
-    _scrollIframeTo(readerPage, false);
-    updatePaginationUI();
+    setTimeout(() => {
+      _readerColW     = w;
+      _readerTotalW   = doc.body.scrollWidth;
+      readerPageCount = Math.max(1, Math.ceil((_readerTotalW - 1) / _readerColW));
+      readerPage      = Math.min(readerPage, readerPageCount - 1);
+      _scrollIframeTo(readerPage, false);
+      updatePaginationUI();
+    }, 50);
   });
 }
   
@@ -4689,6 +4693,16 @@ window.addEventListener('resize',()=>{
     recalcReaderHeight();
   }
 });
+
+  if(window.visualViewport) {
+  window.visualViewport.addEventListener('resize', () => {
+    const overlay = document.getElementById('readerOverlay');
+    if(overlay?.classList.contains('open')) {
+      recalcReaderHeight();
+    }
+  });
+}
+
 
 // ── TTS ───────────────────────────────────────────────────────────────────────
 
