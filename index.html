@@ -20,6 +20,7 @@
   --teal-dark:#1e5f6a; --rust:#b84c1a; --light-blue:#d8e8f0; --border:#c8d8e4;
   --muted:#7a8a9a; --panel:#f0f5f8; --danger:#a02828;
   --header-h:60px; --mob-nav-h:54px; --filter-w:220px;
+  --sab: env(safe-area-inset-bottom, 0px);
 }
 *{box-sizing:border-box;margin:0;padding:0;}
 html,body{height:100%;max-width:100vw;overflow-x:hidden;}
@@ -4012,14 +4013,20 @@ function _getReaderDimensions() {
   const settingsH = settings?.classList.contains('open') ? (settings.offsetHeight || 0) : 0;
   const progressH = progress?.offsetHeight || 0;
 
-  // On iOS Safari, clientHeight includes area under browser chrome.
-  // visualViewport.height is the actual visible area.
-  const viewportH = window.visualViewport
-    ? window.visualViewport.height
-    : overlay.clientHeight;
+  const clientH   = overlay.clientHeight;
+  const visualH   = window.visualViewport?.height ?? clientH;
 
-  const h = viewportH - toolbarH - settingsH - progressH;
+  console.log('clientH:', clientH, 'visualH:', visualH, 
+              'toolbarH:', toolbarH, 'progressH:', progressH,
+              'settingsH:', settingsH);
+
+  const h = visualH - toolbarH - settingsH - progressH - safeBottom - 4;
+  const safeBottom = parseInt(
+    getComputedStyle(document.documentElement).getPropertyValue('--sab') || '0'
+  ) || 0;
   const w = overlay.clientWidth;
+
+  console.log('final h:', h, 'w:', w);
   return { w, h };
 }
 
