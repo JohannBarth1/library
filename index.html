@@ -4289,7 +4289,13 @@ function _scrollIframeTo(pageIdx, animate) {
   const x = pageIdx * _readerColW;
 
   if(animate && readerTransition !== 'none') {
-    doc.body.style.transition = 'transform 0.22s cubic-bezier(0.4,0,0.2,1)';
+    const TRANSITION_STYLES = {
+      bounce: { duration: '0.32s', easing: 'cubic-bezier(0.34, 1.56, 0.64, 1)' },
+      slide:  { duration: '0.22s', easing: 'cubic-bezier(0.4, 0, 0.2, 1)' },
+      scroll: { duration: '0.38s', easing: 'linear' },
+    };
+    const t = TRANSITION_STYLES[readerTransition] || TRANSITION_STYLES.slide;
+    doc.body.style.transition = `transform ${t.duration} ${t.easing}`;
   } else {
     doc.body.style.transition = 'none';
   }
@@ -4351,6 +4357,7 @@ function updatePaginationUI(){
   const prog = (readerChapter + (readerPage/Math.max(readerPageCount,1))) / Math.max(readerSpine.length,1);
   document.getElementById('readerProgressBar').style.width = (Math.min(prog,1)*100)+'%';
   renderReaderBookmarkTab();
+  updateBookmarkNavIcon();
 }
 
   function sanitizeChapterHtml(bodyHtml){
@@ -4585,6 +4592,20 @@ document.getElementById('btnToggleBookmarkList').addEventListener('click', () =>
   panel.classList.toggle('open');
   if(willOpen) renderReaderBookmarkList();
 });
+
+  function updateBookmarkNavIcon() {
+  const btn = document.getElementById('btnToggleBookmarkList');
+  if (!btn || !readerBookId) return;
+
+  const tpl = getDisplayBookmarkTemplate(readerBookId) || {
+    shape: 'classic', icon: '🔖', label: '',
+    colors: { body: '#c8952a', accent: '#0f1a2e', text: '#faf7f2' }
+  };
+
+  btn.innerHTML = renderBookmarkSVG(tpl, 15, 22, 'navbm', false, true);
+  btn.style.transform = 'rotate(-10deg)';
+  btn.style.padding = '0 .5rem';
+}
 
 function renderReaderBookmarkTab() {
   document.getElementById('readerBookmarkTab')?.remove();
