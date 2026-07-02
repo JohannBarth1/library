@@ -3369,15 +3369,7 @@ function bookmarksSection() {
       .filter(b => b.type === 'reading_position' && b.bookId)
       .sort((a,b) => (b.updatedAt?.toMillis?.()||0) - (a.updatedAt?.toMillis?.()||0));
 
-    const trackedBookIds = new Set(readingPosBookmarks.map(b => b.bookId));
-    // Only personal awards — global bookmarks are visual themes, not home-bar items
-    const pureAwards = _myBookmarks.filter(b =>
-      b.type === 'award' &&
-      b.scope !== 'global' &&
-      !trackedBookIds.has(b.bookId)
-    );
-
-    if(!readingPosBookmarks.length && !pureAwards.length) return '';
+    if(!readingPosBookmarks.length) return '';
 
     const COVER_W = 72;
     const COVER_H = 108;
@@ -3459,8 +3451,7 @@ function bookmarksSection() {
       </div>`;
     };
 
-    const html = readingPosBookmarks.map(ub => tileFor(ub)).join('')
-               + pureAwards.map(ub => tileFor(ub)).join('');
+    const html = readingPosBookmarks.map(ub => tileFor(ub)).join('');
 
     return `<div style="margin-bottom:1.4rem;">
       <div style="display:flex;align-items:center;gap:.5rem;padding:.1rem 0 .5rem;">
@@ -3630,8 +3621,6 @@ function showReadingBookmarkSheet(ub) {
   const progress = ub.progress || 0;
   const chapterLabel = ub.chapterLabel || '';
   const updatedAt = ub.updatedAt?.toDate?.();
-  const award = _myBookmarks.find(b => b.type === 'award' && b.bookId === ub.bookId);
-  const tAward = award ? _bookmarkTemplates.find(t => t.id === award.bookmarkId) : null;
 
   const overlay = document.createElement('div');
   overlay.className = 'modal-overlay open';
@@ -3664,18 +3653,7 @@ function showReadingBookmarkSheet(ub) {
           border:none;font-size:1.2rem;cursor:pointer;color:var(--muted);line-height:1;
           align-self:flex-start;">✕</button>
       </div>
-      ${tAward ? `<div style="display:flex;align-items:center;gap:.6rem;padding:.6rem 1.2rem;
-        border-top:1px solid var(--border);background:var(--panel);">
-        ${renderBookmarkSVG(tAward, 24, 38, 'rbm'+ub.id)}
-        <div>
-          <div style="font-size:.78rem;font-weight:700;color:var(--navy2)">${esc(tAward.name)}</div>
-          ${award?.note ? `<div style="font-size:.72rem;color:var(--muted);font-style:italic">
-            "${esc(award.note)}"</div>` : ''}
-          ${award?.awardedAt?.toDate?.()
-            ? `<div style="font-size:.65rem;color:var(--muted);margin-top:2px;">
-                Awarded ${award.awardedAt.toDate().toLocaleDateString()}</div>` : ''}
-        </div>
-      </div>` : ''}
+
       <div style="padding:.6rem 1.2rem .9rem;display:flex;flex-direction:column;gap:.5rem;">
         ${updatedAt ? `<div style="font-size:.7rem;color:var(--muted);">
           Last read ${timeAgo(updatedAt)}</div>` : ''}
@@ -5981,26 +5959,14 @@ function getDisplayBookmarkTemplate(bookId) {
   const book = [...library, ...communityLib, ..._bookmarkBookCache]
     .find(b => b.id === bookId);
 
-  // ── PRIORITY 1: Personal award for this specific book — always show ────
-  const userBookAward = _myBookmarks.find(b =>
-    b.type === 'award' &&
-    b.bookId === bookId &&
-    b.userId === currentUser?.uid &&
-    b.scope !== 'global'
-  );
-  if(userBookAward){
-    const t = _bookmarkTemplates.find(x => x.id === userBookAward.bookmarkId);
-    if(t) return t;
-  }
-
-  // ── PRIORITY 2: Global bookmark assigned to this exact book — always show
+  // ── PRIORITY 1: Global bookmark assigned to this exact book — always show
   const bookSpecific = _bookmarkTemplates.find(t =>
     t.scope === 'global' &&
     (t.assignedBookIds || []).includes(bookId)
   );
   if(bookSpecific) return bookSpecific;
 
-  // ── PRIORITY 3: Global bookmark assigned to this book's category — always
+  // ── PRIORITY 2: Global bookmark assigned to this book's category — always
   if(book?.category){
     const catSpecific = _bookmarkTemplates.find(t =>
       t.scope === 'global' &&
@@ -6014,7 +5980,7 @@ function getDisplayBookmarkTemplate(bookId) {
   const isCurrentlyReading = crList && (crList.bookIds || []).includes(bookId);
   if(!isCurrentlyReading) return null;
 
-  // ── PRIORITY 4: Seasonal global bookmark ──────────────────────────────
+  // ── PRIORITY 3: Seasonal global bookmark ──────────────────────────────
   const seasonal = _bookmarkTemplates.find(t => {
     if(t.scope !== 'global' || t.condition?.type !== 'seasonal') return false;
     const from = t.condition.startsAt?.toDate?.();
@@ -6023,7 +5989,7 @@ function getDisplayBookmarkTemplate(bookId) {
   });
   if(seasonal) return seasonal;
 
-  // ── PRIORITY 5: Default reading bookmark ──────────────────────────────
+  // ── PRIORITY 4: Default reading bookmark ──────────────────────────────
   return {
     shape: 'classic', icon: '📖', label: '',
     colors: { body: '#0f1a2e', accent: '#c8952a', text: '#faf7f2' }
@@ -8572,123 +8538,6 @@ async function adminLoadTags() {
   addBtn?.addEventListener('click', doAdd);
   addInput?.addEventListener('keydown', e => { if(e.key === 'Enter') doAdd(); });
 }
-
-  async function adminLoadAwards() {
-  const el = document.getElementById('adminAwardsList');
-  if(!el) return;
-  el.innerHTML = '<div style="color:var(--muted);font-size:.85rem">Loading…</div>';
-
-  try {
-    // Load all award records and all users in parallel
-    const [awardsSnap, usersSnap, templatesSnap] = await Promise.all([
-      getDocs(query(collection(db, 'user_bookmarks'), where('type', '==', 'award'))),
-      getDocs(collection(db, 'users')),
-      getDocs(collection(db, 'bookmarks')),
-    ]);
-
-    const awards = awardsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-    const userMap = {};
-    usersSnap.docs.forEach(d => {
-      const u = d.data();
-      userMap[d.id] = u.displayName || u.email || d.id;
-    });
-    const templateMap = {};
-    templatesSnap.docs.forEach(d => {
-      templateMap[d.id] = { id: d.id, ...d.data() };
-    });
-
-    if(!awards.length) {
-      el.innerHTML = '<div style="color:var(--muted);font-size:.85rem;padding:.5rem 0">No bookmark awards yet</div>';
-      return;
-    }
-
-    // Group by userId
-    const byUser = {};
-    awards.forEach(a => {
-      const uid = a.userId || 'unknown';
-      if(!byUser[uid]) byUser[uid] = [];
-      byUser[uid].push(a);
-    });
-
-    el.innerHTML = Object.entries(byUser).map(([uid, userAwards]) => {
-      const userName = userMap[uid] || uid;
-      const rowsHtml = userAwards.map(a => {
-        const t = templateMap[a.bookmarkId];
-        const tName = t ? t.name : `Unknown (${a.bookmarkId})`;
-        const book = [...library, ...communityLib].find(b => b.id === a.bookId);
-        const bookName = book ? book.title : (a.bookId ? `Book ID: ${a.bookId}` : '—');
-        const awardedAt = a.awardedAt?.toDate?.()?.toLocaleDateString() || '—';
-        const awardedBy = userMap[a.awardedBy] || a.awardedBy || '—';
-        const svgHtml = t ? renderBookmarkSVG(t, 20, 32, 'adma'+a.id) : '🔖';
-
-        return `<div style="display:flex;align-items:center;gap:.6rem;
-                            padding:.45rem .5rem;border-bottom:1px solid var(--border);
-                            background:var(--warm-white);">
-          <div style="flex-shrink:0">${svgHtml}</div>
-          <div style="flex:1;min-width:0">
-            <div style="font-size:.8rem;font-weight:700;color:var(--navy2);
-                        white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
-              ${esc(tName)}</div>
-            <div style="font-size:.68rem;color:var(--muted);margin-top:1px">
-              📖 ${esc(bookName)}</div>
-            <div style="font-size:.65rem;color:var(--muted);margin-top:1px">
-              Awarded ${awardedAt} by ${esc(awardedBy)}
-              ${a.note ? ` · <em>${esc(a.note)}</em>` : ''}</div>
-          </div>
-          <button data-delete-award="${a.id}"
-            style="flex-shrink:0;background:transparent;border:1px solid #e0b0b0;
-                   color:var(--danger);font-family:'Lato',sans-serif;font-size:.65rem;
-                   font-weight:700;padding:.25rem .5rem;border-radius:3px;
-                   cursor:pointer;white-space:nowrap">✕ Delete</button>
-        </div>`;
-      }).join('');
-
-      return `<div style="margin-bottom:.8rem;border:1px solid var(--border);border-radius:4px;overflow:hidden;">
-        <div style="padding:.45rem .7rem;background:var(--panel);
-                    font-size:.72rem;font-weight:700;color:var(--navy2);
-                    border-bottom:1px solid var(--border);
-                    display:flex;align-items:center;gap:.4rem;">
-          <div style="width:24px;height:24px;border-radius:50%;background:var(--teal);
-                      color:#fff;display:flex;align-items:center;justify-content:center;
-                      font-size:.6rem;font-weight:700;flex-shrink:0;">
-            ${userName.slice(0,2).toUpperCase()}</div>
-          ${esc(userName)}
-          <span style="font-size:.65rem;color:var(--muted);font-weight:400;margin-left:auto">
-            ${userAwards.length} award${userAwards.length !== 1 ? 's' : ''}</span>
-        </div>
-        ${rowsHtml}
-      </div>`;
-    }).join('');
-
-    // Bind delete buttons
-    el.querySelectorAll('[data-delete-award]').forEach(btn => {
-      btn.addEventListener('click', async () => {
-        if(!confirm('Delete this bookmark award? The user will lose it immediately.')) return;
-        const awardId = btn.dataset.deleteAward;
-        btn.textContent = '…';
-        btn.disabled = true;
-        try {
-          await deleteDoc(doc(db, 'user_bookmarks', awardId));
-          // Reload section
-          await adminLoadAwards();
-          // Refresh local bookmarks if this was ours
-          await loadMyBookmarks();
-          renderAll();
-          renderMobHome();
-          showToast('Award deleted ✓');
-        } catch(e) {
-          showToast('Delete failed: ' + e.message);
-          btn.textContent = '✕ Delete';
-          btn.disabled = false;
-        }
-      });
-    });
-
-  } catch(e) {
-    el.innerHTML = `<div style="color:var(--danger);font-size:.82rem">Failed: ${e.message}</div>`;
-    console.error(e);
-  }
-}
   
 
   async function adminLoadBookmarks() {
@@ -8710,35 +8559,35 @@ async function adminLoadTags() {
             ${renderBookmarkSVG(t, 24, 38, 'adm'+t.id)}
             <div style="flex:1;min-width:0">
               <div style="font-size:.82rem;font-weight:700;color:var(--navy2)">${esc(t.name)}</div>
-              <div style="font-size:.7rem;color:var(--muted)">${esc(t.description||'')}</div>
               <div style="font-size:.65rem;color:var(--teal);margin-top:1px">
-                ${t.condition?.type==='manual'?'Manual award':
-                  t.condition?.type==='auto_category'?`Auto: ${t.condition.count} × ${t.condition.category}`:
-                  t.condition?.type==='auto_count'?`Auto: ${t.condition.count} books read`:
-                  'Seasonal'}
+                ${t.condition?.type==='manual'?'Always (while assigned)':'Seasonal'}
               </div>
+              ${(t.assignedCategories?.length || t.assignedBookIds?.length) ? `
+                <div style="font-size:.65rem;color:var(--muted);margin-top:1px">
+                  ${t.assignedCategories?.length ? `${t.assignedCategories.length} categor${t.assignedCategories.length!==1?'ies':'y'}` : ''}
+                  ${t.assignedCategories?.length && t.assignedBookIds?.length ? ' · ' : ''}
+                  ${t.assignedBookIds?.length ? `${t.assignedBookIds.length} book${t.assignedBookIds.length!==1?'s':''}` : ''}
+                </div>` : ''}
             </div>
             <div style="display:flex;gap:.3rem;flex-shrink:0">
-              <button class="admin-copy-btn" data-bm-award="${t.id}">🎖 Award</button>
               <button class="admin-copy-btn" data-bm-edit="${t.id}">✎</button>
               <button class="admin-copy-btn" style="color:var(--danger);border-color:#e0b0b0"
                 data-bm-delete="${t.id}">✕</button>
             </div>
+            
           </div>`).join('')}
       </div>
       <button class="btn-save" style="width:100%;font-size:.72rem;padding:.45rem"
         id="adminBmNewBtn">+ New Bookmark Template</button>`;
 
-    el.querySelectorAll('[data-bm-award]').forEach(btn => {
-      btn.addEventListener('click', () => showBookmarkEditor(btn.dataset.bmAward, currentId||null));
-    });
     el.querySelectorAll('[data-bm-edit]').forEach(btn => {
-      btn.addEventListener('click', () => showBookmarkEditor(btn.dataset.bmEdit, null));
+      btn.addEventListener('click', () => showBookmarkEditor(btn.dataset.bmEdit));
     });
+    
 el.querySelectorAll('[data-bm-delete]').forEach(btn => {
       btn.addEventListener('click', async () => {
         const t = templates.find(x => x.id === btn.dataset.bmDelete);
-        if(!t || !confirm(`Delete "${t.name}"?\n\nThis will also remove it from all users who have been awarded it.`)) return;
+        if(!t || !confirm(`Delete "${t.name}"?\n\nBooks assigned to it will fall back to the default reading bookmark.`)) return;
         showLoading('Deleting…');
         try {
           await deleteDoc(doc(db, 'bookmarks', t.id));
@@ -8760,7 +8609,7 @@ el.querySelectorAll('[data-bm-delete]').forEach(btn => {
       });
     });
 
-    el.querySelector('#adminBmNewBtn')?.addEventListener('click', () => showBookmarkEditor(null, null));
+    el.querySelector('#adminBmNewBtn')?.addEventListener('click', () => showBookmarkEditor(null));
 
   } catch(e) {
     el.innerHTML = `<div style="color:var(--danger);font-size:.82rem">Failed to load: ${e.message}</div>`;
@@ -8823,20 +8672,6 @@ function buildAdminSections() {
     </div>
 
     <div class="admin-section">
-      <div class="admin-section-header" data-admin-section="awardsAdmin">
-        <span class="admin-section-title">🎖 Bookmark Awards</span>
-        <span class="admin-section-chevron">▾</span>
-      </div>
-      <div class="admin-section-body" id="adminAwardsBody">
-        <button class="btn-save" style="font-size:.72rem;padding:.4rem .8rem;margin-bottom:.8rem"
-          id="adminAwardsRefresh">↻ Refresh</button>
-        <div id="adminAwardsList">
-          <div style="color:var(--muted);font-size:.85rem">Open to load…</div>
-        </div>
-      </div>
-    </div>
-
-    <div class="admin-section">
       <div class="admin-section-header" data-admin-section="presence">
         <span class="admin-section-title">🟢 Active Users</span>
         <span class="admin-section-chevron">▾</span>
@@ -8891,7 +8726,6 @@ function buildAdminSections() {
         if(section === 'categories')  adminLoadCategories();
         if(section === 'bookmarks')   adminLoadBookmarks();
         if(section === 'tags')        adminLoadTags();
-        if(section === 'awardsAdmin') adminLoadAwards();
       }
     });
   });
@@ -8909,8 +8743,6 @@ function buildAdminSections() {
     ?.addEventListener('click', adminLoadKoboDevices);
   scroll.querySelector('#adminUsersRefresh')
     ?.addEventListener('click', adminLoadUsers);
-  scroll.querySelector('#adminAwardsRefresh')
-    ?.addEventListener('click', adminLoadAwards);
 }
 
 document.getElementById('mobNavAdmin')?.addEventListener('click', () => {
@@ -8920,16 +8752,8 @@ document.getElementById('mobNavAdmin')?.addEventListener('click', () => {
   buildAdminSections();
 });
 
-function showBookmarkEditor(templateId, _unused) {
+function showBookmarkEditor(templateId) {
   const existing = templateId ? _bookmarkTemplates.find(t => t.id === templateId) : null;
-
-  // Load existing award records so we can show current assignments
-  let existingAwards = [];
-  if(existing){
-    existingAwards = _myBookmarks.filter(b =>
-      b.type === 'award' && b.bookmarkId === existing.id
-    );
-  }
 
   const overlay = document.createElement('div');
   overlay.className = 'modal-overlay open';
@@ -8947,17 +8771,12 @@ function showBookmarkEditor(templateId, _unused) {
     <div class="modal" style="max-width:540px;width:100%;margin:auto">
       <h3>${existing ? 'Edit Bookmark' : 'New Bookmark'}</h3>
 
-      <!-- ── IDENTITY ── -->
       <div style="font-size:.62rem;letter-spacing:.15em;text-transform:uppercase;
                   color:var(--muted);font-weight:700;margin:.8rem 0 .5rem">Identity</div>
       <div class="form-row"><label>Name</label>
         <input type="text" id="bmEdName" value="${esc(existing?.name||'')}"
-          placeholder="e.g. Ghost Reader"/></div>
-      <div class="form-row"><label>Description</label>
-        <input type="text" id="bmEdDesc" value="${esc(existing?.description||'')}"
-          placeholder="e.g. Awarded for reading 5 Thrillers"/></div>
+          placeholder="e.g. Halloween Theme"/></div>
 
-      <!-- ── APPEARANCE ── -->
       <div style="font-size:.62rem;letter-spacing:.15em;text-transform:uppercase;
                   color:var(--muted);font-weight:700;margin:.8rem 0 .5rem">Appearance</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:.6rem">
@@ -8978,7 +8797,7 @@ function showBookmarkEditor(templateId, _unused) {
       <div class="form-row"><label>Chapter Animation
         <span style="font-size:.65rem;font-weight:400;color:var(--muted)">(plays when a chapter changes)</span></label>
         <select id="bmEdAnimStyle">
-          <option value="random" ${(existing?.animationStyle||'random')==='random'?'selected':''}>Random (any of the 5)</option>
+          <option value="random" ${(existing?.animationStyle||'random')==='random'?'selected':''}>Random (any of the 7)</option>
           <option value="none" ${existing?.animationStyle==='none'?'selected':''}>None</option>
           <option value="rain" ${existing?.animationStyle==='rain'?'selected':''}>Rain</option>
           <option value="drift" ${existing?.animationStyle==='drift'?'selected':''}>Drift Across</option>
@@ -9007,122 +8826,56 @@ function showBookmarkEditor(templateId, _unused) {
             ${p.icon} Preset ${i+1}</button>`).join('')}
       </div>
 
-      <!-- Live preview -->
       <div style="display:flex;align-items:center;gap:1rem;padding:.7rem .9rem;
                   background:var(--panel);border-radius:4px;margin-bottom:.9rem;
                   border:1px solid var(--border)">
         <div id="bmEdPreview"></div>
-        <div>
-          <div id="bmEdPreviewName" style="font-size:.82rem;font-weight:700;color:var(--navy2)"></div>
-          <div id="bmEdPreviewDesc" style="font-size:.72rem;color:var(--muted);margin-top:2px"></div>
-        </div>
+        <div id="bmEdPreviewName" style="font-size:.82rem;font-weight:700;color:var(--navy2)"></div>
       </div>
 
-      <!-- ── SCOPE ── -->
       <div style="font-size:.62rem;letter-spacing:.15em;text-transform:uppercase;
-                  color:var(--muted);font-weight:700;margin:.8rem 0 .5rem">Scope</div>
-      <div class="form-row"><label>Bookmark type</label>
-        <select id="bmEdScope">
-          <option value="personal" ${(existing?.scope||'personal')==='personal'?'selected':''}>
-            Personal award — appears in a user's home bar</option>
-          <option value="global" ${existing?.scope==='global'?'selected':''}>
-            Global theme — replaces the default ribbon for matched books</option>
+                  color:var(--muted);font-weight:700;margin:.8rem 0 .5rem">When it applies</div>
+      <div class="form-row"><label>Condition</label>
+        <select id="bmEdCond">
+          <option value="manual" ${(existing?.condition?.type||'manual')==='manual'?'selected':''}>
+            Always — while assigned below</option>
+          <option value="seasonal" ${existing?.condition?.type==='seasonal'?'selected':''}>
+            Seasonal — active between two dates</option>
+        </select>
+      </div>
+      <div id="bmEdCondExtra"></div>
+
+      <div style="font-size:.62rem;letter-spacing:.15em;text-transform:uppercase;
+                  color:var(--muted);font-weight:700;margin:.8rem 0 .4rem">
+        Apply to books / categories</div>
+
+      <div class="form-row"><label>Categories
+        <span style="font-size:.65rem;font-weight:400;color:var(--muted)">
+          (this bookmark replaces the default for all books in these shelves)</span></label>
+        <div id="bmEdCatChips" style="display:flex;flex-wrap:wrap;gap:.3rem;
+          margin-bottom:.4rem;min-height:24px;"></div>
+        <select id="bmEdCatSelect" style="width:100%;padding:.5rem .7rem;
+          font-family:'Lato',sans-serif;font-size:.85rem;border:1px solid var(--border);
+          border-radius:3px;background:var(--cream);color:var(--navy)">
+          <option value="">— Add a category —</option>
+          ${_categories.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('')}
         </select>
       </div>
 
-      <!-- ── CONDITION (when/what it applies to) ── -->
-      <div id="bmEdCondSection">
-        <div style="font-size:.62rem;letter-spacing:.15em;text-transform:uppercase;
-                    color:var(--muted);font-weight:700;margin:.8rem 0 .5rem">
-          When / what it applies to</div>
-        <div class="form-row"><label>Condition</label>
-          <select id="bmEdCond">
-            <option value="manual" ${(existing?.condition?.type||'manual')==='manual'?'selected':''}>
-              No condition — assign manually below</option>
-            <option value="seasonal" ${existing?.condition?.type==='seasonal'?'selected':''}>
-              Seasonal — active between two dates</option>
-          </select>
-        </div>
-        <div id="bmEdCondExtra"></div>
+      <div class="form-row" style="margin-top:.5rem"><label>Specific books
+        <span style="font-size:.65rem;font-weight:400;color:var(--muted)">
+          (overrides category assignment)</span></label>
+        <div id="bmEdBookChips" style="display:flex;flex-wrap:wrap;gap:.3rem;
+          margin-bottom:.4rem;min-height:24px;"></div>
+        <input type="text" id="bmEdBookSearch" placeholder="Search for a book…" autocomplete="off"/>
+        <div id="bmEdBookDropdown" style="display:none;border:1px solid var(--border);
+          border-radius:3px;background:var(--warm-white);max-height:140px;overflow-y:auto;
+          margin-top:2px;"></div>
       </div>
-
-      <!-- ── GLOBAL ASSIGNMENTS (books / categories) ── -->
-      <div id="bmEdGlobalSection" style="display:none">
-        <div style="font-size:.62rem;letter-spacing:.15em;text-transform:uppercase;
-                    color:var(--muted);font-weight:700;margin:.8rem 0 .4rem">
-          Apply to books / categories</div>
-
-        <div class="form-row"><label>Categories
-          <span style="font-size:.65rem;font-weight:400;color:var(--muted)">
-            (this bookmark replaces the default for all books in these shelves)</span></label>
-          <div id="bmEdCatChips" style="display:flex;flex-wrap:wrap;gap:.3rem;
-            margin-bottom:.4rem;min-height:24px;"></div>
-          <select id="bmEdCatSelect" style="width:100%;padding:.5rem .7rem;
-            font-family:'Lato',sans-serif;font-size:.85rem;border:1px solid var(--border);
-            border-radius:3px;background:var(--cream);color:var(--navy)">
-            <option value="">— Add a category —</option>
-            ${_categories.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('')}
-          </select>
-        </div>
-
-        <div class="form-row" style="margin-top:.5rem"><label>Specific books
-          <span style="font-size:.65rem;font-weight:400;color:var(--muted)">
-            (overrides category assignment)</span></label>
-          <div id="bmEdBookChips" style="display:flex;flex-wrap:wrap;gap:.3rem;
-            margin-bottom:.4rem;min-height:24px;"></div>
-          <input type="text" id="bmEdBookSearch" placeholder="Search for a book…"
-            autocomplete="off"/>
-          <div id="bmEdBookDropdown" style="display:none;border:1px solid var(--border);
-            border-radius:3px;background:var(--warm-white);max-height:140px;overflow-y:auto;
-            margin-top:2px;"></div>
-        </div>
-      </div>
-
-      <!-- ── PERSONAL ASSIGNMENTS (users) ── -->
-      <div id="bmEdPersonalSection" style="display:none">
-        <div style="font-size:.62rem;letter-spacing:.15em;text-transform:uppercase;
-                    color:var(--muted);font-weight:700;margin:.8rem 0 .4rem">
-          Award to users</div>
-
-        <div class="form-row"><label>Users</label>
-          <div id="bmEdUserChips" style="display:flex;flex-wrap:wrap;gap:.3rem;
-            margin-bottom:.4rem;min-height:24px;"></div>
-          <select id="bmEdUserSelect">
-            <option value="">— Add a user —</option>
-            <option value="__all__">Everyone</option>
-          </select>
-        </div>
-
-        <div class="form-row" style="margin-top:.5rem"><label>Attach to book
-          <span style="font-size:.65rem;font-weight:400;color:var(--muted)">(optional)</span></label>
-          <select id="bmEdAwardBook">
-            <option value="">— No specific book —</option>
-            ${[...library, ...communityLib]
-              .filter((b,i,a) => a.findIndex(x=>x.id===b.id)===i)
-              .map(b => `<option value="${b.id}">${esc(b.title)}</option>`).join('')}
-          </select>
-        </div>
-
-        <div class="form-row" style="margin-top:.5rem"><label>Award note
-          <span style="font-size:.65rem;font-weight:400;color:var(--muted)">(optional)</span></label>
-          <input type="text" id="bmEdAwardNote"
-            placeholder="e.g. Winner — December 2025 reading competition"/></div>
-      </div>
-
-      <!-- ── CURRENT ASSIGNMENTS (view/remove) ── -->
-      ${existing ? `
-      <div id="bmEdCurrentAssignments">
-        <div style="font-size:.62rem;letter-spacing:.15em;text-transform:uppercase;
-                    color:var(--muted);font-weight:700;margin:.8rem 0 .4rem">
-          Current assignments</div>
-        <div id="bmEdAssignmentsList" style="font-size:.82rem;color:var(--muted);
-          font-style:italic;">Loading…</div>
-      </div>` : ''}
 
       <div class="modal-actions" style="margin-top:1.2rem">
         <button class="btn-cancel" id="bmEdCancel">Cancel</button>
-        <button class="btn-save" id="bmEdSave">
-          ${existing ? 'Save Changes' : 'Create'}</button>
+        <button class="btn-save" id="bmEdSave">${existing ? 'Save Changes' : 'Create'}</button>
       </div>
     </div>`;
 
@@ -9130,12 +8883,9 @@ function showBookmarkEditor(templateId, _unused) {
   overlay.addEventListener('click', e => { if(e.target===overlay) overlay.remove(); });
   overlay.querySelector('#bmEdCancel').addEventListener('click', () => overlay.remove());
 
-  // ── STATE ─────────────────────────────────────────────────────────────
   let selectedCats    = new Set(existing?.assignedCategories || []);
   let selectedBookIds = new Set(existing?.assignedBookIds    || []);
-  let selectedUserIds = new Set();
 
-  // ── PRESETS ───────────────────────────────────────────────────────────
   overlay.querySelectorAll('[data-preset]').forEach(btn => {
     btn.addEventListener('click', () => {
       const p = PRESETS[parseInt(btn.dataset.preset)];
@@ -9147,7 +8897,6 @@ function showBookmarkEditor(templateId, _unused) {
     });
   });
 
-  // ── LIVE PREVIEW ──────────────────────────────────────────────────────
   function getTemplate() {
     return {
       shape: overlay.querySelector('#bmEdShape').value,
@@ -9161,31 +8910,14 @@ function showBookmarkEditor(templateId, _unused) {
     };
   }
   function updatePreview() {
-    overlay.querySelector('#bmEdPreview').innerHTML =
-      renderBookmarkSVG(getTemplate(), 40, 62, 'ed');
+    overlay.querySelector('#bmEdPreview').innerHTML = renderBookmarkSVG(getTemplate(), 40, 62, 'ed');
     overlay.querySelector('#bmEdPreviewName').textContent =
       overlay.querySelector('#bmEdName').value || 'Bookmark name';
-    overlay.querySelector('#bmEdPreviewDesc').textContent =
-      overlay.querySelector('#bmEdDesc').value || 'Description';
   }
-  ['bmEdShape','bmEdIcon','bmEdLabel','bmEdBody','bmEdAccent','bmEdText',
-   'bmEdName','bmEdDesc'].forEach(id => {
-    overlay.querySelector('#'+id)?.addEventListener('input', updatePreview);
-  });
+  ['bmEdShape','bmEdIcon','bmEdLabel','bmEdBody','bmEdAccent','bmEdText','bmEdName']
+    .forEach(id => overlay.querySelector('#'+id)?.addEventListener('input', updatePreview));
   updatePreview();
 
-  // ── SCOPE TOGGLE ─────────────────────────────────────────────────────
-  function updateScopeUI() {
-    const scope = overlay.querySelector('#bmEdScope').value;
-    overlay.querySelector('#bmEdGlobalSection').style.display =
-      scope === 'global' ? '' : 'none';
-    overlay.querySelector('#bmEdPersonalSection').style.display =
-      scope === 'personal' ? '' : 'none';
-  }
-  overlay.querySelector('#bmEdScope').addEventListener('change', updateScopeUI);
-  updateScopeUI();
-
-  // ── CONDITION EXTRA ───────────────────────────────────────────────────
   function updateCondExtra() {
     const type = overlay.querySelector('#bmEdCond').value;
     const el = overlay.querySelector('#bmEdCondExtra');
@@ -9206,7 +8938,6 @@ function showBookmarkEditor(templateId, _unused) {
   overlay.querySelector('#bmEdCond').addEventListener('change', updateCondExtra);
   updateCondExtra();
 
-  // ── CATEGORY CHIPS ────────────────────────────────────────────────────
   function renderCatChips() {
     const wrap = overlay.querySelector('#bmEdCatChips');
     wrap.innerHTML = [...selectedCats].map(c =>
@@ -9217,24 +8948,17 @@ function showBookmarkEditor(templateId, _unused) {
         <button data-rmcat="${esc(c)}" style="background:none;border:none;cursor:pointer;
           font-size:.75rem;color:var(--teal);line-height:1;padding:0;">×</button>
       </span>`
-    ).join('') || `<span style="font-size:.75rem;color:var(--muted);font-style:italic">
-      None selected</span>`;
+    ).join('') || `<span style="font-size:.75rem;color:var(--muted);font-style:italic">None selected</span>`;
     wrap.querySelectorAll('[data-rmcat]').forEach(btn => {
-      btn.addEventListener('click', () => {
-        selectedCats.delete(btn.dataset.rmcat);
-        renderCatChips();
-      });
+      btn.addEventListener('click', () => { selectedCats.delete(btn.dataset.rmcat); renderCatChips(); });
     });
   }
   renderCatChips();
   overlay.querySelector('#bmEdCatSelect').addEventListener('change', e => {
     const v = e.target.value; if(!v) return;
-    selectedCats.add(v);
-    e.target.value = '';
-    renderCatChips();
+    selectedCats.add(v); e.target.value = ''; renderCatChips();
   });
 
-  // ── BOOK CHIPS ────────────────────────────────────────────────────────
   const allBooksFlat = [...library, ...communityLib]
     .filter((b,i,a) => a.findIndex(x=>x.id===b.id)===i);
 
@@ -9249,18 +8973,13 @@ function showBookmarkEditor(templateId, _unused) {
         <button data-rmbook="${id}" style="background:none;border:none;cursor:pointer;
           font-size:.75rem;color:#5a48b0;line-height:1;padding:0;">×</button>
       </span>`;
-    }).join('') || `<span style="font-size:.75rem;color:var(--muted);font-style:italic">
-      None selected</span>`;
+    }).join('') || `<span style="font-size:.75rem;color:var(--muted);font-style:italic">None selected</span>`;
     wrap.querySelectorAll('[data-rmbook]').forEach(btn => {
-      btn.addEventListener('click', () => {
-        selectedBookIds.delete(btn.dataset.rmbook);
-        renderBookChips();
-      });
+      btn.addEventListener('click', () => { selectedBookIds.delete(btn.dataset.rmbook); renderBookChips(); });
     });
   }
   renderBookChips();
 
-  // Book search dropdown
   overlay.querySelector('#bmEdBookSearch').addEventListener('input', e => {
     const q = e.target.value.toLowerCase().trim();
     const dd = overlay.querySelector('#bmEdBookDropdown');
@@ -9285,146 +9004,15 @@ function showBookmarkEditor(templateId, _unused) {
     });
   });
   overlay.querySelector('#bmEdBookSearch').addEventListener('blur', () => {
-    setTimeout(() => {
-      overlay.querySelector('#bmEdBookDropdown').style.display = 'none';
-    }, 150);
+    setTimeout(() => { overlay.querySelector('#bmEdBookDropdown').style.display = 'none'; }, 150);
   });
 
-  // ── USER CHIPS ────────────────────────────────────────────────────────
-  function renderUserChips() {
-    const wrap = overlay.querySelector('#bmEdUserChips');
-    if(!wrap) return;
-    wrap.innerHTML = [...selectedUserIds].map(uid => {
-      const u = allUsers.find(x => x.uid === uid);
-      const label = uid === '__all__' ? 'Everyone'
-        : (u?.displayName || u?.email || uid);
-      return `<span style="display:inline-flex;align-items:center;gap:.25rem;padding:.2rem .6rem;
-        font-size:.65rem;font-weight:700;border-radius:20px;background:#fff8ec;
-        color:var(--gold);border:1px solid rgba(200,149,42,.4);">
-        ${esc(label)}
-        <button data-rmuser="${uid}" style="background:none;border:none;cursor:pointer;
-          font-size:.75rem;color:var(--gold);line-height:1;padding:0;">×</button>
-      </span>`;
-    }).join('') || `<span style="font-size:.75rem;color:var(--muted);font-style:italic">
-      No users selected yet</span>`;
-    wrap.querySelectorAll('[data-rmuser]').forEach(btn => {
-      btn.addEventListener('click', () => {
-        selectedUserIds.delete(btn.dataset.rmuser);
-        renderUserChips();
-      });
-    });
-  }
-
-  // Load users into the select
-  loadAllUsersIncludingSelf().then(users => {
-    const sel = overlay.querySelector('#bmEdUserSelect');
-    if(!sel) return;
-    sel.innerHTML = `
-      <option value="">— Add a user —</option>
-      <option value="__all__">Everyone</option>
-      ${users.map(u =>
-        `<option value="${u.uid}">${esc(u.displayName||u.email||u.uid)}
-         ${u.uid===currentUser?.uid?' (you)':''}</option>`
-      ).join('')}`;
-    sel.addEventListener('change', e => {
-      const v = e.target.value; if(!v) return;
-      selectedUserIds.add(v);
-      e.target.value = '';
-      renderUserChips();
-    });
-    renderUserChips();
-  });
-
-  // ── CURRENT ASSIGNMENTS ───────────────────────────────────────────────
-  if(existing){
-    const assignEl = overlay.querySelector('#bmEdAssignmentsList');
-    // Load all award records for this template
-    getDocs(query(
-      collection(db, 'user_bookmarks'),
-      where('bookmarkId', '==', existing.id)
-    )).then(snap => {
-      const awards = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-      if(!awards.length && !existing.assignedCategories?.length && !existing.assignedBookIds?.length){
-        assignEl.textContent = 'No assignments yet.';
-        return;
-      }
-      const allBooksAll = [...library, ...communityLib, ..._bookmarkBookCache];
-      let html = '';
-
-      // Global category/book assignments
-      if(existing.assignedCategories?.length){
-        html += `<div style="margin-bottom:.4rem">
-          <span style="font-size:.65rem;font-weight:700;color:var(--teal)">Shelves: </span>
-          ${existing.assignedCategories.map(c =>
-            `<span style="font-size:.72rem;background:var(--teal-light);color:var(--teal);
-              padding:1px 7px;border-radius:10px;margin-right:3px;">${esc(c)}</span>`
-          ).join('')}
-        </div>`;
-      }
-      if(existing.assignedBookIds?.length){
-        html += `<div style="margin-bottom:.4rem">
-          <span style="font-size:.65rem;font-weight:700;color:#5a48b0">Books: </span>
-          ${existing.assignedBookIds.map(id => {
-            const b = allBooksAll.find(x => x.id === id);
-            return `<span style="font-size:.72rem;background:#ece8f8;color:#5a48b0;
-              padding:1px 7px;border-radius:10px;margin-right:3px;">
-              ${esc(b?.title || id)}</span>`;
-          }).join('')}
-        </div>`;
-      }
-
-      // Personal award records
-      if(awards.length){
-        html += `<div style="margin-top:.3rem">
-          <span style="font-size:.65rem;font-weight:700;color:var(--gold)">
-            Personal awards (${awards.length}): </span>
-          ${awards.map(a => {
-            const book = a.bookId ? allBooksAll.find(b => b.id === a.bookId) : null;
-            const u = allUsers.find(x => x.uid === a.userId);
-            const name = a.userId === '__all__' ? 'Everyone'
-              : (u?.displayName || u?.email || a.userId);
-            return `<div style="display:flex;align-items:center;justify-content:space-between;
-              padding:.3rem .5rem;background:var(--panel);border-radius:3px;
-              margin-top:.3rem;gap:.5rem;">
-              <div>
-                <span style="font-size:.75rem;font-weight:700">${esc(name)}</span>
-                ${book ? `<span style="font-size:.68rem;color:var(--muted);margin-left:.4rem">
-                  — ${esc(book.title)}</span>` : ''}
-                ${a.note ? `<div style="font-size:.67rem;color:var(--muted);font-style:italic">
-                  "${esc(a.note)}"</div>` : ''}
-              </div>
-              <button data-deleteaward="${a.id}"
-                style="font-size:.65rem;background:transparent;border:1px solid #e0b0b0;
-                color:var(--danger);padding:.2rem .4rem;border-radius:3px;cursor:pointer;
-                flex-shrink:0;">✕</button>
-            </div>`;
-          }).join('')}
-        </div>`;
-      }
-
-      assignEl.innerHTML = html || 'No assignments yet.';
-
-      assignEl.querySelectorAll('[data-deleteaward]').forEach(btn => {
-        btn.addEventListener('click', async () => {
-          if(!confirm('Remove this award?')) return;
-          await deleteDoc(doc(db, 'user_bookmarks', btn.dataset.deleteaward));
-          _myBookmarks = _myBookmarks.filter(b => b.id !== btn.dataset.deleteaward);
-          btn.closest('div[style]').remove();
-          renderMobHome();
-        });
-      });
-    }).catch(() => { assignEl.textContent = 'Could not load assignments.'; });
-  }
-
-  // ── SAVE ─────────────────────────────────────────────────────────────
   overlay.querySelector('#bmEdSave').addEventListener('click', async () => {
     const name = overlay.querySelector('#bmEdName').value.trim();
     if(!name){ showToast('Please enter a name'); return; }
 
-    const scope = overlay.querySelector('#bmEdScope').value;
     const condType = overlay.querySelector('#bmEdCond').value;
     const condition = { type: condType };
-
     if(condType === 'seasonal'){
       const from = overlay.querySelector('#bmEdCondFrom')?.value;
       const to   = overlay.querySelector('#bmEdCondTo')?.value;
@@ -9436,7 +9024,6 @@ function showBookmarkEditor(templateId, _unused) {
 
     const templateData = {
       name,
-      description: overlay.querySelector('#bmEdDesc').value.trim(),
       shape:  overlay.querySelector('#bmEdShape').value,
       animationStyle: overlay.querySelector('#bmEdAnimStyle').value,
       icon:   overlay.querySelector('#bmEdIcon').value,
@@ -9446,60 +9033,25 @@ function showBookmarkEditor(templateId, _unused) {
         accent: overlay.querySelector('#bmEdAccent').value,
         text:   overlay.querySelector('#bmEdText').value,
       },
-      scope,
+      scope: 'global',
       condition,
       active: true,
       updatedAt: serverTimestamp(),
-      // Global assignment targets
-      assignedCategories: scope === 'global' ? [...selectedCats]    : [],
-      assignedBookIds:    scope === 'global' ? [...selectedBookIds] : [],
+      assignedCategories: [...selectedCats],
+      assignedBookIds:    [...selectedBookIds],
     };
 
     overlay.remove();
     showLoading(existing ? 'Saving…' : 'Creating…');
-
     try {
-      let savedId;
       if(existing){
         await updateDoc(doc(db, 'bookmarks', existing.id), templateData);
-        savedId = existing.id;
       } else {
         templateData.createdAt = serverTimestamp();
         templateData.createdBy = currentUser.uid;
-        const ref = await addDoc(collection(db, 'bookmarks'), templateData);
-        savedId = ref.id;
+        await addDoc(collection(db, 'bookmarks'), templateData);
       }
-
-      // Personal awards — create one doc per selected user
-      if(scope === 'personal' && selectedUserIds.size > 0){
-        const targets = selectedUserIds.has('__all__')
-          ? (await loadAllUsersIncludingSelf()).map(u => u.uid)
-          : [...selectedUserIds];
-        const awardBook  = overlay?.querySelector?.('#bmEdAwardBook')?.value  || null;
-        const awardNote  = overlay?.querySelector?.('#bmEdAwardNote')?.value?.trim() || '';
-        for(const uid of targets){
-          const ref = await addDoc(collection(db, 'user_bookmarks'), {
-            userId:     uid,
-            bookmarkId: savedId,
-            bookId:     awardBook || null,
-            type:       'award',
-            scope:      'personal',
-            awardedBy:  currentUser.uid,
-            awardedAt:  serverTimestamp(),
-            note:       awardNote,
-            displayed:  true,
-          });
-          if(uid === currentUser.uid){
-            _myBookmarks.push({ id: ref.id, userId: uid, bookmarkId: savedId,
-              bookId: awardBook||null, type:'award', scope:'personal',
-              awardedBy: currentUser.uid, note: awardNote });
-          }
-        }
-        showToast(`${existing?'Updated':'Created'} — awarded to ${targets.length} user${targets.length!==1?'s':''} ✓`);
-      } else {
-        showToast(`Bookmark ${existing?'updated':'created'} ✓`);
-      }
-
+      showToast(`Bookmark ${existing?'updated':'created'} ✓`);
       await loadBookmarkTemplates();
       await loadMyBookmarks();
       adminLoadBookmarks();
