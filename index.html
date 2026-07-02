@@ -4687,11 +4687,11 @@ document.getElementById('btnToggleBookmarkList').addEventListener('click', () =>
   }
 
   else if(style === 'drift') {
-    const count = 3;
+    const count = 10; // matches rain
     for(let i = 0; i < count; i++) {
       const el = mkParticle(28);
-      const y = h * 0.15 + Math.random() * h * 0.6;
-      const delay = i * 450;
+      const y = h * 0.1 + Math.random() * h * 0.75;
+      const delay = i * 220 + Math.random() * 150;
       el.style.top = y + 'px';
       el.style.left = '-40px';
       el.animate([
@@ -4699,7 +4699,7 @@ document.getElementById('btnToggleBookmarkList').addEventListener('click', () =>
         { opacity: 1, offset: 0.12 },
         { opacity: 1, offset: 0.85 },
         { transform: `translateX(${w + 80}px)`, opacity: 0 }
-      ], { duration: 3000, delay, easing: 'ease-in-out', fill: 'forwards' })
+      ], { duration: 3000 + Math.random() * 600, delay, easing: 'ease-in-out', fill: 'forwards' })
         .onfinish = () => el.remove();
     }
   }
@@ -4725,6 +4725,7 @@ document.getElementById('btnToggleBookmarkList').addEventListener('click', () =>
 
   else if(style === 'spiral') {
     const count = 6;
+    const maxRadius = Math.max(w, h) * 0.55; // reaches toward the edge
     for(let i = 0; i < count; i++) {
       const el = mkParticle(26);
       el.style.left = cx + 'px';
@@ -4733,14 +4734,14 @@ document.getElementById('btnToggleBookmarkList').addEventListener('click', () =>
       const frames = [];
       for(let s = 0; s <= 8; s++) {
         const t = s / 8;
-        const radius = t * 100;
+        const radius = t * maxRadius;
         const angle = baseAngle + t * Math.PI * 4;
         frames.push({
           transform: `translate(${Math.cos(angle) * radius}px, ${Math.sin(angle) * radius}px) rotate(${angle}rad) scale(${1 - t * 0.4})`,
-          opacity: t < 0.15 ? t / 0.15 : 1 - t
+          opacity: t < 0.15 ? t / 0.15 : (t < 0.75 ? 1 : 1 - (t - 0.75) / 0.25)
         });
       }
-      el.animate(frames, { duration: 1600, delay: i * 80, easing: 'ease-out', fill: 'forwards' })
+      el.animate(frames, { duration: 1900, delay: i * 80, easing: 'ease-out', fill: 'forwards' })
         .onfinish = () => el.remove();
     }
   }
