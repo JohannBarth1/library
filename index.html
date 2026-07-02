@@ -4707,23 +4707,47 @@ document.getElementById('btnToggleBookmarkList').addEventListener('click', () =>
   }
 
   else if(style === 'swarm') {
-    const count = 8;
-    for(let i = 0; i < count; i++) {
-      const angle = (i / count) * 2 * Math.PI;
-      const dist = Math.max(w, h) * 0.65;
-      const startX = cx + Math.cos(angle) * dist;
-      const startY = cy + Math.sin(angle) * dist;
-      const el = mkParticle(24);
-      el.style.left = startX + 'px';
-      el.style.top = startY + 'px';
-      el.animate([
-        { transform: 'translate(0,0) scale(0.5)', opacity: 0 },
-        { opacity: 1, offset: 0.25 },
-        { transform: `translate(${cx - startX}px, ${cy - startY}px) scale(1)`, opacity: 0 }
-      ], { duration: 1200, delay: i * 60, easing: 'ease-out', fill: 'forwards' })
-        .onfinish = () => el.remove();
-    }
+  const count = 9;
+  for(let i = 0; i < count; i++) {
+    const angle = Math.random() * 2 * Math.PI;               // fully random entry angle
+    const dist = Math.max(w, h) * (0.55 + Math.random() * 0.35);
+    const startX = cx + Math.cos(angle) * dist;
+    const startY = cy + Math.sin(angle) * dist;
+
+    const startSize = 46 + Math.random() * 30;                // big on entry
+    const endSize   = 14 + Math.random() * 8;                 // settles small
+    const el = mkParticle(startSize);
+    el.style.left = startX + 'px';
+    el.style.top = startY + 'px';
+
+    // land near center but scattered, not stacked on one point
+    const landRadius = Math.random() * w * 0.08;
+    const landAngle = Math.random() * 2 * Math.PI;
+    const endX = cx + Math.cos(landAngle) * landRadius;
+    const endY = cy + Math.sin(landAngle) * landRadius;
+    const dx = endX - startX;
+    const dy = endY - startY;
+
+    // bow the path sideways so it curves in rather than flying straight
+    const bow = (Math.random() - 0.5) * dist * 0.35;
+    const perpX = -Math.sin(angle), perpY = Math.cos(angle);
+    const midX = dx * 0.5 + perpX * bow;
+    const midY = dy * 0.5 + perpY * bow;
+
+    const scaleRatio = endSize / startSize;
+    const dur = 1100 + Math.random() * 700;
+    const delay = Math.random() * 500;                        // randomized, not ordered
+    const rot = (Math.random() - 0.5) * 60;
+
+    el.animate([
+      { transform: 'translate(0,0) scale(1) rotate(0deg)', opacity: 0 },
+      { opacity: 1, offset: 0.12 },
+      { transform: `translate(${midX}px, ${midY}px) scale(${(1+scaleRatio)/2}) rotate(${rot*0.5}deg)`, opacity: 1, offset: 0.55 },
+      { transform: `translate(${dx}px, ${dy}px) scale(${scaleRatio}) rotate(${rot}deg)`, opacity: 0 }
+    ], { duration: dur, delay, easing: 'cubic-bezier(0.25,0.1,0.25,1)', fill: 'forwards' })
+      .onfinish = () => el.remove();
   }
+}
 
   else if(style === 'spiral') {
     const count = 6;
