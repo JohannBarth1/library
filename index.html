@@ -4088,7 +4088,9 @@ async function renderChapterPaged(bodyHtml) {
   }
   const t = _themeStyles();
   const padding = Math.max(16, Math.min(48, Math.round(w * 0.06)));
-
+  const lineHeightPx = readerFontSize * 1.85;
+  const usableH = h - 2 * 16; // rough vertical padding allowance (0.4rem + 0.6rem ≈ 16px at 16px base, adjust if needed)
+  const snappedH = Math.floor(usableH / lineHeightPx) * lineHeightPx;
   // Create + append iframe FIRST so we can measure its real width
   const iframe = document.createElement('iframe');
   iframe.setAttribute('sandbox', 'allow-same-origin');
@@ -4125,7 +4127,7 @@ body {
   column-width: ${actualW - 2 * padding}px;
   column-gap: ${padding * 2}px;
   column-fill: auto;
-  height: ${h}px;
+  height: ${snappedH}px;
   box-sizing: border-box;
   padding: 0.4rem ${padding}px 0.6rem;
   orphans: 3;
@@ -4255,8 +4257,8 @@ function recalcReaderHeight() {
   if(!doc) return;
 
   // Re-apply column height and recalculate page count
-  doc.body.style.height      = h + 'px';
-  doc.body.style.columnWidth = w + 'px';
+  doc.body.style.height      = snappedH + 'px';
+  doc.body.style.columnWidth = (w - 2 * padding) + 'px';
   _readerIframe.style.width  = w + 'px';
   _readerIframe.style.height = h + 'px';
 
