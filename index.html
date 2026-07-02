@@ -4124,7 +4124,7 @@ body {
   column-width: ${actualW - 2 * padding}px;
   column-gap: ${padding * 2}px;
   column-fill: auto;
-  height: ${snappedH}px;
+  height: ${h}px;
   box-sizing: border-box;
   padding: 0.4rem ${padding}px 0.6rem;
   orphans: 3;
@@ -4259,7 +4259,7 @@ function recalcReaderHeight() {
   if(!doc) return;
 
   // Re-apply column height and recalculate page count
-  doc.body.style.height      = snappedH + 'px';
+  doc.body.style.height      = ${h}px;
   doc.body.style.columnWidth = (w - 2 * padding) + 'px';
   _readerIframe.style.width  = w + 'px';
   _readerIframe.style.height = h + 'px';
