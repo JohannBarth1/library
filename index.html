@@ -2855,7 +2855,18 @@ document.getElementById('btnCopyDirectLink').addEventListener('click', async ()=
   const ok = await copyTextToClipboard(document.getElementById('directLinkBox').textContent);
   showToast(ok ? 'Link copied ✓' : 'Copy failed — tap and hold the text above to copy manually');
 });
-function checkUrlHash(){const m=window.location.hash.match(/[#&]book=([a-zA-Z0-9]+)/);if(m)setTimeout(()=>showBookById(m[1]),400);}
+
+function checkUrlHash(){
+  const m=window.location.hash.match(/[#&]book=([a-zA-Z0-9]+)/);
+  if(m)setTimeout(()=>{
+    if(window.innerWidth > 768){
+      showBookById(m[1]);
+    } else {
+      mobPrevPanel = 'mobPanelHome';
+      mob_showBook(m[1]);
+    }
+  },400);
+}
 
 // ── EDIT METADATA ─────────────────────────────────────────────────────────────
 function stripHtml(s){const d=document.createElement('div');d.innerHTML=s;return d.textContent||d.innerText||s;}
