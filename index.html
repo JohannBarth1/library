@@ -1459,6 +1459,21 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
   </div>
   </div>
 
+  <!-- ── TIMELINE PANEL ── -->
+  <div class="mob-panel" id="mobPanelTimeline">
+    <div style="display:flex;flex-direction:column;height:100%;overflow:hidden">
+      <div style="background:var(--navy);padding:10px 14px 8px;display:flex;align-items:center;justify-content:space-between;border-bottom:2px solid var(--gold);flex-shrink:0">
+        <div style="font-family:'Playfair Display',serif;font-size:.9rem;color:#d8e8f0">Timeline</div>
+        <select id="timelineYearFilter" style="font-size:.72rem;background:#1a2840;border:1px solid #334;color:#d8e8f0;border-radius:4px;padding:3px 6px;outline:none;cursor:pointer">
+          <option value="all">All time</option>
+        </select>
+      </div>
+      <div class="mob-grid-scroll" id="timelineContent" style="-webkit-overflow-scrolling:touch">
+        <div style="text-align:center;padding:3rem 1rem;color:var(--muted);font-size:.85rem">Tap Timeline to load</div>
+      </div>
+    </div>
+  </div>
+
   <!-- ── BOOK DETAIL PANEL ── -->
   <div class="mob-panel" id="mobPanelDetail">
     <div class="mob-detail-header">
@@ -1614,8 +1629,24 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
     <button class="mob-tab" id="mobNavLibrary">
       <span class="tab-icon">📚</span><span>Library</span>
     </button>
-    <button class="mob-tab" id="mobNavCommunity" style="position:relative">
+    <button class="mob-tab" id="mobNavCommunity" style="display:none;position:relative">
       <span class="tab-icon">🛋️</span><span>Lounge</span>
+    </button>
+    <button class="mob-tab" id="mobNavTimeline">
+      <span class="tab-icon" style="display:flex;align-items:center;justify-content:center;height:1.4rem">
+        <svg width="24" height="20" viewBox="0 0 26 22" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="2" y="13" width="4" height="8" rx="1" fill="#c8952a" opacity=".7"/>
+          <rect x="8" y="8" width="4" height="13" rx="1" fill="#c8952a" opacity=".85"/>
+          <rect x="14" y="3" width="4" height="18" rx="1" fill="#c8952a"/>
+          <rect x="20" y="7" width="4" height="14" rx="1" fill="#c8952a" opacity=".9"/>
+          <circle cx="4" cy="11" r="2" fill="#2a7c8a"/>
+          <circle cx="10" cy="6" r="2" fill="#2a7c8a"/>
+          <circle cx="16" cy="1" r="2" fill="#2a7c8a"/>
+          <circle cx="22" cy="5" r="2" fill="#2a7c8a"/>
+          <polyline points="4,11 10,6 16,1 22,5" stroke="#2a7c8a" stroke-width="1.2" stroke-dasharray="2 1.5" fill="none"/>
+        </svg>
+      </span>
+      <span>Timeline</span>
     </button>
     <button class="mob-tab" id="mobNavSettings">
       <span class="tab-icon">⚙</span><span>Settings</span>
@@ -2878,17 +2909,19 @@ document.getElementById('mobNavLibrary').addEventListener('click',  () => mob_sw
 document.getElementById('mobNavHome').addEventListener('click', () => { mob_switchTab('home');});
 document.getElementById('mobNavCommunity').addEventListener('click',() => mob_switchTab('community'));
 document.getElementById('mobNavSettings').addEventListener('click', () => mob_switchTab('settings'));
+document.getElementById('mobNavTimeline')?.addEventListener('click', () => mob_switchTab('timeline'));
 
 function mob_switchTab(tab) {
   document.querySelectorAll('.mob-tab, .mob-tab-home').forEach(t => t.classList.remove('active'));
-  const tabMap = { library:'mobNavLibrary', home:'mobNavHome', community:'mobNavCommunity', settings:'mobNavSettings' };
+  const tabMap = { library:'mobNavLibrary', home:'mobNavHome', community:'mobNavCommunity', settings:'mobNavSettings', timeline:'mobNavTimeline' };
   document.getElementById(tabMap[tab])?.classList.add('active');
-  const panelMap = { library:'mobPanelLibrary', home:'mobPanelHome', community:'mobPanelCommunity', settings:'mobPanelSettings' };
+  const panelMap = { library:'mobPanelLibrary', home:'mobPanelHome', community:'mobPanelCommunity', settings:'mobPanelSettings', timeline:'mobPanelTimeline' };
   mob_showPanel(panelMap[tab] || 'mobPanelHome');
   if (tab === 'home') {
     renderMobHome();
   }
   if (tab === 'library')   renderMobLibrary();
+  if (tab === 'timeline')  renderTimeline();
   if (tab === 'settings')  renderKoboSettings(document.getElementById('mobKoboSettings'));
 }
 
@@ -9090,6 +9123,257 @@ function showBookmarkEditor(templateId) {
     }
     hideLoading();
   });
+}
+
+  // ── TIMELINE ──────────────────────────────────────────────────────────────
+let _timelineEvents = [];
+let timelineYearFilter = 'all';
+
+async function loadTimelineCheckouts() {
+  if(!currentUser) return [];
+  try {
+    const snap = await getDocs(
+      query(collection(db, 'checkouts'), where('userId', '==', currentUser.uid), orderBy('checkedOutAt', 'asc'))
+    );
+    return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  } catch(e) {
+    console.warn('loadTimelineCheckouts:', e);
+    return [];
+  }
+}
+
+function estimatePages(book) {
+  const map = {
+    'Short Stories': 180, 'Poetry': 120, "Children's": 150, 'Young Adult': 280,
+    'Graphic Novel': 160,
+  };
+  return map[book?.category] || 320;
+}
+
+async function buildTimelineEvents() {
+  const allBooks = dedupe([...library, ...communityLib]);
+  const bookMap = {};
+  allBooks.forEach(b => bookMap[b.id] = b);
+
+  const checkouts = await loadTimelineCheckouts();
+
+  const firstByBook = {};
+  const lastByBook = {};
+  checkouts.forEach(c => {
+    if(!c.bookId) return;
+    const started = c.checkedOutAt?.toDate?.();
+    const opened  = c.openedAt?.toDate?.() || started;
+    if(started && (!firstByBook[c.bookId] || started < firstByBook[c.bookId])) firstByBook[c.bookId] = started;
+    if(opened  && (!lastByBook[c.bookId]  || opened  > lastByBook[c.bookId]))  lastByBook[c.bookId]  = opened;
+  });
+
+  const finishedIds = _userLists.find(l => l.id === 'finished')?.bookIds || [];
+  const currentIds  = new Set(_userLists.find(l => l.id === 'currently-reading')?.bookIds || []);
+
+  const events = [];
+
+  Object.keys(firstByBook).forEach(bookId => {
+    const book = bookMap[bookId];
+    if(!book) return;
+    events.push({ type: 'started', bookId, book, date: firstByBook[bookId] });
+  });
+
+  finishedIds.forEach(bookId => {
+    const book = bookMap[bookId];
+    if(!book) return;
+    const date = lastByBook[bookId] || firstByBook[bookId] || new Date();
+    events.push({ type: 'finished', bookId, book, date });
+  });
+
+  _myBookmarks
+    .filter(b => b.type === 'reading_position' && currentIds.has(b.bookId))
+    .forEach(b => {
+      const book = bookMap[b.bookId];
+      if(!book) return;
+      events.push({
+        type: 'reading', bookId: b.bookId, book,
+        date: b.updatedAt?.toDate?.() || new Date(),
+        progress: b.progress || 0,
+      });
+    });
+
+  events.sort((a, b) => b.date - a.date);
+  _timelineEvents = events;
+  return events;
+}
+
+async function renderTimeline() {
+  const container = document.getElementById('timelineContent');
+  if(!container) return;
+  container.innerHTML = `<div style="text-align:center;padding:3rem 1rem;color:var(--muted);font-size:.85rem">Loading…</div>`;
+
+  await buildTimelineEvents();
+  populateTimelineYearFilter();
+  renderTimelineContent();
+}
+
+function populateTimelineYearFilter() {
+  const sel = document.getElementById('timelineYearFilter');
+  if(!sel) return;
+  const years = [...new Set(_timelineEvents.map(e => e.date.getFullYear()))].sort((a, b) => b - a);
+  const prev = sel.value || 'all';
+  sel.innerHTML = `<option value="all">All time</option>` +
+    years.map(y => `<option value="${y}">${y}</option>`).join('');
+  sel.value = years.includes(parseInt(prev)) ? prev : 'all';
+  timelineYearFilter = sel.value;
+}
+
+document.getElementById('timelineYearFilter')?.addEventListener('change', e => {
+  timelineYearFilter = e.target.value;
+  renderTimelineContent();
+});
+
+function renderTimelineContent() {
+  const container = document.getElementById('timelineContent');
+  if(!container) return;
+
+  const filtered = timelineYearFilter === 'all'
+    ? _timelineEvents
+    : _timelineEvents.filter(e => e.date.getFullYear() === parseInt(timelineYearFilter));
+
+  const thisYear = new Date().getFullYear();
+  const finishedThisYearEvents = _timelineEvents.filter(e => e.type === 'finished' && e.date.getFullYear() === thisYear);
+  const finishedThisYear = finishedThisYearEvents.length;
+  const pagesRead = finishedThisYearEvents.reduce((sum, e) => sum + estimatePages(e.book), 0);
+  const inProgress = (_userLists.find(l => l.id === 'currently-reading')?.bookIds || []).length;
+
+  const recentFinished = _timelineEvents
+    .filter(e => e.type === 'finished')
+    .slice(0, 3)
+    .map(e => e.book);
+
+  const heroHtml = renderTimelineHero(recentFinished, finishedThisYear, inProgress, pagesRead);
+
+  if(!filtered.length) {
+    container.innerHTML = heroHtml + `
+      <div style="text-align:center;padding:3rem 1.5rem;color:var(--muted);">
+        <div style="font-size:2.2rem;opacity:.25;margin-bottom:.6rem">📖</div>
+        <div style="font-size:.88rem;line-height:1.6">Your reading timeline will appear here as you start and finish books.</div>
+      </div>`;
+    return;
+  }
+
+  const groups = [];
+  let lastKey = null;
+  filtered.forEach(e => {
+    const key = e.date.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+    if(key !== lastKey) { groups.push({ key, events: [] }); lastKey = key; }
+    groups[groups.length - 1].events.push(e);
+  });
+
+  const groupsHtml = groups.map(g => `
+    <div style="padding:0 1rem;margin-bottom:.3rem;">
+      <div style="font-size:.65rem;letter-spacing:.15em;text-transform:uppercase;
+                  font-weight:700;color:var(--muted);padding:1rem 0 .5rem;">
+        ${esc(g.key)}
+      </div>
+      ${g.events.map(e => renderTimelineCard(e)).join('')}
+    </div>`).join('');
+
+  container.innerHTML = heroHtml + groupsHtml + `<div style="height:1rem"></div>`;
+
+  container.querySelectorAll('[data-timeline-bookid]').forEach(el => {
+    el.addEventListener('click', () => {
+      mobPrevPanel = 'mobPanelTimeline';
+      mob_showBook(el.dataset.timelineBookid);
+    });
+  });
+}
+
+function renderTimelineHero(books, finishedThisYear, inProgress, pagesRead) {
+  const positions = [
+    { rot: 0,  x: 0,   z: 3, scale: 1 },
+    { rot: -8, x: -34, z: 2, scale: .92 },
+    { rot: 8,  x: 34,  z: 1, scale: .92 },
+  ];
+
+  const stackHtml = books.length
+    ? books.map((b, i) => {
+        const pos = positions[i] || positions[2];
+        const src = getCoverSrc(b);
+        const bmTpl = getDisplayBookmarkTemplate(b.id);
+        const ribbon = bmTpl ? `<div style="position:absolute;top:-4px;right:6px;z-index:2;
+              filter:drop-shadow(1px 2px 3px rgba(0,0,0,.4))">
+              ${renderBookmarkSVG(bmTpl, 16, 26, 'tlhero' + b.id, true)}</div>` : '';
+        return `<div data-timeline-bookid="${b.id}" style="
+          position:absolute; left:50%; top:0;
+          transform:translateX(calc(-50% + ${pos.x}px)) rotate(${pos.rot}deg) scale(${pos.scale});
+          z-index:${pos.z}; cursor:pointer;">
+          ${src
+            ? `<img src="${src}" style="width:72px;height:106px;object-fit:cover;border-radius:3px;
+                box-shadow:0 6px 18px rgba(0,0,0,.4);display:block;"/>`
+            : `<div style="width:72px;height:106px;background:linear-gradient(145deg,#2a3d5a,#1a2840);
+                border-radius:3px;box-shadow:0 6px 18px rgba(0,0,0,.4);display:flex;align-items:center;
+                justify-content:center;padding:6px;text-align:center;">
+                <span style="font-size:.55rem;color:rgba(200,180,140,.8);line-height:1.3">${esc(b.title)}</span>
+              </div>`}
+          ${ribbon}
+        </div>`;
+      }).join('')
+    : `<div style="text-align:center;color:rgba(250,247,242,.4);font-size:.78rem;padding-top:2rem;">
+        No finished books yet</div>`;
+
+  return `
+    <div style="background:var(--navy);padding:1.6rem 1rem 1.2rem;position:relative;overflow:hidden;">
+      <div style="position:relative;height:118px;margin-bottom:1rem;">
+        ${stackHtml}
+      </div>
+      <div style="display:flex;justify-content:center;gap:1.6rem;padding-top:.4rem;
+                  border-top:1px solid rgba(255,255,255,.08);">
+        <div style="text-align:center;">
+          <div style="font-family:'Playfair Display',serif;font-size:1.3rem;color:var(--gold)">${finishedThisYear}</div>
+          <div style="font-size:.6rem;letter-spacing:.1em;text-transform:uppercase;color:rgba(216,232,240,.55)">Read This Year</div>
+        </div>
+        <div style="text-align:center;">
+          <div style="font-family:'Playfair Display',serif;font-size:1.3rem;color:#5fc9d6">${inProgress}</div>
+          <div style="font-size:.6rem;letter-spacing:.1em;text-transform:uppercase;color:rgba(216,232,240,.55)">In Progress</div>
+        </div>
+        <div style="text-align:center;">
+          <div style="font-family:'Playfair Display',serif;font-size:1.3rem;color:var(--cream)">${pagesRead.toLocaleString()}</div>
+          <div style="font-size:.6rem;letter-spacing:.1em;text-transform:uppercase;color:rgba(216,232,240,.55)">Pages Read</div>
+        </div>
+      </div>
+    </div>`;
+}
+
+function renderTimelineCard(e) {
+  const b = e.book;
+  const src = getCoverSrc(b);
+  const dateStr = e.date.toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
+  const bmTpl = getDisplayBookmarkTemplate(b.id);
+
+  let icon = '', label = '', labelColor = '';
+  if(e.type === 'started')  { icon = '▶'; label = 'Started';  labelColor = 'var(--teal)'; }
+  if(e.type === 'finished') { icon = '✓'; label = 'Finished'; labelColor = '#276749'; }
+  if(e.type === 'reading')  { icon = '📖'; label = `Reading — ${Math.round((e.progress || 0) * 100)}%`; labelColor = 'var(--gold)'; }
+
+  const coverHtml = src
+    ? `<img src="${src}" style="width:44px;height:64px;object-fit:cover;border-radius:2px;
+        box-shadow:0 2px 8px rgba(0,0,0,.2);flex-shrink:0;"/>`
+    : `<div style="width:44px;height:64px;background:linear-gradient(145deg,var(--navy2),#2a3d5a);
+        border-radius:2px;flex-shrink:0;"></div>`;
+
+  const ribbon = bmTpl
+    ? `<div style="position:absolute;top:-3px;right:-2px;filter:drop-shadow(1px 1px 2px rgba(0,0,0,.35))">
+        ${renderBookmarkSVG(bmTpl, 12, 20, 'tlc' + b.id + e.type, true)}</div>` : '';
+
+  return `<div data-timeline-bookid="${b.id}" style="display:flex;gap:.7rem;align-items:center;
+              padding:.6rem 0;border-bottom:1px solid var(--border);cursor:pointer;">
+    <div style="position:relative;flex-shrink:0">${coverHtml}${ribbon}</div>
+    <div style="flex:1;min-width:0">
+      <div style="font-size:.62rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;
+                  color:${labelColor};margin-bottom:2px;">${icon} ${label}</div>
+      <div style="font-family:'Playfair Display',serif;font-size:.88rem;color:var(--navy2);
+                  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(b.title)}</div>
+      <div style="font-size:.7rem;color:var(--muted);margin-top:1px;">${esc(b.author || '')}</div>
+    </div>
+    <div style="font-size:.68rem;color:var(--muted);flex-shrink:0;text-align:right;">${dateStr}</div>
+  </div>`;
 }
 
 renderAll();
