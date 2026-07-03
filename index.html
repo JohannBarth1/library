@@ -4958,8 +4958,10 @@ function closeReader(){
       if(finList && !(finList.bookIds || []).includes(readerBookId)){
         const finIds = [...(finList.bookIds || []), readerBookId];
         finList.bookIds = finIds;
+        finList.finishedAtMap = { ...(finList.finishedAtMap || {}), [readerBookId]: new Date() };
         setDoc(doc(db, 'user_lists', currentUser.uid, 'lists', 'finished'),
-          { bookIds: finIds, updatedAt: serverTimestamp() }, { merge: true }
+          { bookIds: finIds, finishedAtMap: { [readerBookId]: serverTimestamp() }, updatedAt: serverTimestamp() },
+          { merge: true }
         ).catch(e => console.warn('closeReader finished update:', e));
         showToast('Added to Finished ✓');
       }
@@ -4996,9 +4998,10 @@ async function markBookFinished(bookId){
   if(finList && !(finList.bookIds || []).includes(bookId)){
     const finIds = [...(finList.bookIds || []), bookId];
     finList.bookIds = finIds;
+    finList.finishedAtMap = { ...(finList.finishedAtMap || {}), [bookId]: new Date() };
     await setDoc(
       doc(db, 'user_lists', currentUser.uid, 'lists', 'finished'),
-      { bookIds: finIds, updatedAt: serverTimestamp() },
+      { bookIds: finIds, finishedAtMap: { [bookId]: serverTimestamp() }, updatedAt: serverTimestamp() },
       { merge: true }
     ).catch(e => console.warn('markBookFinished finList:', e));
   }
@@ -9178,10 +9181,15 @@ async function buildTimelineEvents() {
     events.push({ type: 'started', bookId, book, date: firstByBook[bookId] });
   });
 
+  const finList = _userLists.find(l => l.id === 'finished');
+  const finishedAtMap = finList?.finishedAtMap || {};
+
   finishedIds.forEach(bookId => {
     const book = bookMap[bookId];
     if(!book) return;
-    const date = lastByBook[bookId] || firstByBook[bookId] || new Date();
+    const stamped = finishedAtMap[bookId];
+    const date = stamped?.toDate?.() || (stamped instanceof Date ? stamped : null)
+      || lastByBook[bookId] || firstByBook[bookId] || new Date();
     events.push({ type: 'finished', bookId, book, date });
   });
 
