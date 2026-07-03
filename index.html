@@ -2679,6 +2679,7 @@ function buildDrawerIconBar(book, isMine){
       <div style="font-size:.58rem;letter-spacing:.15em;text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:.35rem;">Everyone</div>
       <div style="display:flex;gap:.4rem;flex-wrap:wrap;">
         <button class="drawer-icon-btn" data-action="download"><span class="di-icon">⬇</span><span class="di-label">Download</span></button>
+        <button class="drawer-icon-btn" data-action="link"><span class="di-icon">📎</span><span class="di-label">Copy Link</span></button>
         <button class="drawer-icon-btn" data-action="history"><span class="di-icon">📋</span><span class="di-label">History</span></button>
         <button class="drawer-icon-btn" data-action="addtolist"><span class="di-icon">📚</span><span class="di-label">My Lists</span></button>
       </div>
@@ -2818,13 +2819,42 @@ document.getElementById('btnConfirmPrivateShare').addEventListener('click',async
     showToast('Access granted ✓');
   }catch(e){hideLoading();showToast('Failed: '+e.message);}
 });
-document.getElementById('btnCopyPrivateLink').addEventListener('click',()=>navigator.clipboard.writeText(document.getElementById('privateShareLink').textContent).then(()=>showToast('Link copied ✓')));
+document.getElementById('btnCopyPrivateLink').addEventListener('click', async ()=>{
+  const ok = await copyTextToClipboard(document.getElementById('privateShareLink').textContent);
+  showToast(ok ? 'Link copied ✓' : 'Copy failed — tap and hold the text above to copy manually');
+});
 
 // ── DIRECT LINK ───────────────────────────────────────────────────────────────
 function showDirectLink(){if(!currentId)return;document.getElementById('directLinkBox').textContent=getDirectLink(currentId);document.getElementById('linkModal').classList.add('open');}
 function getDirectLink(id){return `${location.origin}${location.pathname}#book=${id}`;}
 document.getElementById('btnCloseLinkModal').addEventListener('click',()=>document.getElementById('linkModal').classList.remove('open'));
-document.getElementById('btnCopyDirectLink').addEventListener('click',()=>navigator.clipboard.writeText(document.getElementById('directLinkBox').textContent).then(()=>showToast('Link copied ✓')));
+async function copyTextToClipboard(text){
+  try{
+    if(navigator.clipboard && window.isSecureContext){
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
+    throw new Error('Clipboard API unavailable');
+  }catch(e){
+    // Fallback for non-HTTPS / embedded webviews where the Clipboard API is blocked
+    try{
+      const ta=document.createElement('textarea');
+      ta.value=text;
+      ta.style.position='fixed';ta.style.opacity='0';
+      document.body.appendChild(ta);
+      ta.focus();ta.select();
+      const ok=document.execCommand('copy');
+      document.body.removeChild(ta);
+      return ok;
+    }catch(e2){
+      return false;
+    }
+  }
+}
+document.getElementById('btnCopyDirectLink').addEventListener('click', async ()=>{
+  const ok = await copyTextToClipboard(document.getElementById('directLinkBox').textContent);
+  showToast(ok ? 'Link copied ✓' : 'Copy failed — tap and hold the text above to copy manually');
+});
 function checkUrlHash(){const m=window.location.hash.match(/[#&]book=([a-zA-Z0-9]+)/);if(m)setTimeout(()=>showBookById(m[1]),400);}
 
 // ── EDIT METADATA ─────────────────────────────────────────────────────────────
