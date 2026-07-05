@@ -4080,6 +4080,10 @@ document.getElementById('readerOverlay').addEventListener('click', e => {
      !e.target.closest('#btnToggleReaderSettings')){
     settingsBar.classList.remove('open');
   }
+
+  if(!e.target.closest('#readerHighlightPopup')) {
+    _removeHighlightPopup();
+  }
 });
 document.getElementById('btnCloseReader').addEventListener('click',closeReader);
 document.addEventListener('keydown',e=>{
@@ -4142,6 +4146,8 @@ async function readCurrentBook(){
     document.getElementById('readerSettingsBar').classList.remove('open');
     document.getElementById('readerOverlay').classList.remove('toolbar-hidden');
     document.getElementById('readerOverlay').classList.add('open');
+
+    await loadHighlightsForBook(book.id);
 
     const saved = loadReadingProgress(book.id);
     if(saved && saved.chapterIdx < readerSpine.length && saved.chapterIdx > 0){
@@ -4291,25 +4297,266 @@ function _themeStyles() {
   return themes[readerTheme] || themes.day;
 }
 
-function _ensureReaderTapLayer() {
-  let layer = document.getElementById('readerTapLayer');
-  if (layer) return layer;
+// ── HIGHLIGHTS ───────────────────────────────────────────────────────────────
+// Highlights are stored as {chapterIdx, startOffset, endOffset} where the
+// offsets index into the flattened plain-text of that chapter's
+// .chapter-wrap content, in document order. CSS columns never split text
+// nodes (they only affect visual layout), so this coordinate space is
+// stable across font-size changes, screen sizes, and re-pagination.
 
-  layer = document.createElement('div');
-  layer.id = 'readerTapLayer';
-  layer.style.cssText = `
-    position:absolute; inset:0; z-index:5;
-    background:transparent; touch-action:manipulation;
+let _currentBookHighlights = [];
+
+const HIGHLIGHT_COLORS = {
+  yellow: 'rgba(255,213,0,.45)',
+  green:  'rgba(110,200,120,.45)',
+  blue:   'rgba(110,170,230,.45)',
+  pink:   'rgba(230,130,175,.45)',
+};
+
+async function loadHighlightsForBook(bookId) {
+  _currentBookHighlights = [];
+  if(!currentUser || !bookId) return;
+  try {
+    const snap = await getDocs(
+      query(
+        collection(db, 'highlights'),
+        where('userId', '==', currentUser.uid),
+        where('bookId', '==', bookId)
+      )
+    );
+    _currentBookHighlights = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  } catch(e) {
+    console.warn('loadHighlightsForBook:', e);
+  }
+}
+
+function getHighlightsForChapter(chapterIdx) {
+  return _currentBookHighlights
+    .filter(h => h.chapterIdx === chapterIdx)
+    .sort((a, b) => a.startOffset - b.startOffset);
+}
+
+function _chapterTextNodes(doc) {
+  const root = doc.querySelector('.chapter-wrap');
+  if(!root) return [];
+  const walker = doc.createTreeWalker(root, NodeFilter.SHOW_TEXT, null);
+  const nodes = [];
+  let n;
+  while((n = walker.nextNode())) nodes.push(n);
+  return nodes;
+}
+
+// Live Range (within doc) → {startOffset, endOffset} in flattened-text space
+function _rangeToOffsets(doc, range) {
+  const nodes = _chapterTextNodes(doc);
+  let pos = 0, start = null, end = null;
+  for(const node of nodes) {
+    const len = node.textContent.length;
+    if(node === range.startContainer) start = pos + range.startOffset;
+    if(node === range.endContainer)   end   = pos + range.endOffset;
+    pos += len;
+  }
+  if(start === null || end === null) return null;
+  return { startOffset: Math.min(start, end), endOffset: Math.max(start, end) };
+}
+
+// Stored {startOffset, endOffset} → live Range, for the current chapter DOM
+function _offsetsToRange(doc, startOffset, endOffset) {
+  const nodes = _chapterTextNodes(doc);
+  const range = doc.createRange();
+  let pos = 0, startSet = false, endSet = false;
+  for(const node of nodes) {
+    const len = node.textContent.length;
+    if(!startSet && startOffset <= pos + len) {
+      range.setStart(node, Math.max(0, startOffset - pos));
+      startSet = true;
+    }
+    if(!endSet && endOffset <= pos + len) {
+      range.setEnd(node, Math.max(0, endOffset - pos));
+      endSet = true;
+      break;
+    }
+    pos += len;
+  }
+  return (startSet && endSet) ? range : null;
+}
+
+// Wraps every saved highlight for the current chapter in a <mark>. Call
+// after every chapter render (new iframe/doc).
+function applyHighlightsToChapter(doc) {
+  if(!readerBookId) return;
+  const list = getHighlightsForChapter(readerChapter);
+  // Reverse-offset order so wrapping one highlight doesn't shift the DOM
+  // positions the next one's Range needs to be built from.
+  [...list].sort((a, b) => b.startOffset - a.startOffset).forEach(h => {
+    try {
+      const range = _offsetsToRange(doc, h.startOffset, h.endOffset);
+      if(!range) return;
+      const mark = doc.createElement('mark');
+      mark.dataset.highlightid = h.id;
+      mark.style.cssText = `background:${HIGHLIGHT_COLORS[h.color] || HIGHLIGHT_COLORS.yellow};color:inherit;border-radius:2px;`;
+      range.surroundContents(mark);
+    } catch(e) {
+      // A highlight that spans a paragraph/element boundary can't be
+      // wrapped in one surroundContents() call — skip rather than break
+      // the whole chapter's rendering.
+      console.warn('applyHighlightsToChapter: skipped one highlight', e);
+    }
+  });
+}
+
+async function saveHighlight(startOffset, endOffset, color, text) {
+  if(!currentUser || !readerBookId) return null;
+  const data = {
+    userId: currentUser.uid,
+    bookId: readerBookId,
+    chapterIdx: readerChapter,
+    chapterLabel: readerSpine[readerChapter]?.label || '',
+    startOffset, endOffset, color,
+    text: (text || '').slice(0, 500),
+    createdAt: serverTimestamp(),
+  };
+  try {
+    const ref = await addDoc(collection(db, 'highlights'), data);
+    _currentBookHighlights.push({ id: ref.id, ...data });
+    return ref.id;
+  } catch(e) {
+    console.warn('saveHighlight:', e);
+    showToast('Could not save highlight');
+    return null;
+  }
+}
+
+async function deleteHighlight(id) {
+  try {
+    await deleteDoc(doc(db, 'highlights', id));
+    _currentBookHighlights = _currentBookHighlights.filter(h => h.id !== id);
+  } catch(e) { console.warn('deleteHighlight:', e); }
+}
+
+async function updateHighlightColor(id, color) {
+  try {
+    await updateDoc(doc(db, 'highlights', id), { color });
+    const h = _currentBookHighlights.find(x => x.id === id);
+    if(h) h.color = color;
+  } catch(e) { console.warn('updateHighlightColor:', e); }
+}
+
+// ── Selection → floating color-picker popup ─────────────────────────────
+let _highlightPopup = null;
+
+function _removeHighlightPopup() {
+  _highlightPopup?.remove();
+  _highlightPopup = null;
+}
+
+function _colorSwatchesHtml() {
+  return Object.keys(HIGHLIGHT_COLORS).map(c =>
+    `<button data-hlcolor="${c}" style="width:22px;height:22px;border-radius:50%;
+       border:2px solid #fff;cursor:pointer;background:${HIGHLIGHT_COLORS[c]};padding:0;"></button>`
+  ).join('');
+}
+
+function _attachHighlightSelectionUI(doc) {
+  doc.addEventListener('selectionchange', () => {
+    const sel = doc.getSelection ? doc.getSelection() : doc.defaultView?.getSelection();
+    if(!sel || sel.isCollapsed || !sel.rangeCount) { _removeHighlightPopup(); return; }
+    const range = sel.getRangeAt(0);
+    if(!range.toString().trim()) { _removeHighlightPopup(); return; }
+    _showHighlightPopup(doc, range);
+  });
+}
+
+function _showHighlightPopup(doc, range) {
+  _removeHighlightPopup();
+  if(!_readerIframe) return;
+
+  const iframeRect = _readerIframe.getBoundingClientRect();
+  const rect = range.getBoundingClientRect();
+  if(!rect || (!rect.width && !rect.height)) return;
+
+  const popup = document.createElement('div');
+  popup.id = 'readerHighlightPopup';
+  popup.style.cssText = `
+    position:absolute; z-index:200;
+    left:${Math.max(8, iframeRect.left + rect.left + rect.width / 2 - 58)}px;
+    top:${Math.max(8, iframeRect.top + rect.top - 42)}px;
+    display:flex; align-items:center; gap:.45rem;
+    background:#222; border-radius:8px; padding:.4rem .55rem;
+    box-shadow:0 4px 14px rgba(0,0,0,.3);
   `;
-  document.getElementById('readerContent').appendChild(layer);
+  popup.innerHTML = _colorSwatchesHtml();
+  document.body.appendChild(popup);
+  _highlightPopup = popup;
 
+  popup.querySelectorAll('[data-hlcolor]').forEach(btn => {
+    // mousedown so this fires before the selectionchange caused by the
+    // click itself would otherwise clear things out from under us
+    btn.addEventListener('mousedown', async e => {
+      e.preventDefault();
+      const color = btn.dataset.hlcolor;
+      const offsets = _rangeToOffsets(doc, range);
+      const text = range.toString();
+      (doc.getSelection ? doc.getSelection() : doc.defaultView?.getSelection())?.removeAllRanges();
+      _removeHighlightPopup();
+      if(!offsets) return;
+      const id = await saveHighlight(offsets.startOffset, offsets.endOffset, color, text);
+      if(id) applyHighlightsToChapter(doc);
+    });
+  });
+}
+
+// ── Tap-on-existing-highlight → change color / delete ───────────────────
+function openHighlightMenu(markEl, clientX, clientY) {
+  _removeHighlightPopup();
+  const id = markEl.dataset.highlightid;
+
+  const popup = document.createElement('div');
+  popup.id = 'readerHighlightPopup';
+  popup.style.cssText = `
+    position:absolute; z-index:200;
+    left:${Math.max(8, clientX - 68)}px;
+    top:${Math.max(8, clientY - 50)}px;
+    display:flex; align-items:center; gap:.45rem;
+    background:#222; border-radius:8px; padding:.4rem .55rem;
+    box-shadow:0 4px 14px rgba(0,0,0,.3);
+  `;
+  popup.innerHTML = _colorSwatchesHtml() +
+    `<button data-hldelete style="background:none;border:none;color:#fff;
+       font-size:1rem;line-height:1;cursor:pointer;padding:0 .2rem;">✕</button>`;
+  document.body.appendChild(popup);
+  _highlightPopup = popup;
+
+  popup.querySelectorAll('[data-hlcolor]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const color = btn.dataset.hlcolor;
+      await updateHighlightColor(id, color);
+      markEl.style.background = HIGHLIGHT_COLORS[color];
+      _removeHighlightPopup();
+    });
+  });
+  popup.querySelector('[data-hldelete]').addEventListener('click', async () => {
+    await deleteHighlight(id);
+    markEl.replaceWith(...markEl.childNodes);
+    _removeHighlightPopup();
+  });
+}
+
+// PATCH: tap/swipe handling now attaches directly to the iframe document
+// (doc.body) instead of a transparent covering div. Since the iframe is
+// sandbox="allow-same-origin", the parent can access its document directly.
+// This means touches land on the real text first, so native text selection
+// (and the browser's "look up" / define menu) works again — a plain tap
+// still pages/toggles the toolbar, but a press-and-drag becomes a selection.
+function _attachReaderTapHandlers(doc) {
   let tx0 = 0, ty0 = 0;
-  layer.addEventListener('touchstart', e => {
+
+  doc.addEventListener('touchstart', e => {
     tx0 = e.touches[0].clientX;
     ty0 = e.touches[0].clientY;
   }, { passive: true });
 
-  layer.addEventListener('touchend', e => {
+  doc.addEventListener('touchend', e => {
     // If a popup panel is open, this tap just closes it — never turns a page
     const list = document.getElementById('readerChapterList');
     const bmPanel = document.getElementById('readerBookmarkListPanel');
@@ -4323,12 +4570,17 @@ function _ensureReaderTapLayer() {
       return;
     }
 
-    // If the toolbar is showing, any tap anywhere just closes it
+    // If the toolbar overlay is open, any tap anywhere just closes it —
+    // mirrors how the chapter/bookmark/settings panels close on outside tap.
     const readerOv = document.getElementById('readerOverlay');
     if (!readerOv.classList.contains('toolbar-hidden')) {
       readerOv.classList.add('toolbar-hidden');
       return;
     }
+
+    // Don't hijack an active/just-made text selection as a tap or swipe
+    const sel = doc.getSelection ? doc.getSelection() : doc.defaultView?.getSelection();
+    if (sel && !sel.isCollapsed) return;
 
     const dx = e.changedTouches[0].clientX - tx0;
     const dy = e.changedTouches[0].clientY - ty0;
@@ -4341,29 +4593,23 @@ function _ensureReaderTapLayer() {
 
     if (Math.abs(dx) < 10 && Math.abs(dy) < 10) {
       const x = e.changedTouches[0].clientX;
-      const w = layer.getBoundingClientRect().width;
+      const w = doc.documentElement.clientWidth;
       if (x < w * 0.3) { goToPage(readerPage - 1); return; }
       if (x > w * 0.7) { goToPage(readerPage + 1); return; }
 
-      // Middle zone: forward the tap to any in-book chapter link underneath,
-      // otherwise toggle the toolbar
-      let hitLink = false;
-      if (_readerIframe) {
-        const rect = _readerIframe.getBoundingClientRect();
-        const doc = _readerIframe.contentDocument;
-        if (doc) {
-          const localX = x - rect.left;
-          const localY = e.changedTouches[0].clientY - rect.top;
-          const el = doc.elementFromPoint(localX, localY);
-          const link = el?.closest?.('[data-navchapter]');
-          if (link) { readerGoToChapter(parseInt(link.dataset.navchapter)); hitLink = true; }
-        }
-      }
-      if (!hitLink) toggleReaderToolbar();
+      // Middle zone: the touch target is the real element now, so we can
+      // just check it directly instead of elementFromPoint-ing into a frame.
+      const link = e.target.closest?.('[data-navchapter]');
+      if (link) { readerGoToChapter(parseInt(link.dataset.navchapter)); return; }
+
+      const mark = e.target.closest?.('mark[data-highlightid]');
+      if (mark) { openHighlightMenu(mark, e.changedTouches[0].clientX, e.changedTouches[0].clientY); return; }
+
+      toggleReaderToolbar();
     }
   }, { passive: true });
 
-  return layer;
+  _attachHighlightSelectionUI(doc);
 }
 
 async function renderChapterPaged(bodyHtml) {
@@ -4391,7 +4637,6 @@ async function renderChapterPaged(bodyHtml) {
   content.style.position = 'relative';
   content.appendChild(iframe);
   _readerIframe = iframe;
-  _ensureReaderTapLayer();
 
   // Measure actual rendered width to avoid column-width drift
   const actualW = Math.round(iframe.getBoundingClientRect().width);
@@ -4486,6 +4731,9 @@ body {
         readerGoToChapter(parseInt(link.dataset.navchapter), 0);
       }
     });
+
+    _attachReaderTapHandlers(doc);
+    applyHighlightsToChapter(doc);
 
     // Wait for images to load before measuring column count
     const imgs = Array.from(doc.querySelectorAll('img'));
@@ -5188,7 +5436,8 @@ function closeReader(){
   _readerColW = 0; _readerTotalW = 0;
 
   document.getElementById('readerBookmarkTab')?.remove();
-  document.getElementById('readerTapLayer')?.remove();
+  _removeHighlightPopup();
+  _currentBookHighlights = [];
   readerZip = null; readerSpine = []; readerBookId = null;
 }
 
