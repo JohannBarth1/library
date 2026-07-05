@@ -264,6 +264,30 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
   pointer-events: none;
   transform: translateY(6px);
 }
+/* PATCH: persistent min/max handle, sits just above the toolbar's slot at
+   all times (higher z-index than the toolbar) so it's never itself hidden
+   and gives desktop/mouse users a way to show/hide the toolbar, since the
+   tap-anywhere-to-toggle behavior only fires on touch. */
+.reader-toolbar-handle{
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: 52px; /* JS (positionReaderToolbar) keeps this docked above the toolbar */
+  z-index: 130;
+  width: 44px;
+  height: 18px;
+  border: none;
+  border-radius: 8px 8px 0 0;
+  background: rgba(120,120,120,.35);
+  color: #fff;
+  font-size: .8rem;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.reader-toolbar-handle:hover{ background: rgba(120,120,120,.55); }
   .reader-overlay{
   display:none;
   position:fixed;
@@ -359,13 +383,13 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
   flex-direction:column;
   gap:.6rem;
   padding:.8rem 1rem;
-  border-bottom:1px solid rgba(128,128,128,.2);
+  border-top:1px solid rgba(128,128,128,.2);
   position:absolute;
-  top:0;
   left:0;
   right:0;
+  bottom:0; /* JS (positionReaderToolbar) docks this directly above the toolbar */
   z-index:121;
-  box-shadow:0 6px 16px rgba(0,0,0,.16);
+  box-shadow:0 -6px 16px rgba(0,0,0,.16);
 }
 /* PATCH: settings bar now floats over the text instead of pushing it down,
    so opening/closing it never resizes reader-content or repaginates. */
@@ -415,6 +439,14 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
   transform:translate(-50%,-50%);
   box-shadow:0 1px 3px rgba(0,0,0,.4);
   pointer-events:none;
+  opacity:0;
+  transition:opacity .15s ease;
+}
+/* PATCH: the dot (and the ability to actually scrub) only appears once the
+   track has been "armed" by a first tap, so brushing past the progress bar
+   on your way to something else can't accidentally jump your page. */
+.reader-progress-track.armed .reader-progress-thumb{
+  opacity:1;
 }
 .reader-overlay.theme-night .reader-progress-track{
   background:rgba(200,149,42,.12);
@@ -1989,6 +2021,9 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
   <button class="reader-btn reader-btn-close" id="btnCloseReader" title="Close">✕</button>
   </div>
   </div>
+  <!-- Always-visible min/max handle — the toolbar only toggles on tap for
+       touch devices, so desktop (mouse) needs its own persistent control. -->
+  <button class="reader-toolbar-handle" id="readerToolbarHandle" title="Show/hide toolbar">⌄</button>
 
 <!-- TTS Audio Bar -->
 <div class="tts-bar" id="ttsBar">
@@ -3986,9 +4021,21 @@ function applyReaderTheme(theme) {
   function toggleReaderToolbar() {
   const overlay = document.getElementById('readerOverlay');
   overlay.classList.toggle('toolbar-hidden');
+  _updateToolbarHandleIcon();
   // PATCH: toolbar is a floating overlay now — showing/hiding it never
   // changes reader-content's size, so there's nothing to recalculate.
 }
+
+function _updateToolbarHandleIcon() {
+  const handle = document.getElementById('readerToolbarHandle');
+  const overlay = document.getElementById('readerOverlay');
+  if(!handle || !overlay) return;
+  handle.textContent = overlay.classList.contains('toolbar-hidden') ? '⌃' : '⌄';
+}
+
+document.getElementById('readerToolbarHandle')?.addEventListener('click', () => {
+  toggleReaderToolbar();
+});
 
 const bmAnimBtn = document.getElementById('btnToggleBookmarkAnim');
 function refreshBmAnimBtn(){
@@ -4146,6 +4193,7 @@ async function readCurrentBook(){
     document.getElementById('readerSettingsBar').classList.remove('open');
     document.getElementById('readerOverlay').classList.remove('toolbar-hidden');
     document.getElementById('readerOverlay').classList.add('open');
+    _updateToolbarHandleIcon();
 
     await loadHighlightsForBook(book.id);
 
@@ -4244,8 +4292,18 @@ function positionReaderToolbar() {
   const toolbar  = document.getElementById('readerToolbar');
   const infoBar  = document.getElementById('readerInfoBar');
   const progress = document.getElementById('readerProgressWrap');
+  const settingsBar = document.getElementById('readerSettingsBar');
+  const handle   = document.getElementById('readerToolbarHandle');
   if(!toolbar) return;
-  toolbar.style.bottom = ((infoBar?.offsetHeight || 0) + (progress?.offsetHeight || 0)) + 'px';
+  const baseOffset = (infoBar?.offsetHeight || 0) + (progress?.offsetHeight || 0);
+  toolbar.style.bottom = baseOffset + 'px';
+  // PATCH: dock the theme/settings menu directly above the button nav
+  // instead of pinning it to the top of the reader.
+  if(settingsBar) settingsBar.style.bottom = (baseOffset + toolbar.offsetHeight) + 'px';
+  // PATCH: small always-visible handle sits just above the toolbar's slot,
+  // regardless of whether the toolbar itself is currently shown or hidden —
+  // this is the min/max control for desktop, where there's no tap-to-toggle.
+  if(handle) handle.style.bottom = (baseOffset + toolbar.offsetHeight) + 'px';
 }
 
 function _getReaderDimensions() {
@@ -4575,6 +4633,7 @@ function _attachReaderTapHandlers(doc) {
     const readerOv = document.getElementById('readerOverlay');
     if (!readerOv.classList.contains('toolbar-hidden')) {
       readerOv.classList.add('toolbar-hidden');
+      _updateToolbarHandleIcon();
       return;
     }
 
@@ -5513,6 +5572,24 @@ document.getElementById('btnReaderNext').addEventListener('click',()=>goToPage(r
   if(!track) return;
 
   let dragging = false;
+  let armed = false;
+  let disarmTimer = null;
+
+  function arm(){
+    armed = true;
+    track.classList.add('armed');
+    clearTimeout(disarmTimer);
+    // Auto-disarm after a few seconds of not being touched again, so the
+    // "unlocked" state doesn't linger indefinitely.
+    disarmTimer = setTimeout(disarm, 4000);
+  }
+  function disarm(){
+    armed = false;
+    dragging = false;
+    track.classList.remove('armed');
+    clearTimeout(disarmTimer);
+  }
+  window.addEventListener('readerprogressdisarm', disarm);
 
   function progFromEvent(e){
     const rect = track.getBoundingClientRect();
@@ -5529,7 +5606,13 @@ document.getElementById('btnReaderNext').addEventListener('click',()=>goToPage(r
 
   track.addEventListener('pointerdown', e => {
     if(!readerSpine.length) return;
+    if(!armed){
+      // First tap just reveals the handle — it doesn't move anything yet.
+      arm();
+      return;
+    }
     dragging = true;
+    clearTimeout(disarmTimer);
     track.setPointerCapture(e.pointerId);
     previewProg(progFromEvent(e));
   });
@@ -5541,6 +5624,7 @@ document.getElementById('btnReaderNext').addEventListener('click',()=>goToPage(r
     if(!dragging) return;
     dragging = false;
     scrubToProgress(progFromEvent(e));
+    disarmTimer = setTimeout(disarm, 4000);
   });
   track.addEventListener('pointercancel', () => { dragging = false; });
 })();
