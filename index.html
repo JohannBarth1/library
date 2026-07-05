@@ -4323,6 +4323,13 @@ function _ensureReaderTapLayer() {
       return;
     }
 
+    // If the toolbar is showing, any tap anywhere just closes it
+    const readerOv = document.getElementById('readerOverlay');
+    if (!readerOv.classList.contains('toolbar-hidden')) {
+      readerOv.classList.add('toolbar-hidden');
+      return;
+    }
+
     const dx = e.changedTouches[0].clientX - tx0;
     const dy = e.changedTouches[0].clientY - ty0;
 
