@@ -12,7 +12,7 @@
 <link rel="apple-touch-icon" href="icon-192.png">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <style>
-
+  
 @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Lato:wght@300;400;700&display=swap');
 :root {
   --navy:#0f1a2e; --navy2:#1a2840; --cream:#faf7f2; --warm-white:#fffefb;
@@ -247,11 +247,22 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
   align-items: center;
   justify-content: space-between;
   gap: .6rem;
-  flex-shrink: 0;
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0; /* JS (positionReaderToolbar) offsets this above the progress+info bars */
+  z-index: 120;
   border-top: 2px solid var(--gold);
+  box-shadow: 0 -2px 12px rgba(0,0,0,.14);
+  transition: opacity .18s ease, transform .18s ease;
 }
+/* PATCH: toolbar is now an overlay that floats over the text instead of
+   reserving layout space, so hiding/showing it never resizes reader-content
+   and never triggers a repagination / loss of place. */
 .reader-overlay.toolbar-hidden .reader-toolbar {
-  display: none;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(6px);
 }
   .reader-overlay{
   display:none;
@@ -343,19 +354,71 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
   gap:.6rem;
   padding:.8rem 1rem;
   border-bottom:1px solid rgba(128,128,128,.2);
-  flex-shrink:0;
+  position:absolute;
+  top:0;
+  left:0;
+  right:0;
+  z-index:121;
+  box-shadow:0 6px 16px rgba(0,0,0,.16);
 }
+/* PATCH: settings bar now floats over the text instead of pushing it down,
+   so opening/closing it never resizes reader-content or repaginates. */
 .reader-settings-bar.open{ display:flex; }
 .reader-overlay.theme-day   .reader-settings-bar{ background:#f4f4f4; }
 .reader-overlay.theme-sepia .reader-settings-bar{ background:#e0d0b8; }
 .reader-overlay.theme-night .reader-settings-bar{ background:#12122a; }
-.reader-progress{height:3px;flex-shrink:0;}
-.reader-overlay.theme-day .reader-progress{background:#ddd;}
-.reader-overlay.theme-sepia .reader-progress{background:#d4c4a8;}
-.reader-overlay.theme-night .reader-progress{background:#2a2a4a;}
-.reader-progress-bar{height:3px;background:var(--gold);transition:width .3s;}
+
+/* PATCH: vintage reading-progress strip, sits between the chapter text and
+   the info/nav bar. Always in-flow (fixed height) so it never contributes
+   to the reflow issue — only the overlay panels above needed fixing. */
+.reader-progress{
+  display:flex;
+  align-items:center;
+  gap:.7rem;
+  height:34px;
+  box-sizing:border-box;
+  padding:0 1.1rem;
+  flex-shrink:0;
+  border-top:1px solid rgba(148,111,41,.3);
+}
+.reader-overlay.theme-day   .reader-progress{ background:#f4f4f4; }
+.reader-overlay.theme-sepia .reader-progress{ background:#e0d0b8; }
+.reader-overlay.theme-night .reader-progress{ background:#12122a; border-top-color:rgba(200,149,42,.25); }
+.reader-progress-track{
+  flex:1;
+  height:6px;
+  border-radius:3px;
+  overflow:hidden;
+  position:relative;
+  background:rgba(148,111,41,.18);
+  box-shadow:inset 0 1px 2px rgba(0,0,0,.18), inset 0 0 0 1px rgba(148,111,41,.15);
+}
+.reader-overlay.theme-night .reader-progress-track{
+  background:rgba(200,149,42,.12);
+  box-shadow:inset 0 1px 2px rgba(0,0,0,.4), inset 0 0 0 1px rgba(200,149,42,.15);
+}
+.reader-progress-bar{
+  height:100%;
+  border-radius:3px;
+  background:linear-gradient(90deg,#8a6423,#c8952a 55%,#e2bb5c);
+  box-shadow:0 0 5px rgba(200,149,42,.55);
+  transition:width .35s ease;
+}
+.reader-progress-pct{
+  font-family:'Playfair Display',serif;
+  font-style:italic;
+  font-size:.72rem;
+  letter-spacing:.02em;
+  white-space:nowrap;
+  min-width:38px;
+  text-align:right;
+  opacity:.9;
+}
+.reader-overlay.theme-day   .reader-progress-pct{ color:#8a6423; }
+.reader-overlay.theme-sepia .reader-progress-pct{ color:#6b4a1e; }
+.reader-overlay.theme-night .reader-progress-pct{ color:var(--gold); }
 /* PATCH 5d: chapter list spans full height minus bottom toolbar */
-.reader-chapter-list{display:none;position:fixed;top:0;left:0;bottom:52px;width:280px;border-right:1px solid rgba(128,128,128,0.2);overflow-y:auto;z-index:160;box-shadow:3px 0 10px rgba(0,0,0,0.08);}
+.reader-chapter-list{display:none;position:fixed;top:0;left:0;bottom:64px;width:280px;border-right:1px solid rgba(128,128,128,0.2);overflow-y:auto;z-index:160;box-shadow:3px 0 10px rgba(0,0,0,0.08);}
 .reader-overlay.theme-day .reader-chapter-list{background:#fff;}
 .reader-overlay.theme-sepia .reader-chapter-list{background:#f4ede0;}
 .reader-overlay.theme-night .reader-chapter-list{background:#1a1a2e;}
@@ -1868,7 +1931,6 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
     <button class="rs-btn" id="btnToggleBookmarkAnim">On</button>
   </div>
 </div>
-  <div class="reader-progress"><div class="reader-progress-bar" id="readerProgressBar" style="width:0%"></div></div>
   <div class="reader-chapter-list" id="readerChapterList">
     <h3>Contents</h3>
     <div id="readerChapterItems"></div>
@@ -1879,6 +1941,13 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
   </div>
   <div class="reader-content" id="readerContent">
 
+  </div>
+  <!-- Reading progress: sits between the chapter text and the info/nav bar -->
+  <div class="reader-progress" id="readerProgressWrap">
+    <div class="reader-progress-track">
+      <div class="reader-progress-bar" id="readerProgressBar" style="width:0%"></div>
+    </div>
+    <span class="reader-progress-pct" id="readerProgressPct">0%</span>
   </div>
   <!-- Info bar: always visible — chapter name + page location -->
   <div class="reader-info-bar" id="readerInfoBar">
@@ -3893,7 +3962,8 @@ function applyReaderTheme(theme) {
   function toggleReaderToolbar() {
   const overlay = document.getElementById('readerOverlay');
   overlay.classList.toggle('toolbar-hidden');
-  recalcReaderHeight();
+  // PATCH: toolbar is a floating overlay now — showing/hiding it never
+  // changes reader-content's size, so there's nothing to recalculate.
 }
 
 const bmAnimBtn = document.getElementById('btnToggleBookmarkAnim');
@@ -3950,7 +4020,6 @@ if(themeBtn){
     localStorage.setItem('elib_reader_transition', readerTransition);
     document.querySelectorAll('#readerSettingsBar [data-transition]')
       .forEach(b => b.classList.toggle('active', b.dataset.transition === readerTransition));
-    recalcReaderHeight();
   }
 });  // ← closes the readerSettingsBar click listener
 
@@ -3958,7 +4027,8 @@ if(themeBtn){
 document.getElementById('btnToggleReaderSettings').addEventListener('click', e => {
   e.stopPropagation();
   document.getElementById('readerSettingsBar').classList.toggle('open');
-  recalcReaderHeight();
+  // PATCH: settings bar floats over the text now, so opening/closing it
+  // no longer needs to resize/repaginate reader-content.
 });
 document.getElementById('btnToggleChapters').addEventListener('click',()=>{
   document.getElementById('readerBookmarkListPanel').classList.remove('open');
@@ -3985,7 +4055,6 @@ document.getElementById('readerOverlay').addEventListener('click', e => {
      !e.target.closest('#readerSettingsBar') &&
      !e.target.closest('#btnToggleReaderSettings')){
     settingsBar.classList.remove('open');
-    recalcReaderHeight();
   }
 });
 document.getElementById('btnCloseReader').addEventListener('click',closeReader);
@@ -4139,16 +4208,29 @@ let _readerIframe = null;      // the live iframe
 let _readerColW   = 0;         // single column width in px (= iframe client width)
 let _readerTotalW = 0;         // full scrollWidth of the iframe document
 
+// PATCH: keep the floating toolbar docked directly above the (always-flow)
+// progress + info bars, whatever their rendered height happens to be.
+function positionReaderToolbar() {
+  const toolbar  = document.getElementById('readerToolbar');
+  const infoBar  = document.getElementById('readerInfoBar');
+  const progress = document.getElementById('readerProgressWrap');
+  if(!toolbar) return;
+  toolbar.style.bottom = ((infoBar?.offsetHeight || 0) + (progress?.offsetHeight || 0)) + 'px';
+}
+
 function _getReaderDimensions() {
   const overlay   = document.getElementById('readerOverlay');
-  const toolbar   = document.getElementById('readerToolbar');
   const infoBar   = document.getElementById('readerInfoBar');
-  const settings  = document.getElementById('readerSettingsBar');
-  const progress  = document.getElementById('readerProgress');
+  const progress  = document.getElementById('readerProgressWrap');
 
-  const toolbarH  = (toolbar && getComputedStyle(toolbar).display !== 'none') ? (toolbar.offsetHeight || 52) : 0;
+  positionReaderToolbar();
+
+  // PATCH: the toolbar and settings bar are now floating overlays (position:
+  // absolute) that sit on top of the text instead of taking up flex space,
+  // so their open/closed state must NOT affect the content height. Only the
+  // always-visible progress bar + info bar are ever subtracted here — this
+  // is what makes toggling those overlays reflow-free.
   const infoBarH  = infoBar?.offsetHeight || 0;
-  const settingsH = settings?.classList.contains('open') ? (settings.offsetHeight || 0) : 0;
   const progressH = progress?.offsetHeight || 0;
 
   const clientH = overlay.clientHeight;
@@ -4161,8 +4243,18 @@ function _getReaderDimensions() {
     safeBottom = sab ? parseInt(sab) || 0 : 0;
   } catch(e) { safeBottom = 0; }
 
-  const h = visualH - toolbarH - infoBarH - settingsH - progressH - safeBottom - 4;
+  let h = visualH - infoBarH - progressH - safeBottom - 4;
   const w = overlay.clientWidth;
+
+  // PATCH: snap the column height down to a whole number of text lines.
+  // CSS multi-column layout can only break between lines, so if the column
+  // height isn't an exact multiple of the line height, the leftover
+  // fractional line becomes dead space at the bottom of the column — and
+  // combined with widows/orphans, can push an entire paragraph to the next
+  // page early, leaving a big empty gap. Rounding down removes that slack.
+  const lineH = readerFontSize * 1.85;
+  if(lineH > 0) h = Math.max(lineH, Math.floor(h / lineH) * lineH);
+
   return { w, h };
 }
 
@@ -4203,7 +4295,6 @@ function _ensureReaderTapLayer() {
       bmPanel.classList.remove('open');
       if (settingsBar.classList.contains('open')) {
         settingsBar.classList.remove('open');
-        recalcReaderHeight();
       }
       return;
     }
@@ -4303,8 +4394,14 @@ body {
   box-sizing: content-box;
   padding: 0;
   margin: 0;
-  orphans: 3;
-  widows: 3;
+  /* PATCH: was orphans:3/widows:3 — that forces at least 3 lines of a
+     paragraph to fit before/after a column break, so whenever fewer than
+     3 lines of a new paragraph would fit at the bottom of a column, the
+     browser pushed the ENTIRE paragraph to the next column instead,
+     leaving a big blank gap. orphans/widows:1 lets a column fill almost
+     all the way to the bottom before breaking. */
+  orphans: 1;
+  widows: 1;
 }
 .chapter-wrap {
   padding: 0.5rem ${padding}px 0;
@@ -4461,7 +4558,10 @@ function updatePaginationUI(){
   document.getElementById('readerPageInfo').textContent = `${readerPage+1}/${readerPageCount}`;
   document.querySelectorAll('.chapter-item').forEach((el,i)=>el.classList.toggle('active', i===readerChapter));
   const prog = (readerChapter + (readerPage/Math.max(readerPageCount,1))) / Math.max(readerSpine.length,1);
-  document.getElementById('readerProgressBar').style.width = (Math.min(prog,1)*100)+'%';
+  const pct = Math.round(Math.min(prog,1)*100);
+  document.getElementById('readerProgressBar').style.width = pct+'%';
+  const pctEl = document.getElementById('readerProgressPct');
+  if(pctEl) pctEl.textContent = pct+'%';
   renderReaderBookmarkTab();
   updateBookmarkNavIcon();
 }
