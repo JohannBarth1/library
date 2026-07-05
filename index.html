@@ -502,16 +502,21 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .mob-detail-desc{font-size:.84rem;line-height:1.7;color:#3a4a5a;}
 
 /* mobile settings */
-.mob-settings-scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:1.5rem 1.2rem calc(var(--mob-nav-h) + 1.5rem);}
-.mob-settings-scroll h2{font-family:'Playfair Display',serif;font-size:1.4rem;color:var(--navy2);margin-bottom:1.5rem;}
-.settings-group{margin-bottom:2rem;}
-.settings-group-label{font-size:.65rem;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:.8rem;padding-bottom:.4rem;border-bottom:1px solid var(--border);}
-.settings-btn{width:100%;padding:1rem 1.2rem;font-family:'Lato',sans-serif;font-size:.92rem;font-weight:700;text-align:left;border:1px solid var(--border);border-radius:4px;cursor:pointer;margin-bottom:.7rem;display:flex;align-items:center;gap:.8rem;transition:background .15s;-webkit-tap-highlight-color:transparent;}
-.settings-btn .s-icon{font-size:1.3rem;}
-.settings-btn.upload-s{background:var(--teal);color:var(--gold);border-color:var(--teal);}
-.settings-btn.neutral{background:var(--warm-white);color:var(--navy2);}
-.settings-btn.danger-s{background:var(--warm-white);color:var(--danger);border-color:#e0b0b0;}
-.settings-note{font-size:.8rem;color:var(--muted);line-height:1.6;margin-top:.3rem;}
+.mob-settings-scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:1.4rem 1rem calc(var(--mob-nav-h) + 1.5rem);background:var(--cream);}
+.settings-header{padding:.2rem .3rem 1.3rem;}
+.settings-header-title{font-family:'Playfair Display',serif;font-size:1.5rem;color:var(--navy2);}
+.settings-header-sub{font-size:.8rem;color:var(--muted);margin-top:.2rem;}
+.settings-card{background:var(--warm-white);border:1px solid var(--border);border-radius:10px;padding:.5rem;margin-bottom:1rem;overflow:hidden;}
+.settings-card-label{font-size:.62rem;letter-spacing:.16em;text-transform:uppercase;color:var(--teal);font-weight:700;padding:.5rem .6rem .4rem;}
+.settings-card-note{font-size:.78rem;color:var(--muted);line-height:1.6;padding:.3rem .6rem .5rem;}
+.settings-row{width:100%;display:flex;align-items:center;gap:.7rem;padding:.65rem .5rem;background:none;border:none;border-radius:8px;cursor:pointer;text-align:left;transition:background .12s;-webkit-tap-highlight-color:transparent;}
+.settings-row:hover{background:var(--teal-light);}
+.settings-row-icon{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.05rem;flex-shrink:0;}
+.settings-row-text{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px;}
+.settings-row-title{font-family:'Lato',sans-serif;font-size:.87rem;font-weight:700;color:var(--navy2);}
+.settings-row-desc{font-size:.72rem;color:var(--muted);}
+.settings-row-chevron{font-size:1rem;color:var(--border);flex-shrink:0;}
+.settings-footer{text-align:center;font-size:.68rem;color:var(--muted);font-style:italic;padding:1rem 0 .5rem;font-family:'Playfair Display',serif;opacity:.6;}
 
 /* ── CHAPTER MANAGER ── */
 .chapter-mgr-list{max-height:420px;overflow-y:auto;margin:.5rem 0;border:1px solid var(--border);border-radius:4px;}
@@ -1543,21 +1548,50 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
   <!-- ── SETTINGS PANEL ── -->
   <div class="mob-panel" id="mobPanelSettings">
     <div class="mob-settings-scroll">
-      <h2>Settings</h2>
-      <div class="settings-group">
-        <div class="settings-group-label">Library</div>
-        <button class="settings-btn upload-s" id="btnMobUpload"><span class="s-icon">📤</span><div><div>Upload EPUB Files</div><div class="settings-note" style="color:rgba(200,149,42,.85)">Add new books to your library</div></div></button>
-        <button class="settings-btn neutral" id="btnMobRefresh"><span class="s-icon">↻</span><div><div>Refresh Library</div><div class="settings-note">Reload books from Firestore</div></div></button>
+      <div class="settings-header">
+        <div class="settings-header-title">Settings</div>
+        <div class="settings-header-sub">Your library, your device</div>
       </div>
-      <div class="settings-group">
-        <div class="settings-group-label">📖 Kobo Devices</div>
+
+      <div class="settings-card">
+        <div class="settings-card-label">📚 Library</div>
+        <button class="settings-row" id="btnMobUpload">
+          <span class="settings-row-icon" style="background:var(--teal);color:var(--gold)">📤</span>
+          <span class="settings-row-text">
+            <span class="settings-row-title">Upload EPUB Files</span>
+            <span class="settings-row-desc">Add new books to your library</span>
+          </span>
+          <span class="settings-row-chevron">›</span>
+        </button>
+        <button class="settings-row" id="btnMobRefresh">
+          <span class="settings-row-icon" style="background:var(--panel);color:var(--teal)">↻</span>
+          <span class="settings-row-text">
+            <span class="settings-row-title">Refresh Library</span>
+            <span class="settings-row-desc">Reload books from Firestore</span>
+          </span>
+          <span class="settings-row-chevron">›</span>
+        </button>
+      </div>
+
+      <div class="settings-card">
+        <div class="settings-card-label">📖 Kobo Devices</div>
         <div id="mobKoboSettings"></div>
       </div>
-      <div class="settings-group">
-        <div class="settings-group-label">Install App</div>
-        <button class="settings-btn neutral" id="mobInstallBtn" style="display:none"><span class="s-icon">📲</span><div><div>Add to Home Screen</div><div class="settings-note">Install eLibrary as an app</div></div></button>
-        <p class="settings-note" id="mobInstallNote">Open in your browser's menu and choose "Add to Home Screen" to install.</p>
+
+      <div class="settings-card">
+        <div class="settings-card-label">📲 Install App</div>
+        <button class="settings-row" id="mobInstallBtn" style="display:none">
+          <span class="settings-row-icon" style="background:var(--gold);color:var(--navy2)">📲</span>
+          <span class="settings-row-text">
+            <span class="settings-row-title">Add to Home Screen</span>
+            <span class="settings-row-desc">Install eLibrary as an app</span>
+          </span>
+          <span class="settings-row-chevron">›</span>
+        </button>
+        <p class="settings-card-note" id="mobInstallNote">Open in your browser's menu and choose "Add to Home Screen" to install.</p>
       </div>
+
+      <div class="settings-footer">eLibrary · made for quiet reading</div>
     </div>
   </div>
 
@@ -6252,26 +6286,27 @@ function renderKoboSettings(container) {
 
   const deviceListHtml = koboDevices.length
     ? koboDevices.map(d => `
-      <div style="display:flex;align-items:center;justify-content:space-between;
-                  padding:.55rem 0;border-bottom:1px solid var(--border);gap:.5rem">
-        <span style="font-size:.85rem;font-weight:700;color:var(--navy2)">${esc(d.name)}</span>
-        <button class="admin-copy-btn" data-kobo-config="${d.id}">
-          📋 View Config
-        </button>
-      </div>`).join('')
-    : `<div style="font-size:.82rem;color:var(--muted);line-height:1.5;margin-bottom:.6rem">
-        No devices yet. Add one to start sending books to your Kobo.
-      </div>`;
+      <button class="settings-row" data-kobo-config="${d.id}">
+        <span class="settings-row-icon" style="background:var(--teal-light);color:var(--teal)">📖</span>
+        <span class="settings-row-text">
+          <span class="settings-row-title">${esc(d.name)}</span>
+          <span class="settings-row-desc">Tap to view setup instructions</span>
+        </span>
+        <span class="settings-row-chevron">›</span>
+      </button>`).join('')
+    : `<div class="settings-card-note">No devices yet. Add one to start sending books to your Kobo.</div>`;
 
   container.innerHTML = `
-    <div style="margin-bottom:.8rem">${deviceListHtml}</div>
-    <button class="settings-btn upload-s" id="koboAddDeviceBtn" style="margin-top:.4rem">
-      <span class="s-icon">📖</span>
-      <div><div>Add Kobo Device</div>
-      <div class="settings-note" style="color:rgba(200,149,42,.85)">Register a new Kobo e-reader</div></div>
+    ${deviceListHtml}
+    <button class="settings-row" id="koboAddDeviceBtn" style="margin-top:${koboDevices.length?'.4rem':'0'}">
+      <span class="settings-row-icon" style="background:var(--gold);color:var(--navy2)">＋</span>
+      <span class="settings-row-text">
+        <span class="settings-row-title">Add Kobo Device</span>
+        <span class="settings-row-desc">Register a new Kobo e-reader</span>
+      </span>
+      <span class="settings-row-chevron">›</span>
     </button>`;
 
-  // Bind view config buttons
   container.querySelectorAll('[data-kobo-config]').forEach(btn => {
     btn.addEventListener('click', () => {
       const device = koboDevices.find(d => d.id === btn.dataset.koboConfig);
@@ -6279,7 +6314,6 @@ function renderKoboSettings(container) {
     });
   });
 
-  // Bind add button
   container.querySelector('#koboAddDeviceBtn')?.addEventListener('click', () => {
     _showKoboAddModal(container);
   });
