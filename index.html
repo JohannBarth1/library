@@ -1375,6 +1375,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
   .btnToggleSettingsDesk{display:none;}
   .toast{bottom:calc(var(--mob-nav-h) + .8rem);left:50%;right:auto;transform:translateX(-50%) translateY(6px);}
   .toast.show{transform:translateX(-50%) translateY(0);}
+  .reader-toolbar-handle{display:none;}
 }
 @media(min-width:769px){
   .mob-panels{display:none!important;}
@@ -4600,73 +4601,98 @@ function openHighlightMenu(markEl, clientX, clientY) {
   });
 }
 
-// PATCH: tap/swipe handling now attaches directly to the iframe document
-// (doc.body) instead of a transparent covering div. Since the iframe is
-// sandbox="allow-same-origin", the parent can access its document directly.
-// This means touches land on the real text first, so native text selection
-// (and the browser's "look up" / define menu) works again — a plain tap
-// still pages/toggles the toolbar, but a press-and-drag becomes a selection.
+// Touch events dispatched inside an iframe do NOT bubble to the parent document,
+// so attaching listeners to doc from parent-script context is silently a no-op
+// on mobile. We use a transparent overlay div in the parent document instead —
+// the proven approach. Mouse clicks on the overlay are forwarded to iframe content
+// via elementFromPoint so chapter links and highlight menus still work.
 function _attachReaderTapHandlers(doc) {
+  const content = document.getElementById('readerContent');
+  document.getElementById('readerTouchOverlay')?.remove();
+
+  const overlay = document.createElement('div');
+  overlay.id = 'readerTouchOverlay';
+  overlay.style.cssText = 'position:absolute;inset:0;z-index:5;background:transparent;touch-action:none;-webkit-tap-highlight-color:transparent;';
+  content.appendChild(overlay);
+
   let tx0 = 0, ty0 = 0;
 
-  doc.addEventListener('touchstart', e => {
+  overlay.addEventListener('touchstart', e => {
     tx0 = e.touches[0].clientX;
     ty0 = e.touches[0].clientY;
   }, { passive: true });
 
-  doc.addEventListener('touchend', e => {
-    // If a popup panel is open, this tap just closes it — never turns a page
+  overlay.addEventListener('touchend', e => {
     const list = document.getElementById('readerChapterList');
     const bmPanel = document.getElementById('readerBookmarkListPanel');
     const settingsBar = document.getElementById('readerSettingsBar');
     if (list.classList.contains('open') || bmPanel.classList.contains('open') || settingsBar.classList.contains('open')) {
       list.classList.remove('open');
       bmPanel.classList.remove('open');
-      if (settingsBar.classList.contains('open')) {
-        settingsBar.classList.remove('open');
-      }
+      settingsBar.classList.remove('open');
       return;
     }
-
-    // If the toolbar overlay is open, any tap anywhere just closes it —
-    // mirrors how the chapter/bookmark/settings panels close on outside tap.
-    const readerOv = document.getElementById('readerOverlay');
-    if (!readerOv.classList.contains('toolbar-hidden')) {
-      readerOv.classList.add('toolbar-hidden');
-      _updateToolbarHandleIcon();
-      return;
-    }
-
-    // Don't hijack an active/just-made text selection as a tap or swipe
-    const sel = doc.getSelection ? doc.getSelection() : doc.defaultView?.getSelection();
-    if (sel && !sel.isCollapsed) return;
 
     const dx = e.changedTouches[0].clientX - tx0;
     const dy = e.changedTouches[0].clientY - ty0;
 
+    // Horizontal swipe always turns a page, regardless of toolbar state
     if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 40) {
       if (dx < 0) goToPage(readerPage + 1);
       else        goToPage(readerPage - 1);
       return;
     }
 
+    // Short tap
     if (Math.abs(dx) < 10 && Math.abs(dy) < 10) {
+      // If toolbar is visible, first tap just hides it
+      const readerOv = document.getElementById('readerOverlay');
+      if (!readerOv.classList.contains('toolbar-hidden')) {
+        readerOv.classList.add('toolbar-hidden');
+        _updateToolbarHandleIcon();
+        return;
+      }
+
+      // Check iframe content at tap point for chapter links and highlights
+      const iframeRect = _readerIframe?.getBoundingClientRect();
+      if (iframeRect && doc) {
+        const relX = e.changedTouches[0].clientX - iframeRect.left;
+        const relY = e.changedTouches[0].clientY - iframeRect.top;
+        try {
+          const el = doc.elementFromPoint(relX, relY);
+          if (el) {
+            const link = el.closest?.('[data-navchapter]');
+            if (link) { readerGoToChapter(parseInt(link.dataset.navchapter)); return; }
+            const mark = el.closest?.('mark[data-highlightid]');
+            if (mark) { openHighlightMenu(mark, e.changedTouches[0].clientX, e.changedTouches[0].clientY); return; }
+          }
+        } catch(err) { /* ignore cross-origin or other errors */ }
+      }
+
       const x = e.changedTouches[0].clientX;
-      const w = doc.documentElement.clientWidth;
+      const w = overlay.offsetWidth || content.offsetWidth;
       if (x < w * 0.3) { goToPage(readerPage - 1); return; }
       if (x > w * 0.7) { goToPage(readerPage + 1); return; }
-
-      // Middle zone: the touch target is the real element now, so we can
-      // just check it directly instead of elementFromPoint-ing into a frame.
-      const link = e.target.closest?.('[data-navchapter]');
-      if (link) { readerGoToChapter(parseInt(link.dataset.navchapter)); return; }
-
-      const mark = e.target.closest?.('mark[data-highlightid]');
-      if (mark) { openHighlightMenu(mark, e.changedTouches[0].clientX, e.changedTouches[0].clientY); return; }
 
       toggleReaderToolbar();
     }
   }, { passive: true });
+
+  // Forward mouse clicks into the iframe for chapter-link navigation and highlight menus
+  overlay.addEventListener('click', e => {
+    if (!_readerIframe || !doc) return;
+    const iframeRect = _readerIframe.getBoundingClientRect();
+    const relX = e.clientX - iframeRect.left;
+    const relY = e.clientY - iframeRect.top;
+    try {
+      const el = doc.elementFromPoint(relX, relY);
+      if (!el) return;
+      const link = el.closest?.('[data-navchapter]');
+      if (link) { readerGoToChapter(parseInt(link.dataset.navchapter)); return; }
+      const mark = el.closest?.('mark[data-highlightid]');
+      if (mark) { openHighlightMenu(mark, e.clientX, e.clientY); return; }
+    } catch(err) { /* ignore */ }
+  });
 
   _attachHighlightSelectionUI(doc);
 }
