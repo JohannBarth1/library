@@ -5518,6 +5518,7 @@ function closeReader(){
   document.getElementById('readerSettingsBar').classList.remove('open');
 
   if(_readerIframe) { _readerIframe.remove(); _readerIframe = null; }
+  document.getElementById('readerTouchOverlay')?.remove();
   _readerColW = 0; _readerTotalW = 0;
 
   document.getElementById('readerBookmarkTab')?.remove();
