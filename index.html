@@ -1670,22 +1670,22 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
       <span class="tab-icon">🛋️</span><span>Lounge</span>
     </button>
     <button class="mob-tab" id="mobNavTimeline">
-  <span class="tab-icon" style="display:flex;align-items:center;justify-content:center">
-    <svg width="1.2em" height="1em" viewBox="0 0 26 22" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <!-- bars -->
-      <rect x="3"  y="13" width="4" height="7" rx="1" fill="var(--navy2)"/>
-      <rect x="11" y="8"  width="4" height="12" rx="1" fill="var(--navy2)"/>
-      <rect x="19" y="3"  width="4" height="17" rx="1" fill="var(--navy2)"/>
-      <!-- trend line -->
-      <polyline points="5,12 13,7 21,2" stroke="var(--gold)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
-      <!-- nodes -->
-      <circle cx="5"  cy="12" r="1.8" fill="var(--gold)"/>
-      <circle cx="13" cy="7"  r="1.8" fill="var(--gold)"/>
-      <circle cx="21" cy="2"  r="1.8" fill="var(--gold)"/>
-    </svg>
-  </span>
-  <span>Timeline</span>
-</button>
+      <span class="tab-icon" style="display:flex;align-items:center;justify-content:center">
+        <svg width="1.2em" height="1em" viewBox="0 0 26 22" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <!-- bars -->
+          <rect x="3"  y="13" width="4" height="7" rx="1" fill="var(--gold)"/>
+          <rect x="11" y="8"  width="4" height="12" rx="1" fill="var(--gold)"/>
+          <rect x="19" y="3"  width="4" height="17" rx="1" fill="var(--gold)"/>
+          <!-- trend line -->
+          <polyline points="5,12 13,7 21,2" stroke="var(--light-blue)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+          <!-- nodes -->
+          <circle cx="5"  cy="12" r="1.8" fill="var(--light-blue)"/>
+          <circle cx="13" cy="7"  r="1.8" fill="var(--light-blue)"/>
+          <circle cx="21" cy="2"  r="1.8" fill="var(--light-blue)"/>
+        </svg>
+      </span>
+      <span>Timeline</span>
+    </button>
     <button class="mob-tab" id="mobNavSettings">
       <span class="tab-icon">⚙</span><span>Settings</span>
     </button>
@@ -7815,7 +7815,7 @@ async function adminToggleUserCard(uid) {
           <div>
             <div style="font-size:.6rem;letter-spacing:.15em;text-transform:uppercase;
                         font-weight:700;color:#5a48b0;margin-bottom:.35rem;">
-              📲 Sent to Kobo (${koboSends.length})</div>
+              🔲 Sent to Kobo (${koboSends.length})</div>
             ${koboSends.slice(0, 8).map(k => `
               <div style="font-size:.75rem;color:var(--navy2);padding:.15rem 0;
                           border-bottom:1px solid var(--border);display:flex;
