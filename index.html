@@ -107,6 +107,9 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .grid-count{font-size:.7rem;color:var(--muted);font-weight:700;}
 .book-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:1.2rem;padding:1.2rem 1.5rem;}
 
+.hide-scrollbar{scrollbar-width:none;}
+.hide-scrollbar::-webkit-scrollbar{display:none;}
+
 /* ── DESKTOP HOME PANEL ── */
 .desk-home{display:none;flex:1;overflow-y:auto;flex-direction:column;padding:1.8rem 2rem;gap:2rem;}
 .desk-home.active{display:flex;}
@@ -1920,7 +1923,7 @@ import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/fireba
 import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut }
   from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
 import { getFirestore, collection, addDoc, getDocs, getDoc, doc,
-         query, where, orderBy, updateDoc, deleteDoc, serverTimestamp, setDoc, Timestamp, limit, onSnapshot, deleteField }
+         query, where, orderBy, updateDoc, deleteDoc, serverTimestamp, setDoc, Timestamp, limit, onSnapshot, deleteField, increment }
   from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 import { getStorage, ref as storageRef, uploadBytes, getDownloadURL, getBytes }
   from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js';
@@ -3553,8 +3556,8 @@ function bookmarksSection() {
       </div>
       <div style="height:2px;border-radius:1px;margin-bottom:.7rem;
         background:linear-gradient(90deg,var(--gold),var(--gold) 40px,transparent 40px);"></div>
-      <div style="display:flex;gap:1rem;overflow-x:auto;padding-bottom:.3rem;
-        -webkit-overflow-scrolling:touch;padding-top:4px;">
+      <div class="hide-scrollbar" style="display:flex;gap:8px;overflow-x:auto;padding-bottom:6px;
+        -webkit-overflow-scrolling:touch;">
         ${html}
       </div>
     </div>`;
@@ -6925,6 +6928,10 @@ function startPresenceHeartbeat() {
       expiresAt: Timestamp.fromDate(expires),
       lastSeen: serverTimestamp(),
     }, { merge: true }).catch(() => {});
+    // Cumulative time-in-app, counted in 5-minute ticks while the tab stays open
+    await setDoc(doc(db, 'users', currentUser.uid), {
+      totalTimeSeconds: increment(300),
+    }, { merge: true }).catch(() => {});
   }, 5 * 60 * 1000);
 }
 
@@ -7524,16 +7531,24 @@ async function adminLoadPresence() {
   }
 }
 
+function formatDuration(totalSeconds) {
+  if(!totalSeconds) return '—';
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.round((totalSeconds % 3600) / 60);
+  if(hours === 0) return `${minutes}m`;
+  return `${hours}h ${minutes}m`;
+}
+
 async function adminLoadUsers() {
   const el = document.getElementById('adminUsersList');
   if(!el) return;
-  // Reuse the same rich card design
   el.innerHTML = '<div style="color:var(--muted);font-size:.85rem">Loading…</div>';
   try {
-    const [userSnap, presSnap, checkoutSnap] = await Promise.all([
+    const [userSnap, presSnap, checkoutSnap, koboQueueSnap] = await Promise.all([
       getDocs(collection(db, 'users')),
       getDocs(collection(db, 'lounge_presence')),
       getDocs(query(collection(db, 'checkouts'), orderBy('checkedOutAt', 'desc'))),
+      getDocs(collection(db, 'kobo_queue')),
     ]);
 
     const presMap = {};
@@ -7544,6 +7559,13 @@ async function adminLoadUsers() {
       const data = d.data();
       if(!checkoutsByUser[data.userId]) checkoutsByUser[data.userId] = [];
       checkoutsByUser[data.userId].push({ id: d.id, ...data });
+    });
+
+    const koboSendsByUser = {};
+    koboQueueSnap.docs.forEach(d => {
+      const data = d.data();
+      if(!koboSendsByUser[data.ownerId]) koboSendsByUser[data.ownerId] = [];
+      koboSendsByUser[data.ownerId].push({ id: d.id, ...data });
     });
 
     const now = Date.now();
@@ -7564,11 +7586,11 @@ async function adminLoadUsers() {
       const pres = presMap[u.uid] || {};
       const isOnline = (pres.expiresAt?.toMillis?.() || 0) > now;
       const lastConnected = u.lastSeen?.toDate?.();
-      const lastLounge = pres.lastSeen?.toDate?.();
       const initials = (u.displayName || u.email || '?')
         .split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
       const checkouts = checkoutsByUser[u.uid] || [];
       const activeCheckouts = checkouts.filter(c => !c.returnedAt);
+      const koboSends = koboSendsByUser[u.uid] || [];
 
       return `<div class="admin-user-card" data-uid="${u.uid}"
         style="background:var(--warm-white);border:1px solid var(--border);
@@ -7592,12 +7614,8 @@ async function adminLoadUsers() {
               ${esc(u.email || '')}
             </div>
             <div style="font-size:.65rem;color:var(--muted);margin-top:1px;">
-              ${lastConnected
-                ? `Last connected ${timeAgo(lastConnected)}`
-                : 'Never connected'}
-              ${lastLounge
-                ? ` · Lounge ${timeAgo(lastLounge)}`
-                : ''}
+              ${lastConnected ? `Last connected ${timeAgo(lastConnected)}` : 'Never connected'}
+              · ⏱ ${formatDuration(u.totalTimeSeconds)} in app
             </div>
           </div>
           <div style="display:flex;flex-direction:column;align-items:flex-end;
@@ -7614,6 +7632,10 @@ async function adminLoadUsers() {
             ${activeCheckouts.length
               ? `<span style="font-size:.6rem;color:var(--teal);font-weight:700;">
                   📖 ${activeCheckouts.length} out</span>`
+              : ''}
+            ${koboSends.length
+              ? `<span style="font-size:.6rem;color:#5a48b0;font-weight:700;">
+                  📲 ${koboSends.length} to Kobo</span>`
               : ''}
             <span style="font-size:.7rem;color:var(--muted);margin-top:1px;">▾</span>
           </div>
@@ -7633,6 +7655,7 @@ async function adminLoadUsers() {
     }).join('');
 
     el._checkoutsByUser = checkoutsByUser;
+    el._koboSendsByUser = koboSendsByUser;
 
   } catch(e) {
     el.innerHTML = `<div style="color:var(--danger);font-size:.82rem">
@@ -7643,7 +7666,7 @@ async function adminLoadUsers() {
 
 document.getElementById('adminUsersRefresh')?.addEventListener('click', adminLoadUsers);
 
-  async function adminToggleUserCard(uid) {
+async function adminToggleUserCard(uid) {
   // Find the expand panel — it may live in either the presence or users section
   const panel = document.getElementById('adminUserExpand_' + uid);
   if(!panel) return;
@@ -7707,6 +7730,9 @@ document.getElementById('adminUsersRefresh')?.addEventListener('click', adminLoa
 
     const active   = checkouts.filter(c => !c.returnedAt);
     const returned = checkouts.filter(c => c.returnedAt);
+
+    // Kobo sends — pulled from the cache stashed on adminUsersList by adminLoadUsers()
+    const koboSends = document.getElementById('adminUsersList')?._koboSendsByUser?.[uid] || [];
 
     panel.innerHTML = `
       <div style="padding:.7rem .8rem;display:flex;flex-direction:column;gap:.75rem;">
@@ -7776,6 +7802,25 @@ document.getElementById('adminUsersRefresh')?.addEventListener('click', adminLoa
             }).join('')}
           </div>` : ''}
 
+        ${koboSends.length ? `
+          <div>
+            <div style="font-size:.6rem;letter-spacing:.15em;text-transform:uppercase;
+                        font-weight:700;color:#5a48b0;margin-bottom:.35rem;">
+              📲 Sent to Kobo (${koboSends.length})</div>
+            ${koboSends.slice(0, 8).map(k => `
+              <div style="font-size:.75rem;color:var(--navy2);padding:.15rem 0;
+                          border-bottom:1px solid var(--border);display:flex;
+                          justify-content:space-between;gap:.4rem;">
+                <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;
+                             white-space:nowrap;">${esc(k.title || 'Unknown title')}</span>
+                <span style="font-size:.65rem;color:var(--muted);flex-shrink:0;">
+                  ${k.createdAt?.toDate?.() ? timeAgo(k.createdAt.toDate()) : ''}</span>
+              </div>`).join('')}
+            ${koboSends.length > 8
+              ? `<div style="font-size:.68rem;color:var(--muted);margin-top:.2rem;">
+                  + ${koboSends.length - 8} more</div>` : ''}
+          </div>` : ''}
+
         ${returned.length ? `
           <div>
             <div style="font-size:.6rem;letter-spacing:.15em;text-transform:uppercase;
@@ -7800,7 +7845,7 @@ document.getElementById('adminUsersRefresh')?.addEventListener('click', adminLoa
                   + ${returned.length - 5} more</div>` : ''}
           </div>` : ''}
 
-        ${!crIds.length && !finIds.length && !active.length && !returned.length ? `
+        ${!crIds.length && !finIds.length && !active.length && !koboSends.length && !returned.length ? `
           <div style="font-size:.8rem;color:var(--muted);text-align:center;padding:.5rem 0;">
             No reading activity yet</div>` : ''}
 
