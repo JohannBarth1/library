@@ -465,7 +465,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .mob-sort-row{padding:.25rem .9rem .45rem;display:flex;align-items:center;gap:.5rem;}
 .mob-sort-row label{font-size:.62rem;color:var(--muted);font-weight:700;letter-spacing:.1em;text-transform:uppercase;white-space:nowrap;}
 .mob-sort-row select{font-size:.78rem;font-family:'Lato',sans-serif;border:1px solid var(--border);border-radius:3px;padding:.22rem .4rem;background:var(--warm-white);color:var(--navy);outline:none;}
-.mob-grid-scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;}
+.mob-grid-scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-bottom:calc(var(--mob-nav-h) + 1rem);}
 .mob-book-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(95px,1fr));gap:.7rem;padding:.8rem;}
 .mob-book-grid .book-card {
   -webkit-touch-callout: none;
@@ -502,7 +502,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .mob-detail-desc{font-size:.84rem;line-height:1.7;color:#3a4a5a;}
 
 /* mobile settings */
-.mob-settings-scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:1.5rem 1.2rem;}
+.mob-settings-scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:1.5rem 1.2rem calc(var(--mob-nav-h) + 1.5rem);}
 .mob-settings-scroll h2{font-family:'Playfair Display',serif;font-size:1.4rem;color:var(--navy2);margin-bottom:1.5rem;}
 .settings-group{margin-bottom:2rem;}
 .settings-group-label{font-size:.65rem;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:.8rem;padding-bottom:.4rem;border-bottom:1px solid var(--border);}
@@ -1633,17 +1633,9 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
       <span class="tab-icon">🛋️</span><span>Lounge</span>
     </button>
     <button class="mob-tab" id="mobNavTimeline">
-      <span class="tab-icon" style="display:flex;align-items:center;justify-content:center;height:1.4rem">
-        <svg width="24" height="20" viewBox="0 0 26 22" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <rect x="2" y="13" width="4" height="8" rx="1" fill="#c8952a" opacity=".7"/>
-          <rect x="8" y="8" width="4" height="13" rx="1" fill="#c8952a" opacity=".85"/>
-          <rect x="14" y="3" width="4" height="18" rx="1" fill="#c8952a"/>
-          <rect x="20" y="7" width="4" height="14" rx="1" fill="#c8952a" opacity=".9"/>
-          <circle cx="4" cy="11" r="2" fill="#2a7c8a"/>
-          <circle cx="10" cy="6" r="2" fill="#2a7c8a"/>
-          <circle cx="16" cy="1" r="2" fill="#2a7c8a"/>
-          <circle cx="22" cy="5" r="2" fill="#2a7c8a"/>
-          <polyline points="4,11 10,6 16,1 22,5" stroke="#2a7c8a" stroke-width="1.2" stroke-dasharray="2 1.5" fill="none"/>
+      <span class="tab-icon" style="display:flex;align-items:center;justify-content:center">
+        <svg width="1.2em" height="1em" viewBox="0 0 26 22" fill="none" xmlns="http://www.w3.org/2000/svg">
+          ...
         </svg>
       </span>
       <span>Timeline</span>
@@ -3515,14 +3507,7 @@ function bookmarksSection() {
             ${progBar}
           </div>
         </div>
-        <!-- Title underneath -->
-        <div style="
-          width:${COVER_W}px;font-size:.6rem;color:var(--muted);
-          text-align:center;overflow:hidden;text-overflow:ellipsis;
-          white-space:nowrap;line-height:1.3;">
-          ${esc(book.title)}
-        </div>
-      </div>`;
+        </div>`;
     };
 
     const html = readingPosBookmarks.map(ub => tileFor(ub)).join('');
@@ -3621,13 +3606,13 @@ function recommendedSection(books) {
       ${bookmarksSection()}
       ${recommendedSection(recBooks)}
       ${shelfSection('home_fav', 'Favourites', '❤️', '#e11d48', favBooks, {defaultOpen:false, showAddTile:true, listId:'favourites', alwaysShow:true})}
-      ${shelfSection('home_wtr', 'Want to read', '🔖', '#7c3aed', wtrBooks, {defaultOpen:false})}
+      ${shelfSection('home_wtr', 'Want to read', '🔖', '#7c3aed', wtrBooks, {defaultOpen:false, showAddTile:true, listId:'want-to-read', alwaysShow:true})}
       ${customLists.map(l =>
         shelfSection('home_list_'+l.id, l.name, l.icon||'📚', 'var(--teal)',
           resolve(l.bookIds||[]), {defaultOpen:false, editable:true, listId:l.id, showAddTile:true})
       ).join('')}
       ${shelfSection('home_recent', 'Recently added', '🕐', 'var(--muted)', recentBooks, {defaultOpen:false})}
-      ${shelfSection('home_viewed', 'Recently Viewed', '👁', 'var(--muted)', viewedBooks, {defaultOpen:false})}
+      ${shelfSection('home_viewed', 'Recently viewed', '👁', 'var(--muted)', viewedBooks, {defaultOpen:false})}
       ${shelfSection('home_fin', 'Finished', '✓', '#276749', finBooks, {defaultOpen:false})}
       <div style="text-align:center;padding:.8rem 0 .4rem;border-top:1px dashed var(--border);margin-top:.4rem;">
         <button id="btnHomeNewList" style="background:none;border:none;
