@@ -4612,28 +4612,83 @@ function openHighlightMenu(markEl, clientX, clientY) {
   });
 }
 
-// Touch events dispatched inside an iframe do NOT bubble to the parent document,
-// so attaching listeners to doc from parent-script context is silently a no-op
-// on mobile. We use a transparent overlay div in the parent document instead —
-// the proven approach. Mouse clicks on the overlay are forwarded to iframe content
-// via elementFromPoint so chapter links and highlight menus still work.
 function _attachReaderTapHandlers(doc) {
   const content = document.getElementById('readerContent');
   document.getElementById('readerTouchOverlay')?.remove();
 
   const overlay = document.createElement('div');
   overlay.id = 'readerTouchOverlay';
-  overlay.style.cssText = 'position:absolute;inset:0;z-index:5;background:transparent;touch-action:none;-webkit-tap-highlight-color:transparent;';
+  overlay.style.cssText = 'position:absolute;inset:0;z-index:5;background:transparent;-webkit-tap-highlight-color:transparent;';
   content.appendChild(overlay);
 
-  let tx0 = 0, ty0 = 0;
+  // ── DESKTOP (mouse): overlay is permanently transparent.
+  // doc's own click/selection events handle everything natively.
+  const isTouchDevice = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
+  if (!isTouchDevice) {
+    overlay.style.pointerEvents = 'none';
+    _attachHighlightSelectionUI(doc);
+    return;
+  }
 
+  // ── MOBILE: overlay catches taps/swipes for page navigation.
+  // A long-hold (finger still for 500ms) enters TEXT SELECT MODE:
+  //   • overlay becomes pointer-events:none so the next touch reaches the actual text
+  //   • browser "Look Up" / dictionary works on the following long-press
+  //   • drag to select text → our highlight colour picker appears
+  // Another long-hold, or 3s of inactivity, exits select mode.
+  overlay.style.touchAction = 'none';
+
+  let tx0 = 0, ty0 = 0;
+  let longPressTimer = null;
+  let selectModeTimer = null;
+  let inSelectMode = false;
+
+  function _showSelectBadge() {
+    document.getElementById('readerSelectBadge')?.remove();
+    const b = document.createElement('div');
+    b.id = 'readerSelectBadge';
+    b.textContent = '✏️ Text select — long-hold or wait to exit';
+    b.style.cssText = `position:absolute;top:8px;left:50%;transform:translateX(-50%);
+      background:rgba(42,124,138,.88);color:#fff;font-size:.66rem;font-weight:700;
+      letter-spacing:.05em;padding:4px 14px;border-radius:20px;z-index:10;
+      pointer-events:none;white-space:nowrap;`;
+    content.appendChild(b);
+  }
+  function _hideSelectBadge() { document.getElementById('readerSelectBadge')?.remove(); }
+
+  function enterSelectMode() {
+    inSelectMode = true;
+    overlay.style.pointerEvents = 'none';
+    _showSelectBadge();
+    if (navigator.vibrate) navigator.vibrate(20);
+    clearTimeout(selectModeTimer);
+    selectModeTimer = setTimeout(exitSelectMode, 3500);
+  }
+  function exitSelectMode() {
+    inSelectMode = false;
+    overlay.style.pointerEvents = '';
+    _hideSelectBadge();
+    clearTimeout(selectModeTimer);
+    try { (doc.getSelection?.() ?? doc.defaultView?.getSelection())?.removeAllRanges(); } catch(e) {}
+  }
+
+  // ── Overlay listeners (navigation mode) ──────────────────────────────────
   overlay.addEventListener('touchstart', e => {
     tx0 = e.touches[0].clientX;
     ty0 = e.touches[0].clientY;
+    clearTimeout(longPressTimer);
+    longPressTimer = setTimeout(enterSelectMode, 500);
+  }, { passive: true });
+
+  overlay.addEventListener('touchmove', e => {
+    const dx = Math.abs(e.touches[0].clientX - tx0);
+    const dy = Math.abs(e.touches[0].clientY - ty0);
+    if (dx > 8 || dy > 8) clearTimeout(longPressTimer);
   }, { passive: true });
 
   overlay.addEventListener('touchend', e => {
+    clearTimeout(longPressTimer);
+
     const list = document.getElementById('readerChapterList');
     const bmPanel = document.getElementById('readerBookmarkListPanel');
     const settingsBar = document.getElementById('readerSettingsBar');
@@ -4647,16 +4702,14 @@ function _attachReaderTapHandlers(doc) {
     const dx = e.changedTouches[0].clientX - tx0;
     const dy = e.changedTouches[0].clientY - ty0;
 
-    // Horizontal swipe always turns a page, regardless of toolbar state
+    // Swipe always navigates, regardless of toolbar state
     if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 40) {
       if (dx < 0) goToPage(readerPage + 1);
       else        goToPage(readerPage - 1);
       return;
     }
 
-    // Short tap
     if (Math.abs(dx) < 10 && Math.abs(dy) < 10) {
-      // If toolbar is visible, first tap just hides it
       const readerOv = document.getElementById('readerOverlay');
       if (!readerOv.classList.contains('toolbar-hidden')) {
         readerOv.classList.add('toolbar-hidden');
@@ -4664,7 +4717,7 @@ function _attachReaderTapHandlers(doc) {
         return;
       }
 
-      // Check iframe content at tap point for chapter links and highlights
+      // Detect links / highlight marks via elementFromPoint into the iframe
       const iframeRect = _readerIframe?.getBoundingClientRect();
       if (iframeRect && doc) {
         const relX = e.changedTouches[0].clientX - iframeRect.left;
@@ -4677,33 +4730,50 @@ function _attachReaderTapHandlers(doc) {
             const mark = el.closest?.('mark[data-highlightid]');
             if (mark) { openHighlightMenu(mark, e.changedTouches[0].clientX, e.changedTouches[0].clientY); return; }
           }
-        } catch(err) { /* ignore cross-origin or other errors */ }
+        } catch(err) {}
       }
 
       const x = e.changedTouches[0].clientX;
       const w = overlay.offsetWidth || content.offsetWidth;
       if (x < w * 0.3) { goToPage(readerPage - 1); return; }
       if (x > w * 0.7) { goToPage(readerPage + 1); return; }
-
       toggleReaderToolbar();
     }
   }, { passive: true });
 
-  // Forward mouse clicks into the iframe for chapter-link navigation and highlight menus
-  overlay.addEventListener('click', e => {
-    if (!_readerIframe || !doc) return;
-    const iframeRect = _readerIframe.getBoundingClientRect();
-    const relX = e.clientX - iframeRect.left;
-    const relY = e.clientY - iframeRect.top;
-    try {
-      const el = doc.elementFromPoint(relX, relY);
-      if (!el) return;
-      const link = el.closest?.('[data-navchapter]');
-      if (link) { readerGoToChapter(parseInt(link.dataset.navchapter)); return; }
-      const mark = el.closest?.('mark[data-highlightid]');
-      if (mark) { openHighlightMenu(mark, e.clientX, e.clientY); return; }
-    } catch(err) { /* ignore */ }
-  });
+  // ── Iframe doc listeners (select mode — overlay is transparent) ───────────
+  // When the overlay steps aside, the iframe receives touches directly.
+  doc.addEventListener('touchstart', e => {
+    if (!inSelectMode) return;
+    tx0 = e.touches[0].clientX;
+    ty0 = e.touches[0].clientY;
+    clearTimeout(selectModeTimer);
+    clearTimeout(longPressTimer);
+    // Long-hold again while in select mode → exit
+    longPressTimer = setTimeout(exitSelectMode, 500);
+  }, { passive: true });
+
+  doc.addEventListener('touchmove', e => {
+    if (!inSelectMode) return;
+    const dx = Math.abs(e.touches[0].clientX - tx0);
+    const dy = Math.abs(e.touches[0].clientY - ty0);
+    if (dx > 8 || dy > 8) clearTimeout(longPressTimer);
+  }, { passive: true });
+
+  doc.addEventListener('touchend', e => {
+    if (!inSelectMode) return;
+    clearTimeout(longPressTimer);
+    // Keep select mode alive while the user is actively interacting
+    clearTimeout(selectModeTimer);
+    selectModeTimer = setTimeout(exitSelectMode, 3000);
+    // Check for a completed text selection → show highlight colour picker
+    setTimeout(() => {
+      const sel = doc.getSelection?.() ?? doc.defaultView?.getSelection();
+      if (sel && !sel.isCollapsed && sel.toString().trim()) {
+        try { _showHighlightPopup(doc, sel.getRangeAt(0)); } catch(e) {}
+      }
+    }, 80);
+  }, { passive: true });
 
   _attachHighlightSelectionUI(doc);
 }
@@ -4822,9 +4892,11 @@ body {
 
     doc.addEventListener('click', e => {
       const link = e.target.closest('[data-navchapter]');
-      if(link){
-        e.preventDefault();
-        readerGoToChapter(parseInt(link.dataset.navchapter), 0);
+      if(link){ e.preventDefault(); readerGoToChapter(parseInt(link.dataset.navchapter), 0); return; }
+      const mark = e.target.closest('mark[data-highlightid]');
+      if(mark){
+        const r = _readerIframe?.getBoundingClientRect() || {left:0,top:0};
+        openHighlightMenu(mark, e.clientX + r.left, e.clientY + r.top);
       }
     });
 
@@ -5530,6 +5602,7 @@ function closeReader(){
 
   if(_readerIframe) { _readerIframe.remove(); _readerIframe = null; }
   document.getElementById('readerTouchOverlay')?.remove();
+  document.getElementById('readerSelectBadge')?.remove();
   _readerColW = 0; _readerTotalW = 0;
 
   document.getElementById('readerBookmarkTab')?.remove();
