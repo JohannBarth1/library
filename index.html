@@ -402,13 +402,19 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 
 /* PATCH: the reading-progress indicator is now a slim line along the top
    edge of the info bar itself — it IS the divider between the reading area
-   and the chapter/page row, instead of a separate fixed-height section. */
+   and the chapter/page row, instead of a separate fixed-height section.
+   It's purely decorative while the toolbar is hidden; once the toolbar is
+   showing, it becomes a scrubbable progress bar (see readerProgressHit). */
 .reader-progress-line{
   position:absolute;
   top:0; left:0; right:0;
   height:3px;
   background:rgba(148,111,41,.18);
   overflow:hidden;
+  transition:height .15s ease;
+}
+.reader-overlay:not(.toolbar-hidden) .reader-progress-line{
+  height:5px;
 }
 .reader-overlay.theme-night .reader-progress-line{
   background:rgba(200,149,42,.12);
@@ -419,6 +425,21 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
   background:linear-gradient(90deg,#8a6423,#c8952a 55%,#e2bb5c);
   box-shadow:0 0 5px rgba(200,149,42,.55);
   transition:width .35s ease;
+}
+/* Invisible, generously-sized touch target laid over the progress line —
+   only active (pointer-events:auto) while the toolbar is visible, so it
+   never steals the "tap info bar to reveal toolbar" gesture. */
+.reader-progress-hit{
+  position:absolute;
+  top:0; left:0; right:0;
+  height:20px;
+  pointer-events:none;
+  touch-action:none;
+  z-index:2;
+}
+.reader-overlay:not(.toolbar-hidden) .reader-progress-hit{
+  pointer-events:auto;
+  cursor:pointer;
 }
 /* PATCH 5d: chapter list spans full height minus bottom toolbar */
 .reader-chapter-list{display:none;position:fixed;top:0;left:0;bottom:64px;width:280px;border-right:1px solid rgba(128,128,128,0.2);overflow-y:auto;z-index:160;box-shadow:3px 0 10px rgba(0,0,0,0.08);}
@@ -1953,20 +1974,23 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
     <div class="reader-progress-line" id="readerProgressLine">
       <div class="reader-progress-bar" id="readerProgressBar" style="width:0%"></div>
     </div>
+    <div class="reader-progress-hit" id="readerProgressHit" title="Drag to jump to a position"></div>
     <div class="reader-title" id="readerTitle">Reading…</div>
     <span class="reader-page-info" id="readerPageInfo">1/1</span>
   </div>
   <!-- Button bar — hides on center-tap -->
   <div class="reader-toolbar" id="readerToolbar">
-    <button class="reader-btn" id="btnToggleChapters" title="Contents">☰</button>
     <div class="reader-nav">
+  <button class="reader-btn" id="btnToggleChapters" title="Contents">☰</button>
   <button class="reader-btn" id="btnToggleBookmarkList" title="Bookmarks">🔖</button>
   <button class="reader-btn" id="btnToggleSelectMode" title="Select & Highlight">✎</button>
+  </div>
+    <div class="reader-nav">
   <button class="reader-btn" id="btnToggleReaderSettings" title="Settings">Aa</button>
   <button class="reader-btn" id="btnReaderPrev">‹</button>
   <button class="reader-btn" id="btnReaderNext">›</button>
-  <button class="reader-btn reader-btn-close" id="btnCloseReader" title="Close">✕</button>
   </div>
+  <button class="reader-btn reader-btn-close" id="btnCloseReader" title="Close">✕</button>
   </div>
   <!-- Always-visible min/max handle — the toolbar only toggles on tap for
        touch devices, so desktop (mouse) needs its own persistent control. -->
@@ -4566,6 +4590,40 @@ function _showSelectBadge() {
 }
 function _hideSelectBadge() { document.getElementById('readerSelectBadge')?.remove(); }
 
+// WebKit (mobile Safari, and some Chrome/Android versions) is notorious for
+// not firing `selectionchange` reliably — or at all — for a Selection that
+// lives inside an iframe's document. Polling sidesteps that entirely: we
+// just check the live selection a few times a second while select mode is
+// on, so the highlight-color popup shows up regardless of which events the
+// browser does or doesn't fire.
+let _selectPollTimer = null;
+let _lastSelText = '';
+function _startSelectPoll(doc) {
+  _stopSelectPoll();
+  if (!doc) return;
+  _selectPollTimer = setInterval(() => {
+    if (!readerSelectMode) return;
+    let sel;
+    try { sel = doc.getSelection ? doc.getSelection() : doc.defaultView?.getSelection(); }
+    catch(e) { return; }
+    if (sel && !sel.isCollapsed && sel.rangeCount && sel.toString().trim()) {
+      const text = sel.toString();
+      if (text !== _lastSelText) {
+        _lastSelText = text;
+        try { _showHighlightPopup(doc, sel.getRangeAt(0)); } catch(e) {}
+      }
+    } else if (_lastSelText) {
+      _lastSelText = '';
+      _removeHighlightPopup();
+    }
+  }, 250);
+}
+function _stopSelectPoll() {
+  clearInterval(_selectPollTimer);
+  _selectPollTimer = null;
+  _lastSelText = '';
+}
+
 function setReaderSelectMode(on) {
   readerSelectMode = on;
   document.getElementById('btnToggleSelectMode')?.classList.toggle('active', on);
@@ -4579,8 +4637,10 @@ function setReaderSelectMode(on) {
   if (on) {
     _showSelectBadge();
     if (navigator.vibrate) navigator.vibrate(20);
+    if (isTouchDevice) _startSelectPoll(_readerIframe?.contentDocument);
   } else {
     _hideSelectBadge();
+    _stopSelectPoll();
     try {
       const doc = _readerIframe?.contentDocument;
       (doc?.getSelection?.() ?? doc?.defaultView?.getSelection())?.removeAllRanges();
@@ -4614,7 +4674,10 @@ function _attachReaderTapHandlers(doc) {
   // "Look Up" long-press, exactly like normal mobile Safari/Chrome text.
   overlay.style.touchAction = 'none';
   overlay.style.pointerEvents = readerSelectMode ? 'none' : '';
-  if (readerSelectMode) _showSelectBadge();
+  if (readerSelectMode) {
+    _showSelectBadge();
+    _startSelectPoll(doc); // re-target the poll at this chapter's fresh doc
+  }
 
   let tx0 = 0, ty0 = 0;
 
@@ -4647,6 +4710,13 @@ function _attachReaderTapHandlers(doc) {
     }
 
     if (Math.abs(dx) < 10 && Math.abs(dy) < 10) {
+      const readerOv = document.getElementById('readerOverlay');
+      if (!readerOv.classList.contains('toolbar-hidden')) {
+        readerOv.classList.add('toolbar-hidden');
+        _updateToolbarHandleIcon();
+        return;
+      }
+
       // Detect links / highlight marks via elementFromPoint into the iframe
       const iframeRect = _readerIframe?.getBoundingClientRect();
       if (iframeRect && doc) {
@@ -4663,27 +4733,13 @@ function _attachReaderTapHandlers(doc) {
         } catch(err) {}
       }
 
-      // Edges turn pages; the middle of the reading area is intentionally
-      // inert now — the button nav is shown/hidden by tapping the info bar.
+      // Edges turn pages when the toolbar is already hidden; the middle of
+      // the reading area is intentionally inert otherwise.
       const x = e.changedTouches[0].clientX;
       const w = overlay.offsetWidth || content.offsetWidth;
       if (x < w * 0.3) { goToPage(readerPage - 1); return; }
       if (x > w * 0.7) { goToPage(readerPage + 1); return; }
     }
-  }, { passive: true });
-
-  // ── Iframe doc listener — only relevant while select mode is on, since
-  // that's the only time the overlay isn't sitting on top swallowing touches.
-  // Native drag-to-select and long-press "Look Up" now work exactly as they
-  // would on any normal web page, because nothing intercepts touchstart.
-  doc.addEventListener('touchend', () => {
-    if (!readerSelectMode) return;
-    setTimeout(() => {
-      const sel = doc.getSelection?.() ?? doc.defaultView?.getSelection();
-      if (sel && !sel.isCollapsed && sel.toString().trim()) {
-        try { _showHighlightPopup(doc, sel.getRangeAt(0)); } catch(e) {}
-      }
-    }, 80);
   }, { passive: true });
 
   _attachHighlightSelectionUI(doc);
@@ -5511,6 +5567,7 @@ function closeReader(){
   document.getElementById('readerTouchOverlay')?.remove();
   document.getElementById('readerSelectBadge')?.remove();
   readerSelectMode = false;
+  _stopSelectPoll();
   document.getElementById('btnToggleSelectMode')?.classList.remove('active');
   _readerColW = 0; _readerTotalW = 0;
 
@@ -5580,13 +5637,61 @@ async function doMarkFinishedFromDetail(){
 document.getElementById('btnReaderPrev').addEventListener('click',()=>goToPage(readerPage-1));
 document.getElementById('btnReaderNext').addEventListener('click',()=>goToPage(readerPage+1));
 
-// PATCH: the reading-progress bar is now a slim decorative line along the
-// top of the info bar (see reader-progress-line), not an interactive
-// scrubber. Tapping anywhere on the info bar — chapter title, page count,
-// or the progress line itself — shows/hides the button nav instead.
+// Tapping the chapter title / page count shows or hides the button nav.
 document.getElementById('readerInfoBar')?.addEventListener('click', () => {
   toggleReaderToolbar();
 });
+
+// PATCH: once the toolbar is visible, the progress line becomes scrubbable —
+// drag (or tap) anywhere along it to jump to a proportional spot in the
+// book. The invisible #readerProgressHit sits on top of the thin visual
+// line and only accepts pointer events while the toolbar is open (see CSS),
+// so it never interferes with the "tap info bar to reveal toolbar" gesture.
+(function setupReaderProgressScrub(){
+  const hit = document.getElementById('readerProgressHit');
+  const bar = document.getElementById('readerProgressBar');
+  if(!hit) return;
+
+  let dragging = false;
+
+  function progFromEvent(e){
+    const rect = hit.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    return Math.min(1, Math.max(0, rect.width ? x / rect.width : 0));
+  }
+  function previewProg(prog){
+    bar.style.width = Math.round(prog * 100) + '%';
+  }
+
+  hit.addEventListener('pointerdown', e => {
+    if(!readerSpine.length) return;
+    dragging = true;
+    hit.setPointerCapture(e.pointerId);
+    previewProg(progFromEvent(e));
+    e.stopPropagation(); // don't let this bubble up and toggle the toolbar
+  });
+  hit.addEventListener('pointermove', e => {
+    if(!dragging) return;
+    previewProg(progFromEvent(e));
+  });
+  hit.addEventListener('pointerup', e => {
+    if(!dragging) return;
+    dragging = false;
+    scrubToProgress(progFromEvent(e));
+  });
+  hit.addEventListener('pointercancel', () => { dragging = false; });
+  hit.addEventListener('click', e => e.stopPropagation());
+})();
+
+function scrubToProgress(prog){
+  if(!readerSpine.length) return;
+  prog = Math.min(1, Math.max(0, prog));
+  const totalCh = readerSpine.length;
+  const targetFloat = prog * totalCh;
+  const chapterIdx = Math.min(totalCh - 1, Math.floor(targetFloat));
+  const fraction = targetFloat - chapterIdx;
+  readerGoToChapter(chapterIdx, { frac: fraction });
+}
 
 window.addEventListener('resize',()=>{
   if(document.getElementById('readerOverlay').classList.contains('open')){
