@@ -314,7 +314,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
   align-items: center;
   justify-content: space-between;
   gap: .6rem;
-  padding: 0 1rem;
+  padding: 0 1.4rem;
   height: 30px;
   flex-shrink: 0;
   border-top: 1px solid rgba(128,128,128,.2);
@@ -404,26 +404,37 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .reader-progress{
   display:flex;
   align-items:center;
-  gap:.7rem;
+  gap:0;
   height:34px;
   box-sizing:border-box;
   padding:0 1.1rem;
   flex-shrink:0;
+}
+.reader-progress.armed{
+  gap:.7rem;
   border-top:1px solid rgba(148,111,41,.3);
 }
+.reader-progress .reader-progress-pct{display:none;}
+.reader-progress.armed .reader-progress-pct{display:block;}
 .reader-overlay.theme-day   .reader-progress{ background:#f4f4f4; }
 .reader-overlay.theme-sepia .reader-progress{ background:#e0d0b8; }
-.reader-overlay.theme-night .reader-progress{ background:#12122a; border-top-color:rgba(200,149,42,.25); }
+.reader-overlay.theme-night .reader-progress{ background:#12122a; }
+.reader-overlay.theme-night .reader-progress.armed{ border-top-color:rgba(200,149,42,.2); }
 .reader-progress-track{
   flex:1;
-  height:6px;
+  height:3px;
   border-radius:3px;
   overflow:visible;
   position:relative;
   background:rgba(148,111,41,.18);
-  box-shadow:inset 0 1px 2px rgba(0,0,0,.18), inset 0 0 0 1px rgba(148,111,41,.15);
+  box-shadow:none;
   cursor:pointer;
   touch-action:none;
+  transition:height .18s ease;
+}
+.reader-progress.armed .reader-progress-track{
+  height:6px;
+  box-shadow:inset 0 1px 2px rgba(0,0,0,.18), inset 0 0 0 1px rgba(148,111,41,.15);
 }
 .reader-progress-track .reader-progress-bar{
   border-radius:3px 0 0 3px;
@@ -5605,6 +5616,7 @@ document.getElementById('btnReaderNext').addEventListener('click',()=>goToPage(r
   function arm(){
     armed = true;
     track.classList.add('armed');
+    track.closest('.reader-progress')?.classList.add('armed');
     clearTimeout(disarmTimer);
     // Auto-disarm after a few seconds of not being touched again, so the
     // "unlocked" state doesn't linger indefinitely.
@@ -5614,6 +5626,7 @@ document.getElementById('btnReaderNext').addEventListener('click',()=>goToPage(r
     armed = false;
     dragging = false;
     track.classList.remove('armed');
+    track.closest('.reader-progress')?.classList.remove('armed');
     clearTimeout(disarmTimer);
   }
   window.addEventListener('readerprogressdisarm', disarm);
