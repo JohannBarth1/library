@@ -441,6 +441,14 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
   pointer-events:auto;
   cursor:pointer;
 }
+/* Visual feedback once a long-press has actually armed scrub mode —
+   the line thickens further so it's clear the drag is live. */
+.reader-progress-line:has(+ .reader-progress-hit.scrubbing){
+  height:8px;
+}
+.reader-progress-hit.scrubbing{
+  cursor:grabbing;
+}
 /* PATCH 5d: chapter list spans full height minus bottom toolbar */
 .reader-chapter-list{display:none;position:fixed;top:0;left:0;bottom:64px;width:280px;border-right:1px solid rgba(128,128,128,0.2);overflow-y:auto;z-index:160;box-shadow:3px 0 10px rgba(0,0,0,0.08);}
 .reader-overlay.theme-day .reader-chapter-list{background:#fff;}
@@ -1974,7 +1982,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
     <div class="reader-progress-line" id="readerProgressLine">
       <div class="reader-progress-bar" id="readerProgressBar" style="width:0%"></div>
     </div>
-    <div class="reader-progress-hit" id="readerProgressHit" title="Drag to jump to a position"></div>
+    <div class="reader-progress-hit" id="readerProgressHit" title="Press and hold, then drag to jump to a position"></div>
     <div class="reader-title" id="readerTitle">Reading…</div>
     <span class="reader-page-info" id="readerPageInfo">1/1</span>
   </div>
@@ -1987,6 +1995,8 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
   </div>
     <div class="reader-nav">
   <button class="reader-btn" id="btnToggleReaderSettings" title="Settings">Aa</button>
+  </div>
+    <div class="reader-nav">
   <button class="reader-btn" id="btnReaderPrev">‹</button>
   <button class="reader-btn" id="btnReaderNext">›</button>
   </div>
@@ -5643,43 +5653,76 @@ document.getElementById('readerInfoBar')?.addEventListener('click', () => {
 });
 
 // PATCH: once the toolbar is visible, the progress line becomes scrubbable —
-// drag (or tap) anywhere along it to jump to a proportional spot in the
-// book. The invisible #readerProgressHit sits on top of the thin visual
-// line and only accepts pointer events while the toolbar is open (see CSS),
-// so it never interferes with the "tap info bar to reveal toolbar" gesture.
+// but scrub mode only arms after a LONG PRESS, so a quick tap on the line
+// never accidentally jumps your place. Hold for LONG_PRESS_MS, then drag
+// anywhere along the invisible #readerProgressHit to jump to a proportional
+// spot in the book. The hit target sits on top of the thin visual line and
+// only accepts pointer events while the toolbar is open (see CSS), so it
+// never interferes with the "tap info bar to reveal toolbar" gesture.
 (function setupReaderProgressScrub(){
   const hit = document.getElementById('readerProgressHit');
   const bar = document.getElementById('readerProgressBar');
   if(!hit) return;
 
-  let dragging = false;
+  const LONG_PRESS_MS = 380;
+  const MOVE_CANCEL_PX = 8;
 
-  function progFromEvent(e){
+  let dragging = false;
+  let longPressTimer = null;
+  let pressStartX = 0, pressStartY = 0, pressPointerId = null;
+
+  function progFromXY(clientX){
     const rect = hit.getBoundingClientRect();
-    const x = e.clientX - rect.left;
+    const x = clientX - rect.left;
     return Math.min(1, Math.max(0, rect.width ? x / rect.width : 0));
   }
+  function progFromEvent(e){ return progFromXY(e.clientX); }
   function previewProg(prog){
     bar.style.width = Math.round(prog * 100) + '%';
+  }
+  function clearLongPressTimer(){
+    if(longPressTimer){ clearTimeout(longPressTimer); longPressTimer = null; }
+  }
+  function armScrub(){
+    longPressTimer = null;
+    dragging = true;
+    hit.classList.add('scrubbing');
+    if(navigator.vibrate) navigator.vibrate(10); // subtle confirmation the hold registered
+    try{ hit.setPointerCapture(pressPointerId); }catch(err){}
+    previewProg(progFromXY(pressStartX));
+  }
+  function endScrub(commitAtX){
+    clearLongPressTimer();
+    if(!dragging){ return; }
+    dragging = false;
+    hit.classList.remove('scrubbing');
+    if(commitAtX !== null) scrubToProgress(progFromXY(commitAtX));
   }
 
   hit.addEventListener('pointerdown', e => {
     if(!readerSpine.length) return;
-    dragging = true;
-    hit.setPointerCapture(e.pointerId);
-    previewProg(progFromEvent(e));
+    pressStartX = e.clientX;
+    pressStartY = e.clientY;
+    pressPointerId = e.pointerId;
+    clearLongPressTimer();
+    longPressTimer = setTimeout(armScrub, LONG_PRESS_MS);
     e.stopPropagation(); // don't let this bubble up and toggle the toolbar
   });
   hit.addEventListener('pointermove', e => {
-    if(!dragging) return;
-    previewProg(progFromEvent(e));
+    if(dragging){
+      previewProg(progFromEvent(e));
+      return;
+    }
+    // Moving too much before the long-press fires cancels it — treat it
+    // like a swipe/tap rather than an intent to scrub.
+    if(longPressTimer && (Math.abs(e.clientX - pressStartX) > MOVE_CANCEL_PX || Math.abs(e.clientY - pressStartY) > MOVE_CANCEL_PX)){
+      clearLongPressTimer();
+    }
   });
   hit.addEventListener('pointerup', e => {
-    if(!dragging) return;
-    dragging = false;
-    scrubToProgress(progFromEvent(e));
+    endScrub(dragging ? e.clientX : null);
   });
-  hit.addEventListener('pointercancel', () => { dragging = false; });
+  hit.addEventListener('pointercancel', () => { endScrub(null); });
   hit.addEventListener('click', e => e.stopPropagation());
 })();
 
