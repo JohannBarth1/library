@@ -2197,6 +2197,16 @@ if (
 });
 
 // ── FIRESTORE ─────────────────────────────────────────────────────────────────
+// PATCH: `library` (mine) and `communityLib` (public/shared) load in two
+// separate waves, the second of which is a fire-and-forget background
+// promise. Anything that needs to look a book up by id (opening the reader,
+// showing book detail) needs a way to know "has that second wave landed
+// yet?" — this flag + promise pair gives them that, instead of silently
+// failing if a book is tapped before communityLib is populated.
+let _libraryReady = false;
+let _libraryReadyResolve;
+let _libraryReadyPromise = new Promise(res => { _libraryReadyResolve = res; });
+
 async function loadLibrary() {
   if (!currentUser) return;
   showLoading('Loading library…');
@@ -2235,13 +2245,52 @@ async function loadLibrary() {
     }).catch(e => {
       console.warn('Background load failed:', e);
       showToast('Could not load public library');
+    }).finally(() => {
+      // PATCH: mark the library "ready" once both waves have settled
+      // (success or failure), so findBookById() stops waiting on it.
+      _libraryReady = true;
+      _libraryReadyResolve();
     });
 
   } catch (e) {
     hideLoading();
     showToast('Error loading library');
     console.error(e);
+    _libraryReady = true;
+    _libraryReadyResolve();
   }
+}
+
+// PATCH: robust book lookup that no longer silently fails when tapped
+// before both library waves have loaded. Order of attempts:
+//   1. Check what's already in memory (fast path, handles the common case).
+//   2. If not found and the background wave hasn't landed yet, wait for it
+//      (with a toast so it doesn't look like the tap did nothing) and
+//      check again.
+//   3. If still not found, fetch that single book doc directly by id —
+//      covers e.g. a direct link to a book that isn't in either local
+//      array (not owned, not public, not yet shared-cached).
+// Returns the book object, or null if it truly doesn't exist / isn't
+// accessible.
+async function findBookById(id) {
+  if (!id) return null;
+  let book = [...library, ...communityLib].find(b => b.id === id);
+  if (book) return book;
+
+  if (!_libraryReady) {
+    showToast('Still loading your library…');
+    await _libraryReadyPromise;
+    book = [...library, ...communityLib].find(b => b.id === id);
+    if (book) return book;
+  }
+
+  try {
+    const snap = await getDoc(doc(db, 'books', id));
+    if (snap.exists()) return { id: snap.id, ...snap.data() };
+  } catch (e) {
+    console.warn('findBookById direct fetch failed:', e);
+  }
+  return null;
 }
 
 function dedupe(books) {
@@ -2619,8 +2668,8 @@ async function renderDeskHome(){
 }
 
 // ── BOOK DETAIL ───────────────────────────────────────────────────────────────
-function showBookById(id){
-  const book=[...library,...communityLib].find(b=>b.id===id);if(!book)return;
+async function showBookById(id){
+  const book=await findBookById(id);if(!book)return showToast("Couldn't find that book");
   lastOpenedBookId = id;
   currentId=id;
   if(book.allowedUsers?.length>0) loadAllUsers();
@@ -3052,8 +3101,8 @@ document.getElementById('btnSaveEditMeta').addEventListener('click',async()=>{
 });
 
 // ── MOBILE DETAIL ─────────────────────────────────────────────────────────────
-function mob_showBook(id){
-  const book=[...library,...communityLib].find(b=>b.id===id);if(!book)return;
+async function mob_showBook(id){
+  const book=await findBookById(id);if(!book)return showToast("Couldn't find that book");
   currentId=id;
   const isMine=book.ownerId===currentUser?.uid;
   const isComm=communityLib.some(b=>b.id===id);
@@ -4142,7 +4191,8 @@ if(isAndroidChrome){
 
 async function readCurrentBook(){
   if(!currentId)return;
-  const book=[...library,...communityLib].find(b=>b.id===currentId);if(!book)return;
+  const book=await findBookById(currentId);
+  if(!book){showToast("Couldn't open that book — try again in a moment");return;}
   recordBookOpened(book);
   addBookToViewedList(book.id);
   let storagePath=book.storagePath;
