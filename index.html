@@ -4516,25 +4516,72 @@ function _offsetsToRange(doc, startOffset, endOffset) {
   return (startSet && endSet) ? range : null;
 }
 
-// Wraps every saved highlight for the current chapter in a <mark>. Call
-// after every chapter render (new iframe/doc).
+// Wraps every saved highlight for the current chapter in one or more
+// <mark> tags. Call after every chapter render (new iframe/doc).
+//
+// PATCH: this used to build one compound Range via _offsetsToRange() and
+// call range.surroundContents(mark) on it. surroundContents() throws
+// InvalidStateError the moment the range's boundary points aren't both
+// inside the same single parent element — which happens constantly in
+// real EPUB markup: a highlight spanning a paragraph break (a "carriage
+// return"), or one that starts/ends right at a quotation mark that the
+// source wraps in its own <span>/<em>, or that crosses any other inline
+// tag boundary. The old code caught that exception and just skipped the
+// whole highlight, so it looked like highlighting "didn't work" for
+// anything but a plain run of unstyled text within a single paragraph.
+//
+// Fix: don't build one compound Range at all. Walk the text nodes that
+// fall within [startOffset, endOffset), split each one so the covered
+// substring is isolated in its own text node, and wrap that node in its
+// own <mark>. A multi-paragraph highlight becomes several <mark>s (one per
+// paragraph/element) instead of one Range — which is exactly how browsers'
+// own native highlighting handles this, and it can't throw regardless of
+// how many elements the selection crosses.
+function _wrapOffsetsInMarks(doc, startOffset, endOffset, markAttrs) {
+  const nodes = _chapterTextNodes(doc);
+  let pos = 0;
+  for (const node of nodes) {
+    const len = node.textContent.length;
+    const nodeStart = pos, nodeEnd = pos + len;
+    pos += len;
+
+    // Does this node overlap [startOffset, endOffset) at all?
+    const from = Math.max(startOffset, nodeStart);
+    const to   = Math.min(endOffset, nodeEnd);
+    if (from >= to) continue; // no overlap with this node
+
+    let target = node;
+    const localStart = from - nodeStart;
+    const localEnd   = to - nodeStart;
+
+    // Isolate [localStart, localEnd) of this node into its own text node.
+    if (localStart > 0) target = target.splitText(localStart);
+    if (localEnd - localStart < target.textContent.length) target.splitText(localEnd - localStart);
+
+    // target now contains exactly the highlighted substring for this node.
+    if (!target.parentNode || !target.textContent) continue;
+    const mark = doc.createElement('mark');
+    mark.dataset.highlightid = markAttrs.id;
+    mark.style.cssText = `background:${markAttrs.bg};color:inherit;border-radius:2px;`;
+    target.parentNode.insertBefore(mark, target);
+    mark.appendChild(target);
+  }
+}
+
 function applyHighlightsToChapter(doc) {
   if(!readerBookId) return;
   const list = getHighlightsForChapter(readerChapter);
-  // Reverse-offset order so wrapping one highlight doesn't shift the DOM
-  // positions the next one's Range needs to be built from.
+  // Reverse-offset order: each highlight's own splitText() calls only
+  // touch nodes at or after its own startOffset, so processing later
+  // (higher-offset) highlights first keeps earlier offsets valid for the
+  // ones still to come.
   [...list].sort((a, b) => b.startOffset - a.startOffset).forEach(h => {
     try {
-      const range = _offsetsToRange(doc, h.startOffset, h.endOffset);
-      if(!range) return;
-      const mark = doc.createElement('mark');
-      mark.dataset.highlightid = h.id;
-      mark.style.cssText = `background:${HIGHLIGHT_COLORS[h.color] || HIGHLIGHT_COLORS.yellow};color:inherit;border-radius:2px;`;
-      range.surroundContents(mark);
+      _wrapOffsetsInMarks(doc, h.startOffset, h.endOffset, {
+        id: h.id,
+        bg: HIGHLIGHT_COLORS[h.color] || HIGHLIGHT_COLORS.yellow
+      });
     } catch(e) {
-      // A highlight that spans a paragraph/element boundary can't be
-      // wrapped in one surroundContents() call — skip rather than break
-      // the whole chapter's rendering.
       console.warn('applyHighlightsToChapter: skipped one highlight', e);
     }
   });
