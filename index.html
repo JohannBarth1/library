@@ -520,6 +520,8 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .loading-spinner{width:44px;height:44px;border:3px solid rgba(200,149,42,.3);border-top-color:var(--gold);border-radius:50%;animation:spin .8s linear infinite;}
 @keyframes spin{to{transform:rotate(360deg);}}
 .loading-msg{color:var(--cream);font-size:.9rem;font-weight:700;letter-spacing:.08em;}
+.tile-opening-spinner{position:absolute;inset:0;background:rgba(15,26,46,.5);display:flex;align-items:center;justify-content:center;z-index:6;border-radius:inherit;}
+.tile-opening-spinner-dot{width:22px;height:22px;border:3px solid rgba(255,255,255,.35);border-top-color:#fff;border-radius:50%;animation:spin .8s linear infinite;}
 
 /* ── DROP ZONE ── */
 .drop-zone{border:2px dashed var(--border);border-radius:6px;padding:2rem;text-align:center;cursor:pointer;transition:all .2s;margin:1.5rem 0;background:var(--warm-white);}
@@ -4252,6 +4254,27 @@ if(isAndroidChrome){
 }
 
 
+// Shows/hides a small spinner directly on a book's tile (grid card or home
+// shelf tile) wherever it currently appears in the DOM — deliberately
+// scoped to just those two tile types so it doesn't land on unrelated
+// elements that also carry data-bookid (star ratings, list pickers, etc).
+function _setTileLoading(bookId, on) {
+  document.querySelectorAll(`.book-card[data-bookid="${bookId}"], .home-shelf-book[data-bookid="${bookId}"]`)
+    .forEach(tile => {
+      const existing = tile.querySelector('.tile-opening-spinner');
+      if (on) {
+        if (!existing) {
+          const spin = document.createElement('div');
+          spin.className = 'tile-opening-spinner';
+          spin.innerHTML = '<div class="tile-opening-spinner-dot"></div>';
+          tile.appendChild(spin);
+        }
+      } else {
+        existing?.remove();
+      }
+    });
+}
+
 async function readCurrentBook(){
   if(!currentId)return;
   const book=await findBookById(currentId);
@@ -4262,6 +4285,7 @@ async function readCurrentBook(){
   if(!storagePath&&book.epubUrl){const match=book.epubUrl.match(/\/o\/(.+?)\?/);if(match)storagePath=decodeURIComponent(match[1]);}
   if(!storagePath){showToast('EPUB not available');return;}
   showLoading('Opening book…');
+  _setTileLoading(book.id, true);
   try{
     const bytes=await getBytes(storageRef(storage,storagePath));
     readerZip=await JSZip.loadAsync(bytes);readerSpine=[];readerChapter=0;
@@ -5104,11 +5128,6 @@ function _attachReaderTapHandlers(doc) {
 
     if (Math.abs(dx) < 10 && Math.abs(dy) < 10) {
       const readerOv = document.getElementById('readerOverlay');
-      if (!readerOv.classList.contains('toolbar-hidden')) {
-        readerOv.classList.add('toolbar-hidden');
-        _updateToolbarHandleIcon();
-        return;
-      }
 
       // Detect links / highlight marks via elementFromPoint into the iframe
       const iframeRect = _readerIframe?.getBoundingClientRect();
@@ -5126,15 +5145,16 @@ function _attachReaderTapHandlers(doc) {
         } catch(err) {}
       }
 
-      // Edges turn pages when the toolbar is already hidden; a tap in the
-      // middle brings the toolbar back (mirrors "tap anywhere hides it"
-      // above, so showing/hiding the toolbar is now symmetric no matter
-      // where you tap, while the edges stay dedicated to page-turning).
+      // Edges ALWAYS turn the page, regardless of toolbar visibility — a
+      // tap on the very first screen of a freshly opened book (toolbar
+      // starts visible) must turn the page immediately, not get swallowed
+      // by "first tap just hides the toolbar" as it did before. Middle
+      // third is the only zone that toggles the toolbar.
       const x = e.changedTouches[0].clientX;
       const w = overlay.offsetWidth || content.offsetWidth;
       if (x < w * 0.3) { goToPage(readerPage - 1); return; }
       if (x > w * 0.7) { goToPage(readerPage + 1); return; }
-      readerOv.classList.remove('toolbar-hidden');
+      readerOv.classList.toggle('toolbar-hidden');
       _updateToolbarHandleIcon();
       return;
     }
@@ -6044,6 +6064,7 @@ function closeReader(){
 
   document.getElementById('readerOverlay').classList.remove('open');
   document.getElementById('readerChapterList').classList.remove('open');
+  document.getElementById('readerBookmarkListPanel').classList.remove('open');
   document.getElementById('readerSettingsBar').classList.remove('open');
 
   if(_readerIframe) { _readerIframe.remove(); _readerIframe = null; }
