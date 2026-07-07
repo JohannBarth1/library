@@ -1753,6 +1753,18 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
   </div>
 </div>
 
+<!-- Full-screen highlights list — opened from either the desktop drawer or
+     mobile detail screen's highlights summary. Reuses the mob-detail-header/
+     mob-back-btn/mob-detail-scroll classes for a consistent look without
+     introducing a parallel set of styles. -->
+<div id="highlightsFullOverlay" style="display:none;position:fixed;inset:0;z-index:250;background:var(--warm-white);flex-direction:column;">
+  <div class="mob-detail-header">
+    <button class="mob-back-btn" id="btnHighlightsFullBack">← Back</button>
+    <div id="highlightsFullTitle" style="font-weight:700;font-size:.85rem;color:var(--navy2);"></div>
+  </div>
+  <div class="mob-detail-scroll" id="highlightsFullList"></div>
+</div>
+
 <!-- Bottom sheet (mobile) -->
 <div class="bottom-sheet-overlay" id="bsOverlay"></div>
 <div class="bottom-sheet" id="bottomSheet">
@@ -4506,8 +4518,9 @@ async function fetchHighlightsForBook(bookId) {
   }
 }
 
-// Populates a book-detail highlights summary: a count + a handful of recent
-// excerpts, each of which deep-links into the reader at that chapter.
+// Populates a book-detail highlights summary: just a count + a link into
+// the full-screen list (see openHighlightsFullList), rather than repeating
+// excerpts inline on the detail page.
 async function renderBookHighlightsSummary(containerEl, bookId) {
   if(!containerEl) return;
   containerEl.innerHTML = '';
@@ -4515,35 +4528,83 @@ async function renderBookHighlightsSummary(containerEl, bookId) {
   const highlights = await fetchHighlightsForBook(bookId);
   if(!highlights.length) return;
 
-  const sorted = [...highlights].sort((a,b) =>
-    (b.createdAt?.toMillis?.()||0) - (a.createdAt?.toMillis?.()||0));
-  const shown = sorted.slice(0, 4);
+  containerEl.style.display = '';
+  containerEl.innerHTML = `
+    <button data-viewhighlights style="
+      display:flex;align-items:center;justify-content:space-between;width:100%;
+      margin:.9rem 0 0;padding:.7rem .9rem;border-radius:8px;
+      border:1px solid var(--border);background:none;cursor:pointer;text-align:left;">
+      <span style="font-size:.78rem;font-weight:700;color:var(--navy2);">
+        ✎ ${highlights.length} Highlight${highlights.length===1?'':'s'}
+      </span>
+      <span style="font-size:.78rem;color:var(--teal);font-weight:700;">View all →</span>
+    </button>
+  `;
+  containerEl.querySelector('[data-viewhighlights]').addEventListener('click', () => {
+    openHighlightsFullList(bookId);
+  });
+}
 
-  const rows = shown.map(h => {
+// ── Full-screen highlights list ──────────────────────────────────────────
+async function openHighlightsFullList(bookId) {
+  const book = await findBookById(bookId);
+  const overlay = document.getElementById('highlightsFullOverlay');
+  const listEl = document.getElementById('highlightsFullList');
+  document.getElementById('highlightsFullTitle').textContent = book ? `Highlights — ${book.title}` : 'Highlights';
+  listEl.innerHTML = `<div style="padding:1.5rem;text-align:center;color:var(--muted);font-size:.85rem;">Loading…</div>`;
+  overlay.style.display = 'flex';
+
+  const highlights = (await fetchHighlightsForBook(bookId))
+    .sort((a,b) => (a.chapterIdx - b.chapterIdx) || (a.startOffset - b.startOffset));
+
+  if(!highlights.length) {
+    listEl.innerHTML = `<div style="padding:1.5rem;text-align:center;color:var(--muted);font-size:.85rem;">
+      No highlights in this book yet.
+    </div>`;
+    return;
+  }
+
+  listEl.innerHTML = highlights.map((h, i) => {
+    const createdAt = h.createdAt?.toDate?.();
+    const dateStr = createdAt ? createdAt.toLocaleDateString() : '';
     const dot = (HIGHLIGHT_COLORS[h.color] || HIGHLIGHT_COLORS.yellow).replace(',.45)', ',1)');
-    const excerpt = esc((h.text || '').trim()).slice(0, 110);
-    return `<div class="detail-highlight-row" data-hbid="${h.id}" data-chidx="${h.chapterIdx}" style="
-      display:flex;gap:.5rem;align-items:flex-start;padding:.4rem 0;cursor:pointer;
-      border-bottom:1px solid var(--border);">
-      <span style="flex-shrink:0;width:8px;height:8px;border-radius:50%;margin-top:.35rem;background:${dot};"></span>
-      <div style="font-size:.78rem;line-height:1.4;color:var(--navy2);">${excerpt || '<em style="opacity:.6">(no preview)</em>'}</div>
+    const excerpt = esc((h.text || '').trim());
+    return `<div class="highlight-item" data-hfidx="${i}" style="display:flex;gap:.6rem;align-items:flex-start;">
+      <span style="flex-shrink:0;width:10px;height:10px;border-radius:50%;margin-top:.3rem;background:${dot};"></span>
+      <div style="min-width:0;flex:1;">
+        <div style="line-height:1.5;">${excerpt || '<em style="opacity:.6">(no preview)</em>'}</div>
+        <div style="font-size:.68rem;opacity:.55;margin-top:4px;">
+          ${esc(h.chapterLabel || ('Chapter ' + (h.chapterIdx+1)))}${dateStr ? ' · ' + dateStr : ''}
+        </div>
+      </div>
+      <button data-hfremove="${i}" title="Remove highlight"
+        style="background:none;border:none;cursor:pointer;font-size:.9rem;
+               color:inherit;opacity:.45;padding:.2rem .3rem;flex-shrink:0;">✕</button>
     </div>`;
   }).join('');
 
-  containerEl.style.display = '';
-  containerEl.innerHTML = `
-    <div style="font-size:.68rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;
-      color:var(--gold);margin:.9rem 0 .4rem;">
-      ✎ ${highlights.length} Highlight${highlights.length===1?'':'s'}
-    </div>
-    ${rows}
-  `;
-  containerEl.querySelectorAll('[data-hbid]').forEach(el => {
-    el.addEventListener('click', () => {
-      openBookAtChapter(bookId, parseInt(el.dataset.chidx));
+  listEl.querySelectorAll('.highlight-item[data-hfidx]').forEach(el => {
+    el.addEventListener('click', e => {
+      if(e.target.closest('[data-hfremove]')) return;
+      const h = highlights[parseInt(el.dataset.hfidx)];
+      closeHighlightsFullList();
+      openBookAtChapter(bookId, h.chapterIdx);
+    });
+  });
+  listEl.querySelectorAll('[data-hfremove]').forEach(btn => {
+    btn.addEventListener('click', async e => {
+      e.stopPropagation();
+      const h = highlights[parseInt(btn.dataset.hfremove)];
+      await deleteHighlight(h.id);
+      openHighlightsFullList(bookId); // simplest correct refresh
     });
   });
 }
+
+function closeHighlightsFullList() {
+  document.getElementById('highlightsFullOverlay').style.display = 'none';
+}
+document.getElementById('btnHighlightsFullBack').addEventListener('click', closeHighlightsFullList);
 
 // Opens a book in the reader and jumps to a given chapter. Used by the
 // book-detail highlights summary to deep-link into a highlight. Note: this
@@ -4892,6 +4953,64 @@ function setReaderSelectMode(on) {
   }
 }
 
+// Finds the word under (x, y) in doc-relative coordinates and returns a
+// Range covering it. "Word" here just means "not whitespace" — punctuation
+// riding along with a word (quotes, commas) is fine and matches how native
+// long-press-to-select behaves in most text views.
+function _wordRangeAtPoint(doc, x, y) {
+  let node, offset;
+  try {
+    if (doc.caretRangeFromPoint) {
+      const r = doc.caretRangeFromPoint(x, y);
+      if (!r) return null;
+      node = r.startContainer; offset = r.startOffset;
+    } else if (doc.caretPositionFromPoint) {
+      const cp = doc.caretPositionFromPoint(x, y);
+      if (!cp) return null;
+      node = cp.offsetNode; offset = cp.offset;
+    } else return null;
+  } catch(e) { return null; }
+
+  if (!node || node.nodeType !== Node.TEXT_NODE) return null;
+  const text = node.textContent;
+  if (!text.trim()) return null;
+
+  const isBoundary = ch => /\s/.test(ch);
+  let start = offset, end = offset;
+  while (start > 0 && !isBoundary(text[start - 1])) start--;
+  while (end < text.length && !isBoundary(text[end])) end++;
+  if (start === end) return null;
+
+  const range = doc.createRange();
+  range.setStart(node, start);
+  range.setEnd(node, end);
+  return range;
+}
+
+// Long-press-to-select entry point: selects the word under the finger, then
+// hands off to the same select-mode machinery the ✎ button uses — the
+// existing poll (_startSelectPoll, already running once select mode is on)
+// notices the new selection within ~250ms and pops the highlight-color menu
+// on its own, so there's nothing extra to trigger here.
+function _fireReaderLongPress(doc, clientX, clientY) {
+  if (!doc || readerSelectMode) return;
+  const list = document.getElementById('readerChapterList');
+  const bmPanel = document.getElementById('readerBookmarkListPanel');
+  const settingsBar = document.getElementById('readerSettingsBar');
+  if (list?.classList.contains('open') || bmPanel?.classList.contains('open') || settingsBar?.classList.contains('open')) return;
+
+  const iframeRect = _readerIframe?.getBoundingClientRect();
+  if (!iframeRect) return;
+  const range = _wordRangeAtPoint(doc, clientX - iframeRect.left, clientY - iframeRect.top);
+  if (!range) return;
+
+  const sel = doc.getSelection ? doc.getSelection() : doc.defaultView?.getSelection();
+  if (!sel) return;
+  sel.removeAllRanges();
+  sel.addRange(range);
+  setReaderSelectMode(true);
+}
+
 function _attachReaderTapHandlers(doc) {
   const content = document.getElementById('readerContent');
   document.getElementById('readerTouchOverlay')?.remove();
@@ -4923,15 +5042,38 @@ function _attachReaderTapHandlers(doc) {
   }
 
   let tx0 = 0, ty0 = 0;
+  let lpTimer = null;
+  let lpFired = false;
 
   // ── Overlay listeners (navigation mode only — inert while select mode is on,
   // since pointer-events:none means the overlay receives nothing at all) ────
   overlay.addEventListener('touchstart', e => {
     tx0 = e.touches[0].clientX;
     ty0 = e.touches[0].clientY;
+    lpFired = false;
+    clearTimeout(lpTimer);
+    // Arm a long-press: if the finger is still roughly where it started
+    // ~450ms from now, treat it as "long-press to select" rather than a
+    // page-turn tap or swipe. We never rely on the OS's own long-press
+    // recognizer (which can't fire here anyway — the overlay, not the
+    // iframe doc, owns the touch while in navigation mode), so there's no
+    // race to lose against native "Look Up" or anything else.
+    lpTimer = setTimeout(() => {
+      lpFired = true;
+      _fireReaderLongPress(doc, tx0, ty0);
+    }, 450);
+  }, { passive: true });
+
+  overlay.addEventListener('touchmove', e => {
+    const dx = e.touches[0].clientX - tx0;
+    const dy = e.touches[0].clientY - ty0;
+    if (Math.abs(dx) > 10 || Math.abs(dy) > 10) clearTimeout(lpTimer);
   }, { passive: true });
 
   overlay.addEventListener('touchend', e => {
+    clearTimeout(lpTimer);
+    if (lpFired) { lpFired = false; return; } // long-press already handled this touch
+
     const list = document.getElementById('readerChapterList');
     const bmPanel = document.getElementById('readerBookmarkListPanel');
     const settingsBar = document.getElementById('readerSettingsBar');
