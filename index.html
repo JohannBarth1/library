@@ -610,7 +610,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 /* mobile book detail */
 .mob-detail-header{padding:.65rem 1rem;border-bottom:1px solid var(--border);background:var(--warm-white);display:flex;align-items:center;gap:.6rem;flex-shrink:0;}
 .mob-back-btn{background:none;border:none;font-size:.78rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--teal);cursor:pointer;-webkit-tap-highlight-color:transparent;display:flex;align-items:center;gap:.3rem;padding:0;}
-.mob-detail-scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:1rem;}
+.mob-detail-scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:1rem 1rem calc(var(--mob-nav-h) + 1.5rem);}
 .mob-detail-top{display:flex;gap:.9rem;margin-bottom:1rem;}
 .mob-detail-cover{width:85px;height:125px;object-fit:cover;border-radius:3px;border:1px solid var(--border);flex-shrink:0;}
 .mob-detail-cover-ph{width:85px;height:125px;background:linear-gradient(145deg,var(--navy2),#2a3d5a);border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:2rem;flex-shrink:0;}
@@ -2809,9 +2809,15 @@ function renderDetailActionRows(container, book, isMine){
     </button>`;
   };
 
+  // Same "already started?" check the Current Reads popup uses — a
+  // reading_position bookmark with progress > 0 means the label should
+  // read "Continue Reading" instead of "Read".
+  const readingPosBm = _myBookmarks.find(b => b.type === 'reading_position' && b.bookId === book.id);
+  const hasStarted = !!readingPosBm && (readingPosBm.progress || 0) > 0;
+
   // ── Row 1: primary, large ──────────────────────────────────────────────
   let html = `<div style="display:flex;gap:.5rem;margin-bottom:.55rem;flex-wrap:wrap;">
-    ${bigBtn('📖','Read','read','#3d7a96','var(--gold)')}
+    ${bigBtn('📖', hasStarted ? 'Continue Reading' : 'Read', 'read','#3d7a96','var(--gold)')}
     ${bigBtn('🔲','Send to Kobo','sendtokobo','var(--teal)','var(--gold)')}
   </div>`;
 
