@@ -3649,8 +3649,17 @@ function shelfSection(id, label, icon, color, books, opts={}) {
 function bookmarksSection() {
     const allBooks = dedupe([...library, ...communityLib, ..._bookmarkBookCache]);
 
+    // PATCH: a "reading position" bookmark is auto-saved every time you read
+    // and never gets deleted on its own — it just marks the last spot you
+    // were at. This section is meant to reflect "Currently Reading" though,
+    // so it needs to be cross-referenced against that list's membership;
+    // otherwise removing a book from Currently Reading left it stuck here
+    // indefinitely (the Timeline feature already does this same
+    // cross-reference — see currentIds usage there).
+    const currentlyReadingIds = new Set(_userLists.find(l => l.id === 'currently-reading')?.bookIds || []);
+
     const readingPosBookmarks = _myBookmarks
-      .filter(b => b.type === 'reading_position' && b.bookId)
+      .filter(b => b.type === 'reading_position' && b.bookId && currentlyReadingIds.has(b.bookId))
       .sort((a,b) => (b.updatedAt?.toMillis?.()||0) - (a.updatedAt?.toMillis?.()||0));
 
     if(!readingPosBookmarks.length) return '';
