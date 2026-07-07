@@ -288,6 +288,37 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
   justify-content: center;
 }
 .reader-toolbar-handle:hover{ background: rgba(120,120,120,.55); }
+/* PATCH: top-pinned back chevron, replacing the old ✕ that lived inside
+   the bottom toolbar (which was ambiguous — easy to confuse with "hide
+   toolbar"). It's an absolutely-positioned overlay like the toolbar
+   itself, so it never takes up layout space, and it only shows/hides in
+   sync with the toolbar so "leave the book" (top) stays visually distinct
+   from "collapse the chrome" (bottom). */
+.reader-back-btn{
+  position: absolute;
+  top: max(10px, env(safe-area-inset-top));
+  left: 10px;
+  z-index: 130;
+  width: 40px;
+  height: 40px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(120,120,120,.35);
+  color: #fff;
+  font-size: 1.3rem;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity .18s ease, transform .18s ease;
+}
+.reader-back-btn:hover{ background: rgba(120,120,120,.55); }
+.reader-overlay.toolbar-hidden .reader-back-btn{
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-6px);
+}
   .reader-overlay{
   display:none;
   position:fixed;
@@ -345,8 +376,6 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .reader-overlay.theme-night .reader-btn { background: rgba(200,149,42,.12); color: var(--gold); border-color: rgba(200,149,42,.25); }
 .reader-btn:hover { opacity: .75; }
 .reader-btn.active { background: var(--gold) !important; color: var(--navy) !important; border-color: var(--gold) !important; }
-.reader-btn-close { color: #c0392b !important; }
-.reader-overlay.theme-night .reader-btn-close { color: #f87171 !important; border-color: rgba(248,113,113,.35) !important; }
 
 .reader-title {
   font-family: 'Playfair Display', serif;
@@ -2000,8 +2029,12 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
   <button class="reader-btn" id="btnReaderPrev">‹</button>
   <button class="reader-btn" id="btnReaderNext">›</button>
   </div>
-  <button class="reader-btn reader-btn-close" id="btnCloseReader" title="Close">✕</button>
   </div>
+  <!-- PATCH: top-pinned back chevron replaces the old in-toolbar ✕. Shows
+       /hides in sync with the toolbar (see .reader-overlay.toolbar-hidden
+       .reader-back-btn), so exiting the book is spatially separate from
+       collapsing the toolbar. -->
+  <button class="reader-back-btn" id="btnCloseReader" title="Exit book">‹</button>
   <!-- Always-visible min/max handle — the toolbar only toggles on tap for
        touch devices, so desktop (mouse) needs its own persistent control. -->
   <button class="reader-toolbar-handle" id="readerToolbarHandle" title="Show/hide toolbar">⌄</button>
@@ -4803,12 +4836,17 @@ function _attachReaderTapHandlers(doc) {
         } catch(err) {}
       }
 
-      // Edges turn pages when the toolbar is already hidden; the middle of
-      // the reading area is intentionally inert otherwise.
+      // Edges turn pages when the toolbar is already hidden; a tap in the
+      // middle brings the toolbar back (mirrors "tap anywhere hides it"
+      // above, so showing/hiding the toolbar is now symmetric no matter
+      // where you tap, while the edges stay dedicated to page-turning).
       const x = e.changedTouches[0].clientX;
       const w = overlay.offsetWidth || content.offsetWidth;
       if (x < w * 0.3) { goToPage(readerPage - 1); return; }
       if (x > w * 0.7) { goToPage(readerPage + 1); return; }
+      readerOv.classList.remove('toolbar-hidden');
+      _updateToolbarHandleIcon();
+      return;
     }
   }, { passive: true });
 
