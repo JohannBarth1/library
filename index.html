@@ -429,11 +429,9 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .reader-overlay.theme-sepia .reader-settings-bar{ background:#e0d0b8; }
 .reader-overlay.theme-night .reader-settings-bar{ background:#12122a; }
 
-/* PATCH: the reading-progress indicator is now a slim line along the top
-   edge of the info bar itself — it IS the divider between the reading area
-   and the chapter/page row, instead of a separate fixed-height section.
-   It's purely decorative while the toolbar is hidden; once the toolbar is
-   showing, it becomes a scrubbable progress bar (see readerProgressHit). */
+/* The reading-progress indicator is a slim line along the top edge of the
+   info bar itself — it IS the divider between the reading area and the
+   chapter/page row, instead of a separate fixed-height section. */
 .reader-progress-line{
   position:absolute;
   top:0; left:0; right:0;
@@ -455,31 +453,14 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
   box-shadow:0 0 5px rgba(200,149,42,.55);
   transition:width .35s ease;
 }
-/* Invisible, generously-sized touch target laid over the progress line —
-   only active (pointer-events:auto) while the toolbar is visible, so it
-   never steals the "tap info bar to reveal toolbar" gesture. */
-.reader-progress-hit{
-  position:absolute;
-  top:0; left:0; right:0;
-  height:20px;
-  pointer-events:none;
-  touch-action:none;
-  z-index:2;
-}
-.reader-overlay:not(.toolbar-hidden) .reader-progress-hit{
-  pointer-events:auto;
-  cursor:pointer;
-}
-/* Visual feedback once a long-press has actually armed scrub mode —
-   the line thickens further so it's clear the drag is live. */
-.reader-progress-line:has(+ .reader-progress-hit.scrubbing){
-  height:8px;
-}
-.reader-progress-hit.scrubbing{
-  cursor:grabbing;
-}
-/* PATCH 5d: chapter list spans full height minus bottom toolbar */
-.reader-chapter-list{display:none;position:fixed;top:0;left:0;bottom:64px;width:280px;border-right:1px solid rgba(128,128,128,0.2);overflow-y:auto;z-index:160;box-shadow:3px 0 10px rgba(0,0,0,0.08);}
+.reader-overlay.theme-sepia{ --muted:#8a6f4e; }
+.reader-overlay.theme-night{ --muted:#8a8aa8; }
+/* PATCH 5d: chapter list spans full height, its bottom edge kept in sync
+   with the toolbar's real (dynamic) top edge by positionReaderToolbar() —
+   see JS. The old hardcoded bottom:64px assumed a fixed toolbar height,
+   which drifted out of alignment whenever the info bar's real height
+   (safe-area insets, font-size-dependent line wrapping, etc.) differed. */
+.reader-chapter-list{display:none;position:fixed;top:0;left:0;width:280px;border-right:1px solid rgba(128,128,128,0.2);overflow-y:auto;z-index:160;box-shadow:3px 0 10px rgba(0,0,0,0.08);}
 .reader-overlay.theme-day .reader-chapter-list{background:#fff;}
 .reader-overlay.theme-sepia .reader-chapter-list{background:#f4ede0;}
 .reader-overlay.theme-night .reader-chapter-list{background:#1a1a2e;}
@@ -2011,7 +1992,6 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
     <div class="reader-progress-line" id="readerProgressLine">
       <div class="reader-progress-bar" id="readerProgressBar" style="width:0%"></div>
     </div>
-    <div class="reader-progress-hit" id="readerProgressHit" title="Press and hold, then drag to jump to a position"></div>
     <div class="reader-title" id="readerTitle">Reading…</div>
     <span class="reader-page-info" id="readerPageInfo">1/1</span>
   </div>
@@ -4168,6 +4148,7 @@ document.getElementById('btnToggleReaderSettings').addEventListener('click', e =
 document.getElementById('btnToggleChapters').addEventListener('click',()=>{
   document.getElementById('readerBookmarkListPanel').classList.remove('open');
   document.getElementById('readerChapterList').classList.toggle('open');
+  positionReaderToolbar();
 });
 document.getElementById('btnToggleSelectMode').addEventListener('click', e => {
   e.stopPropagation();
@@ -4372,6 +4353,8 @@ function positionReaderToolbar() {
   const infoBar  = document.getElementById('readerInfoBar');
   const settingsBar = document.getElementById('readerSettingsBar');
   const handle   = document.getElementById('readerToolbarHandle');
+  const chapterList = document.getElementById('readerChapterList');
+  const bookmarkList = document.getElementById('readerBookmarkListPanel');
   if(!toolbar) return;
   const baseOffset = infoBar?.offsetHeight || 0;
   toolbar.style.bottom = baseOffset + 'px';
@@ -4382,6 +4365,12 @@ function positionReaderToolbar() {
   // regardless of whether the toolbar itself is currently shown or hidden —
   // this is the min/max control for desktop, where there's no tap-to-toggle.
   if(handle) handle.style.bottom = (baseOffset + toolbar.offsetHeight) + 'px';
+  // PATCH: the Contents/Bookmarks side panels must end exactly where the
+  // toolbar begins — previously a hardcoded bottom:64px, which drifted out
+  // of sync with the toolbar's real (dynamic) height/position.
+  const panelBottom = (baseOffset + toolbar.offsetHeight) + 'px';
+  if(chapterList) chapterList.style.bottom = panelBottom;
+  if(bookmarkList) bookmarkList.style.bottom = panelBottom;
 }
 
 function _getReaderDimensions() {
@@ -5124,10 +5113,10 @@ function recalcReaderHeight() {
 }
   
 function updatePaginationUI(){
-  document.getElementById('readerPageInfo').textContent = `${readerPage+1}/${readerPageCount}`;
   document.querySelectorAll('.chapter-item').forEach((el,i)=>el.classList.toggle('active', i===readerChapter));
   const prog = (readerChapter + (readerPage/Math.max(readerPageCount,1))) / Math.max(readerSpine.length,1);
   const pct = Math.round(Math.min(prog,1)*100);
+  document.getElementById('readerPageInfo').textContent = `${readerPage+1}/${readerPageCount} · ${pct}%`;
   document.getElementById('readerProgressBar').style.width = pct+'%';
   renderReaderBookmarkTab();
   updateBookmarkNavIcon();
@@ -5341,7 +5330,7 @@ async function removeReaderBookmarkAt(bookId, chapterIdx, pageIdx) {
       </div>
       <button data-bmremove="${i}" title="Remove bookmark"
         style="background:none;border:none;cursor:pointer;font-size:.85rem;
-               opacity:.45;padding:.2rem .3rem;flex-shrink:0;">✕</button>
+               color:inherit;opacity:.45;padding:.2rem .3rem;flex-shrink:0;">✕</button>
     </div>`;
   }).join('');
 
@@ -5373,6 +5362,7 @@ document.getElementById('btnToggleBookmarkList').addEventListener('click', () =>
   document.getElementById('readerChapterList').classList.remove('open'); // mutually exclusive
   const willOpen = !panel.classList.contains('open');
   panel.classList.toggle('open');
+  positionReaderToolbar();
   if(willOpen) renderReaderBookmarkList();
 });
 
@@ -5796,90 +5786,6 @@ document.getElementById('btnReaderNext').addEventListener('click',()=>goToPage(r
 document.getElementById('readerInfoBar')?.addEventListener('click', () => {
   toggleReaderToolbar();
 });
-
-// PATCH: once the toolbar is visible, the progress line becomes scrubbable —
-// but scrub mode only arms after a LONG PRESS, so a quick tap on the line
-// never accidentally jumps your place. Hold for LONG_PRESS_MS, then drag
-// anywhere along the invisible #readerProgressHit to jump to a proportional
-// spot in the book. The hit target sits on top of the thin visual line and
-// only accepts pointer events while the toolbar is open (see CSS), so it
-// never interferes with the "tap info bar to reveal toolbar" gesture.
-(function setupReaderProgressScrub(){
-  const hit = document.getElementById('readerProgressHit');
-  const bar = document.getElementById('readerProgressBar');
-  if(!hit) return;
-
-  const LONG_PRESS_MS = 380;
-  const MOVE_CANCEL_PX = 8;
-
-  let dragging = false;
-  let longPressTimer = null;
-  let pressStartX = 0, pressStartY = 0, pressPointerId = null;
-
-  function progFromXY(clientX){
-    const rect = hit.getBoundingClientRect();
-    const x = clientX - rect.left;
-    return Math.min(1, Math.max(0, rect.width ? x / rect.width : 0));
-  }
-  function progFromEvent(e){ return progFromXY(e.clientX); }
-  function previewProg(prog){
-    bar.style.width = Math.round(prog * 100) + '%';
-  }
-  function clearLongPressTimer(){
-    if(longPressTimer){ clearTimeout(longPressTimer); longPressTimer = null; }
-  }
-  function armScrub(){
-    longPressTimer = null;
-    dragging = true;
-    hit.classList.add('scrubbing');
-    if(navigator.vibrate) navigator.vibrate(10); // subtle confirmation the hold registered
-    try{ hit.setPointerCapture(pressPointerId); }catch(err){}
-    previewProg(progFromXY(pressStartX));
-  }
-  function endScrub(commitAtX){
-    clearLongPressTimer();
-    if(!dragging){ return; }
-    dragging = false;
-    hit.classList.remove('scrubbing');
-    if(commitAtX !== null) scrubToProgress(progFromXY(commitAtX));
-  }
-
-  hit.addEventListener('pointerdown', e => {
-    if(!readerSpine.length) return;
-    pressStartX = e.clientX;
-    pressStartY = e.clientY;
-    pressPointerId = e.pointerId;
-    clearLongPressTimer();
-    longPressTimer = setTimeout(armScrub, LONG_PRESS_MS);
-    e.stopPropagation(); // don't let this bubble up and toggle the toolbar
-  });
-  hit.addEventListener('pointermove', e => {
-    if(dragging){
-      previewProg(progFromEvent(e));
-      return;
-    }
-    // Moving too much before the long-press fires cancels it — treat it
-    // like a swipe/tap rather than an intent to scrub.
-    if(longPressTimer && (Math.abs(e.clientX - pressStartX) > MOVE_CANCEL_PX || Math.abs(e.clientY - pressStartY) > MOVE_CANCEL_PX)){
-      clearLongPressTimer();
-    }
-  });
-  hit.addEventListener('pointerup', e => {
-    endScrub(dragging ? e.clientX : null);
-  });
-  hit.addEventListener('pointercancel', () => { endScrub(null); });
-  hit.addEventListener('click', e => e.stopPropagation());
-})();
-
-function scrubToProgress(prog){
-  if(!readerSpine.length) return;
-  prog = Math.min(1, Math.max(0, prog));
-  const totalCh = readerSpine.length;
-  const targetFloat = prog * totalCh;
-  const chapterIdx = Math.min(totalCh - 1, Math.floor(targetFloat));
-  const fraction = targetFloat - chapterIdx;
-  readerGoToChapter(chapterIdx, { frac: fraction });
-}
 
 window.addEventListener('resize',()=>{
   if(document.getElementById('readerOverlay').classList.contains('open')){
