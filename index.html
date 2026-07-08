@@ -2145,6 +2145,8 @@ let _readerIsInitialChapterLoad = true;
 let _bookmarkTemplates = [];
 let _myBookmarks = [];
 
+  const _savingReadingProgress = new Set(); // bookIds with an in-flight saveReadingProgress write
+
 // ── AUTH ──────────────────────────────────────────────────────────────────────
 onAuthStateChanged(auth, async user => {
   currentUser = user;
@@ -3704,7 +3706,8 @@ function bookmarksSection() {
 
     const readingPosBookmarks = _myBookmarks
       .filter(b => b.type === 'reading_position' && b.bookId && currentlyReadingIds.has(b.bookId))
-      .sort((a,b) => (b.updatedAt?.toMillis?.()||0) - (a.updatedAt?.toMillis?.()||0));
+      .sort((a,b) => (b.updatedAt?.toMillis?.()||0) - (a.updatedAt?.toMillis?.()||0))
+      .filter((b, i, arr) => arr.findIndex(x => x.bookId === b.bookId) === i); // keep newest per book
 
     if(!readingPosBookmarks.length) return '';
 
@@ -3892,7 +3895,8 @@ function recommendedSection(books) {
       </div>
     </div>`;
 
-  // ── Bind book taps ────────────────────────────────────────────────────
+// ── Bind book taps (all shelves; Current Reads opens the reader, everything
+  //    else opens the book detail screen) ─────────────────────────────────
   container.querySelectorAll('.home-shelf-book[data-bookid]').forEach(el => {
     if(!el.dataset.bookid) return;
     el.addEventListener('click', () => {
@@ -3906,14 +3910,6 @@ function recommendedSection(books) {
       } else {
         mob_showBook(bookId);
       }
-    });
-  });
-
-// ── Bind book taps (favourites / want-to-read / lists / recent / finished / recommended) ──
-  container.querySelectorAll('.home-shelf-book[data-bookid]').forEach(el => {
-    el.addEventListener('click', () => {
-      mobPrevPanel = 'mobPanelHome';
-      mob_showBook(el.dataset.bookid);
     });
   });
 
@@ -4360,6 +4356,13 @@ async function saveReadingProgress(bookId, chapterIdx, pageIdx, totalChapters){
 
   // Write to Firestore
   if(!currentUser) return;
+
+  // Guard against concurrent calls for the same book racing on the
+  // "does a reading_position doc exist yet" check below (see goToPage,
+  // which calls this un-awaited on every page turn with no debounce).
+  if(_savingReadingProgress.has(bookId)) return;
+  _savingReadingProgress.add(bookId);
+
   try {
     const existing = getReadingPositionBookmark(bookId);
     const data = {
@@ -4385,6 +4388,8 @@ async function saveReadingProgress(bookId, chapterIdx, pageIdx, totalChapters){
     }
   } catch(e) {
     console.warn('saveReadingProgress Firestore:', e);
+  } finally {
+    _savingReadingProgress.delete(bookId);
   }
 }
 
