@@ -4260,7 +4260,7 @@ if(isAndroidChrome){
 function _setTileLoading(bookId, on) {
   // Book details view (desktop drawer hero + mobile detail cover) and Home
   // tab tiles only — NOT the Library grid (.book-card), which doesn't need it.
-  document.querySelectorAll(`.home-shelf-book[data-bookid="${bookId}"], #drawerHeroCover, .mob-detail-cover-wrap`)
+  document.querySelectorAll(`#homeSection_home_reading .home-shelf-book[data-bookid="${bookId}"], #drawerHeroCover, .mob-detail-cover-wrap`)
     .forEach(tile => {
       const existing = tile.querySelector('.tile-opening-spinner');
       if (on) {
@@ -4285,7 +4285,6 @@ async function readCurrentBook(){
   let storagePath=book.storagePath;
   if(!storagePath&&book.epubUrl){const match=book.epubUrl.match(/\/o\/(.+?)\?/);if(match)storagePath=decodeURIComponent(match[1]);}
   if(!storagePath){showToast('EPUB not available');return;}
-  showLoading('Opening book…');
   _setTileLoading(book.id, true);
   try{
     const bytes=await getBytes(storageRef(storage,storagePath));
