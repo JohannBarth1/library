@@ -2041,6 +2041,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
   </div>
     <div class="reader-nav">
   <button class="reader-btn" id="btnToggleReaderSettings" title="Settings">Aa</button>
+  <button class="reader-btn" id="btnReaderTTS" title="Read aloud">🔊</button>
   </div>
     <div class="reader-nav">
   <button class="reader-btn" id="btnReaderPrev">‹</button>
@@ -4129,6 +4130,11 @@ function _updateToolbarHandleIcon() {
 
 document.getElementById('readerToolbarHandle')?.addEventListener('click', () => {
   toggleReaderToolbar();
+});
+
+document.getElementById('btnReaderTTS').addEventListener('click', () => {
+  if(!readerBookId) return;
+  startTTS(readerBookId);
 });
 
 const bmAnimBtn = document.getElementById('btnToggleBookmarkAnim');
@@ -6415,6 +6421,7 @@ function ttsStop() {
   document.getElementById('ttsBar').classList.remove('open');
   document.getElementById('ttsSettingsRow').style.display = 'none';
   document.getElementById('ttsBtnPlay').textContent = '▶';
+  document.getElementById('btnReaderTTS')?.classList.remove('active');
 }
 
 // ── CHAPTER LOADING ───────────────────────────────────────────────────────────
@@ -6452,6 +6459,7 @@ async function ttsGoToChapter(idx) {
 
     ttsPlaying = true;
     document.getElementById('ttsBtnPlay').textContent = '⏸';
+    document.getElementById('btnReaderTTS')?.classList.add('active');
     ttsSpeakNextParagraph();
 
   } catch(e) {
@@ -6517,12 +6525,14 @@ function ttsPause() {
   // Back up one paragraph so resume repeats the interrupted one
   ttsParagraphIdx = Math.max(0, ttsParagraphIdx - 1);
   document.getElementById('ttsBtnPlay').textContent = '▶';
+  document.getElementById('btnReaderTTS')?.classList.remove('active');
 }
 
 function ttsResume() {
   if(ttsPlaying) return;
   ttsPlaying = true;
   document.getElementById('ttsBtnPlay').textContent = '⏸';
+  document.getElementById('btnReaderTTS')?.classList.add('active');
   ttsSpeakNextParagraph();
 }
 
