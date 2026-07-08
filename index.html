@@ -5109,10 +5109,14 @@ function _attachReaderTapHandlers(doc) {
     const list = document.getElementById('readerChapterList');
     const bmPanel = document.getElementById('readerBookmarkListPanel');
     const settingsBar = document.getElementById('readerSettingsBar');
-    if (list.classList.contains('open') || bmPanel.classList.contains('open') || settingsBar.classList.contains('open')) {
+    const readerOv = document.getElementById('readerOverlay');
+    const toolbarVisible = !readerOv.classList.contains('toolbar-hidden');
+    
+    if (list.classList.contains('open') || bmPanel.classList.contains('open') || settingsBar.classList.contains('open') || toolbarVisible) {
       list.classList.remove('open');
       bmPanel.classList.remove('open');
       settingsBar.classList.remove('open');
+      if (toolbarVisible) { readerOv.classList.add('toolbar-hidden'); _updateToolbarHandleIcon(); }
       return;
     }
 
