@@ -1762,7 +1762,11 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 <div id="highlightsFullOverlay" style="display:none;position:fixed;inset:0;z-index:250;background:var(--warm-white);flex-direction:column;">
   <div class="mob-detail-header">
     <button class="mob-back-btn" id="btnHighlightsFullBack">← Back</button>
-    <div id="highlightsFullTitle" style="font-weight:700;font-size:.85rem;color:var(--navy2);"></div>
+    <div id="highlightsFullTitle" style="font-weight:700;font-size:.85rem;color:var(--navy2);flex:1;"></div>
+    <button id="btnHighlightsCopyAll" title="Copy all highlights"
+      style="background:none;border:none;cursor:pointer;font-size:.9rem;color:inherit;opacity:.6;padding:.3rem;">📋</button>
+    <button id="btnHighlightsDownloadAll" title="Download all highlights"
+      style="background:none;border:none;cursor:pointer;font-size:.9rem;color:inherit;opacity:.6;padding:.3rem;">⬇</button>
   </div>
   <div class="mob-detail-scroll" id="highlightsFullList"></div>
 </div>
@@ -4576,6 +4580,34 @@ async function renderBookHighlightsSummary(containerEl, bookId) {
 }
 
 // ── Full-screen highlights list ──────────────────────────────────────────
+  function formatHighlightForExport(h) {
+  const createdAt = h.createdAt?.toDate?.();
+  const dateStr = createdAt ? createdAt.toLocaleDateString() : '';
+  const chapter = h.chapterLabel || ('Chapter ' + (h.chapterIdx + 1));
+  const meta = [chapter, dateStr].filter(Boolean).join(' · ');
+  return `"${(h.text || '').trim()}"\n— ${meta}`;
+}
+
+function formatHighlightsForExport(book, highlights) {
+  const header = book ? `Highlights — ${book.title}` : 'Highlights';
+  const body = highlights.map(formatHighlightForExport).join('\n\n');
+  return `${header}\n\n${body}`;
+}
+
+function downloadHighlightsFile(book, highlights) {
+  const text = formatHighlightsForExport(book, highlights);
+  const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const safeTitle = (book?.title || 'highlights').replace(/[^\w\- ]+/g, '').trim() || 'highlights';
+  a.href = url;
+  a.download = `${safeTitle} - highlights.txt`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+  
 async function openHighlightsFullList(bookId) {
   const book = await findBookById(bookId);
   const overlay = document.getElementById('highlightsFullOverlay');
@@ -4607,6 +4639,9 @@ async function openHighlightsFullList(bookId) {
           ${esc(h.chapterLabel || ('Chapter ' + (h.chapterIdx+1)))}${dateStr ? ' · ' + dateStr : ''}
         </div>
       </div>
+      <button data-hfcopy="${i}" title="Copy highlight"
+        style="background:none;border:none;cursor:pointer;font-size:.85rem;
+               color:inherit;opacity:.45;padding:.2rem .3rem;flex-shrink:0;">📋</button>
       <button data-hfremove="${i}" title="Remove highlight"
         style="background:none;border:none;cursor:pointer;font-size:.9rem;
                color:inherit;opacity:.45;padding:.2rem .3rem;flex-shrink:0;">✕</button>
@@ -4629,6 +4664,23 @@ async function openHighlightsFullList(bookId) {
       openHighlightsFullList(bookId); // simplest correct refresh
     });
   });
+  listEl.querySelectorAll('[data-hfcopy]').forEach(btn => {
+    btn.addEventListener('click', async e => {
+      e.stopPropagation();
+      const h = highlights[parseInt(btn.dataset.hfcopy)];
+      const ok = await copyTextToClipboard(formatHighlightForExport(h));
+      showToast(ok ? 'Highlight copied' : 'Copy failed');
+    });
+  });
+
+  document.getElementById('btnHighlightsCopyAll').onclick = async () => {
+    const ok = await copyTextToClipboard(formatHighlightsForExport(book, highlights));
+    showToast(ok ? 'All highlights copied' : 'Copy failed');
+  };
+
+  document.getElementById('btnHighlightsDownloadAll').onclick = () => {
+    downloadHighlightsFile(book, highlights);
+  };
 }
 
 function closeHighlightsFullList() {
