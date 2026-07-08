@@ -2201,8 +2201,6 @@ onAuthStateChanged(auth, async user => {
         loadUserRatings(),
         loadMyCheckouts(),
         loadKoboDevices(),
-        loadBookmarkTemplates(),
-        loadMyBookmarks(),
       ]).then(() => {
         renderMobHome();
         renderDeskHome();
