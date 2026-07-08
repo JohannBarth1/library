@@ -2983,7 +2983,6 @@ function handleAction(e){
   const a=btn.dataset.action;
   document.querySelectorAll('.action-dropdown-menu.open').forEach(m=>m.classList.remove('open'));
   if(a==='read')         readCurrentBook();
-  if(a==='listen')       startTTS(currentId);
   if(a==='download')     downloadCurrentBook();
   if(a==='share')        shareCurrentBook();
   if(a==='unpublish')    unpublishCurrentBook();
@@ -6239,6 +6238,7 @@ let ttsOpfBase = '';
 let ttsPlaying = false;
 let ttsUtterance = null;
 let ttsWatchdog = null;
+let ttsKeepAlive = null;
 let ttsRate = 1;
 let ttsVoice = null;
 let ttsParagraphs = [];
@@ -6412,6 +6412,7 @@ function ttsShowBar(title) {
 function ttsStop() {
   window.speechSynthesis.cancel();
   clearInterval(ttsWatchdog);
+  clearInterval(ttsKeepAlive);
   ttsPlaying = false;
   ttsBookId = null;
   ttsZip = null;
@@ -6506,6 +6507,13 @@ function ttsSpeakNextParagraph() {
 
   window.speechSynthesis.speak(ttsUtterance);
 
+  clearInterval(ttsKeepAlive);
+  ttsKeepAlive = setInterval(() => {
+    if(!ttsPlaying) { clearInterval(ttsKeepAlive); return; }
+    window.speechSynthesis.pause();
+    window.speechSynthesis.resume();
+  }, 10000);
+
   // iOS Chrome watchdog — onend is unreliable
   clearInterval(ttsWatchdog);
   ttsWatchdog = setInterval(() => {
@@ -6521,6 +6529,7 @@ function ttsPause() {
   if(!ttsPlaying) return;
   ttsPlaying = false;
   clearInterval(ttsWatchdog);
+  clearInterval(ttsKeepAlive);
   window.speechSynthesis.cancel(); // more reliable than pause() on iOS
   // Back up one paragraph so resume repeats the interrupted one
   ttsParagraphIdx = Math.max(0, ttsParagraphIdx - 1);
@@ -6535,6 +6544,14 @@ function ttsResume() {
   document.getElementById('btnReaderTTS')?.classList.add('active');
   ttsSpeakNextParagraph();
 }
+
+  document.addEventListener('visibilitychange', () => {
+  if(document.hidden && ttsPlaying) {
+    // iOS suspends speechSynthesis on backgrounding; reflect that in the UI
+    // rather than pretending playback continues.
+    ttsPause();
+  }
+});
 
 // ── SPEED CYCLING ─────────────────────────────────────────────────────────────
 function ttsCycleSpeed() {
