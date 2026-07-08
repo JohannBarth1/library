@@ -616,6 +616,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .mob-detail-top{display:flex;gap:.9rem;margin-bottom:1rem;}
 .mob-detail-cover{width:85px;height:125px;object-fit:cover;border-radius:3px;border:1px solid var(--border);flex-shrink:0;}
 .mob-detail-cover-ph{width:85px;height:125px;background:linear-gradient(145deg,var(--navy2),#2a3d5a);border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:2rem;flex-shrink:0;}
+.mob-detail-cover-wrap{position:relative;flex-shrink:0;}
 .mob-detail-text{flex:1;min-width:0;}
 .mob-detail-cat{font-size:.6rem;letter-spacing:.2em;text-transform:uppercase;color:var(--teal);font-weight:700;margin-bottom:.2rem;}
 .mob-detail-title{font-family:'Playfair Display',serif;font-size:1rem;line-height:1.2;margin-bottom:.2rem;}
@@ -1609,7 +1610,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
     </div>
     <div class="mob-detail-scroll">
       <div class="mob-detail-top">
-        <div>
+        <div class="mob-detail-cover-wrap">
           <img class="mob-detail-cover" id="mobDetailCoverImg" src="" style="display:none"/>
           <div class="mob-detail-cover-ph" id="mobDetailCoverPh">📖</div>
         </div>
@@ -4257,7 +4258,9 @@ if(isAndroidChrome){
 // scoped to just those two tile types so it doesn't land on unrelated
 // elements that also carry data-bookid (star ratings, list pickers, etc).
 function _setTileLoading(bookId, on) {
-  document.querySelectorAll(`.book-card[data-bookid="${bookId}"], .home-shelf-book[data-bookid="${bookId}"]`)
+  // Book details view (desktop drawer hero + mobile detail cover) and Home
+  // tab tiles only — NOT the Library grid (.book-card), which doesn't need it.
+  document.querySelectorAll(`.home-shelf-book[data-bookid="${bookId}"], #drawerHeroCover, .mob-detail-cover-wrap`)
     .forEach(tile => {
       const existing = tile.querySelector('.tile-opening-spinner');
       if (on) {
@@ -4306,7 +4309,7 @@ async function readCurrentBook(){
     document.getElementById('readerTitle').textContent=book.title||'Reading…';
     document.getElementById('readerChapterItems').innerHTML=readerSpine.map((ch,i)=>`<div class="chapter-item" id="chItem_${i}" data-idx="${i}">${esc(ch.label)}</div>`).join('');
     document.getElementById('readerChapterItems').addEventListener('click',e=>{const item=e.target.closest('.chapter-item[data-idx]');if(item)readerGoToChapter(parseInt(item.dataset.idx));});
-    hideLoading();applyReaderTheme(readerTheme);
+    hideLoading();_setTileLoading(book.id, false);applyReaderTheme(readerTheme);
     document.querySelectorAll('#readerSettingsBar [data-transition]')
       .forEach(b => b.classList.toggle('active', b.dataset.transition === readerTransition));
     document.querySelectorAll('#readerSettingsBar [data-size]')
@@ -4334,7 +4337,7 @@ async function readCurrentBook(){
     // recalc ourselves, a couple of frames later, so it's self-correcting
     // instead of depending on incidental user interaction.
     requestAnimationFrame(() => requestAnimationFrame(() => recalcReaderHeight()));
-  }catch(e){hideLoading();showToast('Could not open EPUB: '+e.message);console.error(e);}
+  }catch(e){hideLoading();_setTileLoading(book.id, false);showToast('Could not open EPUB: '+e.message);console.error(e);}
 }
 
 
