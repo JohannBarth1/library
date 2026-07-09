@@ -486,7 +486,8 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .bm-panel-tab.active{color:var(--teal);border-bottom-color:var(--teal);}
 .reader-content{
   flex:1;
-  overflow:hidden;
+  overflow-x:hidden;
+  overflow-y:visible;
   position:relative;
 }
 
@@ -704,7 +705,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
   /* ── IN-READER BOOKMARK TAB ── */
 .reader-bookmark-tab {
   position: absolute;
-  top: 0;
+  top: -14px;
   right: clamp(12px, 4vw, 48px);
   width: 28px;
   z-index: 10;
