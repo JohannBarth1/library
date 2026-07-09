@@ -713,9 +713,11 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
   transition: transform .15s, filter .15s;
   -webkit-tap-highlight-color: transparent;
 }
-.reader-bookmark-tab:hover {
-  transform: translateY(4px);
-  filter: drop-shadow(1px 5px 6px rgba(0,0,0,0.45));
+@media (hover: hover) {
+  .reader-bookmark-tab:hover {
+    transform: translateY(4px);
+    filter: drop-shadow(1px 5px 6px rgba(0,0,0,0.45));
+  }
 }
 .reader-bookmark-tab.placed {
   transform: translateY(0);
@@ -2002,6 +2004,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
     <button class="rs-btn active" data-transition="bounce">Bounce</button>
     <button class="rs-btn" data-transition="slide">Slide</button>
     <button class="rs-btn" data-transition="scroll">Scroll</button>
+    <button class="rs-btn" data-transition="tear" id="btnTransitionTear" style="display:none">Tear</button>
   </div>
   <div class="rs-group">
     <span class="rs-label">Bookmark FX</span>
@@ -4097,7 +4100,19 @@ function applyReaderTheme(theme) {
   document.querySelectorAll('#readerSettingsBar [data-theme]')
     .forEach(b => b.classList.toggle('active', b.dataset.theme === theme));
 
-  // Update colors instantly via CSS custom properties — no re-render needed,
+  // Tear transition is sepia-only — show/hide its button and fall back if leaving sepia
+  const tearBtn = document.getElementById('btnTransitionTear');
+  if (tearBtn) {
+    tearBtn.style.display = theme === 'sepia' ? '' : 'none';
+    if (theme !== 'sepia' && readerTransition === 'tear') {
+      readerTransition = 'slide';
+      localStorage.setItem('elib_reader_transition', 'slide');
+      document.querySelectorAll('#readerSettingsBar [data-transition]')
+        .forEach(b => b.classList.toggle('active', b.dataset.transition === readerTransition));
+    }
+  }
+
+  // Update colors instantly via CSS custom properties
   // so background, text, headings and links all switch together
   if(_readerIframe) {
     const t = _themeStyles();
@@ -5381,6 +5396,86 @@ body {
   });
 }
 
+  function _playTearTransition(onSnap) {
+  const content = document.getElementById('readerContent');
+  if (!content) { onSnap(); return; }
+
+  const w = content.offsetWidth;
+  const h = content.offsetHeight;
+
+  // ── Jagged tear line ────────────────────────────────────────────────────
+  const segs    = Math.ceil(h / 11);
+  const baseTearX = w * (0.44 + Math.random() * 0.12);
+  const pts = [{ x: baseTearX + (Math.random() - 0.5) * 6, y: 0 }];
+
+  for (let i = 1; i < segs; i++) {
+    const y    = (i / segs) * h;
+    const prev = pts[pts.length - 1];
+    const jag  = (Math.random() - 0.5) * 22;
+    const spike = Math.random() < 0.18 ? (Math.random() - 0.5) * 38 : 0;
+    pts.push({
+      x: Math.max(w * 0.15, Math.min(w * 0.85, prev.x + jag + spike)),
+      y
+    });
+  }
+  pts.push({ x: baseTearX + (Math.random() - 0.5) * 6, y: h });
+
+  const pStr     = pts.map(p => `${p.x.toFixed(1)}px ${p.y.toFixed(1)}px`).join(',');
+  const leftClip  = `polygon(0px 0px,${pStr},0px ${h}px)`;
+  const rightClip = `polygon(${pStr},${w}px ${h}px,${w}px 0px)`;
+
+  // ── Overlay ─────────────────────────────────────────────────────────────
+  const ov = document.createElement('div');
+  ov.style.cssText = 'position:absolute;inset:0;z-index:20;pointer-events:none;overflow:hidden;';
+
+  const mkPiece = (clip, shadow, grad) => {
+    const d = document.createElement('div');
+    d.style.cssText = `position:absolute;inset:0;background:${grad};clip-path:${clip};will-change:transform,opacity;filter:${shadow};`;
+    return d;
+  };
+
+  // Left piece: main torn section — slightly darker gradient toward tear edge
+  const left  = mkPiece(
+    leftClip,
+    'drop-shadow(3px 0px 6px rgba(60,35,10,0.42))',
+    'linear-gradient(to right, #ede0c4 74%, #d8c9a8 100%)'
+  );
+  // Right stub: narrower — lighter shadow, slight gradient toward tear edge
+  const right = mkPiece(
+    rightClip,
+    'drop-shadow(-1px 2px 4px rgba(60,35,10,0.18))',
+    'linear-gradient(to left, #ede0c4 80%, #d8c9a8 100%)'
+  );
+
+  ov.appendChild(left);
+  ov.appendChild(right);
+  content.appendChild(ov);
+
+  // Snap iframe to new page now — safely hidden under the overlay
+  onSnap();
+
+  // ── Animation ────────────────────────────────────────────────────────────
+  const ms = 560;
+
+  // Left piece: micro-stutter then sweeps left-down with rotation
+  left.animate([
+    { transform: 'translate(0,0) rotate(0deg)',                         opacity: 1,    offset: 0    },
+    { transform: 'translate(-3px,1px) rotate(-0.5deg)',                 opacity: 1,    offset: 0.06 },
+    { transform: `translate(-${w*0.42}px,${h*0.10}px) rotate(-9deg)`,  opacity: 0.85, offset: 0.55 },
+    { transform: `translate(-${w*1.05}px,${h*0.30}px) rotate(-17deg)`, opacity: 0,    offset: 1    },
+  ], { duration: ms, easing: 'cubic-bezier(0.45,0,0.85,0.55)', fill: 'forwards' });
+
+  // Right stub: brief flutter outward then drifts down-right
+  right.animate([
+    { transform: 'translate(0,0) rotate(0deg)',                        opacity: 1,    offset: 0    },
+    { transform: 'translate(5px,0) rotate(1.2deg)',                    opacity: 1,    offset: 0.09 },
+    { transform: `translate(${w*0.07}px,${h*0.09}px) rotate(3.5deg)`, opacity: 0.88, offset: 0.42 },
+    { transform: `translate(${w*0.32}px,${h*0.52}px) rotate(9deg)`,   opacity: 0,    offset: 1    },
+  ], { duration: ms + 70, delay: 50, easing: 'ease-in', fill: 'forwards' });
+
+  setTimeout(() => ov.remove(), ms + 70 + 50 + 60);
+}
+  
 function _scrollIframeTo(pageIdx, animate) {
   if(!_readerIframe) return;
   const doc = _readerIframe.contentDocument || _readerIframe.contentWindow?.document;
@@ -5413,13 +5508,20 @@ function goToPage(page, opts = {}) {
     return;
   }
 
-  readerPage = page;
-  _scrollIframeTo(page, opts.animate !== false);
-  updatePaginationUI();
+  const shouldAnimate = opts.animate !== false;
 
-  if(readerBookId) {
-    saveReadingProgress(readerBookId, readerChapter, readerPage, readerSpine.length);
+  if (shouldAnimate && readerTransition === 'tear') {
+    readerPage = page;
+    updatePaginationUI();
+    if (readerBookId) saveReadingProgress(readerBookId, readerChapter, readerPage, readerSpine.length);
+    _playTearTransition(() => _scrollIframeTo(page, false));
+    return;
   }
+
+  readerPage = page;
+  _scrollIframeTo(page, shouldAnimate);
+  updatePaginationUI();
+  if (readerBookId) saveReadingProgress(readerBookId, readerChapter, readerPage, readerSpine.length);
 }
 
 function recalcReaderHeight() {
