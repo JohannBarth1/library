@@ -3757,7 +3757,7 @@ function bookmarksSection() {
           </div>`
         : '';
 
-      return `<div class="home-bookmark-item" data-ubid="${ub.id}" style="
+      return `<div class="home-bookmark-item" data-ubid="${ub.id}" data-bookid="${ub.bookId}" style="
         display:flex;flex-direction:column;align-items:center;gap:5px;
         cursor:pointer;flex-shrink:0;">
         <!-- Book + ribbon together -->
@@ -4265,7 +4265,7 @@ if(isAndroidChrome){
 function _setTileLoading(bookId, on) {
   // Book details view (desktop drawer hero + mobile detail cover) and Home
   // tab tiles only — NOT the Library grid (.book-card), which doesn't need it.
-  document.querySelectorAll(`#homeSection_home_reading .home-shelf-book[data-bookid="${bookId}"], #drawerHeroCover, .mob-detail-cover-wrap`)
+  document.querySelectorAll(`#homeSection_home_reading .home-shelf-book[data-bookid="${bookId}"], .home-bookmark-item[data-bookid="${bookId}"], #drawerHeroCover, .mob-detail-cover-wrap`)
     .forEach(tile => {
       const existing = tile.querySelector('.tile-opening-spinner');
       if (on) {
