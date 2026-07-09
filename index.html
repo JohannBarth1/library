@@ -6064,7 +6064,7 @@ function renderReaderBookmarkTab() {
   if(!content || !readerBookId) return;
 
   const bm = getReaderBookmarkAt(readerBookId, readerChapter, readerPage);
-  const isPlaced = !!bm;
+  let isPlaced = !!bm;
 
   // Resolve which visual template to use for the in-reader bookmark
   // Priority: award for this book → seasonal → default gold
