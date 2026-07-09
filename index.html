@@ -1388,7 +1388,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 <body>
 
 <!-- AUTH -->
-<div class="auth-screen" id="authScreen">
+<div class="auth-screen hidden" id="authScreen">
   <div class="auth-card">
     <div class="auth-logo">📚</div>
     <div class="auth-title">eLibrary</div>
@@ -4331,16 +4331,8 @@ async function readCurrentBook(){
     } else {
       await readerGoToChapter(0);
     }
-    // PATCH: on first open, the overlay has JUST gone from display:none to
-    // display:flex, and on mobile (especially iOS Safari) the very first
-    // clientHeight/visualViewport reading taken this synchronously can be
-    // stale — the browser hasn't finished settling layout yet, so the
-    // column width/height baked into the iframe's content can be wrong,
-    // leaving the pane blank until some later resize event (e.g. tapping
-    // the toolbar) happens to trigger recalcReaderHeight(). Force that same
-    // recalc ourselves, a couple of frames later, so it's self-correcting
-    // instead of depending on incidental user interaction.
     requestAnimationFrame(() => requestAnimationFrame(() => recalcReaderHeight()));
+    setTimeout(() => recalcReaderHeight(), 300);
   }catch(e){hideLoading();_setTileLoading(book.id, false);showToast('Could not open EPUB: '+e.message);console.error(e);}
 }
 
