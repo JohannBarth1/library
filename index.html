@@ -4296,6 +4296,12 @@ async function readCurrentBook(){
     readerZip=await JSZip.loadAsync(bytes);readerSpine=[];readerChapter=0;
     readerBookId = book.id;
     _readerIsInitialChapterLoad = true;
+    const _openTpl = getDisplayBookmarkTemplate(book.id);
+    if(_openTpl?.id && !bookmarkAnimEnabled) {
+      bookmarkAnimEnabled = true;
+      localStorage.setItem('elib_bookmark_anim', 'on');
+      refreshBmAnimBtn();
+    }
     const container=await readerZip.file('META-INF/container.xml')?.async('string');
     const opfPath=container?.match(/full-path="([^"]+\.opf)"/i)?.[1];
     if(!opfPath)throw new Error('No OPF found');
@@ -5804,7 +5810,7 @@ function renderReaderHighlightList() {
   if(!tpl || !tpl.icon) return;
 
   const isCustomBookmark = !!tpl.id; // fallback default template has no id
-  if(!isCustomBookmark && !bookmarkAnimEnabled) return;
+  if(!bookmarkAnimEnabled) return;
   const icon = tpl.icon;
 
   const content = document.getElementById('readerContent');
