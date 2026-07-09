@@ -486,8 +486,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .bm-panel-tab.active{color:var(--teal);border-bottom-color:var(--teal);}
 .reader-content{
   flex:1;
-  overflow-x:hidden;
-  overflow-y:visible;
+  overflow:hidden;
   position:relative;
 }
 
@@ -705,7 +704,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
   /* ── IN-READER BOOKMARK TAB ── */
 .reader-bookmark-tab {
   position: absolute;
-  top: -14px;
+  top: 0;
   right: clamp(12px, 4vw, 48px);
   width: 28px;
   z-index: 10;
@@ -720,6 +719,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 }
 .reader-bookmark-tab.placed {
   transform: translateY(0);
+  filter: none;
 }
 .reader-bookmark-ghost {
   opacity: 0.25;
@@ -6090,16 +6090,27 @@ function renderReaderBookmarkTab() {
   content.appendChild(tab);
 
   tab.addEventListener('click', async e => {
-    e.stopPropagation();
-    if(isPlaced) {
+  e.stopPropagation();
+  const wasPlaced = isPlaced;
+  isPlaced = !wasPlaced;                 // flip state immediately
+  tab.classList.toggle('placed', isPlaced);
+  tab.style.opacity = isPlaced ? '1' : '0.18';
+  tab.title = isPlaced ? 'Tap to remove this bookmark' : 'Tap to bookmark this page';
+
+  try {
+    if(wasPlaced) {
       await removeReaderBookmarkAt(readerBookId, readerChapter, readerPage);
     } else {
       await placeReaderBookmark(readerBookId, readerChapter, readerPage);
     }
-    renderReaderBookmarkTab();
-    renderReaderBookmarkList();
-    renderAll();
-  });
+  } catch(e) {
+    // revert on failure
+    isPlaced = wasPlaced;
+    tab.classList.toggle('placed', isPlaced);
+    tab.style.opacity = isPlaced ? '1' : '0.18';
+  }
+  renderReaderBookmarkList();   // just the bookmarks panel — cheap, relevant
+});
 }
 
 function closeReader(){
