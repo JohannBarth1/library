@@ -4852,7 +4852,7 @@ async function saveHighlight(startOffset, endOffset, color, text) {
     chapterIdx: readerChapter,
     chapterLabel: readerSpine[readerChapter]?.label || '',
     startOffset, endOffset, color,
-    text: (text || '').slice(0, 500),
+    text: (text || '').slice(0, 2000),
     createdAt: serverTimestamp(),
   };
   try {
