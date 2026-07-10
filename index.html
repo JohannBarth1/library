@@ -45,6 +45,38 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .brand-sub{font-size:.6rem;letter-spacing:.18em;text-transform:uppercase;color:var(--gold);margin-top:1px;}
 .header-right{display:flex;gap:.5rem;align-items:center;flex-shrink:0;}
 .hbtn{border:none;padding:.42rem .85rem;font-family:'Lato',sans-serif;font-size:.72rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;border-radius:2px;transition:background .2s;white-space:nowrap;}
+/* ── Notifications bell + overlay ────────────────────────────────────────── */
+.notif-bell-wrap{position:relative;display:flex;align-items:center;}
+.notif-bell-btn{background:none;border:none;color:var(--cream);font-size:1.15rem;cursor:pointer;padding:.3rem .4rem;line-height:1;position:relative;-webkit-tap-highlight-color:transparent;}
+.notif-badge{position:absolute;top:-2px;right:-2px;background:#c0392b;color:#fff;font-size:.6rem;font-weight:700;border-radius:10px;min-width:16px;height:16px;display:flex;align-items:center;justify-content:center;padding:0 3px;line-height:1;pointer-events:none;}
+#notifFullOverlay{position:fixed;inset:0;z-index:260;background:var(--warm-white);display:none;flex-direction:column;}
+.notif-list-item{padding:.85rem 1.2rem;border-bottom:1px solid var(--border);cursor:pointer;display:flex;gap:.7rem;align-items:flex-start;transition:background .12s;}
+.notif-list-item:hover{background:rgba(42,124,138,0.08);}
+.notif-list-item.unread{background:rgba(42,124,138,0.06);}
+.notif-dot{width:9px;height:9px;border-radius:50%;background:var(--teal);flex-shrink:0;margin-top:.35rem;visibility:hidden;}
+.notif-list-item.unread .notif-dot{visibility:visible;}
+.notif-type-chip{font-size:.6rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;padding:.15rem .45rem;border-radius:10px;display:inline-block;margin-bottom:.25rem;}
+.notif-type-chip.book_request{background:rgba(200,149,42,.18);color:#8a6414;}
+.notif-type-chip.broadcast{background:rgba(42,124,138,.18);color:#1c6b78;}
+.notif-title{font-weight:700;font-size:.86rem;color:var(--navy2);}
+.notif-preview{font-size:.78rem;color:var(--muted);margin-top:.15rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.notif-meta{font-size:.68rem;color:var(--muted);margin-top:.3rem;}
+.notif-thread-msg{padding:.6rem .9rem;border-radius:10px;margin-bottom:.6rem;background:#fff;border:1px solid var(--border);position:relative;max-width:88%;}
+.notif-thread-msg.mine{margin-left:auto;background:rgba(42,124,138,0.09);}
+.notif-thread-author{font-size:.68rem;font-weight:700;color:var(--teal);margin-bottom:.2rem;}
+.notif-thread-text{font-size:.83rem;color:var(--navy2);white-space:pre-wrap;word-break:break-word;}
+.notif-thread-time{font-size:.62rem;color:var(--muted);margin-top:.3rem;}
+.notif-thread-del{position:absolute;top:.2rem;right:.35rem;background:none;border:none;color:var(--muted);cursor:pointer;font-size:.7rem;padding:.1rem .3rem;}
+.notif-compose-bar{display:flex;gap:.5rem;padding:.7rem 1rem;border-top:1px solid var(--border);background:var(--warm-white);flex-shrink:0;}
+.notif-compose-bar textarea{flex:1;resize:none;border:1px solid var(--border);border-radius:8px;padding:.5rem .7rem;font-family:'Lato',sans-serif;font-size:.85rem;min-height:2.4rem;max-height:6rem;}
+.notif-compose-bar button{flex-shrink:0;background:var(--teal);color:#fff;border:none;border-radius:8px;padding:0 1rem;font-weight:700;font-size:.8rem;cursor:pointer;}
+#notifReminderModal{position:fixed;inset:0;z-index:300;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;}
+.notif-reminder-card{background:var(--warm-white);border-radius:14px;padding:1.4rem 1.3rem;max-width:320px;text-align:center;box-shadow:0 10px 40px rgba(0,0,0,.3);}
+.notif-reminder-card .rc-icon{font-size:2rem;margin-bottom:.4rem;}
+.notif-reminder-card h3{font-family:'Playfair Display',serif;font-size:1.05rem;color:var(--navy2);margin:0 0 .4rem;}
+.notif-reminder-card p{font-size:.82rem;color:var(--muted);margin:0 0 1rem;}
+.notif-reminder-card button{background:var(--teal);color:#fff;border:none;border-radius:8px;padding:.55rem 1.1rem;font-weight:700;font-size:.8rem;cursor:pointer;margin:0 .25rem;}
+.notif-reminder-card button.secondary{background:none;color:var(--muted);}
 /* PATCH 6a: gold text on teal buttons */
 .hbtn-upload{background:var(--teal);color:var(--gold);}
 .hbtn-upload:hover{background:var(--teal-dark);}
@@ -1418,6 +1450,9 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
     <button class="hbtn hbtn-home btnToggleSettingsDesk" id="btnDeskHome">📚 Home</button>
     <button class="hbtn hbtn-upload" id="btnHeaderUpload">📤 Upload</button>
     <button class="hbtn hbtn-ghost btnToggleSettingsDesk" id="btnToggleSettings">⚙</button>
+    <div class="notif-bell-wrap">
+      <button class="notif-bell-btn" id="btnNotifBell" title="Notifications">🔔<div id="notifBadge" class="notif-badge" style="display:none;"></div></button>
+    </div>
     <div class="header-user" id="headerUser">
       <div class="user-avatar-initials" id="userAvatarInitials">?</div>
       <img class="user-avatar" id="userAvatarImg" src="" alt="" style="display:none"/>
@@ -1775,6 +1810,60 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
   <div class="mob-detail-scroll" id="highlightsFullList"></div>
 </div>
 
+<!-- Notifications: full-page list -->
+<div id="notifFullOverlay">
+  <div class="mob-detail-header">
+    <button class="mob-back-btn" id="btnNotifFullBack">← Back</button>
+    <div style="font-weight:700;font-size:.85rem;color:var(--navy2);flex:1;">Notifications</div>
+    <button id="btnNotifNew" title="New notification"
+      style="background:none;border:none;cursor:pointer;font-size:.9rem;color:inherit;opacity:.75;padding:.3rem .5rem;font-weight:700;">+ New</button>
+  </div>
+  <div class="mob-detail-scroll" id="notifListEl"></div>
+</div>
+
+<!-- Notifications: thread view -->
+<div id="notifThreadOverlay" style="display:none;position:fixed;inset:0;z-index:270;background:var(--warm-white);flex-direction:column;">
+  <div class="mob-detail-header">
+    <button class="mob-back-btn" id="btnNotifThreadBack">← Back</button>
+    <div id="notifThreadTitle" style="font-weight:700;font-size:.85rem;color:var(--navy2);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></div>
+    <button id="btnNotifThreadDelete" title="Delete notification"
+      style="display:none;background:none;border:none;cursor:pointer;font-size:.85rem;color:#b84c1a;padding:.3rem .5rem;">🗑</button>
+  </div>
+  <div class="mob-detail-scroll" id="notifThreadList" style="padding:1rem;"></div>
+  <div class="notif-compose-bar">
+    <textarea id="notifReplyInput" placeholder="Write a reply…" rows="1"></textarea>
+    <button id="btnNotifReplySend">Send</button>
+  </div>
+</div>
+
+<!-- Notifications: compose new modal -->
+<div class="bottom-sheet-overlay" id="notifComposeOverlay"></div>
+<div class="bottom-sheet" id="notifComposeSheet">
+  <div style="padding:1rem 1.2rem;">
+    <div style="font-weight:700;font-size:.95rem;color:var(--navy2);margin-bottom:.8rem;">New Notification</div>
+    <div style="display:flex;gap:.5rem;margin-bottom:.8rem;">
+      <button class="mob-chip active" id="notifTypeBookReq" data-notiftype="book_request">📗 Book Request</button>
+      <button class="mob-chip" id="notifTypeBroadcast" data-notiftype="broadcast">📢 Broadcast</button>
+    </div>
+    <input id="notifComposeTitle" placeholder="Title" style="width:100%;box-sizing:border-box;padding:.55rem .7rem;border:1px solid var(--border);border-radius:8px;font-size:.85rem;margin-bottom:.6rem;font-family:'Lato',sans-serif;"/>
+    <textarea id="notifComposeBody" placeholder="Details…" rows="4" style="width:100%;box-sizing:border-box;padding:.55rem .7rem;border:1px solid var(--border);border-radius:8px;font-size:.85rem;font-family:'Lato',sans-serif;resize:vertical;"></textarea>
+    <button id="btnNotifComposeSend" style="margin-top:.8rem;width:100%;background:var(--teal);color:#fff;border:none;border-radius:8px;padding:.65rem;font-weight:700;font-size:.85rem;cursor:pointer;">Post</button>
+  </div>
+</div>
+
+<!-- Notifications: 3-day inactivity reminder -->
+<div id="notifReminderModal">
+  <div class="notif-reminder-card">
+    <div class="rc-icon">🔔</div>
+    <h3>You've got messages</h3>
+    <p>You haven't checked your notifications in a few days. Take a look so you don't miss anything.</p>
+    <div>
+      <button id="btnNotifReminderOpen">View Notifications</button>
+      <button class="secondary" id="btnNotifReminderDismiss">Later</button>
+    </div>
+  </div>
+</div>
+
 <!-- Bottom sheet (mobile) -->
 <div class="bottom-sheet-overlay" id="bsOverlay"></div>
 <div class="bottom-sheet" id="bottomSheet">
@@ -2098,7 +2187,7 @@ import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/fireba
 import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut }
   from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
 import { getFirestore, collection, addDoc, getDocs, getDoc, doc,
-         query, where, orderBy, updateDoc, deleteDoc, serverTimestamp, setDoc, Timestamp, limit, onSnapshot, deleteField, increment }
+         query, where, orderBy, updateDoc, deleteDoc, serverTimestamp, setDoc, Timestamp, limit, onSnapshot, deleteField, increment, arrayUnion }
   from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 import { getStorage, ref as storageRef, uploadBytes, getDownloadURL, getBytes }
   from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js';
@@ -2218,6 +2307,7 @@ onAuthStateChanged(auth, async user => {
       });
 
       startNotifListener();
+      startAppNotifListener();
       loungeJoinPassive();
       startPresenceHeartbeat();
       checkAdminStatus();
@@ -2225,6 +2315,10 @@ onAuthStateChanged(auth, async user => {
 
   } else {
     document.getElementById('authScreen').classList.remove('hidden');
+    if(appNotifUnsub) { appNotifUnsub(); appNotifUnsub = null; }
+    if(appNotifRepliesUnsub) { appNotifRepliesUnsub(); appNotifRepliesUnsub = null; }
+    appNotifications = [];
+    updateNotifBadge();
   }
 });
 document.getElementById('btnGoogleSignIn').addEventListener('click',()=>signInWithPopup(auth,gprovider).catch(e=>showToast('Sign-in failed: '+e.message)));
@@ -4741,6 +4835,253 @@ function closeHighlightsFullList() {
   document.getElementById('highlightsFullOverlay').style.display = 'none';
 }
 document.getElementById('btnHighlightsFullBack').addEventListener('click', closeHighlightsFullList);
+
+// ── NOTIFICATIONS (bell / requests / broadcasts / chat replies) ─────────────
+// Data model:
+//   app_notifications/{id}: {type:'book_request'|'broadcast', title, body,
+//     creatorId, creatorName, createdAt, readBy:[uid...], deleted:false}
+//   app_notifications/{id}/replies/{rid}: {text, authorId, authorName,
+//     createdAt, deleted:false}
+//   users/{uid}.notifLastSeenAt: Timestamp — last time the full list was opened,
+//     used for the "haven't checked in 3 days" nudge.
+let appNotifications = [];
+let appNotifUnsub = null;
+let appNotifRepliesUnsub = null;
+let currentNotifThreadId = null;
+let notifComposeType = 'book_request';
+
+function startAppNotifListener() {
+  if(appNotifUnsub || !currentUser) return;
+  const q = query(collection(db, 'app_notifications'), orderBy('createdAt', 'desc'), limit(200));
+  appNotifUnsub = onSnapshot(q, snap => {
+    appNotifications = snap.docs
+      .map(d => ({ id: d.id, ...d.data() }))
+      .filter(n => !n.deleted);
+    updateNotifBadge();
+    if(document.getElementById('notifFullOverlay').style.display === 'flex') {
+      renderNotifList();
+    }
+  }, e => console.warn('App notif listener:', e));
+  maybeShowNotifReminder();
+}
+
+function notifUnreadCount() {
+  if(!currentUser) return 0;
+  return appNotifications.filter(n => !(n.readBy||[]).includes(currentUser.uid)).length;
+}
+
+function updateNotifBadge() {
+  const badge = document.getElementById('notifBadge');
+  const count = notifUnreadCount();
+  if(count > 0) {
+    badge.textContent = count > 9 ? '9+' : count;
+    badge.style.display = 'flex';
+  } else {
+    badge.style.display = 'none';
+  }
+}
+
+async function maybeShowNotifReminder() {
+  if(!currentUser) return;
+  if(notifUnreadCount() === 0) return;
+  try {
+    const snap = await getDoc(doc(db, 'users', currentUser.uid));
+    const lastSeen = snap.exists() ? snap.data().notifLastSeenAt : null;
+    const threeDaysMs = 3 * 24 * 60 * 60 * 1000;
+    const lastSeenMs = lastSeen?.toDate ? lastSeen.toDate().getTime() : 0;
+    if(Date.now() - lastSeenMs > threeDaysMs) {
+      document.getElementById('notifReminderModal').style.display = 'flex';
+    }
+  } catch(e) { console.warn('notif reminder check:', e); }
+}
+
+function openNotifFullList() {
+  document.getElementById('notifFullOverlay').style.display = 'flex';
+  renderNotifList();
+  if(currentUser) {
+    setDoc(doc(db, 'users', currentUser.uid), { notifLastSeenAt: serverTimestamp() }, { merge: true }).catch(()=>{});
+  }
+  document.getElementById('notifReminderModal').style.display = 'none';
+}
+function closeNotifFullList() {
+  document.getElementById('notifFullOverlay').style.display = 'none';
+}
+document.getElementById('btnNotifBell').addEventListener('click', openNotifFullList);
+document.getElementById('btnNotifFullBack').addEventListener('click', closeNotifFullList);
+document.getElementById('btnNotifReminderOpen').addEventListener('click', openNotifFullList);
+document.getElementById('btnNotifReminderDismiss').addEventListener('click', () => {
+  document.getElementById('notifReminderModal').style.display = 'none';
+});
+
+function notifTypeLabel(type) {
+  return type === 'broadcast' ? '📢 Broadcast' : '📗 Book Request';
+}
+
+function renderNotifList() {
+  const listEl = document.getElementById('notifListEl');
+  if(!appNotifications.length) {
+    listEl.innerHTML = `<div style="padding:2rem 1.2rem;text-align:center;color:var(--muted);font-size:.85rem;">No notifications yet.</div>`;
+    return;
+  }
+  listEl.innerHTML = appNotifications.map(n => {
+    const unread = currentUser && !(n.readBy||[]).includes(currentUser.uid);
+    const when = n.createdAt?.toDate ? timeAgo(n.createdAt.toDate()) : '';
+    return `<div class="notif-list-item ${unread?'unread':''}" data-notifid="${n.id}">
+      <div class="notif-dot"></div>
+      <div style="flex:1;min-width:0;">
+        <span class="notif-type-chip ${n.type}">${notifTypeLabel(n.type)}</span>
+        <div class="notif-title">${esc(n.title||'')}</div>
+        <div class="notif-preview">${esc(n.body||'')}</div>
+        <div class="notif-meta">${esc(n.creatorName||'Someone')} · ${when}</div>
+      </div>
+    </div>`;
+  }).join('');
+  listEl.querySelectorAll('[data-notifid]').forEach(el => {
+    el.addEventListener('click', () => openNotifThread(el.dataset.notifid));
+  });
+}
+
+async function markNotifRead(notifId) {
+  if(!currentUser) return;
+  try {
+    await updateDoc(doc(db, 'app_notifications', notifId), { readBy: arrayUnion(currentUser.uid) });
+  } catch(e) { console.warn('markNotifRead:', e); }
+}
+
+async function openNotifThread(notifId) {
+  const n = appNotifications.find(x => x.id === notifId);
+  if(!n) return;
+  currentNotifThreadId = notifId;
+  document.getElementById('notifThreadTitle').textContent = n.title || '';
+  document.getElementById('notifThreadOverlay').style.display = 'flex';
+  document.getElementById('btnNotifThreadDelete').style.display =
+    (currentUser && n.creatorId === currentUser.uid) ? 'inline-block' : 'none';
+
+  if(currentUser && !(n.readBy||[]).includes(currentUser.uid)) markNotifRead(notifId);
+
+  if(appNotifRepliesUnsub) { appNotifRepliesUnsub(); appNotifRepliesUnsub = null; }
+  const repliesQ = query(collection(db, 'app_notifications', notifId, 'replies'), orderBy('createdAt', 'asc'));
+  appNotifRepliesUnsub = onSnapshot(repliesQ, snap => {
+    const replies = snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(r => !r.deleted);
+    renderNotifThread(n, replies);
+  }, e => console.warn('replies listener:', e));
+}
+
+function renderNotifThread(n, replies) {
+  const listEl = document.getElementById('notifThreadList');
+  const openMsg = `<div class="notif-thread-msg">
+      <div class="notif-thread-author">${esc(n.creatorName||'Someone')}</div>
+      <div class="notif-thread-text">${esc(n.body||'')}</div>
+      <div class="notif-thread-time">${n.createdAt?.toDate ? timeAgo(n.createdAt.toDate()) : ''}</div>
+    </div>`;
+  const replyMsgs = replies.map(r => {
+    const mine = currentUser && r.authorId === currentUser.uid;
+    const canDelete = mine;
+    return `<div class="notif-thread-msg ${mine?'mine':''}">
+      ${canDelete?`<button class="notif-thread-del" data-delreply="${r.id}">✕</button>`:''}
+      <div class="notif-thread-author">${esc(r.authorName||'Someone')}</div>
+      <div class="notif-thread-text">${esc(r.text||'')}</div>
+      <div class="notif-thread-time">${r.createdAt?.toDate ? timeAgo(r.createdAt.toDate()) : 'sending…'}</div>
+    </div>`;
+  }).join('');
+  listEl.innerHTML = openMsg + replyMsgs;
+  listEl.scrollTop = listEl.scrollHeight;
+  listEl.querySelectorAll('[data-delreply]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      if(!confirm('Delete this message?')) return;
+      try {
+        await deleteDoc(doc(db, 'app_notifications', currentNotifThreadId, 'replies', btn.dataset.delreply));
+      } catch(e) { showToast('Delete failed'); }
+    });
+  });
+}
+
+document.getElementById('btnNotifThreadBack').addEventListener('click', () => {
+  document.getElementById('notifThreadOverlay').style.display = 'none';
+  if(appNotifRepliesUnsub) { appNotifRepliesUnsub(); appNotifRepliesUnsub = null; }
+  currentNotifThreadId = null;
+});
+
+document.getElementById('btnNotifThreadDelete').addEventListener('click', async () => {
+  if(!currentNotifThreadId) return;
+  if(!confirm('Delete this notification and its whole conversation? This cannot be undone.')) return;
+  try {
+    const repliesSnap = await getDocs(collection(db, 'app_notifications', currentNotifThreadId, 'replies'));
+    for(const r of repliesSnap.docs) await deleteDoc(r.ref);
+    await deleteDoc(doc(db, 'app_notifications', currentNotifThreadId));
+    document.getElementById('btnNotifThreadBack').click();
+    showToast('Notification deleted');
+  } catch(e) { showToast('Delete failed'); }
+});
+
+async function sendNotifReply() {
+  const input = document.getElementById('notifReplyInput');
+  const text = input.value.trim();
+  if(!text || !currentNotifThreadId || !currentUser) return;
+  input.value = '';
+  try {
+    await addDoc(collection(db, 'app_notifications', currentNotifThreadId, 'replies'), {
+      text,
+      authorId: currentUser.uid,
+      authorName: currentUser.displayName || currentUser.email || 'Someone',
+      createdAt: serverTimestamp(),
+      deleted: false
+    });
+    // Replying counts as having seen the thread.
+    markNotifRead(currentNotifThreadId);
+  } catch(e) { showToast('Reply failed to send'); }
+}
+document.getElementById('btnNotifReplySend').addEventListener('click', sendNotifReply);
+document.getElementById('notifReplyInput').addEventListener('keydown', e => {
+  if(e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendNotifReply(); }
+});
+
+// ── Compose new notification ────────────────────────────────────────────────
+function openNotifCompose() {
+  document.getElementById('notifComposeTitle').value = '';
+  document.getElementById('notifComposeBody').value = '';
+  notifComposeType = 'book_request';
+  document.getElementById('notifTypeBookReq').classList.add('active');
+  document.getElementById('notifTypeBroadcast').classList.remove('active');
+  document.getElementById('notifComposeOverlay').classList.add('open');
+  document.getElementById('notifComposeSheet').classList.add('open');
+}
+function closeNotifCompose() {
+  document.getElementById('notifComposeOverlay').classList.remove('open');
+  document.getElementById('notifComposeSheet').classList.remove('open');
+}
+document.getElementById('btnNotifNew').addEventListener('click', openNotifCompose);
+document.getElementById('notifComposeOverlay').addEventListener('click', closeNotifCompose);
+document.getElementById('notifTypeBookReq').addEventListener('click', () => {
+  notifComposeType = 'book_request';
+  document.getElementById('notifTypeBookReq').classList.add('active');
+  document.getElementById('notifTypeBroadcast').classList.remove('active');
+});
+document.getElementById('notifTypeBroadcast').addEventListener('click', () => {
+  notifComposeType = 'broadcast';
+  document.getElementById('notifTypeBroadcast').classList.add('active');
+  document.getElementById('notifTypeBookReq').classList.remove('active');
+});
+document.getElementById('btnNotifComposeSend').addEventListener('click', async () => {
+  const title = document.getElementById('notifComposeTitle').value.trim();
+  const body = document.getElementById('notifComposeBody').value.trim();
+  if(!title) { showToast('Please add a title'); return; }
+  if(!currentUser) return;
+  try {
+    await addDoc(collection(db, 'app_notifications'), {
+      type: notifComposeType,
+      title,
+      body,
+      creatorId: currentUser.uid,
+      creatorName: currentUser.displayName || currentUser.email || 'Someone',
+      createdAt: serverTimestamp(),
+      readBy: [currentUser.uid],
+      deleted: false
+    });
+    closeNotifCompose();
+    showToast('Posted ✓');
+  } catch(e) { showToast('Post failed'); }
+});
 
 // Opens a book in the reader and jumps to a given chapter. Used by the
 // book-detail highlights summary to deep-link into a highlight. Note: this
