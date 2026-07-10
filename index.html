@@ -5567,7 +5567,7 @@ body {
           x0: r.left,
           y0: r.bottom - 1,
           w:  r.width,
-          fontSize: Math.max(8, Math.round(r.height * 0.80)),
+          fontSize: Math.max(8, Math.round(parseFloat(getComputedStyle(node.parentElement).fontSize))),
         });
       }
     }
