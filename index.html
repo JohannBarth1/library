@@ -5068,6 +5068,7 @@ function setReaderSelectMode(on) {
     try {
       const doc = _readerIframe?.contentDocument;
       (doc?.getSelection?.() ?? doc?.defaultView?.getSelection())?.removeAllRanges();
+      if (doc) _clearSentenceSelectionMarks(doc);
     } catch(e) {}
     _removeHighlightPopup();
     _sentenceSelAnchor = null;
@@ -5159,9 +5160,9 @@ function _pointToOffset(doc, x, y) {
   return null;
 }
 
-function _clearSentenceSelection(doc) {
-  _sentenceSelAnchor = null;
-  (doc.getSelection ? doc.getSelection() : doc.defaultView?.getSelection())?.removeAllRanges();
+function _clearSentenceSelectionMarks(doc) {
+  doc.querySelectorAll('mark[data-highlightid="__sentencesel"]').forEach(mark => mark.replaceWith(...mark.childNodes));
+  doc.normalize?.();
 }
 
 function _handleSentenceTap(doc, clientX, clientY) {
@@ -5179,24 +5180,22 @@ function _handleSentenceTap(doc, clientX, clientY) {
   const idx = _sentenceRanges.findIndex(r => off >= r.start && off < r.end);
   if (idx === -1) return;
 
-  let start, end;
+  _clearSentenceSelectionMarks(doc);
+
   if (_sentenceSelAnchor === null) {
     _sentenceSelAnchor = idx;
-    start = _sentenceRanges[idx].start; end = _sentenceRanges[idx].end;
   } else if (idx === _sentenceSelAnchor) {
-    _clearSentenceSelection(doc);
+    _sentenceSelAnchor = null;
+    _removeHighlightPopup();
     return;
-  } else if (idx > _sentenceSelAnchor) {
-    start = _sentenceRanges[_sentenceSelAnchor].start; end = _sentenceRanges[idx].end;
-  } else {
-    start = _sentenceRanges[idx].start; end = _sentenceRanges[_sentenceSelAnchor].end;
   }
 
+  const lo = Math.min(_sentenceSelAnchor, idx), hi = Math.max(_sentenceSelAnchor, idx);
+  const start = _sentenceRanges[lo].start, end = _sentenceRanges[hi].end;
+
+  _wrapOffsetsInMarks(doc, start, end, { id: '__sentencesel', bg: 'rgba(74,144,226,.4)' });
   const range = _offsetsToRange(doc, start, end);
-  if (!range) return;
-  const sel = doc.getSelection ? doc.getSelection() : doc.defaultView?.getSelection();
-  sel.removeAllRanges();
-  sel.addRange(range);
+  if (range) _showHighlightPopup(doc, range);
 }
 
 function _fireReaderLongPress(doc, clientX, clientY) {
@@ -5216,7 +5215,7 @@ function _attachReaderTapHandlers(doc) {
 
   const overlay = document.createElement('div');
   overlay.id = 'readerTouchOverlay';
-  overlay.style.cssText = 'position:absolute;inset:0;z-index:5;background:transparent;-webkit-tap-highlight-color:transparent;';
+  overlay.style.cssText = 'position:absolute;inset:0;z-index:5;background:transparent;-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;';
   content.appendChild(overlay);
 
   // ── DESKTOP (mouse): overlay is permanently transparent.
@@ -5247,21 +5246,16 @@ function _attachReaderTapHandlers(doc) {
   // ── Overlay listeners (navigation mode only — inert while select mode is on,
   // since pointer-events:none means the overlay receives nothing at all) ────
   overlay.addEventListener('touchstart', e => {
+    e.preventDefault();
     tx0 = e.touches[0].clientX;
     ty0 = e.touches[0].clientY;
     lpFired = false;
     clearTimeout(lpTimer);
-    // Arm a long-press: if the finger is still roughly where it started
-    // ~450ms from now, treat it as "long-press to select" rather than a
-    // page-turn tap or swipe. We never rely on the OS's own long-press
-    // recognizer (which can't fire here anyway — the overlay, not the
-    // iframe doc, owns the touch while in navigation mode), so there's no
-    // race to lose against native "Look Up" or anything else.
     lpTimer = setTimeout(() => {
       lpFired = true;
       _fireReaderLongPress(doc, tx0, ty0);
     }, 450);
-  }, { passive: true });
+  }, { passive: false });
 
   overlay.addEventListener('touchmove', e => {
     const dx = e.touches[0].clientX - tx0;
@@ -5276,8 +5270,22 @@ function _attachReaderTapHandlers(doc) {
     if (readerSelectMode) {
       const dx = e.changedTouches[0].clientX - tx0;
       const dy = e.changedTouches[0].clientY - ty0;
+
+      // Swipe still turns pages, so you can reach sentences elsewhere.
+      if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 40) {
+        if (dx < 0) goToPage(readerPage + 1);
+        else        goToPage(readerPage - 1);
+        return;
+      }
       if (Math.abs(dx) < 10 && Math.abs(dy) < 10) {
-        _handleSentenceTap(doc, e.changedTouches[0].clientX, e.changedTouches[0].clientY);
+        const x = e.changedTouches[0].clientX;
+        const w = overlay.offsetWidth || content.offsetWidth;
+        // Narrower edge zones than navigation mode (15% vs 30%) — in
+        // select mode most of the screen should be tap-to-select, with
+        // just a strip at each edge reserved for turning pages.
+        if (x < w * 0.15) { goToPage(readerPage - 1); return; }
+        if (x > w * 0.85) { goToPage(readerPage + 1); return; }
+        _handleSentenceTap(doc, x, e.changedTouches[0].clientY);
       }
       return;
     }
