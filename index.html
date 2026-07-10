@@ -2005,6 +2005,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
     <button class="rs-btn" data-transition="slide">Slide</button>
     <button class="rs-btn" data-transition="scroll">Scroll</button>
     <button class="rs-btn" data-transition="tear" id="btnTransitionTear" style="display:none">Tear</button>
+    <button class="rs-btn" data-transition="gravity" id="btnTransitionGravity" style="display:none">Fall</button>
   </div>
   <div class="rs-group">
     <span class="rs-label">Bookmark FX</span>
@@ -4117,10 +4118,23 @@ function applyReaderTheme(theme) {
     .forEach(b => b.classList.toggle('active', b.dataset.theme === theme));
 
   // Tear transition is sepia-only — show/hide its button and fall back if leaving sepia
+  // Tear transition is sepia-only — show/hide its button and fall back if leaving sepia
   const tearBtn = document.getElementById('btnTransitionTear');
   if (tearBtn) {
     tearBtn.style.display = theme === 'sepia' ? '' : 'none';
     if (theme !== 'sepia' && readerTransition === 'tear') {
+      readerTransition = 'slide';
+      localStorage.setItem('elib_reader_transition', 'slide');
+      document.querySelectorAll('#readerSettingsBar [data-transition]')
+        .forEach(b => b.classList.toggle('active', b.dataset.transition === readerTransition));
+    }
+  }
+
+  // Fall transition is night-only — show/hide its button and fall back if leaving night
+  const gravBtn = document.getElementById('btnTransitionGravity');
+  if (gravBtn) {
+    gravBtn.style.display = theme === 'night' ? '' : 'none';
+    if (theme !== 'night' && readerTransition === 'gravity') {
       readerTransition = 'slide';
       localStorage.setItem('elib_reader_transition', 'slide');
       document.querySelectorAll('#readerSettingsBar [data-transition]')
@@ -5504,6 +5518,156 @@ body {
   });
 }
 
+  function _playGravityTransition(onSnap) {
+  const content = document.getElementById('readerContent');
+  if (!content || !_readerIframe) { onSnap(); return; }
+  const doc = _readerIframe.contentDocument || _readerIframe.contentWindow?.document;
+  if (!doc || !doc.body) { onSnap(); return; }
+
+  const w = content.offsetWidth;
+  const h = content.offsetHeight;
+
+  // ── Collect visible words ─────────────────────────────────────────────
+  const words = [];
+  const range = doc.createRange();
+  const walker = doc.createTreeWalker(doc.body, NodeFilter.SHOW_TEXT, {
+    acceptNode(node) {
+      const tag = node.parentElement?.tagName?.toLowerCase();
+      if (['script','style','noscript'].includes(tag)) return NodeFilter.FILTER_REJECT;
+      return NodeFilter.FILTER_ACCEPT;
+    }
+  });
+
+  let node;
+  while ((node = walker.nextNode())) {
+    if (words.length >= 220) break;
+
+    // Quick cull: skip text nodes with no rect in the visible column
+    range.selectNode(node);
+    let nodeVisible = false;
+    for (const r of range.getClientRects()) {
+      if (r.right > 0 && r.left < w && r.bottom > 0 && r.top < h) {
+        nodeVisible = true; break;
+      }
+    }
+    if (!nodeVisible) continue;
+
+    // Word-level rects
+    const text = node.textContent;
+    for (const match of text.matchAll(/\S+/g)) {
+      if (words.length >= 220) break;
+      range.setStart(node, match.index);
+      range.setEnd(node, match.index + match[0].length);
+      const r = range.getBoundingClientRect();
+      if (r.width > 0 && r.height > 0 &&
+          r.left > -8 && r.right < w + 8 &&
+          r.top  > -8 && r.bottom < h + 8) {
+        words.push({
+          text: match[0],
+          x0: r.left,
+          y0: r.bottom - 1,
+          w:  r.width,
+          fontSize: Math.max(8, Math.round(r.height * 0.80)),
+        });
+      }
+    }
+  }
+
+  if (!words.length) { onSnap(); return; }
+
+  // ── Canvas overlay ────────────────────────────────────────────────────
+  const dpr = window.devicePixelRatio || 1;
+  const canvas = document.createElement('canvas');
+  canvas.width  = w * dpr;
+  canvas.height = h * dpr;
+  canvas.style.cssText = `position:absolute;inset:0;width:${w}px;height:${h}px;z-index:20;pointer-events:none;`;
+  content.appendChild(canvas);
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+
+  const bgColor = '#0d0d14';
+  const fgColor = '#c8c8d8';
+  const font    = `'Lato', Georgia, serif`;
+
+  // ── Particles ─────────────────────────────────────────────────────────
+  const particles = words.map(wd => ({
+    ...wd,
+    vx:   (Math.random() - 0.5) * 55,
+    vy:    Math.random() * -15,
+    g:    420 + Math.random() * 140,
+    rotV: (Math.random() - 0.5) * 3.2,
+    delay: Math.random() * 160,
+  }));
+
+  // Snap to new page now — canvas covers it
+  onSnap();
+
+  // ── Animate ───────────────────────────────────────────────────────────
+  let start = null;
+  const BG_FADE  = 160;   // ms — bg fades, revealing new page
+  const FALL_DUR = 750;   // ms — words fall and fade
+
+  function frame(ts) {
+    if (!start) start = ts;
+    const elapsed = ts - start;
+
+    ctx.clearRect(0, 0, w, h);
+
+    // Background fades first, revealing new page behind canvas
+    const bgA = Math.max(0, 1 - elapsed / BG_FADE);
+    if (bgA > 0) {
+      ctx.globalAlpha = bgA;
+      ctx.fillStyle = bgColor;
+      ctx.fillRect(0, 0, w, h);
+      ctx.globalAlpha = 1;
+    }
+
+    let anyLive = bgA > 0;
+
+    for (const p of particles) {
+      const t = Math.max(0, elapsed - p.delay) / 1000; // seconds since this word started
+
+      if (elapsed < p.delay) {
+        // Not yet falling — hold at original position
+        anyLive = true;
+        ctx.globalAlpha = 1;
+        ctx.font = `${p.fontSize}px ${font}`;
+        ctx.fillStyle = fgColor;
+        ctx.fillText(p.text, p.x0, p.y0);
+        continue;
+      }
+
+      const opacity = Math.max(0, 1 - t / (FALL_DUR / 1000));
+      if (opacity <= 0) continue;
+      anyLive = true;
+
+      // Kinematics: x = x₀ + vx·t,  y = y₀ + vy·t + ½g·t²
+      const x   = p.x0 + p.vx * t;
+      const y   = p.y0 + p.vy * t + 0.5 * p.g * t * t;
+      const rot = p.rotV * t;
+
+      ctx.save();
+      ctx.globalAlpha = opacity;
+      ctx.translate(x + p.w * 0.5, y);
+      ctx.rotate(rot);
+      ctx.font = `${p.fontSize}px ${font}`;
+      ctx.fillStyle = fgColor;
+      ctx.fillText(p.text, -p.w * 0.5, 0);
+      ctx.restore();
+    }
+
+    ctx.globalAlpha = 1;
+
+    if (anyLive && elapsed < 2000) {
+      requestAnimationFrame(frame);
+    } else {
+      canvas.remove();
+    }
+  }
+
+  requestAnimationFrame(frame);
+}
+  
   function _playTearTransition(onSnap) {
   const content = document.getElementById('readerContent');
   if (!content) { onSnap(); return; }
@@ -5623,6 +5787,14 @@ function goToPage(page, opts = {}) {
     updatePaginationUI();
     if (readerBookId) saveReadingProgress(readerBookId, readerChapter, readerPage, readerSpine.length);
     _playTearTransition(() => _scrollIframeTo(page, false));
+    return;
+  }
+
+  if (shouldAnimate && readerTransition === 'gravity') {
+    readerPage = page;
+    updatePaginationUI();
+    if (readerBookId) saveReadingProgress(readerBookId, readerChapter, readerPage, readerSpine.length);
+    _playGravityTransition(() => _scrollIframeTo(page, false));
     return;
   }
 
