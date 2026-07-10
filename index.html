@@ -7218,6 +7218,9 @@ async function openChapterManager(){
     while((m=mRe.exec(opfXml))!==null){const a=m[1];const id=a.match(/\bid="([^"]+)"/)?.[1];const href=a.match(/\bhref="([^"]+)"/)?.[1];const mt=a.match(/\bmedia-type="([^"]+)"/)?.[1];if(id&&href)manifestMap[id]={href,mediaType:mt};}
     const labelMap={};const ncxId=Object.keys(manifestMap).find(k=>manifestMap[k].mediaType==='application/x-dtbncx+xml');
     if(ncxId&&manifestMap[ncxId]){const ncxXml=await chapterMgrZip.file(chapterMgrOpfBase+manifestMap[ncxId].href)?.async('string');if(ncxXml){const npRe=/<navPoint[^>]*>[\s\S]*?<navLabel[^>]*>[\s\S]*?<text>([^<]*)<\/text>[\s\S]*?<content\s+src="([^"]+)"/gi;let np;while((np=npRe.exec(ncxXml))!==null)labelMap[np[2].split('#')[0]]=np[1].trim();}}
+    const navTagMatch=opfXml.match(/<item\s+[^>]*properties="[^"]*\bnav\b[^"]*"[^>]*\/?>/i);
+    const navHref=navTagMatch?.[0].match(/\bhref="([^"]+)"/)?.[1];
+    if(navHref){const navXml=await chapterMgrZip.file(chapterMgrOpfBase+navHref)?.async('string');if(navXml){const liRe=/<a[^>]+href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/gi;let na;while((na=liRe.exec(navXml))!==null){const href=na[1].split('#')[0];const text=na[2].replace(/<[^>]+>/g,'').trim();if(text)labelMap[href]=text;}}}
     chapterMgrSpine=[];const spineRe=/<itemref\s+([^>]+)>/gi;let sp2;
     while((sp2=spineRe.exec(opfXml))!==null){const attrs=sp2[1];const idref=attrs.match(/\bidref="([^"]+)"/)?.[1];if(!idref)continue;const item=manifestMap[idref];if(!item)continue;const fallbackLabel=item.href.split('/').pop().replace(/\.x?html?$/i,'').replace(/[-_]/g,' ');const label=labelMap[item.href]||fallbackLabel;chapterMgrSpine.push({id:idref,href:item.href,label,originalLabel:label,deleted:false});}
     if(!chapterMgrSpine.length)throw new Error('No chapters found in spine');
@@ -7264,6 +7267,9 @@ async function saveChapterManager(){
     const ncxHrefMatch=ncxId&&newOpf.match(new RegExp(`id="${ncxId}"[^>]+href="([^"]+)"`, 'i'));
     const ncxHref=ncxHrefMatch?.[1];
     if(ncxHref){const ncxPath=chapterMgrOpfBase+ncxHref;const ncxXml=await chapterMgrZip.file(ncxPath)?.async('string');if(ncxXml){let playOrder=1;const newNavPoints=active.map(ch=>`<navPoint id="navPoint-${ch.id}" playOrder="${playOrder++}"><navLabel><text>${esc(ch.label)}</text></navLabel><content src="${ch.href}"/></navPoint>`).join('\n    ');const newNcx=ncxXml.replace(/<navMap[^>]*>[\s\S]*?<\/navMap>/i,`<navMap>\n    ${newNavPoints}\n  </navMap>`);chapterMgrZip.file(ncxPath,newNcx);}}
+    const navTagMatch2=newOpf.match(/<item\s+[^>]*properties="[^"]*\bnav\b[^"]*"[^>]*\/?>/i);
+    const navHref2=navTagMatch2?.[0].match(/\bhref="([^"]+)"/)?.[1];
+    if(navHref2){const navPath=chapterMgrOpfBase+navHref2;const navXml=await chapterMgrZip.file(navPath)?.async('string');if(navXml){let newNav=navXml;for(const ch of active){const hrefEsc=ch.href.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');const linkRe=new RegExp(`(<a[^>]+href="${hrefEsc}(?:#[^"]*)?"[^>]*>)([\\s\\S]*?)(</a>)`,'i');newNav=newNav.replace(linkRe,(m,open,inner,close)=>open+esc(ch.label)+close);}chapterMgrZip.file(navPath,newNav);}}
     chapterMgrZip.file(chapterMgrOpfPath,newOpf);
     showLoading('Compressing…');
     const newBlob=await chapterMgrZip.generateAsync({type:'blob',mimeType:'application/epub+zip',compression:'DEFLATE',compressionOptions:{level:6}});
