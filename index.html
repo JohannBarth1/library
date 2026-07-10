@@ -5668,27 +5668,24 @@ body {
   requestAnimationFrame(frame);
 }
   
-  function _playTearTransition(onSnap) {
+function _playTearTransition(onSnap) {
   const content = document.getElementById('readerContent');
   if (!content) { onSnap(); return; }
 
   const w = content.offsetWidth;
   const h = content.offsetHeight;
 
-  // ── Jagged tear line ────────────────────────────────────────────────────
-  const segs    = Math.ceil(h / 11);
+  // ── Jagged tear line ──────────────────────────────────────────────────
+  const segs = Math.ceil(h / 11);
   const baseTearX = w * (0.44 + Math.random() * 0.12);
   const pts = [{ x: baseTearX + (Math.random() - 0.5) * 6, y: 0 }];
 
   for (let i = 1; i < segs; i++) {
-    const y    = (i / segs) * h;
-    const prev = pts[pts.length - 1];
-    const jag  = (Math.random() - 0.5) * 22;
+    const y     = (i / segs) * h;
+    const prev  = pts[pts.length - 1];
+    const jag   = (Math.random() - 0.5) * 22;
     const spike = Math.random() < 0.18 ? (Math.random() - 0.5) * 38 : 0;
-    pts.push({
-      x: Math.max(w * 0.15, Math.min(w * 0.85, prev.x + jag + spike)),
-      y
-    });
+    pts.push({ x: Math.max(w * 0.15, Math.min(w * 0.85, prev.x + jag + spike)), y });
   }
   pts.push({ x: baseTearX + (Math.random() - 0.5) * 6, y: h });
 
@@ -5696,52 +5693,75 @@ body {
   const leftClip  = `polygon(0px 0px,${pStr},0px ${h}px)`;
   const rightClip = `polygon(${pStr},${w}px ${h}px,${w}px 0px)`;
 
-  // ── Overlay ─────────────────────────────────────────────────────────────
+  // ── SVG fibrous-edge filter ────────────────────────────────────────────
+  const filterId = `tf_${Math.random().toString(36).slice(2, 8)}`;
+  const svgNS = 'http://www.w3.org/2000/svg';
+  const svg   = document.createElementNS(svgNS, 'svg');
+  svg.setAttribute('width', '0'); svg.setAttribute('height', '0');
+  svg.style.cssText = 'position:absolute;overflow:visible;';
+  const defs = document.createElementNS(svgNS, 'defs');
+  const filt = document.createElementNS(svgNS, 'filter');
+  filt.setAttribute('id', filterId);
+  filt.setAttribute('x', '-10%');   filt.setAttribute('y', '-5%');
+  filt.setAttribute('width', '120%'); filt.setAttribute('height', '110%');
+  const turb = document.createElementNS(svgNS, 'feTurbulence');
+  turb.setAttribute('type', 'fractalNoise');
+  turb.setAttribute('baseFrequency', '0.035 0.12');
+  turb.setAttribute('numOctaves', '4');
+  turb.setAttribute('seed', String(Math.floor(Math.random() * 100)));
+  turb.setAttribute('result', 'noise');
+  const disp = document.createElementNS(svgNS, 'feDisplacementMap');
+  disp.setAttribute('in', 'SourceGraphic'); disp.setAttribute('in2', 'noise');
+  disp.setAttribute('scale', '5');
+  disp.setAttribute('xChannelSelector', 'R'); disp.setAttribute('yChannelSelector', 'G');
+  filt.appendChild(turb); filt.appendChild(disp);
+  defs.appendChild(filt); svg.appendChild(defs);
+
+  // ── Overlay ────────────────────────────────────────────────────────────
   const ov = document.createElement('div');
   ov.style.cssText = 'position:absolute;inset:0;z-index:20;pointer-events:none;overflow:hidden;';
 
   const mkPiece = (clip, shadow, grad) => {
     const d = document.createElement('div');
-    d.style.cssText = `position:absolute;inset:0;background:${grad};clip-path:${clip};will-change:transform,opacity;filter:${shadow};`;
+    d.style.cssText = `position:absolute;inset:0;background:${grad};clip-path:${clip};will-change:transform,opacity;filter:url(#${filterId}) ${shadow};`;
     return d;
   };
 
-  // Left piece: main torn section — slightly darker gradient toward tear edge
-  const left  = mkPiece(
-    leftClip,
+  const left  = mkPiece(leftClip,
     'drop-shadow(3px 0px 6px rgba(60,35,10,0.42))',
-    'linear-gradient(to right, #ede0c4 74%, #d8c9a8 100%)'
-  );
-  // Right stub: narrower — lighter shadow, slight gradient toward tear edge
-  const right = mkPiece(
-    rightClip,
+    'linear-gradient(to right, #ede0c4 74%, #d8c9a8 100%)');
+  const right = mkPiece(rightClip,
     'drop-shadow(-1px 2px 4px rgba(60,35,10,0.18))',
-    'linear-gradient(to left, #ede0c4 80%, #d8c9a8 100%)'
-  );
+    'linear-gradient(to left, #ede0c4 80%, #d8c9a8 100%)');
 
+  ov.appendChild(svg);
   ov.appendChild(left);
   ov.appendChild(right);
   content.appendChild(ov);
 
-  // Snap iframe to new page now — safely hidden under the overlay
+  // Snap iframe to new page (hidden under overlay)
   onSnap();
 
-  // ── Animation ────────────────────────────────────────────────────────────
-  const ms = 560;
+  // ── Animate — pre-tear shudder then sweep ──────────────────────────────
+  const ms = 580;
 
-  // Left piece: micro-stutter then sweeps left-down with rotation
+  // Left: resist briefly then tear away left-down
   left.animate([
     { transform: 'translate(0,0) rotate(0deg)',                         opacity: 1,    offset: 0    },
-    { transform: 'translate(-3px,1px) rotate(-0.5deg)',                 opacity: 1,    offset: 0.06 },
-    { transform: `translate(-${w*0.42}px,${h*0.10}px) rotate(-9deg)`,  opacity: 0.85, offset: 0.55 },
+    { transform: 'translate(-2px,0px) rotate(-0.3deg)',                 opacity: 1,    offset: 0.03 },
+    { transform: 'translate(1px,0px) rotate(0.2deg)',                   opacity: 1,    offset: 0.06 },
+    { transform: 'translate(-2px,1px) rotate(-0.4deg)',                 opacity: 1,    offset: 0.10 },
+    { transform: `translate(-${w*0.42}px,${h*0.10}px) rotate(-9deg)`,  opacity: 0.85, offset: 0.58 },
     { transform: `translate(-${w*1.05}px,${h*0.30}px) rotate(-17deg)`, opacity: 0,    offset: 1    },
   ], { duration: ms, easing: 'cubic-bezier(0.45,0,0.85,0.55)', fill: 'forwards' });
 
-  // Right stub: brief flutter outward then drifts down-right
+  // Right: opposite-phase resist then drift down-right
   right.animate([
     { transform: 'translate(0,0) rotate(0deg)',                        opacity: 1,    offset: 0    },
-    { transform: 'translate(5px,0) rotate(1.2deg)',                    opacity: 1,    offset: 0.09 },
-    { transform: `translate(${w*0.07}px,${h*0.09}px) rotate(3.5deg)`, opacity: 0.88, offset: 0.42 },
+    { transform: 'translate(2px,0px) rotate(0.3deg)',                  opacity: 1,    offset: 0.03 },
+    { transform: 'translate(-1px,0px) rotate(-0.2deg)',                opacity: 1,    offset: 0.06 },
+    { transform: 'translate(2px,0px) rotate(0.4deg)',                  opacity: 1,    offset: 0.10 },
+    { transform: `translate(${w*0.07}px,${h*0.09}px) rotate(3.5deg)`, opacity: 0.88, offset: 0.45 },
     { transform: `translate(${w*0.32}px,${h*0.52}px) rotate(9deg)`,   opacity: 0,    offset: 1    },
   ], { duration: ms + 70, delay: 50, easing: 'ease-in', fill: 'forwards' });
 
