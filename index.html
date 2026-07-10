@@ -4968,6 +4968,7 @@ function _showHighlightPopup(doc, range) {
       const text = range.toString();
       (doc.getSelection ? doc.getSelection() : doc.defaultView?.getSelection())?.removeAllRanges();
       _removeHighlightPopup();
+      setReaderSelectMode(false);
       if(!offsets) return;
       const id = await saveHighlight(offsets.startOffset, offsets.endOffset, color, text);
       if(id) applyHighlightsToChapter(doc);
