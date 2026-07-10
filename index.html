@@ -2450,9 +2450,24 @@ async function uploadOneEpub(file){
   try{
     setUpP(rowId,20,'Parsing…');
     const meta=await parseEpubMeta(file);
+    setUpP(rowId,30,'Checking cover…');
+    let uploadBlob=file;
+    try{
+      const zip2=await JSZip.loadAsync(file);
+      const container2=await zip2.file('META-INF/container.xml')?.async('string');
+      const opfPath2=container2?.match(/full-path="([^"]+\.opf)"/i)?.[1];
+      const opfXml2=opfPath2?await zip2.file(opfPath2)?.async('string'):null;
+      if(opfPath2&&opfXml2){
+        const patchedOpf=await ensureKoboCoverDeclared(zip2,opfPath2,opfXml2);
+        if(patchedOpf!==opfXml2){
+          zip2.file(opfPath2,patchedOpf);
+          uploadBlob=await zip2.generateAsync({type:'blob',mimeType:'application/epub+zip',compression:'DEFLATE',compressionOptions:{level:6}});
+        }
+      }
+    }catch(e){console.warn('Cover normalization skipped:',e);}
     setUpP(rowId,40,'Uploading…');
     const sRef=storageRef(storage,`books/${currentUser.uid}/${Date.now()}_${file.name}`);
-    const snap=await uploadBytes(sRef,file);
+    const snap=await uploadBytes(sRef,uploadBlob);
 setUpP(rowId,70,'Saving…');
     const epubUrl=await getDownloadURL(snap.ref);
     // Upload cover image to Storage instead of storing base64 in Firestore
@@ -6738,6 +6753,54 @@ async function parseEpubMeta(file){
     return{title:get('title')||file.name.replace(/\.epub$/i,''),author:getAll('creator').join(', ')||'Unknown Author',description:get('description')||'',category:getAll('subject')[0]||'Uncategorised',language:get('language')||'',publisher:get('publisher')||'',coverDataUrl};
   }catch(e){return fallbackMeta(file);}
 }
+
+// Ensures the OPF declares a cover Kobo will reliably recognize: adds
+// properties="cover-image" to the manifest item (the modern EPUB3 signal)
+// AND keeps the legacy <meta name="cover" content="ID"/> in sync with it
+// (older readers/extractors still look for that). Reuses the same 3-tier
+// lookup as parseEpubMeta, so whatever image your library grid already
+// shows is exactly what gets declared — even if the source file's own
+// declaration was missing, broken, or CSS-background-only. Returns the
+// opfXml unchanged if no cover could be found at all.
+async function ensureKoboCoverDeclared(zip, opfPath, opfXml){
+  const opfDir=opfPath.includes('/')?opfPath.replace(/\/[^/]+$/,'/'):'';
+  const manifestMap={};const mRe=/<item\s+([^>]+)\/?>/gi;let m;
+  while((m=mRe.exec(opfXml))!==null){const a=m[1];const id=a.match(/\bid="([^"]+)"/)?.[1];const href=a.match(/\bhref="([^"]+)"/)?.[1];const mt=a.match(/\bmedia-type="([^"]+)"/)?.[1];if(id&&href)manifestMap[id]={href,mediaType:mt};}
+
+  let coverHref=null;
+  const coverId=opfXml.match(/name="cover"\s+content="([^"]+)"/i)?.[1]||opfXml.match(/content="([^"]+)"\s+name="cover"/i)?.[1];
+  if(coverId&&manifestMap[coverId])coverHref=manifestMap[coverId].href;
+  if(!coverHref){for(const id in manifestMap){const it=manifestMap[id];if(!it.mediaType?.startsWith('image/'))continue;if(id.toLowerCase().includes('cover')||it.href.toLowerCase().includes('cover')){coverHref=it.href;break;}}}
+  if(!coverHref){for(const p of ['cover.jpg','cover.jpeg','cover.png','images/cover.jpg','OEBPS/cover.jpg','OEBPS/cover.jpeg','OEBPS/cover.png','OEBPS/images/cover.jpg','OEBPS/images/cover.jpeg','OPS/images/cover.jpg','OPS/cover.jpg']){if(zip.file(opfDir+p)||zip.file(p)){coverHref=p;break;}}}
+  if(!coverHref)return opfXml;
+
+  let itemId=Object.keys(manifestMap).find(id=>manifestMap[id].href===coverHref);
+  let newOpf=opfXml;
+  if(!itemId){
+    itemId='kobocoverimg';
+    const ext=(coverHref.match(/\.(\w+)$/)?.[1]||'jpg').toLowerCase();
+    const mimeMap={jpg:'image/jpeg',jpeg:'image/jpeg',png:'image/png',gif:'image/gif',svg:'image/svg+xml'};
+    const mediaType=mimeMap[ext]||'image/jpeg';
+    newOpf=newOpf.replace(/<manifest[^>]*>/i,match=>`${match}\n    <item id="${itemId}" href="${coverHref}" media-type="${mediaType}" properties="cover-image"/>`);
+  } else {
+    const itemRe=new RegExp(`<item\\s+([^>]*\\bid="${itemId}"[^>]*)\\/?>`,'i');
+    newOpf=newOpf.replace(itemRe,(match,attrs)=>{
+      if(/\bproperties="[^"]*cover-image[^"]*"/i.test(attrs))return match;
+      if(/\bproperties="/i.test(attrs))return match.replace(/\bproperties="([^"]*)"/i,(m2,p)=>`properties="${(p+' cover-image').trim()}"`);
+      return match.replace(/\/?>\s*$/,` properties="cover-image"/>`);
+    });
+  }
+
+  if(/name="cover"\s+content="[^"]*"/i.test(newOpf)){
+    newOpf=newOpf.replace(/(<meta\s+)name="cover"\s+content="[^"]*"([^>]*\/?>)/i,`$1name="cover" content="${itemId}"$2`);
+  } else if(/content="[^"]*"\s+name="cover"/i.test(newOpf)){
+    newOpf=newOpf.replace(/(<meta\s+)content="[^"]*"\s+name="cover"([^>]*\/?>)/i,`$1content="${itemId}" name="cover"$2`);
+  } else {
+    newOpf=newOpf.replace(/<\/metadata>/i,`  <meta name="cover" content="${itemId}"/>\n  </metadata>`);
+  }
+  return newOpf;
+}
+  
 function fallbackMeta(file){return{title:file.name.replace(/\.epub$/i,''),author:'Unknown Author',description:'',category:'Uncategorised',language:'',publisher:'',coverDataUrl:null};}
 function blobToDataUrl(blob){return new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=rej;r.readAsDataURL(blob);});}
 function dataUrlToBlob(dataUrl){const[header,data]=dataUrl.split(',');const mime=header.match(/:(.*?);/)[1];const binary=atob(data);const arr=new Uint8Array(binary.length);for(let i=0;i<binary.length;i++)arr[i]=binary.charCodeAt(i);return new Blob([arr],{type:mime});}
@@ -7270,6 +7333,7 @@ async function saveChapterManager(){
     const navTagMatch2=newOpf.match(/<item\s+[^>]*properties="[^"]*\bnav\b[^"]*"[^>]*\/?>/i);
     const navHref2=navTagMatch2?.[0].match(/\bhref="([^"]+)"/)?.[1];
     if(navHref2){const navPath=chapterMgrOpfBase+navHref2;const navXml=await chapterMgrZip.file(navPath)?.async('string');if(navXml){let newNav=navXml;for(const href of deletedHrefs){const hrefEsc=href.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');const liRe=new RegExp(`<li[^>]*>\\s*<a[^>]+href="${hrefEsc}(?:#[^"]*)?"[^>]*>[\\s\\S]*?</a>\\s*</li>`,'i');newNav=newNav.replace(liRe,'');}for(const ch of active){const hrefEsc=ch.href.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');const linkRe=new RegExp(`(<a[^>]+href="${hrefEsc}(?:#[^"]*)?"[^>]*>)([\\s\\S]*?)(</a>)`,'i');newNav=newNav.replace(linkRe,(m,open,inner,close)=>open+esc(ch.label)+close);}chapterMgrZip.file(navPath,newNav);}}
+    newOpf=await ensureKoboCoverDeclared(chapterMgrZip,chapterMgrOpfPath,newOpf);
     chapterMgrZip.file(chapterMgrOpfPath,newOpf);
     showLoading('Compressing…');
     const newBlob=await chapterMgrZip.generateAsync({type:'blob',mimeType:'application/epub+zip',compression:'DEFLATE',compressionOptions:{level:6}});
