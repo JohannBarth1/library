@@ -49,29 +49,49 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .notif-bell-wrap{position:relative;display:flex;align-items:center;}
 .notif-bell-btn{background:none;border:none;color:var(--cream);font-size:1.15rem;cursor:pointer;padding:.3rem .4rem;line-height:1;position:relative;-webkit-tap-highlight-color:transparent;}
 .notif-badge{position:absolute;top:-2px;right:-2px;background:#c0392b;color:#fff;font-size:.6rem;font-weight:700;border-radius:10px;min-width:16px;height:16px;display:flex;align-items:center;justify-content:center;padding:0 3px;line-height:1;pointer-events:none;}
-#notifFullOverlay{position:fixed;inset:0;z-index:260;background:var(--warm-white);display:none;flex-direction:column;}
-.notif-list-item{padding:.85rem 1.2rem;border-bottom:1px solid var(--border);cursor:pointer;display:flex;gap:.7rem;align-items:flex-start;transition:background .12s;}
-.notif-list-item:hover{background:rgba(42,124,138,0.08);}
-.notif-list-item.unread{background:rgba(42,124,138,0.06);}
-.notif-dot{width:9px;height:9px;border-radius:50%;background:var(--teal);flex-shrink:0;margin-top:.35rem;visibility:hidden;}
+#notifFullOverlay{position:fixed;inset:0;z-index:260;background:var(--cream);display:none;flex-direction:column;}
+.notif-header-title{font-family:'Playfair Display',serif;font-size:1.02rem;color:var(--navy2);flex:1;letter-spacing:.01em;}
+.notif-header-new{border:1px solid var(--gold);border-radius:20px;cursor:pointer;font-size:.72rem;color:var(--gold2);padding:.32rem .8rem;font-weight:700;letter-spacing:.03em;text-transform:uppercase;background:rgba(200,149,42,.08);}
+#notifListEl{padding-top:.6rem;}
+.notif-list-item{padding:.8rem .9rem;margin:0 .7rem .6rem;border-radius:8px;cursor:pointer;display:flex;gap:.7rem;align-items:flex-start;transition:box-shadow .15s,transform .15s;background:var(--warm-white);border:1px solid var(--border);border-left:3px solid transparent;box-shadow:1px 2px 6px rgba(15,26,46,.05);}
+.notif-list-item:hover{box-shadow:1px 3px 10px rgba(15,26,46,.1);transform:translateY(-1px);}
+.notif-list-item.unread{border-left-color:var(--gold);background:linear-gradient(90deg,rgba(200,149,42,.05),var(--warm-white) 14%);}
+.notif-dot{width:8px;height:8px;border-radius:50%;background:var(--gold);flex-shrink:0;margin-top:.4rem;visibility:hidden;box-shadow:0 0 0 3px rgba(200,149,42,.15);}
 .notif-list-item.unread .notif-dot{visibility:visible;}
-.notif-type-chip{font-size:.6rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;padding:.15rem .45rem;border-radius:10px;display:inline-block;margin-bottom:.25rem;}
-.notif-type-chip.book_request{background:rgba(200,149,42,.18);color:#8a6414;}
-.notif-type-chip.broadcast{background:rgba(42,124,138,.18);color:#1c6b78;}
-.notif-type-chip.feature_request{background:rgba(90,72,176,.18);color:#4a3a8f;}
-.notif-type-chip.bug{background:rgba(184,76,26,.18);color:#a03e15;}
-.notif-title{font-weight:700;font-size:.86rem;color:var(--navy2);}
-.notif-preview{font-size:.78rem;color:var(--muted);margin-top:.15rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.notif-meta{font-size:.68rem;color:var(--muted);margin-top:.3rem;}
-.notif-thread-msg{padding:.6rem .9rem;border-radius:10px;margin-bottom:.6rem;background:#fff;border:1px solid var(--border);position:relative;max-width:88%;}
-.notif-thread-msg.mine{margin-left:auto;background:rgba(42,124,138,0.09);}
-.notif-thread-author{font-size:.68rem;font-weight:700;color:var(--teal);margin-bottom:.2rem;}
+.notif-type-chip{font-family:'Lato',sans-serif;font-size:.58rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;padding:.18rem .5rem;border-radius:3px;display:inline-block;margin-bottom:.3rem;border:1px solid currentColor;background:transparent !important;}
+.notif-type-chip.book_request{color:#8a6414;}
+.notif-type-chip.broadcast{color:#1c6b78;}
+.notif-type-chip.feature_request{color:#4a3a8f;}
+.notif-type-chip.bug{color:#a03e15;}
+.notif-title{font-family:'Playfair Display',serif;font-weight:700;font-size:.95rem;color:var(--navy2);}
+.notif-preview{font-size:.78rem;color:var(--muted);margin-top:.2rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.notif-meta{font-size:.66rem;color:var(--muted);margin-top:.35rem;font-style:italic;}
+/* Thread ("chat") view — the original post stays a hero notice, replies read as a conversation beneath it */
+#notifThreadList{background:var(--cream);}
+.notif-hero{position:relative;padding:1.1rem 1.1rem 1rem;margin-bottom:1.1rem;background:var(--warm-white);border:1px solid var(--border);border-radius:4px;box-shadow:0 3px 14px rgba(15,26,46,.08);}
+.notif-hero::before{content:'';position:absolute;top:0;left:0;right:0;height:4px;background:linear-gradient(90deg,var(--gold),var(--gold2));border-radius:4px 4px 0 0;}
+.notif-hero-head{display:flex;align-items:center;gap:.6rem;margin-bottom:.55rem;}
+.notif-hero-title{font-family:'Playfair Display',serif;font-size:1.05rem;color:var(--navy2);flex:1;line-height:1.3;}
+.notif-hero-author{font-size:.72rem;font-weight:700;color:var(--gold2);}
+.notif-hero-text{font-size:.88rem;color:var(--navy2);white-space:pre-wrap;word-break:break-word;line-height:1.55;}
+.notif-hero-time{font-size:.65rem;color:var(--muted);margin-top:.6rem;padding-top:.5rem;border-top:1px dashed var(--border);}
+.notif-thread-divider{font-size:.62rem;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);text-align:center;margin:0 0 .8rem;position:relative;}
+.notif-thread-divider::before,.notif-thread-divider::after{content:'';position:absolute;top:50%;width:36%;border-top:1px solid var(--border);}
+.notif-thread-divider::before{left:0;}
+.notif-thread-divider::after{right:0;}
+.notif-thread-row{display:flex;gap:.55rem;margin-bottom:.65rem;align-items:flex-end;}
+.notif-thread-row.mine{flex-direction:row-reverse;}
+.notif-thread-avatar{width:24px;height:24px;border-radius:50%;background:var(--navy2);color:var(--gold2);display:flex;align-items:center;justify-content:center;font-size:.58rem;font-weight:700;flex-shrink:0;border:1px solid var(--border);object-fit:cover;}
+.notif-thread-msg{padding:.6rem .85rem;border-radius:10px;background:#fff;border:1px solid var(--border);position:relative;max-width:78%;}
+.notif-thread-msg.mine{background:rgba(200,149,42,.1);border-color:rgba(200,149,42,.3);}
+.notif-thread-author{font-size:.65rem;font-weight:700;color:var(--teal);margin-bottom:.2rem;}
+.notif-thread-msg.mine .notif-thread-author{color:var(--gold2);}
 .notif-thread-text{font-size:.83rem;color:var(--navy2);white-space:pre-wrap;word-break:break-word;}
 .notif-thread-time{font-size:.62rem;color:var(--muted);margin-top:.3rem;}
 .notif-thread-del{position:absolute;top:.2rem;right:.35rem;background:none;border:none;color:var(--muted);cursor:pointer;font-size:.7rem;padding:.1rem .3rem;}
 .notif-compose-bar{display:flex;gap:.5rem;padding:.7rem 1rem;border-top:1px solid var(--border);background:var(--warm-white);flex-shrink:0;}
-.notif-compose-bar textarea{flex:1;resize:none;border:1px solid var(--border);border-radius:8px;padding:.5rem .7rem;font-family:'Lato',sans-serif;font-size:.85rem;min-height:2.4rem;max-height:6rem;}
-.notif-compose-bar button{flex-shrink:0;background:var(--teal);color:#fff;border:none;border-radius:8px;padding:0 1rem;font-weight:700;font-size:.8rem;cursor:pointer;}
+.notif-compose-bar textarea{flex:1;resize:none;border:1px solid var(--border);border-radius:8px;padding:.5rem .7rem;font-family:'Lato',sans-serif;font-size:1rem;min-height:2.4rem;max-height:6rem;}
+.notif-compose-bar button{flex-shrink:0;background:var(--navy2);color:var(--gold2);border:none;border-radius:8px;padding:0 1.1rem;font-weight:700;font-size:.8rem;cursor:pointer;}
 #notifComposeOverlay{z-index:380;}
 #notifComposeSheet{z-index:381;}
 #notifReminderModal{position:fixed;inset:0;z-index:300;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;}
@@ -1818,18 +1838,17 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 <div id="notifFullOverlay">
   <div class="mob-detail-header">
     <button class="mob-back-btn" id="btnNotifFullBack">← Back</button>
-    <div style="font-weight:700;font-size:.85rem;color:var(--navy2);flex:1;">Notifications</div>
-    <button id="btnNotifNew" title="New notification"
-      style="background:none;border:none;cursor:pointer;font-size:.9rem;color:inherit;opacity:.75;padding:.3rem .5rem;font-weight:700;">+ New</button>
+    <div class="notif-header-title">Notifications</div>
+    <button class="notif-header-new" id="btnNotifNew" title="New notification">+ New</button>
   </div>
   <div class="mob-detail-scroll" id="notifListEl"></div>
 </div>
 
 <!-- Notifications: thread view -->
-<div id="notifThreadOverlay" style="display:none;position:fixed;inset:0;z-index:270;background:var(--warm-white);flex-direction:column;">
+<div id="notifThreadOverlay" style="display:none;position:fixed;inset:0;z-index:270;background:var(--cream);flex-direction:column;">
   <div class="mob-detail-header">
     <button class="mob-back-btn" id="btnNotifThreadBack">← Back</button>
-    <div id="notifThreadTitle" style="font-weight:700;font-size:.85rem;color:var(--navy2);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></div>
+    <div id="notifThreadTitle" class="notif-header-title" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></div>
     <button id="btnNotifThreadDelete" title="Delete notification"
       style="display:none;background:none;border:none;cursor:pointer;font-size:.85rem;color:#b84c1a;padding:.3rem .5rem;">🗑</button>
   </div>
@@ -1844,16 +1863,16 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 <div class="bottom-sheet-overlay" id="notifComposeOverlay"></div>
 <div class="bottom-sheet" id="notifComposeSheet">
   <div style="padding:1rem 1.2rem;">
-    <div style="font-weight:700;font-size:.95rem;color:var(--navy2);margin-bottom:.8rem;">New Notification</div>
+    <div style="font-family:'Playfair Display',serif;font-size:1.05rem;color:var(--navy2);margin-bottom:.8rem;">New Notification</div>
     <div style="display:flex;gap:.5rem;margin-bottom:.8rem;flex-wrap:wrap;">
       <button class="mob-chip active" id="notifTypeBookReq" data-notiftype="book_request">📗 Book Request</button>
       <button class="mob-chip" id="notifTypeBroadcast" data-notiftype="broadcast">📢 Broadcast</button>
       <button class="mob-chip" id="notifTypeFeatureReq" data-notiftype="feature_request">💡 Feature Request</button>
       <button class="mob-chip" id="notifTypeBug" data-notiftype="bug">🐛 Bug</button>
     </div>
-    <input id="notifComposeTitle" placeholder="Title" style="width:100%;box-sizing:border-box;padding:.55rem .7rem;border:1px solid var(--border);border-radius:8px;font-size:.85rem;margin-bottom:.6rem;font-family:'Lato',sans-serif;"/>
-    <textarea id="notifComposeBody" placeholder="Details…" rows="4" style="width:100%;box-sizing:border-box;padding:.55rem .7rem;border:1px solid var(--border);border-radius:8px;font-size:.85rem;font-family:'Lato',sans-serif;resize:vertical;"></textarea>
-    <button id="btnNotifComposeSend" style="margin-top:.8rem;width:100%;background:var(--teal);color:#fff;border:none;border-radius:8px;padding:.65rem;font-weight:700;font-size:.85rem;cursor:pointer;">Post</button>
+    <input id="notifComposeTitle" placeholder="Title" style="width:100%;box-sizing:border-box;padding:.55rem .7rem;border:1px solid var(--border);border-radius:8px;font-size:1rem;margin-bottom:.6rem;font-family:'Lato',sans-serif;"/>
+    <textarea id="notifComposeBody" placeholder="Details…" rows="4" style="width:100%;box-sizing:border-box;padding:.55rem .7rem;border:1px solid var(--border);border-radius:8px;font-size:1rem;font-family:'Lato',sans-serif;resize:vertical;"></textarea>
+    <button id="btnNotifComposeSend" style="margin-top:.8rem;width:100%;background:var(--navy2);color:var(--gold2);border:none;border-radius:8px;padding:.65rem;font-weight:700;font-size:.85rem;cursor:pointer;letter-spacing:.03em;">Post</button>
   </div>
 </div>
 
