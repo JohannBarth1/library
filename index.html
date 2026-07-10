@@ -5618,8 +5618,8 @@ setTimeout(() => {
     // Background fades first, revealing new page behind canvas
     let bgA = 1;
 
-    if (elapsed > PAGE_DELAY) {
-      bgA = Math.max(0, 1 - (elapsed - PAGE_DELAY) / BG_FADE);
+    if (elapsed > 500) {
+      bgA = Math.max(0, 1 - (elapsed - 500) / BG_FADE);
     }
     if (bgA > 0) {
       ctx.globalAlpha = bgA;
