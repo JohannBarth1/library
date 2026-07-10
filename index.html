@@ -5599,8 +5599,10 @@ body {
     delay: Math.random() * 160,
   }));
 
-  // Snap to new page now — canvas covers it
+  // Keep the old page visible for 500ms, then load the new page
+setTimeout(() => {
   onSnap();
+}, 500);
 
   // ── Animate ───────────────────────────────────────────────────────────
   let start = null;
@@ -5614,7 +5616,11 @@ body {
     ctx.clearRect(0, 0, w, h);
 
     // Background fades first, revealing new page behind canvas
-    const bgA = Math.max(0, 1 - elapsed / BG_FADE);
+    let bgA = 1;
+
+    if (elapsed > PAGE_DELAY) {
+      bgA = Math.max(0, 1 - (elapsed - PAGE_DELAY) / BG_FADE);
+    }
     if (bgA > 0) {
       ctx.globalAlpha = bgA;
       ctx.fillStyle = bgColor;
