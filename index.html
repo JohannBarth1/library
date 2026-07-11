@@ -2166,28 +2166,29 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
   <!-- Always-visible min/max handle — the toolbar only toggles on tap for
        touch devices, so desktop (mouse) needs its own persistent control. -->
   <button class="reader-toolbar-handle" id="readerToolbarHandle" title="Show/hide toolbar">⌄</button>
+
+  <!-- Read-aloud panel — docked above the toolbar exactly like readerSettingsBar,
+       so it shares the same theme-aware styling and floats over the text
+       instead of pushing/resizing the reading area. -->
+  <div class="reader-settings-bar" id="ttsPanel">
+    <div class="rs-row">
+      <span class="tts-chapter-label" id="ttsPanelChapterLabel">—</span>
+      <button class="rs-btn" id="ttsBtnVoiceToggle">Voice ▾</button>
+    </div>
+    <div class="rs-row tts-transport">
+      <button class="rs-btn" id="ttsBtnPrev" title="Previous chapter">⏮</button>
+      <button class="rs-btn active tts-play" id="ttsBtnPlay" title="Play/Pause">▶</button>
+      <button class="rs-btn" id="ttsBtnNext" title="Next chapter">⏭</button>
+      <button class="rs-btn" id="ttsBtnSpeed" title="Speed">1×</button>
+      <button class="rs-btn stopping" id="ttsBtnStop" title="Stop reading">✕</button>
+    </div>
+    <div class="rs-row" id="ttsVoiceRow" style="display:none;">
+      <span class="rs-label">Voice</span>
+      <select id="ttsVoiceSelect"></select>
+    </div>
+  </div>
 </div>
 
-<!-- Read-aloud panel — docked above the toolbar exactly like readerSettingsBar,
-     so it shares the same theme-aware styling and floats over the text
-     instead of pushing/resizing the reading area. -->
-<div class="reader-settings-bar" id="ttsPanel">
-  <div class="rs-row">
-    <span class="tts-chapter-label" id="ttsPanelChapterLabel">—</span>
-    <button class="rs-btn" id="ttsBtnVoiceToggle">Voice ▾</button>
-  </div>
-  <div class="rs-row tts-transport">
-    <button class="rs-btn" id="ttsBtnPrev" title="Previous chapter">⏮</button>
-    <button class="rs-btn active tts-play" id="ttsBtnPlay" title="Play/Pause">▶</button>
-    <button class="rs-btn" id="ttsBtnNext" title="Next chapter">⏭</button>
-    <button class="rs-btn" id="ttsBtnSpeed" title="Speed">1×</button>
-    <button class="rs-btn stopping" id="ttsBtnStop" title="Stop reading">✕</button>
-  </div>
-  <div class="rs-row" id="ttsVoiceRow" style="display:none;">
-    <span class="rs-label">Voice</span>
-    <select id="ttsVoiceSelect"></select>
-  </div>
-</div>
 <div class="loading-overlay" id="loadingOverlay">
   <div class="loading-spinner"></div>
   <div class="loading-msg" id="loadingMsg">Loading…</div>
