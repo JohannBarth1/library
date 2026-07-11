@@ -567,8 +567,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .loading-spinner{width:44px;height:44px;border:3px solid rgba(200,149,42,.3);border-top-color:var(--gold);border-radius:50%;animation:spin .8s linear infinite;}
 @keyframes spin{to{transform:rotate(360deg);}}
 .loading-msg{color:var(--cream);font-size:.9rem;font-weight:700;letter-spacing:.08em;}
-.tile-opening-spinner{position:absolute;inset:0;background:rgba(15,26,46,.5);display:flex;align-items:center;justify-content:center;z-index:6;border-radius:inherit;}
-.tile-opening-spinner-dot{width:22px;height:22px;border:3px solid rgba(255,255,255,.35);border-top-color:#fff;border-radius:50%;animation:spin .8s linear infinite;}
+
 
 /* ── DROP ZONE ── */
 .drop-zone{border:2px dashed var(--border);border-radius:6px;padding:2rem;text-align:center;cursor:pointer;transition:all .2s;margin:1.5rem 0;background:var(--warm-white);}
@@ -4484,24 +4483,12 @@ if(isAndroidChrome){
 // shelf tile) wherever it currently appears in the DOM — deliberately
 // scoped to just those two tile types so it doesn't land on unrelated
 // elements that also carry data-bookid (star ratings, list pickers, etc).
-function _setTileLoading(bookId, on) {
-  // Book details view (desktop drawer hero + mobile detail cover) and Home
-  // tab tiles only — NOT the Library grid (.book-card), which doesn't need it.
-  document.querySelectorAll(`#homeSection_home_reading .home-shelf-book[data-bookid="${bookId}"], .home-bookmark-item[data-bookid="${bookId}"], #drawerHeroCover, .mob-detail-cover-wrap`)
-    .forEach(tile => {
-      const existing = tile.querySelector('.tile-opening-spinner');
-      if (on) {
-        if (!existing) {
-          const spin = document.createElement('div');
-          spin.className = 'tile-opening-spinner';
-          spin.innerHTML = '<div class="tile-opening-spinner-dot"></div>';
-          tile.appendChild(spin);
-        }
-      } else {
-        existing?.remove();
-      }
-    });
-}
+// (Tile-level "opening" spinner removed — the full-page spinner in
+// readCurrentBook() now reliably covers the whole load, from tapping "Read"
+// through images finishing, in every entry point. A separate tile spinner
+// was redundant and, on views where the cover is visible while the sheet is
+// open (e.g. the Library tab's book detail), showed up alongside the
+// full-page one at the same time.)
 
 // ── OFFLINE EPUB CACHE ───────────────────────────────────────────────────────
 // Books on the "Currently Reading" list get their EPUB bytes stored in the
@@ -4723,7 +4710,6 @@ async function readCurrentBook(){
   let storagePath=book.storagePath;
   if(!storagePath&&book.epubUrl){const match=book.epubUrl.match(/\/o\/(.+?)\?/);if(match)storagePath=decodeURIComponent(match[1]);}
   if(!storagePath){showToast('EPUB not available');return;}
-  _setTileLoading(book.id, true);
   showLoading('Opening book…'); // show immediately — covers the network fetch too, not just pagination
   try{
     let bytes = await getCachedEpubBytes(book.id);
@@ -4774,7 +4760,7 @@ async function readCurrentBook(){
       }
     }
 
-    hideLoading();_setTileLoading(book.id, false);applyReaderTheme(readerTheme);
+    applyReaderTheme(readerTheme);
     document.querySelectorAll('#readerSettingsBar [data-transition]')
       .forEach(b => b.classList.toggle('active', b.dataset.transition === readerTransition));
     document.querySelectorAll('#readerSettingsBar [data-size]')
@@ -4800,7 +4786,7 @@ async function readCurrentBook(){
     
     requestAnimationFrame(() => requestAnimationFrame(() => recalcReaderHeight()));
     setTimeout(() => recalcReaderHeight(), 300);
-  }catch(e){hideLoading();_setTileLoading(book.id, false);showToast('Could not open EPUB: '+e.message);console.error(e);}
+  }catch(e){hideLoading();showToast('Could not open EPUB: '+e.message);console.error(e);}
 }
 
 
