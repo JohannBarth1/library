@@ -2274,6 +2274,10 @@ let mobLibSearch = '';
 let mobLibSort   = 'recent';
 let mobPrevPanel = 'mobPanelLibrary';
 let currentUser=null,library=[],allUsers=[],userRatings={},currentId=null,communityLib = [];
+// Kick off loading any offline-cached covers immediately — Cache Storage isn't
+// tied to auth, and this needs to finish before the first real Home render so
+// cached tiles show correctly even when opening the app offline.
+let _coverCachePrimed = primeCoverCache();
 let shelfMode='mine',activeCat='All',activeCatPublic='All',searchQ='';
 let selectMode=false,selectedIds=new Set(),deskView='library';
 let myCheckedOutIds=new Set();
@@ -2331,6 +2335,7 @@ onAuthStateChanged(auth, async user => {
     Promise.all([
       loadUserLists(),
       loadConfig(),
+      _coverCachePrimed,
     ]).then(() => {
       renderMobHome();
       renderDeskHome();
@@ -4552,7 +4557,12 @@ async function evictCachedEpub(bookId) {
 // Safe to call opportunistically — no-ops quickly if already cached or offline.
 async function cacheEpubForOfflineById(bookId, { silent = true } = {}) {
   try {
-    if(await isEpubCached(bookId)) return true;
+    if(await isEpubCached(bookId)) {
+      // EPUB already cached from a previous session — still backfill the
+      // cover in case this book was cached before offline covers existed.
+      cacheCoverForOfflineById(bookId).then(ok => { if(ok) _refreshCoverTiles(bookId); }).catch(()=>{});
+      return true;
+    }
     if(navigator.onLine === false) return false; // can't fetch to cache while offline
     const book = await findBookById(bookId);
     if(!book) return false;
@@ -4564,12 +4574,28 @@ async function cacheEpubForOfflineById(bookId, { silent = true } = {}) {
     if(!storagePath) return false;
     const bytes = await getBytes(storageRef(storage, storagePath));
     const ok = await storeCachedEpub(bookId, bytes);
-    if(ok && !silent) showToast(`"${book.title || 'Book'}" saved for offline reading ✓`);
+    if(ok) {
+      cacheCoverForOfflineById(bookId).then(coverOk => {
+        // Cover finished caching after the tile was already rendered —
+        // refresh any visible tiles for this book so it doesn't need a
+        // manual reload to show the offline-safe image.
+        if(coverOk) _refreshCoverTiles(bookId);
+      }).catch(()=>{});
+      if(!silent) showToast(`"${book.title || 'Book'}" saved for offline reading ✓`);
+    }
     return ok;
   } catch(e) {
     console.warn('cacheEpubForOfflineById:', e);
     return false;
   }
+}
+
+// Swaps the <img src> on any already-rendered tiles for this book over to the
+// freshly-cached offline cover, without a full re-render.
+function _refreshCoverTiles(bookId) {
+  const src = getCoverSrc({ id: bookId });
+  if(!src) return;
+  document.querySelectorAll(`[data-bookid="${bookId}"] img`).forEach(img => { img.src = src; });
 }
 
 // Retroactively caches any books already on "Currently Reading" the first time
@@ -4584,6 +4610,110 @@ async function prewarmOfflineEpubs() {
   }
 }
 
+// ── OFFLINE COVER CACHE ──────────────────────────────────────────────────────
+// Whenever a book's EPUB gets cached for offline reading, its cover image gets
+// cached alongside it — otherwise the book tile itself goes blank the moment
+// you're offline, even though the book is fully downloaded. Same Cache Storage
+// pattern as the EPUB cache above, plus an in-memory map of blob: object URLs
+// so getCoverSrc() (called synchronously all over the tile-rendering code) can
+// return a working <img src> immediately, without every render site needing to
+// become async.
+const COVER_CACHE_NAME = 'elib-cover-cache-v1';
+
+function _coverCacheKey(bookId) {
+  return new Request(location.origin + '/__offline_cover__/' + encodeURIComponent(bookId));
+}
+
+async function isCoverCached(bookId) {
+  if(!('caches' in window)) return false;
+  try {
+    const cache = await caches.open(COVER_CACHE_NAME);
+    return !!(await cache.match(_coverCacheKey(bookId)));
+  } catch(e) { return false; }
+}
+
+async function getCachedCoverBlob(bookId) {
+  if(!('caches' in window)) return null;
+  try {
+    const cache = await caches.open(COVER_CACHE_NAME);
+    const match = await cache.match(_coverCacheKey(bookId));
+    return match ? await match.blob() : null;
+  } catch(e) { console.warn('getCachedCoverBlob:', e); return null; }
+}
+
+async function storeCachedCover(bookId, blob) {
+  if(!('caches' in window) || !blob) return false;
+  try {
+    const cache = await caches.open(COVER_CACHE_NAME);
+    await cache.put(_coverCacheKey(bookId), new Response(blob, {
+      headers: { 'Content-Type': blob.type || 'image/jpeg' }
+    }));
+    return true;
+  } catch(e) { console.warn('storeCachedCover:', e); return false; }
+}
+
+async function evictCachedCover(bookId) {
+  if(!('caches' in window)) return;
+  try {
+    const cache = await caches.open(COVER_CACHE_NAME);
+    await cache.delete(_coverCacheKey(bookId));
+  } catch(e) { console.warn('evictCachedCover:', e); }
+  const url = _cachedCoverObjectUrls[bookId];
+  if(url) { URL.revokeObjectURL(url); delete _cachedCoverObjectUrls[bookId]; }
+}
+
+// bookId -> blob: object URL, for covers already cached on disk. Populated by
+// primeCoverCache() on boot so it's ready before the first meaningful render,
+// and kept in sync as covers are cached/evicted afterwards.
+const _cachedCoverObjectUrls = {};
+
+// Reads whatever cover images are already in Cache Storage from a previous
+// session and turns them into live object URLs. Safe to call before login —
+// Cache Storage isn't tied to auth state.
+async function primeCoverCache() {
+  if(!('caches' in window)) return;
+  try {
+    const cache = await caches.open(COVER_CACHE_NAME);
+    const requests = await cache.keys();
+    for(const req of requests) {
+      const marker = '/__offline_cover__/';
+      const idx = req.url.indexOf(marker);
+      if(idx === -1) continue;
+      const bookId = decodeURIComponent(req.url.slice(idx + marker.length));
+      if(!bookId || _cachedCoverObjectUrls[bookId]) continue;
+      const res = await cache.match(req);
+      if(res) _cachedCoverObjectUrls[bookId] = URL.createObjectURL(await res.blob());
+    }
+  } catch(e) { console.warn('primeCoverCache:', e); }
+}
+
+// Downloads and caches a single book's cover for offline display, if not
+// already cached. Safe to call opportunistically.
+async function cacheCoverForOfflineById(bookId) {
+  try {
+    if(_cachedCoverObjectUrls[bookId]) return true; // already primed this session
+    const alreadyOnDisk = await isCoverCached(bookId);
+    if(alreadyOnDisk) {
+      const blob = await getCachedCoverBlob(bookId);
+      if(blob) _cachedCoverObjectUrls[bookId] = URL.createObjectURL(blob);
+      return true;
+    }
+    if(navigator.onLine === false) return false;
+    const book = await findBookById(bookId);
+    const coverUrl = book?.coverUrl; // coverDataUrl books are already offline-safe as-is
+    if(!coverUrl) return false;
+    const res = await fetch(coverUrl);
+    if(!res.ok) return false;
+    const blob = await res.blob();
+    const ok = await storeCachedCover(bookId, blob);
+    if(ok) _cachedCoverObjectUrls[bookId] = URL.createObjectURL(blob);
+    return ok;
+  } catch(e) {
+    console.warn('cacheCoverForOfflineById:', e);
+    return false;
+  }
+}
+
 async function readCurrentBook(){
   if(!currentId)return;
   const book=await findBookById(currentId);
@@ -4594,6 +4724,7 @@ async function readCurrentBook(){
   if(!storagePath&&book.epubUrl){const match=book.epubUrl.match(/\/o\/(.+?)\?/);if(match)storagePath=decodeURIComponent(match[1]);}
   if(!storagePath){showToast('EPUB not available');return;}
   _setTileLoading(book.id, true);
+  showLoading('Opening book…'); // show immediately — covers the network fetch too, not just pagination
   try{
     let bytes = await getCachedEpubBytes(book.id);
     const fromCache = !!bytes;
@@ -4652,7 +4783,7 @@ async function readCurrentBook(){
     document.getElementById('readerOverlay').classList.remove('toolbar-hidden');
     document.getElementById('readerOverlay').classList.add('open');
     document.getElementById('readerOverlay').classList.add('reader-loading'); // hides reader content until target page is ready
-    showLoading('Opening book…'); // reuse existing global spinner overlay
+    // (spinner already showing since the top of this function — no need to re-show it here)
     _updateToolbarHandleIcon();
     
     await loadHighlightsForBook(book.id);
@@ -7095,6 +7226,7 @@ function closeReader(){
         { bookIds, updatedAt: serverTimestamp() }, { merge: true }
       ).catch(e => console.warn('closeReader list update:', e));
       evictCachedEpub(readerBookId).catch(()=>{});
+      evictCachedCover(readerBookId).catch(()=>{});
       const finList = _userLists.find(l => l.id === 'finished');
       if(finList && !(finList.bookIds || []).includes(readerBookId)){
         const finIds = [...(finList.bookIds || []), readerBookId];
@@ -7692,7 +7824,7 @@ let toastTimer;
 function showLoading(msg){document.getElementById('loadingMsg').textContent=msg||'Loading…';document.getElementById('loadingOverlay').classList.add('open');}
 function hideLoading(){document.getElementById('loadingOverlay').classList.remove('open');}
 function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.remove('show'),2800);}
-function getCoverSrc(b){return b.coverDataUrl||b.coverUrl||null;}
+function getCoverSrc(b){return _cachedCoverObjectUrls[b.id]||b.coverDataUrl||b.coverUrl||null;}
 const BOOKMARK_SHAPES = {
   classic: (w,h) => `M0,0 H${w} V${h} L${w/2},${h-w*0.28} L0,${h} Z`,
   rounded: (w,h) => `M${w*0.12},0 H${w-w*0.12} Q${w},0 ${w},${w*0.12} V${h} L${w/2},${h-w*0.28} L0,${h} V${w*0.12} Q0,0 ${w*0.12},0 Z`,
@@ -10198,7 +10330,7 @@ async function toggleBookInList(listId, bookId) {
   // back up when a book leaves that list.
   if(listId === 'currently-reading') {
     if(!wasPresent) cacheEpubForOfflineById(bookId, { silent: false }).catch(()=>{});
-    else evictCachedEpub(bookId).catch(()=>{});
+    else { evictCachedEpub(bookId).catch(()=>{}); evictCachedCover(bookId).catch(()=>{}); }
   }
 }
 
