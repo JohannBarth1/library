@@ -537,21 +537,17 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
   position:relative;
 }
 
-/* ── TTS AUDIO BAR ── */
-.tts-bar{position:fixed;bottom:0;left:0;right:0;z-index:140;background:var(--navy);border-top:2px solid var(--gold);transform:translateY(100%);transition:transform .3s ease;display:flex;flex-direction:column;padding:0;}
-.tts-bar.open{transform:translateY(0);}
-.tts-bar-main{display:flex;align-items:center;gap:.6rem;padding:.6rem 1rem;}
-.tts-bar-info{flex:1;min-width:0;}
-.tts-bar-title{font-family:'Playfair Display',serif;font-size:.88rem;color:var(--cream);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.tts-bar-chapter{font-size:.7rem;color:var(--muted);margin-top:1px;}
-.tts-bar-controls{display:flex;gap:.3rem;align-items:center;flex-shrink:0;}
-.tts-btn{background:transparent;border:1px solid rgba(255,255,255,.15);color:var(--cream);padding:.35rem .6rem;font-family:'Lato',sans-serif;font-size:.75rem;font-weight:700;border-radius:3px;cursor:pointer;transition:all .15s;white-space:nowrap;min-width:32px;text-align:center;}
-.tts-btn:hover{background:rgba(255,255,255,.1);}
-.tts-btn.primary{background:var(--teal);border-color:var(--teal);color:var(--gold);min-width:40px;}
-.tts-btn.stop{color:#f87171;border-color:rgba(248,113,113,.4);}
-.tts-btn.speed-active{background:rgba(200,149,42,.2);border-color:var(--gold);color:var(--gold);}
-.tts-progress{height:2px;background:rgba(255,255,255,.1);}
-.tts-progress-bar{height:2px;background:var(--gold);transition:width .4s linear;width:0%;}
+/* ── TTS PANEL (in-reader overlay, same language as reader-settings-bar) ── */
+/* Base look/positioning is inherited from .reader-settings-bar (docked
+   above the toolbar, theme-aware bg, floats over the text). These rules
+   only add the bits specific to the TTS layout. */
+#ttsPanel .rs-row{display:flex;align-items:center;gap:.5rem;width:100%;}
+#ttsPanel .rs-row + .rs-row{margin-top:.55rem;}
+#ttsPanel .tts-chapter-label{font-size:.72rem;color:var(--muted);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+#ttsPanel .tts-transport{justify-content:center;}
+#ttsPanel .rs-btn.tts-play{min-width:44px;font-size:.85rem;}
+#ttsPanel .rs-btn.stopping{color:#f87171 !important;border-color:rgba(248,113,113,.4) !important;}
+#ttsVoiceSelect{flex:1;min-width:0;background:transparent;border:1px solid rgba(200,149,42,.35);color:inherit;font-family:'Lato',sans-serif;font-size:.75rem;padding:.28rem .5rem;border-radius:20px;outline:none;}
 
 /* ── SKELETON ── */
 .skeleton-card{border-radius:4px;overflow:hidden;background:var(--warm-white);border:1px solid var(--border);}
@@ -2172,26 +2168,24 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
   <button class="reader-toolbar-handle" id="readerToolbarHandle" title="Show/hide toolbar">⌄</button>
 </div>
 
-<!-- TTS Audio Bar -->
-<div class="tts-bar" id="ttsBar">
-  <div class="tts-progress"><div class="tts-progress-bar" id="ttsProgressBar"></div></div>
-  <div class="tts-bar-main">
-    <div class="tts-bar-info">
-      <div class="tts-bar-title" id="ttsBarTitle">—</div>
-      <div class="tts-bar-chapter" id="ttsBarChapter"></div>
-    </div>
-    <div class="tts-bar-controls">
-      <button class="tts-btn" id="ttsBtnPrev">⏮</button>
-      <button class="tts-btn primary" id="ttsBtnPlay">▶</button>
-      <button class="tts-btn" id="ttsBtnNext">⏭</button>
-      <button class="tts-btn" id="ttsBtnSpeed">1×</button>
-      <button class="tts-btn stop" id="ttsBtnStop">✕</button>
-    </div>
+<!-- Read-aloud panel — docked above the toolbar exactly like readerSettingsBar,
+     so it shares the same theme-aware styling and floats over the text
+     instead of pushing/resizing the reading area. -->
+<div class="reader-settings-bar" id="ttsPanel">
+  <div class="rs-row">
+    <span class="tts-chapter-label" id="ttsPanelChapterLabel">—</span>
+    <button class="rs-btn" id="ttsBtnVoiceToggle">Voice ▾</button>
   </div>
-  <!-- Voice + settings row -->
-  <div id="ttsSettingsRow" style="display:none;padding:.4rem 1.2rem .6rem;display:none;gap:.5rem;align-items:center;flex-wrap:wrap;border-top:1px solid rgba(255,255,255,.08);">
-    <span style="font-size:.65rem;letter-spacing:.12em;text-transform:uppercase;color:rgba(200,169,82,.5);font-weight:700;">Voice</span>
-    <select id="ttsVoiceSelect" style="flex:1;background:#1a2840;border:1px solid rgba(200,149,42,.3);color:#d8c8a0;font-family:'Lato',sans-serif;font-size:.78rem;padding:.28rem .5rem;border-radius:3px;outline:none;min-width:0;"></select>
+  <div class="rs-row tts-transport">
+    <button class="rs-btn" id="ttsBtnPrev" title="Previous chapter">⏮</button>
+    <button class="rs-btn active tts-play" id="ttsBtnPlay" title="Play/Pause">▶</button>
+    <button class="rs-btn" id="ttsBtnNext" title="Next chapter">⏭</button>
+    <button class="rs-btn" id="ttsBtnSpeed" title="Speed">1×</button>
+    <button class="rs-btn stopping" id="ttsBtnStop" title="Stop reading">✕</button>
+  </div>
+  <div class="rs-row" id="ttsVoiceRow" style="display:none;">
+    <span class="rs-label">Voice</span>
+    <select id="ttsVoiceSelect"></select>
   </div>
 </div>
 <div class="loading-overlay" id="loadingOverlay">
@@ -4352,9 +4346,23 @@ document.getElementById('readerToolbarHandle')?.addEventListener('click', () => 
   toggleReaderToolbar();
 });
 
-document.getElementById('btnReaderTTS').addEventListener('click', () => {
+document.getElementById('btnReaderTTS').addEventListener('click', (e) => {
+  e.stopPropagation();
   if(!readerBookId) return;
-  startTTS(readerBookId);
+  const panel = document.getElementById('ttsPanel');
+  const wasOpen = panel.classList.contains('open');
+  document.getElementById('readerChapterList').classList.remove('open');
+  document.getElementById('readerBookmarkListPanel').classList.remove('open');
+  document.getElementById('readerSettingsBar').classList.remove('open');
+  panel.classList.toggle('open', !wasOpen);
+  positionReaderToolbar();
+  if(!wasOpen) {
+    ttsLoadVoices();
+    // Opening the panel for the first time on this book starts reading
+    // from wherever the reader currently is; if it's already the active
+    // book, opening the panel shouldn't interrupt playback in progress.
+    if(ttsBookId !== readerBookId) startTTS(readerBookId);
+  }
 });
 
 const bmAnimBtn = document.getElementById('btnToggleBookmarkAnim');
@@ -4417,12 +4425,14 @@ if(themeBtn){
     
 document.getElementById('btnToggleReaderSettings').addEventListener('click', e => {
   e.stopPropagation();
+  document.getElementById('ttsPanel').classList.remove('open');
   document.getElementById('readerSettingsBar').classList.toggle('open');
   // PATCH: settings bar floats over the text now, so opening/closing it
   // no longer needs to resize/repaginate reader-content.
 });
 document.getElementById('btnToggleChapters').addEventListener('click',()=>{
   document.getElementById('readerBookmarkListPanel').classList.remove('open');
+  document.getElementById('ttsPanel').classList.remove('open');
   document.getElementById('readerChapterList').classList.toggle('open');
   positionReaderToolbar();
 });
@@ -4434,6 +4444,7 @@ document.getElementById('readerOverlay').addEventListener('click', e => {
   const list = document.getElementById('readerChapterList');
   const bmPanel = document.getElementById('readerBookmarkListPanel');
   const settingsBar = document.getElementById('readerSettingsBar');
+  const ttsPanel = document.getElementById('ttsPanel');
 
   if(list.classList.contains('open') &&
      !e.target.closest('#readerChapterList') &&
@@ -4451,6 +4462,14 @@ document.getElementById('readerOverlay').addEventListener('click', e => {
      !e.target.closest('#readerSettingsBar') &&
      !e.target.closest('#btnToggleReaderSettings')){
     settingsBar.classList.remove('open');
+  }
+
+  // Note: tapping outside the TTS panel only hides the panel — it does
+  // NOT stop playback, so audio keeps going while you keep reading.
+  if(ttsPanel.classList.contains('open') &&
+     !e.target.closest('#ttsPanel') &&
+     !e.target.closest('#btnReaderTTS')){
+    ttsPanel.classList.remove('open');
   }
 
   if(!e.target.closest('#readerHighlightPopup')) {
@@ -4884,6 +4903,7 @@ function positionReaderToolbar() {
   const toolbar  = document.getElementById('readerToolbar');
   const infoBar  = document.getElementById('readerInfoBar');
   const settingsBar = document.getElementById('readerSettingsBar');
+  const ttsPanel = document.getElementById('ttsPanel');
   const handle   = document.getElementById('readerToolbarHandle');
   const chapterList = document.getElementById('readerChapterList');
   const bookmarkList = document.getElementById('readerBookmarkListPanel');
@@ -4893,6 +4913,7 @@ function positionReaderToolbar() {
   // PATCH: dock the theme/settings menu directly above the button nav
   // instead of pinning it to the top of the reader.
   if(settingsBar) settingsBar.style.bottom = (baseOffset + toolbar.offsetHeight) + 'px';
+  if(ttsPanel) ttsPanel.style.bottom = (baseOffset + toolbar.offsetHeight) + 'px';
   // PATCH: small always-visible handle sits just above the toolbar's slot,
   // regardless of whether the toolbar itself is currently shown or hidden —
   // this is the min/max control for desktop, where there's no tap-to-toggle.
@@ -6784,6 +6805,7 @@ async function removeReaderBookmarkAt(bookId, chapterIdx, pageIdx) {
 }
 
 document.getElementById('btnToggleBookmarkList').addEventListener('click', () => {
+  document.getElementById('ttsPanel').classList.remove('open');
   const panel = document.getElementById('readerBookmarkListPanel');
   document.getElementById('readerChapterList').classList.remove('open'); // mutually exclusive
   const willOpen = !panel.classList.contains('open');
@@ -7201,6 +7223,7 @@ function renderReaderBookmarkTab() {
 }
 
 function closeReader(){
+  if(typeof ttsStop === 'function') ttsStop();
   // Move finished book: currently-reading → finished
   if(readerBookId){
     const crList = _userLists.find(l => l.id === 'currently-reading');
@@ -7328,23 +7351,26 @@ window.addEventListener('resize',()=>{
 
 
 // ── TTS ───────────────────────────────────────────────────────────────────────
+// Reads directly off the live, already-paginated reader iframe instead of
+// fetching/parsing its own copy of the EPUB. That's what lets it: start
+// from wherever the reader currently is (readerPage/readerChapter), and
+// turn pages in the visible reader as it speaks (same goToPage/
+// readerGoToChapter the tap/arrow controls use), so the two are always
+// looking at the same spot in the book.
 
 let ttsBookId = null;
-let ttsSpine = [];
 let ttsChapter = 0;
-let ttsZip = null;
-let ttsOpfBase = '';
 let ttsPlaying = false;
 let ttsUtterance = null;
 let ttsWatchdog = null;
 let ttsKeepAlive = null;
 let ttsRate = 1;
 let ttsVoice = null;
-let ttsParagraphs = [];
-let ttsParagraphIdx = 0;
-let ttsChapterText = '';
+let ttsBlocks = [];   // [{ text, el }] for the chapter currently loaded in the reader
+let ttsIdx = 0;
 
 const TTS_RATES = [0.75, 1, 1.25, 1.5, 2];
+const TTS_BLOCK_TAGS = ['p','h1','h2','h3','h4','h5','h6','li','td','blockquote'];
 
 // ── VOICE LOADING ─────────────────────────────────────────────────────────────
 function ttsLoadVoices() {
@@ -7368,144 +7394,91 @@ function ttsLoadVoices() {
   sel.value = defaultIdx >= 0 ? defaultIdx : 0;
   ttsVoice = voices[parseInt(sel.value)];
 
-  sel.addEventListener('change', () => {
-    ttsVoice = voices[parseInt(sel.value)];
-  });
+  sel.onchange = () => { ttsVoice = voices[parseInt(sel.value)]; };
 }
 
 // Voices load asynchronously — wire both the event and a fallback poll
 window.speechSynthesis.onvoiceschanged = ttsLoadVoices;
 setTimeout(ttsLoadVoices, 500);
 
-// ── EXTRACT CLEAN TEXT FROM CHAPTER HTML ──────────────────────────────────────
-function ttsExtractParagraphs(html) {
-  const div = document.createElement('div');
-  div.innerHTML = html;
+// ── COLLECT READABLE BLOCKS FROM THE LIVE (ALREADY-PAGINATED) CHAPTER ─────────
+// Walks the real DOM the reader iframe rendered, keeping a reference to each
+// element — that reference is what lets ttsPageOfEl() work out which page a
+// paragraph landed on after CSS-column pagination.
+function ttsCollectBlocks() {
+  const doc = _readerIframe?.contentDocument || _readerIframe?.contentWindow?.document;
+  const root = doc?.querySelector('.chapter-wrap') || doc?.body;
+  if(!root) return [];
 
-  // Remove script, style, nav elements
-  div.querySelectorAll('script,style,nav,aside,[epub\\:type="toc"],[role="doc-toc"]')
-    .forEach(el => el.remove());
-
-  // Get paragraphs and headings as separate chunks
   const blocks = [];
   const walk = (node) => {
-    if(node.nodeType === Node.TEXT_NODE) {
-      const t = node.textContent.trim();
-      if(t) blocks.push(t);
-      return;
-    }
-    if(node.nodeType !== Node.ELEMENT_NODE) return;
-    const tag = node.tagName.toLowerCase();
-
-    // Block elements — add their text as a chunk
-    if(['p','h1','h2','h3','h4','h5','h6','li','td','blockquote','div'].includes(tag)) {
-      const text = node.textContent.replace(/\s+/g, ' ').trim();
-      if(text.length > 2) blocks.push(text);
-    } else {
-      for(const child of node.childNodes) walk(child);
+    for(const el of node.children) {
+      const tag = el.tagName.toLowerCase();
+      if(TTS_BLOCK_TAGS.includes(tag)) {
+        const text = el.textContent.replace(/\s+/g, ' ').trim();
+        if(text.length > 3) blocks.push({ text, el });
+      } else {
+        walk(el);
+      }
     }
   };
-
-  for(const child of div.childNodes) walk(child);
-
-  // Filter out very short fragments (page numbers, labels etc.)
-  return blocks.filter(t => t.length > 3);
+  walk(root);
+  return blocks;
 }
 
-// ── IS THIS A NAV/TOC CHAPTER? ────────────────────────────────────────────────
-function ttsIsNavChapter(html) {
-  const lower = html.toLowerCase();
-  return lower.includes('epub:type="toc"') ||
-         lower.includes('epub:type="nav"') ||
-         lower.includes('role="doc-toc"') ||
-         (lower.includes('<nav') && lower.includes('toc'));
+// Which reader page (0-indexed) a block landed on, based on its column
+// offset — columns are exactly _readerColW apart with zero gap, so this
+// lines up with the same page index goToPage()/readerPage use.
+function ttsPageOfEl(el) {
+  if(!el || !_readerColW) return 0;
+  return Math.round(el.offsetLeft / _readerColW);
 }
 
-// ── OPEN TTS ──────────────────────────────────────────────────────────────────
+function ttsUpdatePanelInfo() {
+  const label = document.getElementById('ttsPanelChapterLabel');
+  if(label) label.textContent = readerSpine[readerChapter]?.label || `Chapter ${readerChapter + 1}`;
+}
+
+// ── START / TOGGLE ────────────────────────────────────────────────────────────
 async function startTTS(bookId) {
   if(!bookId) return;
-  const book = [...library, ...communityLib].find(b => b.id === bookId);
-  if(!book) { showToast('Book not found'); return; }
+  if(readerBookId !== bookId || !_readerIframe) {
+    showToast('Open the book in the reader first');
+    return;
+  }
 
-  // If same book, just toggle play/pause
+  // Same book already loaded for TTS — just toggle play/pause.
   if(ttsBookId === bookId) {
     if(ttsPlaying) ttsPause();
     else ttsResume();
     return;
   }
 
-  // New book — load it
   window.speechSynthesis.cancel();
   ttsBookId = bookId;
-  ttsChapter = 0;
-  ttsSpine = [];
-  ttsZip = null;
-  ttsParagraphs = [];
-  ttsParagraphIdx = 0;
+  ttsChapter = readerChapter;
+  ttsBlocks = ttsCollectBlocks();
 
-  showLoading('Preparing audio…');
-  try {
-    let sp = book.storagePath;
-    if(!sp && book.epubUrl) {
-      const m = book.epubUrl.match(/\/o\/(.+?)\?/);
-      if(m) sp = decodeURIComponent(m[1]);
-    }
-    if(!sp) { hideLoading(); showToast('EPUB not available'); return; }
-
-    const bytes = await getBytes(storageRef(storage, sp));
-    ttsZip = await JSZip.loadAsync(bytes);
-
-    const container = await ttsZip.file('META-INF/container.xml')?.async('string');
-    const opfPath = container?.match(/full-path="([^"]+\.opf)"/i)?.[1];
-    if(!opfPath) throw new Error('No OPF');
-
-    const opfXml = await ttsZip.file(opfPath)?.async('string');
-    ttsOpfBase = opfPath.includes('/') ? opfPath.replace(/\/[^/]+$/, '/') : '';
-
-    const manifestMap = {};
-    const mRe = /<item\s+([^>]+)>/gi;
-    let mm;
-    while((mm = mRe.exec(opfXml)) !== null) {
-      const a = mm[1];
-      const id = a.match(/\bid="([^"]+)"/)?.[1];
-      const href = a.match(/\bhref="([^"]+)"/)?.[1];
-      const mt = a.match(/\bmedia-type="([^"]+)"/)?.[1];
-      if(id && href) manifestMap[id] = { href, mt };
-    }
-
-    const spineRe = /<itemref\s+idref="([^"]+)"/gi;
-    let sp2;
-    while((sp2 = spineRe.exec(opfXml)) !== null) {
-      const item = manifestMap[sp2[1]];
-      if(item && item.mt !== 'application/x-dtbncx+xml') {
-        ttsSpine.push(item.href);
-      }
-    }
-
-    if(!ttsSpine.length) throw new Error('No spine items');
-
-    // If visual reader is open on this book, start from current chapter
-    if(readerBookId === bookId && readerChapter > 0) {
-      ttsChapter = readerChapter;
-    }
-
-    hideLoading();
-    ttsShowBar(book.title);
-    ttsLoadVoices();
-
-    await ttsGoToChapter(ttsChapter);
-
-  } catch(e) {
-    hideLoading();
-    showToast('Could not load book: ' + e.message);
-    console.error(e);
+  if(!ttsBlocks.length) {
+    showToast('Nothing to read in this chapter');
+    ttsBookId = null;
+    return;
   }
-}
 
-// ── SHOW / HIDE BAR ───────────────────────────────────────────────────────────
-function ttsShowBar(title) {
-  document.getElementById('ttsBarTitle').textContent = title || '';
-  document.getElementById('ttsBar').classList.add('open');
+  // Start from current page, not the top of the chapter: the first block
+  // whose column lands on or after the page the reader is showing now.
+  const startIdx = ttsBlocks.findIndex(b => ttsPageOfEl(b.el) >= readerPage);
+  ttsIdx = startIdx >= 0 ? startIdx : 0;
+
+  ttsLoadVoices();
+  ttsUpdatePanelInfo();
+
+  ttsPlaying = true;
+  document.getElementById('ttsBtnPlay').textContent = '⏸';
+  document.getElementById('ttsBtnPlay').classList.add('active');
+  document.getElementById('btnReaderTTS')?.classList.add('active');
+
+  ttsSpeakNextParagraph();
 }
 
 function ttsStop() {
@@ -7514,80 +7487,70 @@ function ttsStop() {
   clearInterval(ttsKeepAlive);
   ttsPlaying = false;
   ttsBookId = null;
-  ttsZip = null;
-  ttsSpine = [];
-  ttsParagraphs = [];
-  ttsParagraphIdx = 0;
-  document.getElementById('ttsBar').classList.remove('open');
-  document.getElementById('ttsSettingsRow').style.display = 'none';
+  ttsBlocks = [];
+  ttsIdx = 0;
+  document.getElementById('ttsPanel').classList.remove('open');
   document.getElementById('ttsBtnPlay').textContent = '▶';
+  document.getElementById('ttsBtnPlay').classList.remove('active');
   document.getElementById('btnReaderTTS')?.classList.remove('active');
 }
 
-// ── CHAPTER LOADING ───────────────────────────────────────────────────────────
-async function ttsGoToChapter(idx) {
-  if(!ttsZip || idx < 0 || idx >= ttsSpine.length) {
-    if(idx >= ttsSpine.length) showToast('End of book 📖');
+// ── CHAPTER ADVANCE (uses the same readerGoToChapter as manual navigation) ────
+async function ttsAdvanceChapter(dir) {
+  const next = readerChapter + dir;
+  if(next < 0) return;
+  if(next >= readerSpine.length) {
     ttsStop();
+    showToast('End of book 📖');
     return;
   }
 
-  ttsChapter = idx;
-  ttsParagraphs = [];
-  ttsParagraphIdx = 0;
+  window.speechSynthesis.cancel();
+  clearInterval(ttsWatchdog);
+  clearInterval(ttsKeepAlive);
 
-  try {
-    const html = await ttsZip.file(ttsOpfBase + ttsSpine[idx])?.async('string') || '';
+  await readerGoToChapter(next, 0);   // also turns the visible page for the user
 
-    // Skip nav/toc chapters silently
-    if(ttsIsNavChapter(html)) {
-      await ttsGoToChapter(idx + 1);
-      return;
-    }
+  ttsChapter = readerChapter;
+  ttsBlocks = ttsCollectBlocks();
+  ttsIdx = 0;
+  ttsUpdatePanelInfo();
 
-    ttsParagraphs = ttsExtractParagraphs(html);
-
-    if(!ttsParagraphs.length) {
-      await ttsGoToChapter(idx + 1);
-      return;
-    }
-
-    const pct = Math.round((idx / Math.max(ttsSpine.length - 1, 1)) * 100);
-    document.getElementById('ttsBarChapter').textContent =
-      `Chapter ${idx + 1} of ${ttsSpine.length}`;
-    document.getElementById('ttsProgressBar').style.width = pct + '%';
-
-    ttsPlaying = true;
-    document.getElementById('ttsBtnPlay').textContent = '⏸';
-    document.getElementById('btnReaderTTS')?.classList.add('active');
-    ttsSpeakNextParagraph();
-
-  } catch(e) {
-    console.warn('TTS chapter load error:', e);
-    await ttsGoToChapter(idx + 1);
-  }
+  if(!ttsBlocks.length) { await ttsAdvanceChapter(1); return; }
+  if(ttsPlaying) ttsSpeakNextParagraph();
 }
 
-// ── SPEAK ONE PARAGRAPH ───────────────────────────────────────────────────────
+// ── SPEAK ONE BLOCK, TURNING THE READER PAGE TO MATCH ─────────────────────────
 function ttsSpeakNextParagraph() {
   if(!ttsPlaying) return;
-  if(ttsParagraphIdx >= ttsParagraphs.length) {
-    // Chapter done — move to next
-    ttsGoToChapter(ttsChapter + 1);
+
+  // The reader can be navigated manually (Contents panel, a link tap) while
+  // TTS is speaking — if that happened, our block list belongs to a chapter
+  // that's no longer rendered. Re-sync to wherever the reader is now.
+  if(ttsChapter !== readerChapter) {
+    ttsChapter = readerChapter;
+    ttsBlocks = ttsCollectBlocks();
+    const idx = ttsBlocks.findIndex(b => ttsPageOfEl(b.el) >= readerPage);
+    ttsIdx = idx >= 0 ? idx : 0;
+    ttsUpdatePanelInfo();
+  }
+
+  if(ttsIdx >= ttsBlocks.length) {
+    ttsAdvanceChapter(1);
     return;
   }
 
-  const text = ttsParagraphs[ttsParagraphIdx];
-  ttsParagraphIdx++;
+  const block = ttsBlocks[ttsIdx];
+  ttsIdx++;
 
-  // Update progress within chapter
-  const chapterPct = Math.round(((ttsChapter + ttsParagraphIdx / ttsParagraphs.length)
-    / Math.max(ttsSpine.length, 1)) * 100);
-  document.getElementById('ttsProgressBar').style.width = chapterPct + '%';
+  // Pages turn as reading progresses: if this block lives on a page other
+  // than the one currently shown, animate the reader there before speaking.
+  const targetPage = ttsPageOfEl(block.el);
+  if(targetPage !== readerPage) goToPage(targetPage, { animate: true });
 
   window.speechSynthesis.cancel();
 
-  ttsUtterance = new SpeechSynthesisUtterance(text);
+  ttsUtterance = new SpeechSynthesisUtterance(block.text);
   ttsUtterance.rate = ttsRate;
   if(ttsVoice) ttsUtterance.voice = ttsVoice;
   ttsUtterance.lang = ttsVoice?.lang || 'en-US';
@@ -7630,21 +7593,35 @@ function ttsPause() {
   clearInterval(ttsWatchdog);
   clearInterval(ttsKeepAlive);
   window.speechSynthesis.cancel(); // more reliable than pause() on iOS
-  // Back up one paragraph so resume repeats the interrupted one
-  ttsParagraphIdx = Math.max(0, ttsParagraphIdx - 1);
+  // Back up one block so resume repeats the interrupted one
+  ttsIdx = Math.max(0, ttsIdx - 1);
   document.getElementById('ttsBtnPlay').textContent = '▶';
+  document.getElementById('ttsBtnPlay').classList.remove('active');
   document.getElementById('btnReaderTTS')?.classList.remove('active');
 }
 
 function ttsResume() {
   if(ttsPlaying) return;
+
+  // If the reader moved to a different chapter/page while TTS was paused
+  // (manual page-turns, bookmarks, etc.), re-sync to wherever it is now
+  // rather than continuing from the stale spot.
+  if(!ttsBlocks.length || ttsChapter !== readerChapter) {
+    ttsChapter = readerChapter;
+    ttsBlocks = ttsCollectBlocks();
+    const idx = ttsBlocks.findIndex(b => ttsPageOfEl(b.el) >= readerPage);
+    ttsIdx = idx >= 0 ? idx : 0;
+    ttsUpdatePanelInfo();
+  }
+
   ttsPlaying = true;
   document.getElementById('ttsBtnPlay').textContent = '⏸';
+  document.getElementById('ttsBtnPlay').classList.add('active');
   document.getElementById('btnReaderTTS')?.classList.add('active');
   ttsSpeakNextParagraph();
 }
 
-  document.addEventListener('visibilitychange', () => {
+document.addEventListener('visibilitychange', () => {
   if(document.hidden && ttsPlaying) {
     // iOS suspends speechSynthesis on backgrounding; reflect that in the UI
     // rather than pretending playback continues.
@@ -7658,10 +7635,10 @@ function ttsCycleSpeed() {
   ttsRate = TTS_RATES[(idx + 1) % TTS_RATES.length];
   const btn = document.getElementById('ttsBtnSpeed');
   btn.textContent = ttsRate + '×';
-  btn.classList.toggle('speed-active', ttsRate !== 1);
-  // Restart current paragraph at new speed
+  btn.classList.toggle('active', ttsRate !== 1);
+  // Restart current block at new speed
   if(ttsPlaying) {
-    ttsParagraphIdx = Math.max(0, ttsParagraphIdx - 1);
+    ttsIdx = Math.max(0, ttsIdx - 1);
     window.speechSynthesis.cancel();
     clearInterval(ttsWatchdog);
     setTimeout(() => ttsSpeakNextParagraph(), 80);
@@ -7669,39 +7646,38 @@ function ttsCycleSpeed() {
 }
 
 // ── BUTTON BINDINGS ───────────────────────────────────────────────────────────
-document.getElementById('ttsBtnPlay').addEventListener('click', () => {
-  if(!ttsBookId) return;
+document.getElementById('ttsBtnPlay').addEventListener('click', (e) => {
+  e.stopPropagation();
+  if(!readerBookId) return;
+  if(ttsBookId !== readerBookId) { startTTS(readerBookId); return; }
   if(ttsPlaying) ttsPause();
   else ttsResume();
 });
 
-document.getElementById('ttsBtnPrev').addEventListener('click', () => {
+document.getElementById('ttsBtnPrev').addEventListener('click', (e) => {
+  e.stopPropagation();
   if(!ttsBookId) return;
-  window.speechSynthesis.cancel();
-  clearInterval(ttsWatchdog);
-  ttsGoToChapter(Math.max(0, ttsChapter - 1));
+  ttsAdvanceChapter(-1);
 });
 
-document.getElementById('ttsBtnNext').addEventListener('click', () => {
+document.getElementById('ttsBtnNext').addEventListener('click', (e) => {
+  e.stopPropagation();
   if(!ttsBookId) return;
-  window.speechSynthesis.cancel();
-  clearInterval(ttsWatchdog);
-  ttsGoToChapter(ttsChapter + 1);
+  ttsAdvanceChapter(1);
 });
 
-document.getElementById('ttsBtnSpeed').addEventListener('click', ttsCycleSpeed);
+document.getElementById('ttsBtnSpeed').addEventListener('click', (e) => { e.stopPropagation(); ttsCycleSpeed(); });
 
-document.getElementById('ttsBtnStop').addEventListener('click', ttsStop);
+document.getElementById('ttsBtnStop').addEventListener('click', (e) => { e.stopPropagation(); ttsStop(); });
 
-// Show/hide voice row on title tap
-document.getElementById('ttsBarTitle').style.cursor = 'pointer';
-document.getElementById('ttsBarTitle').addEventListener('click', () => {
-  const row = document.getElementById('ttsSettingsRow');
-  const isOpen = row.style.display === 'flex';
-  row.style.display = isOpen ? 'none' : 'flex';
-  if(!isOpen) ttsLoadVoices();
+document.getElementById('ttsBtnVoiceToggle').addEventListener('click', (e) => {
+  e.stopPropagation();
+  const row = document.getElementById('ttsVoiceRow');
+  const show = row.style.display !== 'flex';
+  row.style.display = show ? 'flex' : 'none';
+  if(show) ttsLoadVoices();
 });
-  
+
 // ── EPUB META ─────────────────────────────────────────────────────────────────
 async function parseEpubMeta(file){
   try{
