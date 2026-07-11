@@ -387,12 +387,6 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .reader-overlay.theme-sepia .reader-toolbar { background: #e0d0b8; }
 .reader-overlay.theme-night .reader-toolbar { background: #12122a; }
 .reader-overlay.reader-loading #readerContent{ visibility:hidden; }
-.reader-overlay.reader-loading::after{
-  content:'';
-  position:absolute; inset:0;
-  display:flex; align-items:center; justify-content:center;
-  background:var(--r-bg, var(--warm-white));
-}
 .reader-info-bar {
   display: flex;
   align-items: center;
@@ -2224,7 +2218,46 @@ import { getStorage, ref as storageRef, uploadBytes, getDownloadURL, getBytes }
   const manifest={name:'eLibrary',short_name:'eLibrary',description:'Your personal EPUB library',start_url:'./',display:'standalone',background_color:'#0f1a2e',theme_color:'#0f1a2e',icons:[{src:"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'%3E%3Crect width='192' height='192' rx='32' fill='%230f1a2e'/%3E%3Ctext y='130' x='30' font-size='120' fill='%23c8952a'%3E📚%3C/text%3E%3C/svg%3E",sizes:'192x192',type:'image/svg+xml'},{src:"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='80' fill='%230f1a2e'/%3E%3Ctext y='360' x='60' font-size='320' fill='%23c8952a'%3E📚%3C/text%3E%3C/svg%3E",sizes:'512x512',type:'image/svg+xml'}]};
   const blob=new Blob([JSON.stringify(manifest)],{type:'application/json'});
   document.getElementById('manifestLink').href=URL.createObjectURL(blob);
-  if('serviceWorker' in navigator){const sw=`const C='elib-v1';self.addEventListener('install',e=>{self.skipWaiting();});self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(k=>Promise.all(k.filter(x=>x!==C).map(x=>caches.delete(x)))));self.clients.claim();});self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWith(caches.match(e.request).then(c=>c||fetch(e.request)));});`;navigator.serviceWorker.register(URL.createObjectURL(new Blob([sw],{type:'application/javascript'}))).catch(()=>{});}
+  if('serviceWorker' in navigator){const sw=`
+const SHELL_CACHE = 'elib-shell-v2';
+const SHELL_URLS = [
+  self.registration.scope,
+  'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js',
+  'https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Lato:wght@300;400;700&display=swap'
+];
+self.addEventListener('install', e => {
+  self.skipWaiting();
+  e.waitUntil(caches.open(SHELL_CACHE).then(cache => cache.addAll(SHELL_URLS)).catch(()=>{}));
+});
+self.addEventListener('activate', e => {
+  e.waitUntil(
+    caches.keys().then(keys => Promise.all(
+      keys.filter(k => k !== SHELL_CACHE && !k.startsWith('elib-epub-cache')).map(k => caches.delete(k))
+    ))
+  );
+  self.clients.claim();
+});
+self.addEventListener('fetch', e => {
+  if(e.request.method !== 'GET') return;
+  const url = e.request.url;
+  // Never intercept Firebase/Google API calls — auth, Firestore, and Storage
+  // must always go straight to the network so the app's own online/offline
+  // handling (and the dedicated EPUB cache) stays in control of those.
+  if(url.includes('googleapis.com') || url.includes('gstatic.com') || url.includes('firebasestorage.app')) return;
+  e.respondWith(
+    caches.match(e.request).then(cached => {
+      const networkFetch = fetch(e.request).then(resp => {
+        if(resp && resp.ok && (url.startsWith(self.location.origin) || SHELL_URLS.includes(url))) {
+          const copy = resp.clone();
+          caches.open(SHELL_CACHE).then(cache => cache.put(e.request, copy));
+        }
+        return resp;
+      }).catch(() => cached);
+      return cached || networkFetch;
+    })
+  );
+});
+`;navigator.serviceWorker.register(URL.createObjectURL(new Blob([sw],{type:'application/javascript'}))).catch(()=>{});}
 })();
 
 let deferredInstall=null;
@@ -2339,6 +2372,7 @@ onAuthStateChanged(auth, async user => {
       startPresenceHeartbeat();
       checkAdminStatus();
       prewarmTimeline();
+      prewarmOfflineEpubs();
     }, 400);
 
   } else {
@@ -4464,6 +4498,92 @@ function _setTileLoading(bookId, on) {
     });
 }
 
+// ── OFFLINE EPUB CACHE ───────────────────────────────────────────────────────
+// Books on the "Currently Reading" list get their EPUB bytes stored in the
+// Cache Storage API so they can be reopened (and re-read) without a network
+// connection. Cache entries use a synthetic same-origin URL as the key —
+// nothing is ever actually fetched from that URL, it's just used as a stable
+// identifier so cache.match()/cache.put() have something to key off.
+const EPUB_CACHE_NAME = 'elib-epub-cache-v1';
+
+function _epubCacheKey(bookId) {
+  return new Request(location.origin + '/__offline_epub__/' + encodeURIComponent(bookId));
+}
+
+async function getCachedEpubBytes(bookId) {
+  if(!('caches' in window)) return null;
+  try {
+    const cache = await caches.open(EPUB_CACHE_NAME);
+    const match = await cache.match(_epubCacheKey(bookId));
+    if(!match) return null;
+    return new Uint8Array(await match.arrayBuffer());
+  } catch(e) { console.warn('getCachedEpubBytes:', e); return null; }
+}
+
+async function isEpubCached(bookId) {
+  if(!('caches' in window)) return false;
+  try {
+    const cache = await caches.open(EPUB_CACHE_NAME);
+    return !!(await cache.match(_epubCacheKey(bookId)));
+  } catch(e) { return false; }
+}
+
+async function storeCachedEpub(bookId, bytes) {
+  if(!('caches' in window)) return false;
+  try {
+    const cache = await caches.open(EPUB_CACHE_NAME);
+    const body = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
+    await cache.put(_epubCacheKey(bookId), new Response(body, {
+      headers: { 'Content-Type': 'application/epub+zip', 'Content-Length': String(body.byteLength) }
+    }));
+    return true;
+  } catch(e) { console.warn('storeCachedEpub:', e); return false; }
+}
+
+async function evictCachedEpub(bookId) {
+  if(!('caches' in window)) return;
+  try {
+    const cache = await caches.open(EPUB_CACHE_NAME);
+    await cache.delete(_epubCacheKey(bookId));
+  } catch(e) { console.warn('evictCachedEpub:', e); }
+}
+
+// Downloads and caches a book's EPUB for offline reading, if not already cached.
+// Safe to call opportunistically — no-ops quickly if already cached or offline.
+async function cacheEpubForOfflineById(bookId, { silent = true } = {}) {
+  try {
+    if(await isEpubCached(bookId)) return true;
+    if(navigator.onLine === false) return false; // can't fetch to cache while offline
+    const book = await findBookById(bookId);
+    if(!book) return false;
+    let storagePath = book.storagePath;
+    if(!storagePath && book.epubUrl) {
+      const match = book.epubUrl.match(/\/o\/(.+?)\?/);
+      if(match) storagePath = decodeURIComponent(match[1]);
+    }
+    if(!storagePath) return false;
+    const bytes = await getBytes(storageRef(storage, storagePath));
+    const ok = await storeCachedEpub(bookId, bytes);
+    if(ok && !silent) showToast(`"${book.title || 'Book'}" saved for offline reading ✓`);
+    return ok;
+  } catch(e) {
+    console.warn('cacheEpubForOfflineById:', e);
+    return false;
+  }
+}
+
+// Retroactively caches any books already on "Currently Reading" the first time
+// this feature ships (and generally on each login, as a no-op for anything
+// already cached). Runs quietly in the background, one at a time.
+async function prewarmOfflineEpubs() {
+  if(!currentUser || navigator.onLine === false) return;
+  const crList = _userLists.find(l => l.id === 'currently-reading');
+  const bookIds = crList?.bookIds || [];
+  for(const bookId of bookIds) {
+    await cacheEpubForOfflineById(bookId, { silent: true });
+  }
+}
+
 async function readCurrentBook(){
   if(!currentId)return;
   const book=await findBookById(currentId);
@@ -4475,7 +4595,18 @@ async function readCurrentBook(){
   if(!storagePath){showToast('EPUB not available');return;}
   _setTileLoading(book.id, true);
   try{
-    const bytes=await getBytes(storageRef(storage,storagePath));
+    let bytes = await getCachedEpubBytes(book.id);
+    const fromCache = !!bytes;
+    if(!bytes) {
+      try {
+        bytes = await getBytes(storageRef(storage,storagePath));
+      } catch(netErr) {
+        if(navigator.onLine === false) {
+          throw new Error("You're offline and this book hasn't been downloaded for offline reading yet.");
+        }
+        throw netErr;
+      }
+    }
     readerZip=await JSZip.loadAsync(bytes);readerSpine=[];readerChapter=0;
     readerBookId = book.id;
     _readerIsInitialChapterLoad = true;
@@ -4502,6 +4633,16 @@ async function readCurrentBook(){
     document.getElementById('readerTitle').textContent=book.title||'Reading…';
     document.getElementById('readerChapterItems').innerHTML=readerSpine.map((ch,i)=>`<div class="chapter-item" id="chItem_${i}" data-idx="${i}">${esc(ch.label)}</div>`).join('');
     document.getElementById('readerChapterItems').addEventListener('click',e=>{const item=e.target.closest('.chapter-item[data-idx]');if(item)readerGoToChapter(parseInt(item.dataset.idx));});
+
+    // If this book is on "Currently Reading" and we had to fetch it over the
+    // network (i.e. it wasn't cached yet), stash it for offline reading now.
+    if(!fromCache) {
+      const crList = _userLists.find(l => l.id === 'currently-reading');
+      if(crList?.bookIds?.includes(book.id)) {
+        storeCachedEpub(book.id, bytes).catch(()=>{});
+      }
+    }
+
     hideLoading();_setTileLoading(book.id, false);applyReaderTheme(readerTheme);
     document.querySelectorAll('#readerSettingsBar [data-transition]')
       .forEach(b => b.classList.toggle('active', b.dataset.transition === readerTransition));
@@ -4510,7 +4651,8 @@ async function readCurrentBook(){
     document.getElementById('readerSettingsBar').classList.remove('open');
     document.getElementById('readerOverlay').classList.remove('toolbar-hidden');
     document.getElementById('readerOverlay').classList.add('open');
-    document.getElementById('readerOverlay').classList.add('reader-loading'); // NEW: hides content, shows spinner
+    document.getElementById('readerOverlay').classList.add('reader-loading'); // hides reader content until target page is ready
+    showLoading('Opening book…'); // reuse existing global spinner overlay
     _updateToolbarHandleIcon();
     
     await loadHighlightsForBook(book.id);
@@ -4522,7 +4664,8 @@ async function readCurrentBook(){
       await readerGoToChapter(0);
     }
 
-    document.getElementById('readerOverlay').classList.remove('reader-loading'); //reveal only when ready
+    document.getElementById('readerOverlay').classList.remove('reader-loading'); // reveal only when ready
+    hideLoading();
     
     requestAnimationFrame(() => requestAnimationFrame(() => recalcReaderHeight()));
     setTimeout(() => recalcReaderHeight(), 300);
@@ -6951,6 +7094,7 @@ function closeReader(){
       setDoc(doc(db, 'user_lists', currentUser.uid, 'lists', 'currently-reading'),
         { bookIds, updatedAt: serverTimestamp() }, { merge: true }
       ).catch(e => console.warn('closeReader list update:', e));
+      evictCachedEpub(readerBookId).catch(()=>{});
       const finList = _userLists.find(l => l.id === 'finished');
       if(finList && !(finList.bookIds || []).includes(readerBookId)){
         const finIds = [...(finList.bookIds || []), readerBookId];
@@ -7779,6 +7923,7 @@ async function recordBookOpened(book) {
         { bookIds, updatedAt: serverTimestamp() },
         { merge: true }
       );
+      cacheEpubForOfflineById(book.id, { silent: false }).catch(()=>{});
     }
 
     // ── 3. Remove from "want-to-read" if it was there ────────────────────
@@ -10039,7 +10184,8 @@ async function toggleBookInList(listId, bookId) {
   if(!list) return;
   const bookIds = [...(list.bookIds || [])];
   const idx = bookIds.indexOf(bookId);
-  if(idx >= 0) bookIds.splice(idx, 1);
+  const wasPresent = idx >= 0;
+  if(wasPresent) bookIds.splice(idx, 1);
   else bookIds.push(bookId);
   list.bookIds = bookIds;
   await setDoc(
@@ -10047,6 +10193,13 @@ async function toggleBookInList(listId, bookId) {
     { bookIds, updatedAt: serverTimestamp() },
     { merge: true }
   );
+
+  // Keep "Currently Reading" books' EPUBs available offline; free the cache
+  // back up when a book leaves that list.
+  if(listId === 'currently-reading') {
+    if(!wasPresent) cacheEpubForOfflineById(bookId, { silent: false }).catch(()=>{});
+    else evictCachedEpub(bookId).catch(()=>{});
+  }
 }
 
 async function createUserList(name, icon='📚') {
