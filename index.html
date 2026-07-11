@@ -4568,7 +4568,7 @@ async function cacheEpubForOfflineById(bookId, { silent = true } = {}) {
         // manual reload to show the offline-safe image.
         if(coverOk) _refreshCoverTiles(bookId);
       }).catch(()=>{});
-      if(!silent) showToast(`"${book.title || 'Book'}" saved for offline reading ✓`);
+      if(!silent) showToastWhenIdle(`"${book.title || 'Book'}" saved for offline reading ✓`);
     }
     return ok;
   } catch(e) {
@@ -7807,8 +7807,25 @@ document.getElementById('mobInstallBtn').addEventListener('click',triggerInstall
 function triggerInstall(){if(deferredInstall){deferredInstall.prompt();deferredInstall.userChoice.then(()=>deferredInstall=null);}}
 
 let toastTimer;
-function showLoading(msg){document.getElementById('loadingMsg').textContent=msg||'Loading…';document.getElementById('loadingOverlay').classList.add('open');}
-function hideLoading(){document.getElementById('loadingOverlay').classList.remove('open');}
+let _loadingOverlayOpen = false;
+let _loadingOverlayWaiters = [];
+function showLoading(msg){_loadingOverlayOpen=true;document.getElementById('loadingMsg').textContent=msg||'Loading…';document.getElementById('loadingOverlay').classList.add('open');}
+function hideLoading(){
+  _loadingOverlayOpen=false;
+  document.getElementById('loadingOverlay').classList.remove('open');
+  const waiters=_loadingOverlayWaiters;_loadingOverlayWaiters=[];
+  waiters.forEach(fn=>fn());
+}
+// Same as showToast, but if the full-page spinner is up right now, the toast
+// would render on top of it (same dark navy tones) and easily go unnoticed —
+// so wait until the spinner closes before actually showing it. Use this for
+// toasts that can fire from background tasks running alongside a book open
+// (e.g. "saved for offline reading"), not for toasts tied to a user action
+// that just finished (those already fire after their own hideLoading()).
+function showToastWhenIdle(msg){
+  if(!_loadingOverlayOpen){showToast(msg);return;}
+  _loadingOverlayWaiters.push(()=>showToast(msg));
+}
 function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.remove('show'),2800);}
 function getCoverSrc(b){return _cachedCoverObjectUrls[b.id]||b.coverDataUrl||b.coverUrl||null;}
 const BOOKMARK_SHAPES = {
