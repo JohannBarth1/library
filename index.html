@@ -386,7 +386,13 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .reader-overlay.theme-day   .reader-toolbar { background: #f4f4f4; }
 .reader-overlay.theme-sepia .reader-toolbar { background: #e0d0b8; }
 .reader-overlay.theme-night .reader-toolbar { background: #12122a; }
-
+.reader-overlay.reader-loading #readerContent{ visibility:hidden; }
+.reader-overlay.reader-loading::after{
+  content:'';
+  position:absolute; inset:0;
+  display:flex; align-items:center; justify-content:center;
+  background:var(--r-bg, var(--warm-white));
+}
 .reader-info-bar {
   display: flex;
   align-items: center;
@@ -2332,6 +2338,7 @@ onAuthStateChanged(auth, async user => {
       loungeJoinPassive();
       startPresenceHeartbeat();
       checkAdminStatus();
+      prewarmTimeline();
     }, 400);
 
   } else {
@@ -2367,6 +2374,13 @@ if (
     closeDrawer();
   }
 });
+
+  let _timelinePrewarmed = false;
+async function prewarmTimeline() {
+  if(_timelinePrewarmed) return;
+  _timelinePrewarmed = true;
+  try { await buildTimelineEvents(); } catch(e) { console.warn('timeline prewarm:', e); }
+}
 
 // ── FIRESTORE ─────────────────────────────────────────────────────────────────
 // PATCH: `library` (mine) and `communityLib` (public/shared) load in two
@@ -3355,7 +3369,15 @@ function mob_switchTab(tab) {
     renderMobHome();
   }
   if (tab === 'library')   renderMobLibrary();
-  if (tab === 'timeline')  renderTimeline();
+  if (tab === 'timeline') {
+    if (_timelineEvents && _timelineEvents.length) {
+      populateTimelineYearFilter();
+      renderTimelineContent();
+      buildTimelineEvents().then(() => { populateTimelineYearFilter(); renderTimelineContent(); }); // silent refresh
+    } else {
+      renderTimeline();
+    }
+  }
   if (tab === 'settings')  renderKoboSettings(document.getElementById('mobKoboSettings'));
 }
 
@@ -4488,16 +4510,20 @@ async function readCurrentBook(){
     document.getElementById('readerSettingsBar').classList.remove('open');
     document.getElementById('readerOverlay').classList.remove('toolbar-hidden');
     document.getElementById('readerOverlay').classList.add('open');
+    document.getElementById('readerOverlay').classList.add('reader-loading'); // NEW: hides content, shows spinner
     _updateToolbarHandleIcon();
-
+    
     await loadHighlightsForBook(book.id);
-
+    
     const saved = loadReadingProgress(book.id);
     if(saved && saved.chapterIdx < readerSpine.length && saved.chapterIdx > 0){
       await readerGoToChapter(saved.chapterIdx, saved.pageIdx);
     } else {
       await readerGoToChapter(0);
     }
+
+    document.getElementById('readerOverlay').classList.remove('reader-loading'); //reveal only when ready
+    
     requestAnimationFrame(() => requestAnimationFrame(() => recalcReaderHeight()));
     setTimeout(() => recalcReaderHeight(), 300);
   }catch(e){hideLoading();_setTileLoading(book.id, false);showToast('Could not open EPUB: '+e.message);console.error(e);}
