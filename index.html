@@ -7431,10 +7431,13 @@ function ttsCollectBlocks() {
 // pre-scroll layout position. That makes it a reliable way to ask "is this
 // text on screen right now, and if not, which way did it go".
 function ttsElRect(el) {
-  const iframeRect = _readerIframe?.getBoundingClientRect();
-  if(!iframeRect || !el) return null;
+  if(!el || !_readerIframe) return null;
+  // el lives inside the iframe's own document, so its getBoundingClientRect()
+  // is already relative to the iframe's viewport (0,0 = top-left of the
+  // iframe's content area) — it must NOT be offset by the iframe's own
+  // position in the parent page, or everything shifts by that amount.
   const r = el.getBoundingClientRect();
-  return { left: r.left - iframeRect.left, right: r.right - iframeRect.left };
+  return { left: r.left, right: r.right };
 }
 
 // Instantly (no animation) jump however many pages are needed so `el` ends
