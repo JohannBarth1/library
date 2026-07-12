@@ -46,70 +46,107 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .brand-sub{font-size:.6rem;letter-spacing:.18em;text-transform:uppercase;color:var(--gold);margin-top:1px;}
 .header-right{display:flex;gap:.5rem;align-items:center;flex-shrink:0;}
 .hbtn{border:none;padding:.42rem .85rem;font-family:'Lato',sans-serif;font-size:.72rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;border-radius:2px;transition:background .2s;white-space:nowrap;}
-/* ── Notifications bell + overlay ────────────────────────────────────────── */
+/* ── Notifications bell + dropdown ───────────────────────────────────────── */
 .notif-bell-wrap{position:relative;display:flex;align-items:center;}
 .notif-bell-btn{background:none;border:none;color:var(--cream);font-size:1.15rem;cursor:pointer;padding:.3rem .4rem;line-height:1;position:relative;-webkit-tap-highlight-color:transparent;}
 .notif-badge{position:absolute;top:-2px;right:-2px;background:#c0392b;color:#fff;font-size:.6rem;font-weight:700;border-radius:10px;min-width:16px;height:16px;display:flex;align-items:center;justify-content:center;padding:0 3px;line-height:1;pointer-events:none;}
 .notif-bell-wiggle{animation:notifBellWiggle .5s ease;}
 @keyframes notifBellWiggle{0%,100%{transform:rotate(0);}20%{transform:rotate(-14deg);}40%{transform:rotate(11deg);}60%{transform:rotate(-8deg);}80%{transform:rotate(5deg);}}
+
+/* The dropdown "bounces" out of the bell — a small panel anchored under it,
+   not a full-screen takeover. */
 #notifFullOverlay{
-  position:fixed;top:0;left:0;right:0;bottom:var(--mob-nav-h);z-index:260;
+  display:none;position:absolute;top:calc(100% + 12px);right:-8px;
+  width:340px;max-width:88vw;max-height:min(70vh,540px);
   background:
-    radial-gradient(rgba(15,26,46,.025) 1px, transparent 1px) 0 0/3px 3px,
+    radial-gradient(rgba(15,26,46,.02) 1px, transparent 1px) 0 0/3px 3px,
     var(--cream);
-  display:none;flex-direction:column;
-  border-top-left-radius:14px;border-top-right-radius:14px;
-  box-shadow:0 -8px 30px rgba(15,26,46,.18);
-  animation:notifSheetIn .28s cubic-bezier(.2,.8,.3,1);
+  border-radius:12px;box-shadow:0 12px 34px rgba(15,26,46,.28);
+  z-index:95;flex-direction:column;overflow:hidden;transform-origin:top right;
 }
-@keyframes notifSheetIn{from{transform:translateY(14px);opacity:0;}to{transform:translateY(0);opacity:1;}}
-.notif-sheet-anim{animation:notifSheetIn .28s cubic-bezier(.2,.8,.3,1);}
+#notifFullOverlay.open{display:flex;animation:notifBounceOut .32s cubic-bezier(.34,1.56,.64,1);}
+@keyframes notifBounceOut{
+  0%{opacity:0;transform:scale(.35) translateY(-16px);}
+  55%{opacity:1;transform:scale(1.05) translateY(2px);}
+  100%{transform:scale(1) translateY(0);}
+}
+/* little caret pointing up at the bell */
+#notifFullOverlay::before{
+  content:'';position:absolute;top:-6px;right:22px;width:13px;height:13px;
+  background:var(--cream);transform:rotate(45deg);border-radius:2px 0 0 0;
+}
+.notif-dropdown-head{
+  display:flex;align-items:center;justify-content:space-between;gap:.5rem;
+  padding:.7rem .9rem;border-bottom:1px solid var(--border);flex-shrink:0;
+  font-family:'Playfair Display',serif;font-weight:700;font-size:.85rem;color:var(--navy2);
+}
+.notif-dropdown-head button{background:none;border:none;cursor:pointer;font-size:.72rem;font-weight:700;letter-spacing:.03em;color:var(--teal-dark);opacity:.85;padding:.2rem .3rem;}
+.notif-dropdown-head button:hover{opacity:1;}
+#notifListEl{overflow-y:auto;flex:1;padding:.4rem .4rem 0;}
+
 .notif-list-item{
-  padding:.85rem 1.2rem;margin:.6rem .8rem;cursor:pointer;display:flex;gap:.7rem;align-items:flex-start;
-  background:var(--warm-white);border:1px solid var(--border);border-radius:3px;
-  box-shadow:1px 2px 6px rgba(15,26,46,.08);
-  transition:transform .15s ease, box-shadow .15s ease, background .12s;
+  padding:.55rem .65rem;margin:0 .1rem .4rem;cursor:pointer;display:flex;gap:.6rem;align-items:flex-start;
+  background:var(--warm-white);border:1px solid var(--border);border-radius:8px;
+  box-shadow:1px 2px 5px rgba(15,26,46,.07);
+  transition:box-shadow .15s ease, border-color .15s;
 }
-.notif-list-item:nth-child(odd){transform:rotate(-.35deg);}
-.notif-list-item:nth-child(even){transform:rotate(.35deg);}
-.notif-list-item:hover{transform:rotate(0deg) translateY(-1px);box-shadow:2px 4px 12px rgba(15,26,46,.14);}
-.notif-list-item.unread{background:linear-gradient(rgba(200,149,42,.05),rgba(200,149,42,.05)),var(--warm-white);border-color:rgba(200,149,42,.35);}
-.notif-dot{
-  width:11px;height:11px;border-radius:46% 54% 55% 45%/50% 45% 55% 50%;
+.notif-list-item:hover{box-shadow:2px 4px 10px rgba(15,26,46,.13);}
+.notif-list-item.unread{background:linear-gradient(rgba(200,149,42,.07),rgba(200,149,42,.07)),var(--warm-white);border-color:rgba(200,149,42,.4);}
+.notif-list-item.expanded{border-color:var(--teal);box-shadow:0 0 0 2px rgba(42,124,138,.18);}
+.notif-emoji-wrap{position:relative;flex-shrink:0;margin-top:.05rem;}
+.notif-emoji{font-size:1.7rem;line-height:1;display:block;}
+.notif-unread-dot{
+  position:absolute;top:-3px;right:-4px;width:9px;height:9px;
+  border-radius:46% 54% 55% 45%/50% 45% 55% 50%;
   background:radial-gradient(circle at 35% 30%, var(--rust) 0%, #8a3410 100%);
-  box-shadow:0 1px 2px rgba(0,0,0,.3), inset -1px -1px 1px rgba(0,0,0,.25);
-  flex-shrink:0;margin-top:.35rem;visibility:hidden;
+  box-shadow:0 1px 2px rgba(0,0,0,.35);animation:notifSeal .4s ease;
 }
-.notif-list-item.unread .notif-dot{visibility:visible;animation:notifSeal .4s ease;}
 @keyframes notifSeal{from{transform:scale(0);}70%{transform:scale(1.25);}to{transform:scale(1);}}
+.notif-title{font-family:'Playfair Display',serif;font-weight:700;font-size:.85rem;color:var(--navy2);line-height:1.25;}
+.notif-preview{font-size:.73rem;color:var(--muted);margin-top:.15rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-style:italic;}
+.notif-meta{font-size:.62rem;color:var(--muted);margin-top:.25rem;letter-spacing:.02em;}
+
+/* Hero: the original notification, the clear focal point */
+.notif-hero{
+  background:linear-gradient(180deg, rgba(200,149,42,.18), rgba(200,149,42,.08) 60%, var(--cream));
+  border:1px solid rgba(200,149,42,.4);border-top:4px solid var(--gold);border-radius:3px;
+  padding:.9rem 1rem 1rem;margin:.6rem .6rem .7rem;
+  box-shadow:2px 4px 14px rgba(15,26,46,.14);flex-shrink:0;position:relative;
+}
+.notif-hero::after{
+  content:'';position:absolute;top:0;left:1rem;width:30px;height:5px;
+  background:var(--gold);border-radius:0 0 3px 3px;box-shadow:0 1px 3px rgba(0,0,0,.25);
+}
+.notif-hero-title{font-family:'Playfair Display',serif;font-size:1.1rem;font-weight:700;color:var(--navy2);margin:.45rem 0 .5rem;line-height:1.25;}
+.notif-hero-body{font-size:.86rem;color:var(--navy2);white-space:pre-wrap;word-break:break-word;line-height:1.5;}
+.notif-hero-meta{display:flex;align-items:center;gap:.5rem;margin-top:.7rem;padding-top:.6rem;border-top:1px dashed rgba(200,149,42,.5);}
 .notif-type-chip{font-family:'Playfair Display',serif;font-size:.6rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;padding:.15rem .5rem;border-radius:2px;display:inline-block;margin-bottom:.3rem;border:1px solid currentColor;background:var(--warm-white);}
 .notif-type-chip.book_request{color:#8a6414;background:rgba(200,149,42,.12);}
 .notif-type-chip.broadcast{color:var(--teal-dark);background:rgba(42,124,138,.1);}
 .notif-type-chip.feature_request{color:#4a3a8f;background:rgba(90,72,176,.1);}
 .notif-type-chip.bug{color:var(--rust);background:rgba(184,76,26,.1);}
-.notif-title{font-family:'Playfair Display',serif;font-weight:700;font-size:.95rem;color:var(--navy2);}
-.notif-preview{font-size:.78rem;color:var(--muted);margin-top:.15rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-style:italic;}
-.notif-meta{font-size:.68rem;color:var(--muted);margin-top:.3rem;letter-spacing:.02em;}
-/* Hero: the original notification, kept visually separate from the reply chat below it */
-.notif-hero{
-  background:linear-gradient(180deg, rgba(200,149,42,.16), rgba(200,149,42,.07) 60%, var(--cream));
-  border:1px solid rgba(200,149,42,.4);border-top:4px solid var(--gold);border-radius:3px;
-  padding:1.1rem 1.2rem 1.2rem;margin:1rem 1rem 1.1rem;
-  box-shadow:2px 4px 16px rgba(15,26,46,.14);flex-shrink:0;position:relative;
+
+/* The inline accordion panel — a visually separate "chat" area that opens
+   beneath the list when a notification is tapped. */
+.notif-inline-detail{
+  display:none;flex-direction:column;flex-shrink:0;
+  border-top:2px dashed var(--border);margin-top:.2rem;
+  background:rgba(15,26,46,.02);
 }
-.notif-hero::after{
-  content:'';position:absolute;top:0;left:1.2rem;width:34px;height:6px;
-  background:var(--gold);border-radius:0 0 3px 3px;box-shadow:0 1px 3px rgba(0,0,0,.25);
+.notif-inline-head{
+  display:flex;align-items:center;justify-content:space-between;gap:.4rem;
+  padding:.55rem .8rem 0;
 }
-.notif-hero-title{font-family:'Playfair Display',serif;font-size:1.3rem;font-weight:700;color:var(--navy2);margin:.5rem 0 .55rem;line-height:1.25;}
-.notif-hero-body{font-size:.9rem;color:var(--navy2);white-space:pre-wrap;word-break:break-word;line-height:1.55;}
-.notif-hero-meta{display:flex;align-items:center;gap:.5rem;margin-top:.8rem;padding-top:.65rem;border-top:1px dashed rgba(200,149,42,.5);}
+.notif-inline-head #notifThreadTitle{font-weight:700;font-size:.76rem;color:var(--navy2);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.notif-inline-head button{background:none;border:none;cursor:pointer;font-size:.78rem;color:var(--muted);padding:.15rem .35rem;}
+.notif-inline-head button:hover{color:var(--rust);}
 .notif-chat-area{
   background:rgba(15,26,46,.03);
   box-shadow:inset 0 1px 4px rgba(15,26,46,.08);
-  margin:0 1rem 1rem;border-radius:8px;padding:.2rem .7rem .7rem;flex:1;
+  margin:0 .6rem .6rem;border-radius:8px;padding:.2rem .6rem .6rem;
+  max-height:230px;overflow-y:auto;
 }
-.notif-replies-label{font-family:'Playfair Display',serif;font-style:italic;font-size:.68rem;color:var(--muted);margin:0;padding:.6rem 0 .3rem;text-align:center;position:relative;}
+.notif-replies-label{font-family:'Playfair Display',serif;font-style:italic;font-size:.66rem;color:var(--muted);margin:0;padding:.55rem 0 .3rem;text-align:center;position:relative;}
 .notif-replies-label::before,.notif-replies-label::after{content:'';display:inline-block;width:22%;height:1px;background:var(--border);vertical-align:middle;margin:0 .5rem;}
 .notif-avatar{width:26px;height:26px;border-radius:50%;flex-shrink:0;object-fit:cover;background:var(--teal-dark);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'Playfair Display',serif;font-size:.7rem;font-weight:700;}
 .notif-hero-meta .notif-avatar{width:22px;height:22px;font-size:.62rem;}
@@ -129,7 +166,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .notif-thread-time{font-size:.6rem;color:var(--muted);margin-top:.15rem;}
 .notif-thread-del{flex-shrink:0;background:none;border:none;color:var(--muted);cursor:pointer;font-size:.68rem;padding:.05rem .2rem;line-height:1;}
 .notif-thread-del:hover{color:var(--rust);}
-.notif-compose-bar{display:flex;gap:.5rem;padding:.7rem 1rem;border-top:1px solid var(--border);background:var(--cream);flex-shrink:0;}
+.notif-compose-bar{display:flex;gap:.5rem;padding:.6rem .8rem;border-top:1px solid var(--border);background:var(--cream);flex-shrink:0;}
 .notif-compose-bar textarea{flex:1;resize:none;border:1px solid var(--border);border-radius:8px;padding:.5rem .7rem;font-family:'Lato',sans-serif;font-size:16px;min-height:2.4rem;max-height:6rem;background:var(--warm-white);}
 .notif-compose-bar button{flex-shrink:0;background:var(--teal);color:var(--gold2);border:none;border-radius:20px;padding:0 1.1rem;font-weight:700;font-size:.8rem;cursor:pointer;transition:background .15s, transform .1s;}
 .notif-compose-bar button:active{transform:scale(.94);}
@@ -1432,6 +1469,29 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
     <button class="hbtn hbtn-ghost btnToggleSettingsDesk" id="btnToggleSettings">⚙</button>
     <div class="notif-bell-wrap">
       <button class="notif-bell-btn" id="btnNotifBell" title="Notifications">🔔<div id="notifBadge" class="notif-badge" style="display:none;"></div></button>
+      <div id="notifFullOverlay">
+        <div class="notif-dropdown-head">
+          <span>Notifications</span>
+          <button id="btnNotifNew" title="New notification">+ New</button>
+        </div>
+        <div class="mob-detail-scroll" id="notifListEl"></div>
+        <div id="notifThreadInline" class="notif-inline-detail">
+          <div class="notif-inline-head">
+            <div id="notifThreadTitle"></div>
+            <button id="btnNotifThreadDelete" title="Delete notification" style="display:none;color:#b84c1a;">🗑</button>
+            <button id="btnNotifThreadBack" title="Close">✕</button>
+          </div>
+          <div class="notif-hero" id="notifThreadHero"></div>
+          <div class="notif-chat-area">
+            <div class="notif-replies-label">Replies</div>
+            <div id="notifThreadList"></div>
+          </div>
+          <div class="notif-compose-bar">
+            <textarea id="notifReplyInput" placeholder="Write a reply…" rows="1"></textarea>
+            <button id="btnNotifReplySend">Send</button>
+          </div>
+        </div>
+      </div>
     </div>
     <div class="header-user" id="headerUser">
       <div class="user-avatar-initials" id="userAvatarInitials">?</div>
@@ -1760,39 +1820,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
   <div class="mob-detail-scroll" id="highlightsFullList"></div>
 </div>
 
-<!-- Notifications: full-page list -->
-<div id="notifFullOverlay">
-  <div class="mob-detail-header">
-    <button class="mob-back-btn" id="btnNotifFullBack">← Back</button>
-    <div style="font-weight:700;font-size:.85rem;color:var(--navy2);flex:1;">Notifications</div>
-    <button id="btnNotifNew" title="New notification"
-      style="background:none;border:none;cursor:pointer;font-size:.9rem;color:inherit;opacity:.75;padding:.3rem .5rem;font-weight:700;">+ New</button>
-  </div>
-  <div class="mob-detail-scroll" id="notifListEl"></div>
-</div>
 
-<!-- Notifications: thread view -->
-<div id="notifThreadOverlay" class="notif-sheet-anim" style="display:none;position:fixed;top:0;left:0;right:0;bottom:var(--mob-nav-h);z-index:270;background:var(--cream);flex-direction:column;border-top-left-radius:14px;border-top-right-radius:14px;box-shadow:0 -8px 30px rgba(15,26,46,.18);">
-  <div class="mob-detail-header">
-    <button class="mob-back-btn" id="btnNotifThreadBack">← Back</button>
-    <div id="notifThreadTitle" style="font-weight:700;font-size:.85rem;color:var(--navy2);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></div>
-    <button id="btnNotifThreadDelete" title="Delete notification"
-      style="display:none;background:none;border:none;cursor:pointer;font-size:.85rem;color:#b84c1a;padding:.3rem .5rem;">🗑</button>
-  </div>
-  <div class="mob-detail-scroll" style="padding:0;display:flex;flex-direction:column;">
-    <div class="notif-hero" id="notifThreadHero"></div>
-    <div class="notif-chat-area">
-      <div class="notif-replies-label">Replies</div>
-      <div id="notifThreadList"></div>
-    </div>
-  </div>
-  <div class="notif-compose-bar">
-    <textarea id="notifReplyInput" placeholder="Write a reply…" rows="1"></textarea>
-    <button id="btnNotifReplySend">Send</button>
-  </div>
-</div>
-
-<!-- Notifications: compose new modal -->
 <div class="bottom-sheet-overlay" id="notifComposeOverlay"></div>
 <div class="bottom-sheet" id="notifComposeSheet">
   <div style="padding:1rem 1.2rem;">
@@ -2336,6 +2364,10 @@ document.getElementById('headerUser').addEventListener('click',e=>{e.stopPropaga
 document.addEventListener('click',(e)=>{
   document.getElementById('userDropdown').classList.remove('open');
   document.querySelectorAll('.action-dropdown-menu.open').forEach(m=>m.classList.remove('open'));
+  const notifDrop = document.getElementById('notifFullOverlay');
+  if(notifDrop.classList.contains('open') && !notifDrop.contains(e.target)) {
+    closeNotifFullList();
+  }
   const drawer = document.getElementById('bookDrawer');
 if (
     drawer.classList.contains('open') &&
@@ -5200,7 +5232,7 @@ async function maybeShowNotifReminder() {
 }
 
 function openNotifFullList() {
-  document.getElementById('notifFullOverlay').style.display = 'flex';
+  document.getElementById('notifFullOverlay').classList.add('open');
   renderNotifList();
   if(currentUser) {
     setDoc(doc(db, 'users', currentUser.uid), { notifLastSeenAt: serverTimestamp() }, { merge: true }).catch(()=>{});
@@ -5208,10 +5240,15 @@ function openNotifFullList() {
   document.getElementById('notifReminderModal').style.display = 'none';
 }
 function closeNotifFullList() {
-  document.getElementById('notifFullOverlay').style.display = 'none';
+  document.getElementById('notifFullOverlay').classList.remove('open');
+  closeNotifThreadInline();
 }
-document.getElementById('btnNotifBell').addEventListener('click', openNotifFullList);
-document.getElementById('btnNotifFullBack').addEventListener('click', closeNotifFullList);
+document.getElementById('btnNotifBell').addEventListener('click', e => {
+  e.stopPropagation();
+  const overlay = document.getElementById('notifFullOverlay');
+  if(overlay.classList.contains('open')) closeNotifFullList();
+  else openNotifFullList();
+});
 document.getElementById('btnNotifReminderOpen').addEventListener('click', openNotifFullList);
 document.getElementById('btnNotifReminderDismiss').addEventListener('click', () => {
   document.getElementById('notifReminderModal').style.display = 'none';
@@ -5222,6 +5259,12 @@ function notifTypeLabel(type) {
   if(type === 'feature_request') return '💡 Feature Request';
   if(type === 'bug') return '🐞 Bug';
   return '📗 Book Request';
+}
+function notifTypeEmoji(type) {
+  if(type === 'broadcast') return '📢';
+  if(type === 'feature_request') return '💡';
+  if(type === 'bug') return '🐞';
+  return '📗';
 }
 
 function renderNotifList() {
@@ -5234,9 +5277,11 @@ function renderNotifList() {
     const unread = currentUser && !(n.readBy||[]).includes(currentUser.uid);
     const when = n.createdAt?.toDate ? timeAgo(n.createdAt.toDate()) : '';
     return `<div class="notif-list-item ${unread?'unread':''}" data-notifid="${n.id}">
-      <div class="notif-dot"></div>
+      <div class="notif-emoji-wrap">
+        <span class="notif-emoji">${notifTypeEmoji(n.type)}</span>
+        ${unread?'<span class="notif-unread-dot"></span>':''}
+      </div>
       <div style="flex:1;min-width:0;">
-        <span class="notif-type-chip ${n.type}">${notifTypeLabel(n.type)}</span>
         <div class="notif-title">${esc(n.title||'')}</div>
         <div class="notif-preview">${esc(n.body||'')}</div>
         <div class="notif-meta">${esc(n.creatorName||'Someone')} · ${when}</div>
@@ -5246,6 +5291,11 @@ function renderNotifList() {
   listEl.querySelectorAll('[data-notifid]').forEach(el => {
     el.addEventListener('click', () => openNotifThread(el.dataset.notifid));
   });
+  // Realtime updates rebuild this list — re-apply the "open" highlight so an
+  // expanded thread doesn't visually disconnect from its row mid-conversation.
+  if(currentNotifThreadId) {
+    listEl.querySelector(`[data-notifid="${currentNotifThreadId}"]`)?.classList.add('expanded');
+  }
 }
 
 function notifAvatarHTML(name, photoURL) {
@@ -5264,9 +5314,21 @@ async function markNotifRead(notifId) {
 async function openNotifThread(notifId) {
   const n = appNotifications.find(x => x.id === notifId);
   if(!n) return;
+
+  const detail = document.getElementById('notifThreadInline');
+
+  // Tapping the already-open notification again collapses it.
+  if(currentNotifThreadId === notifId && detail.style.display !== 'none') {
+    closeNotifThreadInline();
+    return;
+  }
+
   currentNotifThreadId = notifId;
+  detail.style.display = 'flex';
+  document.querySelectorAll('#notifListEl .notif-list-item.expanded').forEach(el => el.classList.remove('expanded'));
+  document.querySelector(`#notifListEl [data-notifid="${notifId}"]`)?.classList.add('expanded');
+
   document.getElementById('notifThreadTitle').textContent = n.title || '';
-  document.getElementById('notifThreadOverlay').style.display = 'flex';
   document.getElementById('btnNotifThreadDelete').style.display =
     (currentUser && n.creatorId === currentUser.uid) ? 'inline-block' : 'none';
 
@@ -5290,6 +5352,16 @@ async function openNotifThread(notifId) {
     const replies = snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(r => !r.deleted);
     renderNotifThread(replies);
   }, e => console.warn('replies listener:', e));
+
+  detail.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+}
+
+function closeNotifThreadInline() {
+  const detail = document.getElementById('notifThreadInline');
+  detail.style.display = 'none';
+  document.querySelectorAll('#notifListEl .notif-list-item.expanded').forEach(el => el.classList.remove('expanded'));
+  if(appNotifRepliesUnsub) { appNotifRepliesUnsub(); appNotifRepliesUnsub = null; }
+  currentNotifThreadId = null;
 }
 
 function renderNotifThread(replies) {
@@ -5323,11 +5395,7 @@ function renderNotifThread(replies) {
   });
 }
 
-document.getElementById('btnNotifThreadBack').addEventListener('click', () => {
-  document.getElementById('notifThreadOverlay').style.display = 'none';
-  if(appNotifRepliesUnsub) { appNotifRepliesUnsub(); appNotifRepliesUnsub = null; }
-  currentNotifThreadId = null;
-});
+document.getElementById('btnNotifThreadBack').addEventListener('click', closeNotifThreadInline);
 
 document.getElementById('btnNotifThreadDelete').addEventListener('click', async () => {
   if(!currentNotifThreadId) return;
