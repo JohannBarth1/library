@@ -92,7 +92,10 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 }
 .notif-list-item:hover{box-shadow:2px 4px 10px rgba(15,26,46,.13);}
 .notif-list-item.unread{background:linear-gradient(rgba(200,149,42,.07),rgba(200,149,42,.07)),var(--warm-white);border-color:rgba(200,149,42,.4);}
-.notif-list-item.expanded{border-color:var(--teal);box-shadow:0 0 0 2px rgba(42,124,138,.18);}
+.notif-list-item.expanded{
+  border-color:var(--teal);box-shadow:0 0 0 2px rgba(42,124,138,.18);
+  border-bottom-left-radius:0;border-bottom-right-radius:0;margin-bottom:0;
+}
 .notif-emoji-wrap{position:relative;flex-shrink:0;margin-top:.05rem;}
 .notif-emoji{font-size:1.7rem;line-height:1;display:block;}
 .notif-unread-dot{
@@ -106,40 +109,42 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .notif-preview{font-size:.73rem;color:var(--muted);margin-top:.15rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-style:italic;}
 .notif-meta{font-size:.62rem;color:var(--muted);margin-top:.25rem;letter-spacing:.02em;}
 
-/* Hero: the original notification, the clear focal point */
-.notif-hero{
-  background:linear-gradient(180deg, rgba(200,149,42,.18), rgba(200,149,42,.08) 60%, var(--cream));
-  border:1px solid rgba(200,149,42,.4);border-top:4px solid var(--gold);border-radius:3px;
-  padding:.9rem 1rem 1rem;margin:.6rem .6rem .7rem;
-  box-shadow:2px 4px 14px rgba(15,26,46,.14);flex-shrink:0;position:relative;
+/* "New notification" — an inline accordion under the header, not a bottom sheet */
+.notif-compose-inline{
+  max-height:0;opacity:0;overflow:hidden;padding:0 .9rem;flex-shrink:0;
+  transition:max-height .28s ease, opacity .2s ease, padding .28s ease;
+  border-bottom:1px solid transparent;
 }
-.notif-hero::after{
-  content:'';position:absolute;top:0;left:1rem;width:30px;height:5px;
-  background:var(--gold);border-radius:0 0 3px 3px;box-shadow:0 1px 3px rgba(0,0,0,.25);
+.notif-compose-inline.open{max-height:420px;opacity:1;padding:.8rem .9rem;border-bottom-color:var(--border);}
+.notif-compose-inline input, .notif-compose-inline textarea{
+  width:100%;box-sizing:border-box;padding:.55rem .7rem;border:1px solid var(--border);
+  border-radius:8px;font-size:16px;margin-bottom:.6rem;font-family:'Lato',sans-serif;background:var(--warm-white);
 }
-.notif-hero-title{font-family:'Playfair Display',serif;font-size:1.1rem;font-weight:700;color:var(--navy2);margin:.45rem 0 .5rem;line-height:1.25;}
-.notif-hero-body{font-size:.86rem;color:var(--navy2);white-space:pre-wrap;word-break:break-word;line-height:1.5;}
-.notif-hero-meta{display:flex;align-items:center;gap:.5rem;margin-top:.7rem;padding-top:.6rem;border-top:1px dashed rgba(200,149,42,.5);}
+.notif-compose-inline textarea{resize:vertical;}
+.notif-compose-inline .notif-compose-post{
+  width:100%;background:var(--teal);color:var(--gold2);border:none;border-radius:8px;
+  padding:.6rem;font-weight:700;font-size:.85rem;cursor:pointer;
+}
+
+/* Type chip already used elsewhere (hero context removed) — kept for the compose form */
 .notif-type-chip{font-family:'Playfair Display',serif;font-size:.6rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;padding:.15rem .5rem;border-radius:2px;display:inline-block;margin-bottom:.3rem;border:1px solid currentColor;background:var(--warm-white);}
 .notif-type-chip.book_request{color:#8a6414;background:rgba(200,149,42,.12);}
 .notif-type-chip.broadcast{color:var(--teal-dark);background:rgba(42,124,138,.1);}
 .notif-type-chip.feature_request{color:#4a3a8f;background:rgba(90,72,176,.1);}
 .notif-type-chip.bug{color:var(--rust);background:rgba(184,76,26,.1);}
 
-/* The inline accordion panel — a visually separate "chat" area that opens
-   beneath the list when a notification is tapped. */
+/* The accordion that expands beneath a tapped row — a continuation of that
+   same card (matching border/edges), not a repeated "hero" summary. */
 .notif-inline-detail{
-  display:none;flex-direction:column;flex-shrink:0;
-  border-top:2px dashed var(--border);margin-top:.2rem;
-  background:rgba(15,26,46,.02);
+  display:none;flex-direction:column;
+  background:var(--warm-white);border:1px solid var(--teal);border-top:1px dashed rgba(42,124,138,.35);
+  border-radius:0 0 8px 8px;margin:0 .1rem .4rem;
+  box-shadow:1px 2px 5px rgba(15,26,46,.08);
 }
-.notif-inline-head{
-  display:flex;align-items:center;justify-content:space-between;gap:.4rem;
-  padding:.55rem .8rem 0;
-}
-.notif-inline-head #notifThreadTitle{font-weight:700;font-size:.76rem;color:var(--navy2);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.notif-inline-head button{background:none;border:none;cursor:pointer;font-size:.78rem;color:var(--muted);padding:.15rem .35rem;}
-.notif-inline-head button:hover{color:var(--rust);}
+.notif-inline-body{font-size:.78rem;color:var(--navy2);white-space:pre-wrap;word-break:break-word;line-height:1.5;padding:.6rem .8rem .2rem;}
+.notif-inline-foot{display:flex;justify-content:flex-end;gap:.9rem;padding:.2rem .8rem .5rem;}
+.notif-inline-foot button{background:none;border:none;cursor:pointer;font-size:.66rem;font-weight:700;letter-spacing:.03em;text-transform:uppercase;color:var(--muted);padding:.15rem .2rem;}
+.notif-inline-foot button:hover{color:var(--rust);}
 .notif-chat-area{
   background:rgba(15,26,46,.03);
   box-shadow:inset 0 1px 4px rgba(15,26,46,.08);
@@ -185,8 +190,6 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
     100%{transform:translateX(-50%) scale(1) translateY(0);}
   }
 }
-#notifComposeOverlay{z-index:380;}
-#notifComposeSheet{z-index:381;background:var(--cream);}
 #notifReminderModal{position:fixed;inset:0;z-index:300;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;}
 .notif-reminder-card{background:var(--warm-white);border-radius:14px;padding:1.4rem 1.3rem;max-width:320px;text-align:center;box-shadow:0 10px 40px rgba(0,0,0,.3);}
 .notif-reminder-card .rc-icon{font-size:2rem;margin-bottom:.4rem;}
@@ -1488,14 +1491,20 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
           <span>Notifications</span>
           <button id="btnNotifNew" title="New notification">+ New</button>
         </div>
+        <div class="notif-compose-inline" id="notifComposeInline">
+          <div style="display:flex;gap:.4rem;margin-bottom:.6rem;flex-wrap:wrap;">
+            <button class="mob-chip active" id="notifTypeBookReq" data-notiftype="book_request">📗 Book Request</button>
+            <button class="mob-chip" id="notifTypeBroadcast" data-notiftype="broadcast">📢 Broadcast</button>
+            <button class="mob-chip" id="notifTypeFeatureReq" data-notiftype="feature_request">💡 Feature Request</button>
+            <button class="mob-chip" id="notifTypeBug" data-notiftype="bug">🐞 Bug</button>
+          </div>
+          <input id="notifComposeTitle" placeholder="Title"/>
+          <textarea id="notifComposeBody" placeholder="Details…" rows="3"></textarea>
+          <button id="btnNotifComposeSend" class="notif-compose-post">Post</button>
+        </div>
         <div class="mob-detail-scroll" id="notifListEl"></div>
         <div id="notifThreadInline" class="notif-inline-detail">
-          <div class="notif-inline-head">
-            <div id="notifThreadTitle"></div>
-            <button id="btnNotifThreadDelete" title="Delete notification" style="display:none;color:#b84c1a;">🗑</button>
-            <button id="btnNotifThreadBack" title="Close">✕</button>
-          </div>
-          <div class="notif-hero" id="notifThreadHero"></div>
+          <div class="notif-inline-body" id="notifThreadBody"></div>
           <div class="notif-chat-area">
             <div class="notif-replies-label">Replies</div>
             <div id="notifThreadList"></div>
@@ -1503,6 +1512,10 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
           <div class="notif-compose-bar">
             <textarea id="notifReplyInput" placeholder="Write a reply…" rows="1"></textarea>
             <button id="btnNotifReplySend">Send</button>
+          </div>
+          <div class="notif-inline-foot">
+            <button id="btnNotifThreadDelete" title="Delete notification" style="display:none;">🗑 Delete</button>
+            <button id="btnNotifThreadBack" title="Close">Close</button>
           </div>
         </div>
       </div>
@@ -1835,21 +1848,6 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 </div>
 
 
-<div class="bottom-sheet-overlay" id="notifComposeOverlay"></div>
-<div class="bottom-sheet" id="notifComposeSheet">
-  <div style="padding:1rem 1.2rem;">
-    <div style="font-weight:700;font-size:.95rem;color:var(--navy2);margin-bottom:.8rem;">New Notification</div>
-    <div style="display:flex;gap:.5rem;margin-bottom:.8rem;flex-wrap:wrap;">
-      <button class="mob-chip active" id="notifTypeBookReq" data-notiftype="book_request">📗 Book Request</button>
-      <button class="mob-chip" id="notifTypeBroadcast" data-notiftype="broadcast">📢 Broadcast</button>
-      <button class="mob-chip" id="notifTypeFeatureReq" data-notiftype="feature_request">💡 Feature Request</button>
-      <button class="mob-chip" id="notifTypeBug" data-notiftype="bug">🐞 Bug</button>
-    </div>
-    <input id="notifComposeTitle" placeholder="Title" style="width:100%;box-sizing:border-box;padding:.55rem .7rem;border:1px solid var(--border);border-radius:8px;font-size:16px;margin-bottom:.6rem;font-family:'Lato',sans-serif;"/>
-    <textarea id="notifComposeBody" placeholder="Details…" rows="4" style="width:100%;box-sizing:border-box;padding:.55rem .7rem;border:1px solid var(--border);border-radius:8px;font-size:16px;font-family:'Lato',sans-serif;resize:vertical;"></textarea>
-    <button id="btnNotifComposeSend" style="margin-top:.8rem;width:100%;background:var(--teal);color:#fff;border:none;border-radius:8px;padding:.65rem;font-weight:700;font-size:.85rem;cursor:pointer;">Post</button>
-  </div>
-</div>
 
 <!-- Notifications: 3-day inactivity reminder -->
 <div id="notifReminderModal">
@@ -5256,6 +5254,7 @@ function openNotifFullList() {
 function closeNotifFullList() {
   document.getElementById('notifFullOverlay').classList.remove('open');
   closeNotifThreadInline();
+  closeNotifCompose();
 }
 document.getElementById('btnNotifBell').addEventListener('click', e => {
   e.stopPropagation();
@@ -5338,25 +5337,17 @@ async function openNotifThread(notifId) {
   }
 
   currentNotifThreadId = notifId;
-  detail.style.display = 'flex';
   document.querySelectorAll('#notifListEl .notif-list-item.expanded').forEach(el => el.classList.remove('expanded'));
-  document.querySelector(`#notifListEl [data-notifid="${notifId}"]`)?.classList.add('expanded');
+  const row = document.querySelector(`#notifListEl [data-notifid="${notifId}"]`);
+  if(row) {
+    row.classList.add('expanded');
+    row.insertAdjacentElement('afterend', detail);
+  }
+  detail.style.display = 'flex';
 
-  document.getElementById('notifThreadTitle').textContent = n.title || '';
+  document.getElementById('notifThreadBody').textContent = n.body || '';
   document.getElementById('btnNotifThreadDelete').style.display =
     (currentUser && n.creatorId === currentUser.uid) ? 'inline-block' : 'none';
-
-  document.getElementById('notifThreadHero').innerHTML = `
-    <span class="notif-type-chip ${n.type}">${notifTypeLabel(n.type)}</span>
-    <div class="notif-hero-title">${esc(n.title||'')}</div>
-    <div class="notif-hero-body">${esc(n.body||'')}</div>
-    <div class="notif-hero-meta">
-      ${notifAvatarHTML(n.creatorName, n.creatorPhoto)}
-      <div>
-        <div style="font-family:'Playfair Display',serif;font-weight:700;font-size:.78rem;color:var(--navy2);">${esc(n.creatorName||'Someone')}</div>
-        <div class="notif-thread-time">${n.createdAt?.toDate ? timeAgo(n.createdAt.toDate()) : ''}</div>
-      </div>
-    </div>`;
 
   if(currentUser && !(n.readBy||[]).includes(currentUser.uid)) markNotifRead(notifId);
 
@@ -5463,20 +5454,20 @@ function openNotifCompose() {
   document.getElementById('notifComposeTitle').value = '';
   document.getElementById('notifComposeBody').value = '';
   notifComposeType = 'book_request';
-  document.querySelectorAll('#notifComposeSheet [data-notiftype]').forEach(c => c.classList.toggle('active', c.dataset.notiftype === 'book_request'));
-  document.getElementById('notifComposeOverlay').classList.add('open');
-  document.getElementById('notifComposeSheet').classList.add('open');
+  document.querySelectorAll('#notifComposeInline [data-notiftype]').forEach(c => c.classList.toggle('active', c.dataset.notiftype === 'book_request'));
+  document.getElementById('notifComposeInline').classList.add('open');
 }
 function closeNotifCompose() {
-  document.getElementById('notifComposeOverlay').classList.remove('open');
-  document.getElementById('notifComposeSheet').classList.remove('open');
+  document.getElementById('notifComposeInline').classList.remove('open');
 }
-document.getElementById('btnNotifNew').addEventListener('click', openNotifCompose);
-document.getElementById('notifComposeOverlay').addEventListener('click', closeNotifCompose);
-document.querySelectorAll('#notifComposeSheet [data-notiftype]').forEach(chip => {
+document.getElementById('btnNotifNew').addEventListener('click', () => {
+  const el = document.getElementById('notifComposeInline');
+  el.classList.contains('open') ? closeNotifCompose() : openNotifCompose();
+});
+document.querySelectorAll('#notifComposeInline [data-notiftype]').forEach(chip => {
   chip.addEventListener('click', () => {
     notifComposeType = chip.dataset.notiftype;
-    document.querySelectorAll('#notifComposeSheet [data-notiftype]').forEach(c => c.classList.toggle('active', c === chip));
+    document.querySelectorAll('#notifComposeInline [data-notiftype]').forEach(c => c.classList.toggle('active', c === chip));
   });
 });
 document.getElementById('btnNotifComposeSend').addEventListener('click', async () => {
