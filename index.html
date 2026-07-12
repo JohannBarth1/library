@@ -939,87 +939,6 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
   gap: .5rem;
   background: var(--panel);
 }
-.lounge-comment-count {
-  font-size: .72rem;
-  color: var(--muted);
-  font-weight: 700;
-  flex: 1;
-}
-.lounge-card-actions { display: flex; gap: .3rem; }
-
-/* Comment thread */
-.lounge-comments {
-  display: none;
-  border-top: 1px solid var(--border);
-  background: var(--cream);
-  padding: .6rem .9rem;
-}
-.lounge-comments.open { display: block; }
-.lounge-comment {
-  display: flex;
-  gap: .5rem;
-  margin-bottom: .6rem;
-  align-items: flex-start;
-}
-.lounge-comment-avatar {
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  background: var(--navy2);
-  color: #fff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: .55rem;
-  font-weight: 700;
-  flex-shrink: 0;
-  margin-top: 2px;
-}
-.lounge-comment-bubble {
-  background: var(--warm-white);
-  border: 1px solid var(--border);
-  border-radius: 0 8px 8px 8px;
-  padding: .35rem .6rem;
-  flex: 1;
-  min-width: 0;
-}
-.lounge-comment-author { font-size: .65rem; font-weight: 700; color: var(--teal); margin-bottom: 2px; }
-.lounge-comment-text { font-size: .8rem; color: var(--navy2); line-height: 1.5; }
-.lounge-comment-time { font-size: .6rem; color: var(--muted); margin-top: 2px; }
-.lounge-comment-delete { background: none; border: none; cursor: pointer; font-size: .65rem; color: var(--muted); padding: 0 .2rem; opacity: 0; transition: opacity .15s; }
-.lounge-comment:hover .lounge-comment-delete { opacity: 1; }
-.lounge-comment-input-row {
-  display: flex;
-  gap: .4rem;
-  margin-top: .5rem;
-  align-items: center;
-}
-.lounge-comment-input {
-  flex: 1;
-  padding: .4rem .6rem;
-  font-family: 'Lato', sans-serif;
-  font-size: 1rem;
-  border: 1px solid var(--border);
-  border-radius: 20px;
-  background: var(--warm-white);
-  color: var(--navy);
-  outline: none;
-}
-.lounge-comment-input:focus { border-color: var(--teal); }
-.lounge-comment-send {
-  background: var(--teal);
-  color: var(--gold);
-  border: none;
-  border-radius: 50%;
-  width: 30px;
-  height: 30px;
-  font-size: .9rem;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
 
 /* News clip card */
 .news-card {
@@ -1684,37 +1603,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
   <div class="mob-panel" id="mobPanelAdmin">
     <div class="mob-settings-scroll">
       <h2>🔑 Admin</h2>
-
-      <!-- Checkouts -->
-      <div class="settings-group">
-        <div class="settings-group-label">📋 All Book Signouts</div>
-        <div style="display:flex;gap:.5rem;margin-bottom:.8rem;flex-wrap:wrap">
-          <button class="btn-save" style="font-size:.72rem;padding:.4rem .8rem" id="adminCheckoutsRefresh">↻ Refresh</button>
-          <button class="btn-cancel" style="font-size:.72rem;padding:.4rem .8rem" id="adminCheckoutsFilter">Show Active Only</button>
-        </div>
-        <div id="adminCheckoutsList">
-          <div style="color:var(--muted);font-size:.85rem">Loading…</div>
-        </div>
-      </div>
-
-      <!-- Kobo devices -->
-      <div class="settings-group">
-        <div class="settings-group-label">📖 All Kobo Devices</div>
-        <button class="btn-save" style="font-size:.72rem;padding:.4rem .8rem;margin-bottom:.8rem" id="adminKoboRefresh">↻ Refresh</button>
-        <div id="adminKoboList">
-          <div style="color:var(--muted);font-size:.85rem">Loading…</div>
-        </div>
-      </div>
-
-      <!-- Users -->
-      <div class="settings-group">
-        <div class="settings-group-label">👤 All Users</div>
-        <button class="btn-save" style="font-size:.72rem;padding:.4rem .8rem;margin-bottom:.8rem" id="adminUsersRefresh">↻ Refresh</button>
-        <div id="adminUsersList">
-          <div style="color:var(--muted);font-size:.85rem">Loading…</div>
-        </div>
-      </div>
-
+      <div style="color:var(--muted);font-size:.85rem">Loading…</div>
     </div>
   </div>
 
@@ -5787,40 +5676,6 @@ function setReaderSelectMode(on) {
   }
 }
 
-// Finds the word under (x, y) in doc-relative coordinates and returns a
-// Range covering it. "Word" here just means "not whitespace" — punctuation
-// riding along with a word (quotes, commas) is fine and matches how native
-// long-press-to-select behaves in most text views.
-function _wordRangeAtPoint(doc, x, y) {
-  let node, offset;
-  try {
-    if (doc.caretRangeFromPoint) {
-      const r = doc.caretRangeFromPoint(x, y);
-      if (!r) return null;
-      node = r.startContainer; offset = r.startOffset;
-    } else if (doc.caretPositionFromPoint) {
-      const cp = doc.caretPositionFromPoint(x, y);
-      if (!cp) return null;
-      node = cp.offsetNode; offset = cp.offset;
-    } else return null;
-  } catch(e) { return null; }
-
-  if (!node || node.nodeType !== Node.TEXT_NODE) return null;
-  const text = node.textContent;
-  if (!text.trim()) return null;
-
-  const isBoundary = ch => /\s/.test(ch);
-  let start = offset, end = offset;
-  while (start > 0 && !isBoundary(text[start - 1])) start--;
-  while (end < text.length && !isBoundary(text[end])) end++;
-  if (start === end) return null;
-
-  const range = doc.createRange();
-  range.setStart(node, start);
-  range.setEnd(node, end);
-  return range;
-}
-
   // ── Sentence-tap highlighting ────────────────────────────────────────────
 // Tap a sentence to select it; tap further along to extend that edge to
 // the new sentence; tap the sentence you started on again to clear the
@@ -7402,8 +7257,8 @@ setTimeout(ttsLoadVoices, 500);
 
 // ── COLLECT READABLE BLOCKS FROM THE LIVE (ALREADY-PAGINATED) CHAPTER ─────────
 // Walks the real DOM the reader iframe rendered, keeping a reference to each
-// element — that reference is what lets ttsPageOfEl() work out which page a
-// paragraph landed on after CSS-column pagination.
+// element — that reference is what lets ttsElRect() work out where a
+// paragraph currently sits after CSS-column pagination.
 function ttsCollectBlocks() {
   const doc = _readerIframe?.contentDocument || _readerIframe?.contentWindow?.document;
   const root = doc?.querySelector('.chapter-wrap') || doc?.body;
@@ -7692,9 +7547,7 @@ function ttsCycleSpeed() {
 document.getElementById('ttsBtnPlay').addEventListener('click', (e) => {
   e.stopPropagation();
   if(!readerBookId) return;
-  if(ttsBookId !== readerBookId) { startTTS(readerBookId); return; }
-  if(ttsPlaying) ttsPause();
-  else ttsResume();
+  startTTS(readerBookId); // handles both "start fresh" and "toggle play/pause" internally
 });
 
 document.getElementById('ttsBtnPrev').addEventListener('click', (e) => {
@@ -7965,39 +7818,6 @@ async function toggleRecommended() {
     book.recommended = !rec;
     showToast('Failed: ' + e.message);
   }
-}
-
-// ── CHECKOUT SYSTEM ───────────────────────────────────────────────────────────
-async function signOutBook(){
-  if(!currentId||!currentUser)return;
-  const book=[...library,...communityLib].find(b=>b.id===currentId);if(!book)return;
-  if(myCheckedOutIds.has(currentId)){showToast('Already signed out — return it first');return;}
-  const due=new Date();due.setDate(due.getDate()+14);
-  showLoading('Signing out…');
-  try{
-    await addDoc(collection(db,'checkouts'),{bookId:currentId,bookTitle:book.title,userId:currentUser.uid,userName:currentUser.displayName||currentUser.email,checkedOutAt:serverTimestamp(),dueDate:Timestamp.fromDate(due),returnedAt:null});
-    myCheckedOutIds.add(currentId);
-    hideLoading();
-    showToast(`"${book.title}" signed out — due ${due.toLocaleDateString()}`);
-    if(window.innerWidth > 768) showBookById(currentId);
-      else mob_showBook(currentId);
-      }catch(e){hideLoading();showToast('Sign-out failed: '+e.message);}
-    }
-async function returnCurrentBook(){
-  if(!currentId||!currentUser)return;
-  try{
-    const q=query(collection(db,'checkouts'),where('bookId','==',currentId),where('userId','==',currentUser.uid));
-    const snap=await getDocs(q);
-    const unreturned=snap.docs.filter(d=>!d.data().returnedAt).sort((a,b)=>b.data().checkedOutAt?.toMillis()-a.data().checkedOutAt?.toMillis());
-    if(!unreturned.length){showToast('No active checkout found');return;}
-    showLoading('Returning…');
-    await updateDoc(doc(db,'checkouts',unreturned[0].id),{returnedAt:serverTimestamp()});
-    myCheckedOutIds.delete(currentId);
-    hideLoading();
-    showToast('Book returned ✓');
-    if(window.innerWidth > 768) showBookById(currentId);
-      else mob_showBook(currentId);
-  }catch(e){hideLoading();showToast('Return failed: '+e.message);}
 }
 
 async function showCheckoutHistory(bookId){
@@ -9043,110 +8863,6 @@ async function deleteDetailComment(reqId, commentId, btn) {
   } catch(e) { showToast('Delete failed: ' + e.message); }
 }
 
-// ── COMMENTS ─────────────────────────────────────────────────────────────────
-const commentUnsubMap = {};
-
-function toggleComments(reqId) {
-  const el = document.getElementById('loungeComments_' + reqId);
-  if(!el) return;
-  const isOpen = el.classList.contains('open');
-  // Close all others
-  document.querySelectorAll('.lounge-comments.open').forEach(c => {
-    c.classList.remove('open');
-    const id = c.id.replace('loungeComments_', '');
-    if(commentUnsubMap[id]){ commentUnsubMap[id](); delete commentUnsubMap[id]; }
-  });
-  if(!isOpen){
-    el.classList.add('open');
-    loadComments(reqId, el);
-  }
-}
-
-function loadComments(reqId, container) {
-  if(commentUnsubMap[reqId]) commentUnsubMap[reqId]();
-  const q = query(
-    collection(db, 'lounge_requests', reqId, 'comments'),
-    orderBy('createdAt', 'asc')
-  );
-  commentUnsubMap[reqId] = onSnapshot(q, snap => {
-    const comments = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    renderComments(reqId, comments, container);
-    // Update comment count on the card
-    updateDoc(doc(db, 'lounge_requests', reqId), { commentCount: comments.length }).catch(()=>{});
-  }, e => console.warn('Comments listener:', e));
-}
-
-function renderComments(reqId, comments, container) {
-  const inputHtml = `
-    <div class="lounge-comment-input-row">
-      <input class="lounge-comment-input" type="text" placeholder="Add a comment…" id="commentInput_${reqId}"/>
-      <button class="lounge-comment-send" data-send-comment="${reqId}">➤</button>
-    </div>`;
-
-  if(!comments.length){
-    container.innerHTML = `<div style="font-size:.78rem;color:var(--muted);padding:.3rem 0 .6rem">No comments yet — start the conversation!</div>${inputHtml}`;
-  } else {
-    container.innerHTML = comments.map(c => {
-      const isMine = c.authorId === currentUser?.uid;
-      const initials = (c.authorName || '?').split(' ').map(w => w[0]).join('').toUpperCase().slice(0,2);
-      const commentAvatar = c.authorPhoto
-        ? `<img src="${c.authorPhoto}" style="width:22px;height:22px;border-radius:50%;object-fit:cover;border:1px solid var(--border);flex-shrink:0;margin-top:2px"/>`
-        : `<div class="lounge-comment-avatar">${initials}</div>`;
-      return `<div class="lounge-comment">
-        ${commentAvatar}
-        <div class="lounge-comment-bubble">
-          <div class="lounge-comment-author">${esc(c.authorName || 'Unknown')}</div>
-          <div class="lounge-comment-text">${esc(c.text)}</div>
-          <div style="display:flex;align-items:center;gap:.3rem">
-            <div class="lounge-comment-time">${c.createdAt?.toDate?.() ? timeAgo(c.createdAt.toDate()) : ''}</div>
-            ${isMine ? `<button class="lounge-comment-delete" data-delete-comment="${c.id}" data-req-id="${reqId}">✕ delete</button>` : ''}
-          </div>
-        </div>
-      </div>`;
-    }).join('') + inputHtml;
-  }
-
-  // Bind send
-  container.querySelectorAll('[data-send-comment]').forEach(btn => {
-    btn.addEventListener('click', () => sendComment(reqId));
-  });
-  container.querySelector(`#commentInput_${reqId}`)?.addEventListener('keydown', e => {
-    if(e.key === 'Enter') sendComment(reqId);
-  });
-  // Bind delete
-  container.querySelectorAll('[data-delete-comment]').forEach(btn => {
-    btn.addEventListener('click', () => deleteComment(btn.dataset.reqId, btn.dataset.deleteComment));
-  });
-}
-
-async function sendComment(reqId) {
-  const input = document.getElementById('commentInput_' + reqId);
-  if(!input) return;
-  const text = input.value.trim();
-  if(!text) return;
-  input.value = '';
-  try {
-    await addDoc(collection(db, 'lounge_requests', reqId, 'comments'), {
-      text,
-      authorId: currentUser.uid,
-      authorName: currentUser.displayName || currentUser.email,
-      authorPhoto: currentUser.photoURL || null,
-      createdAt: serverTimestamp(),
-    });
-  } catch(e) {
-    showToast('Failed to send: ' + e.message);
-  }
-}
-
-async function deleteComment(reqId, commentId) {
-  if(!confirm('Delete this comment?')) return;
-  try {
-    await deleteDoc(doc(db, 'lounge_requests', reqId, 'comments', commentId));
-  } catch(e) {
-    showToast('Delete failed: ' + e.message);
-  }
-}
-
 async function deleteRequest(reqId) {
   if(!confirm('Delete this request and all its comments?')) return;
   showLoading('Deleting…');
@@ -9723,128 +9439,6 @@ async function adminLoadKoboDevices() {
 
 document.getElementById('adminKoboRefresh')?.addEventListener('click', adminLoadKoboDevices);
 
-  // ── ADMIN LOAD USERS AND CURRENT USERS ──────────────────────────────────────────────────
-async function adminLoadPresence() {
-  const el = document.getElementById('adminPresenceBody');
-  if(!el) return;
-  el.innerHTML = '<div style="color:var(--muted);font-size:.85rem">Loading…</div>';
-  try {
-    const [presSnap, userSnap, checkoutSnap] = await Promise.all([
-  getDocs(collection(db, 'lounge_presence')),
-  getDocs(collection(db, 'users')),
-  getDocs(query(collection(db, 'checkouts'), orderBy('checkedOutAt', 'desc'))),
-]);
-
-    const presMap = {};
-    presSnap.docs.forEach(d => { presMap[d.id] = d.data(); });
-
-    const checkoutsByUser = {};
-    checkoutSnap.docs.forEach(d => {
-      const data = d.data();
-      if(!checkoutsByUser[data.userId]) checkoutsByUser[data.userId] = [];
-      checkoutsByUser[data.userId].push({ id: d.id, ...data });
-    });
-
-    // Build currently-reading map from user_lists subcollections
-    // We'll load them lazily on expand instead
-
-    const now = Date.now();
-    const users = userSnap.docs
-      .map(d => ({ id: d.id, ...d.data() }))
-      .sort((a, b) => {
-        const pa = presMap[a.uid]?.lastSeen?.toMillis?.() || 0;
-        const pb = presMap[b.uid]?.lastSeen?.toMillis?.() || 0;
-        return pb - pa;
-      });
-
-    if(!users.length) {
-      el.innerHTML = '<div style="color:var(--muted);font-size:.85rem">No users found</div>';
-      return;
-    }
-
-    el.innerHTML = users.map(u => {
-      const pres = presMap[u.uid] || {};
-      const isOnline = (pres.expiresAt?.toMillis?.() || 0) > now;
-      const lastSeen = pres.lastSeen?.toDate?.() || u.lastSeen?.toDate?.();
-      const lastConnected = u.lastSeen?.toDate?.();
-      const initials = (u.displayName || u.email || '?')
-        .split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
-      const checkouts = checkoutsByUser[u.uid] || [];
-      const activeCheckouts = checkouts.filter(c => !c.returnedAt);
-
-      return `<div class="admin-user-card" data-uid="${u.uid}"
-        style="background:var(--warm-white);border:1px solid var(--border);
-               border-radius:4px;margin-bottom:.5rem;overflow:hidden;cursor:pointer;
-               transition:border-color .15s;"
-        onclick="adminToggleUserCard('${u.uid}')">
-
-        <div style="display:flex;align-items:center;gap:.6rem;padding:.6rem .8rem;">
-          ${u.photoURL
-            ? `<img src="${u.photoURL}" style="width:32px;height:32px;border-radius:50%;
-                object-fit:cover;border:1px solid var(--border);flex-shrink:0"/>`
-            : `<div style="width:32px;height:32px;border-radius:50%;background:var(--teal);
-                color:#fff;display:flex;align-items:center;justify-content:center;
-                font-size:.65rem;font-weight:700;flex-shrink:0">${initials}</div>`}
-          <div style="flex:1;min-width:0;">
-            <div style="font-weight:700;font-size:.82rem;color:var(--navy2);
-                        white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
-              ${esc(u.displayName || 'Unknown')}
-            </div>
-            <div style="font-size:.7rem;color:var(--muted);
-                        white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
-              ${esc(u.email || '')}
-            </div>
-            <div style="font-size:.65rem;color:var(--muted);margin-top:1px;">
-              ${lastConnected
-                ? `Last connected ${timeAgo(lastConnected)}`
-                : 'Never connected'}
-              ${lastSeen && lastSeen !== lastConnected
-                ? ` · Lounge ${timeAgo(lastSeen)}`
-                : ''}
-            </div>
-          </div>
-          <div style="display:flex;flex-direction:column;align-items:flex-end;
-                      gap:3px;flex-shrink:0;">
-            <span style="font-size:.6rem;font-weight:700;padding:1px 6px;border-radius:8px;
-              background:${isOnline ? '#d1fae5' : 'var(--panel)'};
-              color:${isOnline ? '#065f46' : 'var(--muted)'};">
-              ${isOnline ? '● Online' : '○ Offline'}
-            </span>
-            ${u.isAdmin
-              ? `<span style="font-size:.6rem;font-weight:700;padding:1px 6px;
-                  border-radius:8px;background:#fff8ec;color:var(--gold);">Admin</span>`
-              : ''}
-            ${activeCheckouts.length
-              ? `<span style="font-size:.6rem;color:var(--teal);font-weight:700;">
-                  📖 ${activeCheckouts.length} out</span>`
-              : ''}
-            <span style="font-size:.7rem;color:var(--muted);margin-top:1px;">▾</span>
-          </div>
-        </div>
-
-        ${pres.currentlyReading
-          ? `<div style="padding:0 .8rem .5rem;font-size:.7rem;color:var(--gold);
-                         font-weight:700;">📖 ${esc(pres.currentlyReading)}</div>`
-          : ''}
-
-        <div id="adminUserExpand_${u.uid}"
-          style="display:none;border-top:1px solid var(--border);background:var(--panel);">
-          <div style="padding:.6rem .8rem;font-size:.75rem;color:var(--muted);">
-            Loading…</div>
-        </div>
-      </div>`;
-    }).join('');
-
-    // Store checkout data for lazy expand
-    el._checkoutsByUser = checkoutsByUser;
-
-  } catch(e) {
-    el.innerHTML = `<div style="color:var(--danger);font-size:.82rem">
-      Failed: ${e.message}</div>`;
-    console.error(e);
-  }
-}
-
 function formatDuration(totalSeconds) {
   if(!totalSeconds) return '—';
   const hours = Math.floor(totalSeconds / 3600);
@@ -10175,15 +9769,6 @@ async function adminToggleUserCard(uid) {
 window.adminToggleUserCard = adminToggleUserCard;
 
 // ── NAV ───────────────────────────────────────────────────────────────────────
-document.getElementById('mobNavAdmin')?.addEventListener('click', () => {
-  document.querySelectorAll('.mob-tab').forEach(t => t.classList.remove('active'));
-  document.getElementById('mobNavAdmin').classList.add('active');
-  mob_showPanel('mobPanelAdmin');
-  adminLoadCheckouts();
-  adminLoadKoboDevices();
-  adminLoadUsers();
-});
-
   // ── CATEGORIES (admin-managed) ────────────────────────────────────────────────
 
 const SYSTEM_CATEGORIES = [
@@ -10230,13 +9815,6 @@ async function loadConfig() {
 
 function getCategoryList() { return _categories; }
 function getTagList() { return _globalTags; }
-
-// Populate category datalists throughout the app
-function populateCategoryDatalist(datalistId) {
-  const dl = document.getElementById(datalistId);
-  if(!dl) return;
-  dl.innerHTML = _categories.map(c => `<option value="${esc(c)}">`).join('');
-}
 
 function showQuickCategoryModal() {
   if(!currentId) return;
@@ -10319,10 +9897,6 @@ async function loadUserLists() {
     console.warn('loadUserLists:', e);
     _userLists = SYSTEM_LISTS.map(sl => ({ ...sl, bookIds: [] }));
   }
-}
-
-function getListsForBook(bookId) {
-  return _userLists.filter(l => (l.bookIds || []).includes(bookId));
 }
 
 async function toggleBookInList(listId, bookId) {
