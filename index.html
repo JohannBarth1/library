@@ -171,6 +171,20 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .notif-compose-bar button{flex-shrink:0;background:var(--teal);color:var(--gold2);border:none;border-radius:20px;padding:0 1.1rem;font-weight:700;font-size:.8rem;cursor:pointer;transition:background .15s, transform .1s;}
 .notif-compose-bar button:active{transform:scale(.94);}
 .notif-compose-bar button:hover{background:var(--teal-dark);}
+@media(max-width:768px){
+  #notifFullOverlay{
+    position:fixed;top:calc(var(--header-h) + 10px);left:50%;right:auto;
+    transform:translateX(-50%);
+    width:min(340px,92vw);max-height:min(72vh,540px);
+  }
+  #notifFullOverlay.open{animation:notifBounceOutMobile .32s cubic-bezier(.34,1.56,.64,1);}
+  #notifFullOverlay::before{display:none;}
+  @keyframes notifBounceOutMobile{
+    0%{opacity:0;transform:translateX(-50%) scale(.35) translateY(-16px);}
+    55%{opacity:1;transform:translateX(-50%) scale(1.05) translateY(2px);}
+    100%{transform:translateX(-50%) scale(1) translateY(0);}
+  }
+}
 #notifComposeOverlay{z-index:380;}
 #notifComposeSheet{z-index:381;background:var(--cream);}
 #notifReminderModal{position:fixed;inset:0;z-index:300;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;}
