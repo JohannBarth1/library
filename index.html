@@ -4608,6 +4608,34 @@ async function cacheCoverForOfflineById(bookId) {
   }
 }
 
+// ── SCREEN WAKE LOCK ──────────────────────────────────────────────────────────
+// Keeps the screen from sleeping while actively reading or listening.
+// The browser auto-releases the lock whenever the tab is backgrounded, so
+// re-acquiring on visibilitychange (only while still relevant) is required —
+// otherwise it silently stays off after switching apps and back.
+let _wakeLock = null;
+
+async function _acquireWakeLock() {
+  if(!('wakeLock' in navigator) || _wakeLock) return;
+  try {
+    _wakeLock = await navigator.wakeLock.request('screen');
+    _wakeLock.addEventListener('release', () => { _wakeLock = null; });
+  } catch(e) {
+    // Common + harmless: e.g. tab not visible yet, or the browser declined.
+    console.warn('Wake lock request failed:', e);
+  }
+}
+
+function _releaseWakeLock() {
+  if(_wakeLock) { _wakeLock.release().catch(() => {}); _wakeLock = null; }
+}
+
+document.addEventListener('visibilitychange', () => {
+  if(document.visibilityState === 'visible' && (readerBookId || ttsPlaying)) {
+    _acquireWakeLock();
+  }
+});
+
 async function readCurrentBook(){
   if(!currentId)return;
   const book=await findBookById(currentId);
@@ -4676,6 +4704,7 @@ async function readCurrentBook(){
     document.getElementById('readerOverlay').classList.remove('toolbar-hidden');
     document.getElementById('readerOverlay').classList.add('open');
     document.getElementById('readerOverlay').classList.add('reader-loading'); // hides reader content until target page is ready
+    _acquireWakeLock();
     // (spinner already showing since the top of this function — no need to re-show it here)
     _updateToolbarHandleIcon();
     
@@ -7080,6 +7109,7 @@ function renderReaderBookmarkTab() {
 
 function closeReader(){
   if(typeof ttsStop === 'function') ttsStop();
+  _releaseWakeLock();
   // Move finished book: currently-reading → finished
   if(readerBookId){
     const crList = _userLists.find(l => l.id === 'currently-reading');
@@ -7259,7 +7289,7 @@ setTimeout(ttsLoadVoices, 500);
 
 // ── COLLECT READABLE BLOCKS FROM THE LIVE (ALREADY-PAGINATED) CHAPTER ─────────
 // Walks the real DOM the reader iframe rendered, keeping a reference to each
-// element — that reference is what lets ttsElRect() work out where a
+// element — that reference is what lets ttsPageOfEl() work out where a
 // paragraph currently sits after CSS-column pagination.
 function ttsCollectBlocks() {
   const doc = _readerIframe?.contentDocument || _readerIframe?.contentWindow?.document;
@@ -7282,55 +7312,45 @@ function ttsCollectBlocks() {
   return blocks;
 }
 
-// A block's horizontal position relative to the iframe's own viewport —
-// this reflects whatever page is CURRENTLY scrolled into view (the reader's
-// translateX pagination shows up here), unlike offsetLeft which is a raw
-// pre-scroll layout position. That makes it a reliable way to ask "is this
-// text on screen right now, and if not, which way did it go".
-function ttsElRect(el) {
-  if(!el || !_readerIframe) return null;
-  // el lives inside the iframe's own document, so its getBoundingClientRect()
-  // is already relative to the iframe's viewport (0,0 = top-left of the
-  // iframe's content area) — it must NOT be offset by the iframe's own
-  // position in the parent page, or everything shifts by that amount.
-  const r = el.getBoundingClientRect();
-  return { left: r.left, right: r.right };
+// Which page (0-indexed) a block's own layout position falls on. offsetLeft
+// is a pure layout measurement, unaffected by the page-turn CSS transition —
+// unlike getBoundingClientRect(), which reflects wherever the animation
+// happens to be mid-flight if queried again while a turn is still playing
+// (a couple hundred ms). readerPage itself updates synchronously the moment
+// goToPage() is called, before that animation even starts, so comparing
+// against it here stays accurate regardless of how quickly paragraphs turn
+// pages back-to-back.
+function ttsPageOfEl(el) {
+  if(!el || !_readerColW) return 0;
+  return Math.max(0, Math.round(el.offsetLeft / _readerColW));
 }
 
-// Instantly (no animation) jump however many pages are needed so `el` ends
-// up on the visible page. Used for initial positioning — starting TTS,
-// resuming after a manual navigation, landing at the top of a new chapter —
-// where we want to land in the right spot, not watch it flip repeatedly.
+// Instantly (no animation) jump to whatever page `el` is on. Used for
+// initial positioning — starting TTS, resuming after a manual navigation,
+// landing at the top of a new chapter — where we want to land in the right
+// spot, not watch it flip.
 function ttsJumpToElement(el) {
-  if(!el || !_readerIframe || !_readerColW) return;
-  let guard = 0;
-  while(guard++ < readerPageCount + 2) {
-    const r = ttsElRect(el);
-    if(!r) break;
-    if(r.right <= 0 && readerPage > 0) { goToPage(readerPage - 1, { animate: false }); continue; }
-    if(r.left >= _readerColW && readerPage < readerPageCount - 1) { goToPage(readerPage + 1, { animate: false }); continue; }
-    break;
+  if(!el || !_readerColW) return;
+  const target = ttsPageOfEl(el);
+  if(target !== readerPage && target >= 0 && target < readerPageCount) {
+    goToPage(target, { animate: false });
   }
 }
 
-// Turns exactly one page (animated) toward `el` if it's no longer on the
-// current page — this is the "watch it follow along" turn during playback,
-// which normally only needs to move a single page at a time.
+// Turns to `el`'s page (animated) if it's not the one currently shown —
+// the "watch it follow along" turn during playback.
 function ttsFollowToElement(el) {
-  if(!el || !_readerIframe || !_readerColW) return;
-  const r = ttsElRect(el);
-  if(!r) return;
-  if(r.right <= 0 && readerPage > 0) goToPage(readerPage - 1, { animate: true });
-  else if(r.left >= _readerColW && readerPage < readerPageCount - 1) goToPage(readerPage + 1, { animate: true });
+  if(!el || !_readerColW) return;
+  const target = ttsPageOfEl(el);
+  if(target !== readerPage && target >= 0 && target < readerPageCount) {
+    goToPage(target, { animate: true });
+  }
 }
 
-// The first block that hasn't already fully scrolled past the page the
-// reader is currently showing — i.e. wherever reading should resume from.
+// The first block whose page is at or after the one the reader is
+// currently showing — i.e. wherever reading should resume from.
 function ttsFindStartIndex(blocks) {
-  const idx = blocks.findIndex(b => {
-    const r = ttsElRect(b.el);
-    return r && r.right > 0;
-  });
+  const idx = blocks.findIndex(b => ttsPageOfEl(b.el) >= readerPage);
   return idx >= 0 ? idx : 0;
 }
 
@@ -7370,6 +7390,7 @@ async function startTTS(bookId) {
 
   ttsLoadVoices();
   ttsUpdatePanelInfo();
+  _acquireWakeLock();
 
   ttsPlaying = true;
   document.getElementById('ttsBtnPlay').textContent = '⏸';
@@ -7514,6 +7535,7 @@ function ttsResume() {
     if(block) ttsJumpToElement(block.el);
   }
 
+  _acquireWakeLock();
   ttsPlaying = true;
   document.getElementById('ttsBtnPlay').textContent = '⏸';
   document.getElementById('ttsBtnPlay').classList.add('active');
