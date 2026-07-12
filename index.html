@@ -91,28 +91,44 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .notif-preview{font-size:.78rem;color:var(--muted);margin-top:.15rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-style:italic;}
 .notif-meta{font-size:.68rem;color:var(--muted);margin-top:.3rem;letter-spacing:.02em;}
 /* Hero: the original notification, kept visually separate from the reply chat below it */
-.notif-hero{background:var(--cream);border:1px solid var(--border);border-top:3px solid var(--gold);border-radius:2px;padding:.9rem 1rem 1rem;margin:1rem 1rem .3rem;box-shadow:2px 3px 10px rgba(0,0,0,.12);flex-shrink:0;}
-.notif-hero-title{font-family:'Playfair Display',serif;font-size:1.15rem;font-weight:700;color:var(--navy2);margin:.35rem 0 .5rem;line-height:1.25;}
-.notif-hero-body{font-size:.88rem;color:var(--navy2);white-space:pre-wrap;word-break:break-word;line-height:1.5;}
-.notif-hero-meta{display:flex;align-items:center;gap:.5rem;margin-top:.7rem;padding-top:.6rem;border-top:1px dashed var(--border);}
-.notif-replies-label{font-family:'Playfair Display',serif;font-style:italic;font-size:.74rem;color:var(--muted);margin:.9rem 1rem .4rem;text-align:center;position:relative;}
+.notif-hero{
+  background:linear-gradient(180deg, rgba(200,149,42,.16), rgba(200,149,42,.07) 60%, var(--cream));
+  border:1px solid rgba(200,149,42,.4);border-top:4px solid var(--gold);border-radius:3px;
+  padding:1.1rem 1.2rem 1.2rem;margin:1rem 1rem 1.1rem;
+  box-shadow:2px 4px 16px rgba(15,26,46,.14);flex-shrink:0;position:relative;
+}
+.notif-hero::after{
+  content:'';position:absolute;top:0;left:1.2rem;width:34px;height:6px;
+  background:var(--gold);border-radius:0 0 3px 3px;box-shadow:0 1px 3px rgba(0,0,0,.25);
+}
+.notif-hero-title{font-family:'Playfair Display',serif;font-size:1.3rem;font-weight:700;color:var(--navy2);margin:.5rem 0 .55rem;line-height:1.25;}
+.notif-hero-body{font-size:.9rem;color:var(--navy2);white-space:pre-wrap;word-break:break-word;line-height:1.55;}
+.notif-hero-meta{display:flex;align-items:center;gap:.5rem;margin-top:.8rem;padding-top:.65rem;border-top:1px dashed rgba(200,149,42,.5);}
+.notif-chat-area{
+  background:rgba(15,26,46,.03);
+  box-shadow:inset 0 1px 4px rgba(15,26,46,.08);
+  margin:0 1rem 1rem;border-radius:8px;padding:.2rem .7rem .7rem;flex:1;
+}
+.notif-replies-label{font-family:'Playfair Display',serif;font-style:italic;font-size:.68rem;color:var(--muted);margin:0;padding:.6rem 0 .3rem;text-align:center;position:relative;}
 .notif-replies-label::before,.notif-replies-label::after{content:'';display:inline-block;width:22%;height:1px;background:var(--border);vertical-align:middle;margin:0 .5rem;}
 .notif-avatar{width:26px;height:26px;border-radius:50%;flex-shrink:0;object-fit:cover;background:var(--teal-dark);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'Playfair Display',serif;font-size:.7rem;font-weight:700;}
 .notif-hero-meta .notif-avatar{width:22px;height:22px;font-size:.62rem;}
 .notif-thread-msg{
-  padding:.65rem .9rem .6rem;border-radius:4px;margin-bottom:.8rem;background:var(--warm-white);
+  padding:.4rem .6rem;border-radius:4px;margin:.5rem 0;background:var(--warm-white);
   border:1px solid var(--border);border-top:2px solid var(--gold);position:relative;max-width:88%;
-  display:flex;gap:.5rem;align-items:flex-start;box-shadow:1px 2px 8px rgba(15,26,46,.07);
+  display:flex;gap:.4rem;align-items:flex-start;box-shadow:1px 1px 5px rgba(15,26,46,.06);
   animation:notifMsgIn .25s ease both;
 }
+.notif-thread-msg .notif-avatar{width:20px;height:20px;font-size:.58rem;}
 .notif-thread-msg.mine{margin-left:auto;flex-direction:row-reverse;background:rgba(42,124,138,0.09);border-top-color:var(--teal-dark);}
 @keyframes notifMsgIn{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}
 .notif-thread-bubble{min-width:0;flex:1;}
-.notif-thread-author{font-family:'Playfair Display',serif;font-size:.7rem;font-weight:700;color:var(--teal-dark);margin-bottom:.2rem;}
-.notif-thread-text{font-size:.83rem;color:var(--navy2);white-space:pre-wrap;word-break:break-word;}
-.notif-thread-time{font-size:.62rem;color:var(--muted);margin-top:.3rem;}
-.notif-thread-del{position:absolute;top:.2rem;right:.35rem;background:none;border:none;color:var(--muted);cursor:pointer;font-size:.7rem;padding:.1rem .3rem;}
-.notif-thread-msg.mine .notif-thread-del{right:auto;left:.35rem;}
+.notif-thread-head{display:flex;align-items:center;justify-content:space-between;gap:.4rem;}
+.notif-thread-author{font-family:'Playfair Display',serif;font-size:.66rem;font-weight:700;color:var(--teal-dark);}
+.notif-thread-text{font-size:.8rem;color:var(--navy2);white-space:pre-wrap;word-break:break-word;margin-top:.1rem;}
+.notif-thread-time{font-size:.6rem;color:var(--muted);margin-top:.15rem;}
+.notif-thread-del{flex-shrink:0;background:none;border:none;color:var(--muted);cursor:pointer;font-size:.68rem;padding:.05rem .2rem;line-height:1;}
+.notif-thread-del:hover{color:var(--rust);}
 .notif-compose-bar{display:flex;gap:.5rem;padding:.7rem 1rem;border-top:1px solid var(--border);background:var(--cream);flex-shrink:0;}
 .notif-compose-bar textarea{flex:1;resize:none;border:1px solid var(--border);border-radius:8px;padding:.5rem .7rem;font-family:'Lato',sans-serif;font-size:16px;min-height:2.4rem;max-height:6rem;background:var(--warm-white);}
 .notif-compose-bar button{flex-shrink:0;background:var(--teal);color:var(--gold2);border:none;border-radius:20px;padding:0 1.1rem;font-weight:700;font-size:.8rem;cursor:pointer;transition:background .15s, transform .1s;}
@@ -1765,8 +1781,10 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
   </div>
   <div class="mob-detail-scroll" style="padding:0;display:flex;flex-direction:column;">
     <div class="notif-hero" id="notifThreadHero"></div>
-    <div class="notif-replies-label">Replies</div>
-    <div id="notifThreadList" style="padding:0 1rem 1rem;"></div>
+    <div class="notif-chat-area">
+      <div class="notif-replies-label">Replies</div>
+      <div id="notifThreadList"></div>
+    </div>
   </div>
   <div class="notif-compose-bar">
     <textarea id="notifReplyInput" placeholder="Write a reply…" rows="1"></textarea>
@@ -5285,8 +5303,10 @@ function renderNotifThread(replies) {
     return `<div class="notif-thread-msg ${mine?'mine':''}">
       ${notifAvatarHTML(r.authorName, r.authorPhoto)}
       <div class="notif-thread-bubble">
-        ${mine?`<button class="notif-thread-del" data-delreply="${r.id}">✕</button>`:''}
-        <div class="notif-thread-author">${esc(r.authorName||'Someone')}</div>
+        <div class="notif-thread-head">
+          <div class="notif-thread-author">${esc(r.authorName||'Someone')}</div>
+          ${mine?`<button class="notif-thread-del" data-delreply="${r.id}">✕</button>`:''}
+        </div>
         <div class="notif-thread-text">${esc(r.text||'')}</div>
         <div class="notif-thread-time">${r.createdAt?.toDate ? timeAgo(r.createdAt.toDate()) : 'sending…'}</div>
       </div>
