@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>eLibrary</title>
 <meta name="theme-color" content="#0f1a2e"/>
+<meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="eLibrary"/>
 <link rel="manifest" id="manifestLink"/>
@@ -2094,7 +2095,7 @@ import { getStorage, ref as storageRef, uploadBytes, getDownloadURL, getBytes }
 
 // ── PWA ──────────────────────────────────────────────────────────────────────
 (function(){
-  const manifest={name:'eLibrary',short_name:'eLibrary',description:'Your personal EPUB library',start_url:'./',display:'standalone',background_color:'#0f1a2e',theme_color:'#0f1a2e',icons:[{src:"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'%3E%3Crect width='192' height='192' rx='32' fill='%230f1a2e'/%3E%3Ctext y='130' x='30' font-size='120' fill='%23c8952a'%3E📚%3C/text%3E%3C/svg%3E",sizes:'192x192',type:'image/svg+xml'},{src:"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='80' fill='%230f1a2e'/%3E%3Ctext y='360' x='60' font-size='320' fill='%23c8952a'%3E📚%3C/text%3E%3C/svg%3E",sizes:'512x512',type:'image/svg+xml'}]};
+  const manifest={name:'eLibrary',short_name:'eLibrary',description:'Your personal EPUB library',start_url:new URL('./', location.href).href,display:'standalone',background_color:'#0f1a2e',theme_color:'#0f1a2e',icons:[{src:"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'%3E%3Crect width='192' height='192' rx='32' fill='%230f1a2e'/%3E%3Ctext y='130' x='30' font-size='120' fill='%23c8952a'%3E📚%3C/text%3E%3C/svg%3E",sizes:'192x192',type:'image/svg+xml'},{src:"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='80' fill='%230f1a2e'/%3E%3Ctext y='360' x='60' font-size='320' fill='%23c8952a'%3E📚%3C/text%3E%3C/svg%3E",sizes:'512x512',type:'image/svg+xml'}]};
   const blob=new Blob([JSON.stringify(manifest)],{type:'application/json'});
   document.getElementById('manifestLink').href=URL.createObjectURL(blob);
   if('serviceWorker' in navigator){const sw=`
@@ -2147,6 +2148,7 @@ const app=initializeApp({apiKey:'AIzaSyA1hCS7-C_W0VS7_JVcPIPdJ4aluDuL_-Q',authDo
 const auth=getAuth(app),db=getFirestore(app),storage=getStorage(app),gprovider=new GoogleAuthProvider();
 
 // ── STATE ─────────────────────────────────────────────────────────────────────
+const COVER_CACHE_NAME = 'elib-cover-cache-v1'; // hoisted above primeCoverCache()'s call site below — it's a const, so it must be initialized before that call runs
 let mobLibFilter = 'all';
 let mobLibCat    = 'All';
 let mobLibSearch = '';
@@ -4509,8 +4511,8 @@ async function prewarmOfflineEpubs() {
 // pattern as the EPUB cache above, plus an in-memory map of blob: object URLs
 // so getCoverSrc() (called synchronously all over the tile-rendering code) can
 // return a working <img src> immediately, without every render site needing to
-// become async.
-const COVER_CACHE_NAME = 'elib-cover-cache-v1';
+// become async. (COVER_CACHE_NAME itself is declared near the top of the file,
+// above where primeCoverCache() gets called.)
 
 function _coverCacheKey(bookId) {
   return new Request(location.origin + '/__offline_cover__/' + encodeURIComponent(bookId));
