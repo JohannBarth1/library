@@ -50,12 +50,38 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .notif-bell-wrap{position:relative;display:flex;align-items:center;}
 .notif-bell-btn{background:none;border:none;color:var(--cream);font-size:1.15rem;cursor:pointer;padding:.3rem .4rem;line-height:1;position:relative;-webkit-tap-highlight-color:transparent;}
 .notif-badge{position:absolute;top:-2px;right:-2px;background:#c0392b;color:#fff;font-size:.6rem;font-weight:700;border-radius:10px;min-width:16px;height:16px;display:flex;align-items:center;justify-content:center;padding:0 3px;line-height:1;pointer-events:none;}
-#notifFullOverlay{position:fixed;inset:0;z-index:260;background:var(--warm-white);display:none;flex-direction:column;}
-.notif-list-item{padding:.85rem 1.2rem;border-bottom:1px solid var(--border);cursor:pointer;display:flex;gap:.7rem;align-items:flex-start;transition:background .12s;}
-.notif-list-item:hover{background:rgba(42,124,138,0.08);}
-.notif-list-item.unread{background:rgba(42,124,138,0.06);}
-.notif-dot{width:9px;height:9px;border-radius:50%;background:var(--teal);flex-shrink:0;margin-top:.35rem;visibility:hidden;}
-.notif-list-item.unread .notif-dot{visibility:visible;}
+.notif-bell-wiggle{animation:notifBellWiggle .5s ease;}
+@keyframes notifBellWiggle{0%,100%{transform:rotate(0);}20%{transform:rotate(-14deg);}40%{transform:rotate(11deg);}60%{transform:rotate(-8deg);}80%{transform:rotate(5deg);}}
+#notifFullOverlay{
+  position:fixed;top:0;left:0;right:0;bottom:var(--mob-nav-h);z-index:260;
+  background:
+    radial-gradient(rgba(15,26,46,.025) 1px, transparent 1px) 0 0/3px 3px,
+    var(--cream);
+  display:none;flex-direction:column;
+  border-top-left-radius:14px;border-top-right-radius:14px;
+  box-shadow:0 -8px 30px rgba(15,26,46,.18);
+  animation:notifSheetIn .28s cubic-bezier(.2,.8,.3,1);
+}
+@keyframes notifSheetIn{from{transform:translateY(14px);opacity:0;}to{transform:translateY(0);opacity:1;}}
+.notif-sheet-anim{animation:notifSheetIn .28s cubic-bezier(.2,.8,.3,1);}
+.notif-list-item{
+  padding:.85rem 1.2rem;margin:.6rem .8rem;cursor:pointer;display:flex;gap:.7rem;align-items:flex-start;
+  background:var(--warm-white);border:1px solid var(--border);border-radius:3px;
+  box-shadow:1px 2px 6px rgba(15,26,46,.08);
+  transition:transform .15s ease, box-shadow .15s ease, background .12s;
+}
+.notif-list-item:nth-child(odd){transform:rotate(-.35deg);}
+.notif-list-item:nth-child(even){transform:rotate(.35deg);}
+.notif-list-item:hover{transform:rotate(0deg) translateY(-1px);box-shadow:2px 4px 12px rgba(15,26,46,.14);}
+.notif-list-item.unread{background:linear-gradient(rgba(200,149,42,.05),rgba(200,149,42,.05)),var(--warm-white);border-color:rgba(200,149,42,.35);}
+.notif-dot{
+  width:11px;height:11px;border-radius:46% 54% 55% 45%/50% 45% 55% 50%;
+  background:radial-gradient(circle at 35% 30%, var(--rust) 0%, #8a3410 100%);
+  box-shadow:0 1px 2px rgba(0,0,0,.3), inset -1px -1px 1px rgba(0,0,0,.25);
+  flex-shrink:0;margin-top:.35rem;visibility:hidden;
+}
+.notif-list-item.unread .notif-dot{visibility:visible;animation:notifSeal .4s ease;}
+@keyframes notifSeal{from{transform:scale(0);}70%{transform:scale(1.25);}to{transform:scale(1);}}
 .notif-type-chip{font-family:'Playfair Display',serif;font-size:.6rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;padding:.15rem .5rem;border-radius:2px;display:inline-block;margin-bottom:.3rem;border:1px solid currentColor;background:var(--warm-white);}
 .notif-type-chip.book_request{color:#8a6414;background:rgba(200,149,42,.12);}
 .notif-type-chip.broadcast{color:var(--teal-dark);background:rgba(42,124,138,.1);}
@@ -73,19 +99,27 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .notif-replies-label::before,.notif-replies-label::after{content:'';display:inline-block;width:22%;height:1px;background:var(--border);vertical-align:middle;margin:0 .5rem;}
 .notif-avatar{width:26px;height:26px;border-radius:50%;flex-shrink:0;object-fit:cover;background:var(--teal-dark);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'Playfair Display',serif;font-size:.7rem;font-weight:700;}
 .notif-hero-meta .notif-avatar{width:22px;height:22px;font-size:.62rem;}
-.notif-thread-msg{padding:.6rem .9rem;border-radius:10px;margin-bottom:.7rem;background:var(--warm-white);border:1px solid var(--border);position:relative;max-width:88%;display:flex;gap:.5rem;align-items:flex-start;}
-.notif-thread-msg.mine{margin-left:auto;flex-direction:row-reverse;background:rgba(42,124,138,0.09);}
+.notif-thread-msg{
+  padding:.65rem .9rem .6rem;border-radius:4px;margin-bottom:.8rem;background:var(--warm-white);
+  border:1px solid var(--border);border-top:2px solid var(--gold);position:relative;max-width:88%;
+  display:flex;gap:.5rem;align-items:flex-start;box-shadow:1px 2px 8px rgba(15,26,46,.07);
+  animation:notifMsgIn .25s ease both;
+}
+.notif-thread-msg.mine{margin-left:auto;flex-direction:row-reverse;background:rgba(42,124,138,0.09);border-top-color:var(--teal-dark);}
+@keyframes notifMsgIn{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}
 .notif-thread-bubble{min-width:0;flex:1;}
 .notif-thread-author{font-family:'Playfair Display',serif;font-size:.7rem;font-weight:700;color:var(--teal-dark);margin-bottom:.2rem;}
 .notif-thread-text{font-size:.83rem;color:var(--navy2);white-space:pre-wrap;word-break:break-word;}
 .notif-thread-time{font-size:.62rem;color:var(--muted);margin-top:.3rem;}
 .notif-thread-del{position:absolute;top:.2rem;right:.35rem;background:none;border:none;color:var(--muted);cursor:pointer;font-size:.7rem;padding:.1rem .3rem;}
 .notif-thread-msg.mine .notif-thread-del{right:auto;left:.35rem;}
-.notif-compose-bar{display:flex;gap:.5rem;padding:.7rem 1rem;border-top:1px solid var(--border);background:var(--warm-white);flex-shrink:0;}
-.notif-compose-bar textarea{flex:1;resize:none;border:1px solid var(--border);border-radius:8px;padding:.5rem .7rem;font-family:'Lato',sans-serif;font-size:16px;min-height:2.4rem;max-height:6rem;}
-.notif-compose-bar button{flex-shrink:0;background:var(--teal);color:#fff;border:none;border-radius:8px;padding:0 1rem;font-weight:700;font-size:.8rem;cursor:pointer;}
+.notif-compose-bar{display:flex;gap:.5rem;padding:.7rem 1rem;border-top:1px solid var(--border);background:var(--cream);flex-shrink:0;}
+.notif-compose-bar textarea{flex:1;resize:none;border:1px solid var(--border);border-radius:8px;padding:.5rem .7rem;font-family:'Lato',sans-serif;font-size:16px;min-height:2.4rem;max-height:6rem;background:var(--warm-white);}
+.notif-compose-bar button{flex-shrink:0;background:var(--teal);color:var(--gold2);border:none;border-radius:20px;padding:0 1.1rem;font-weight:700;font-size:.8rem;cursor:pointer;transition:background .15s, transform .1s;}
+.notif-compose-bar button:active{transform:scale(.94);}
+.notif-compose-bar button:hover{background:var(--teal-dark);}
 #notifComposeOverlay{z-index:380;}
-#notifComposeSheet{z-index:381;}
+#notifComposeSheet{z-index:381;background:var(--cream);}
 #notifReminderModal{position:fixed;inset:0;z-index:300;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;}
 .notif-reminder-card{background:var(--warm-white);border-radius:14px;padding:1.4rem 1.3rem;max-width:320px;text-align:center;box-shadow:0 10px 40px rgba(0,0,0,.3);}
 .notif-reminder-card .rc-icon{font-size:2rem;margin-bottom:.4rem;}
@@ -1722,7 +1756,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 </div>
 
 <!-- Notifications: thread view -->
-<div id="notifThreadOverlay" style="display:none;position:fixed;inset:0;z-index:270;background:var(--warm-white);flex-direction:column;">
+<div id="notifThreadOverlay" class="notif-sheet-anim" style="display:none;position:fixed;top:0;left:0;right:0;bottom:var(--mob-nav-h);z-index:270;background:var(--cream);flex-direction:column;border-top-left-radius:14px;border-top-right-radius:14px;box-shadow:0 -8px 30px rgba(15,26,46,.18);">
   <div class="mob-detail-header">
     <button class="mob-back-btn" id="btnNotifThreadBack">← Back</button>
     <div id="notifThreadTitle" style="font-weight:700;font-size:.85rem;color:var(--navy2);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></div>
@@ -5118,6 +5152,13 @@ function notifUnreadCount() {
 function updateNotifBadge() {
   const badge = document.getElementById('notifBadge');
   const count = notifUnreadCount();
+  if(count > (window._notifPrevCount||0)) {
+    const bell = document.getElementById('btnNotifBell');
+    bell?.classList.remove('notif-bell-wiggle');
+    void bell?.offsetWidth; // restart animation
+    bell?.classList.add('notif-bell-wiggle');
+  }
+  window._notifPrevCount = count;
   if(count > 0) {
     badge.textContent = count > 9 ? '9+' : count;
     badge.style.display = 'flex';
@@ -7322,7 +7363,17 @@ function ttsCollectBlocks() {
 // pages back-to-back.
 function ttsPageOfEl(el) {
   if(!el || !_readerColW) return 0;
-  return Math.max(0, Math.round(el.offsetLeft / _readerColW));
+  // offsetLeft is only relative to the nearest *positioned* ancestor, not
+  // necessarily the page origin — any block sitting inside a positioned
+  // wrapper (headers, figures, blockquotes) would otherwise be measured
+  // against the wrong reference point and land on the wrong page. Walk the
+  // offsetParent chain and sum, so this works regardless of what's positioned.
+  let x = 0, node = el;
+  while(node) {
+    x += node.offsetLeft || 0;
+    node = node.offsetParent;
+  }
+  return Math.max(0, Math.round(x / _readerColW));
 }
 
 // Instantly (no animation) jump to whatever page `el` is on. Used for
