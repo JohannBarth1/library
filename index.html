@@ -1509,7 +1509,6 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
         <div id="notifThreadInline" class="notif-inline-detail">
           <div class="notif-inline-body" id="notifThreadBody"></div>
           <div class="notif-chat-area">
-            <div class="notif-replies-label">Replies</div>
             <div id="notifThreadList"></div>
           </div>
           <div class="notif-compose-bar">
@@ -1518,7 +1517,6 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
           </div>
           <div class="notif-inline-foot">
             <button id="btnNotifThreadDelete" title="Delete notification" style="display:none;">🗑 Delete</button>
-            <button id="btnNotifThreadBack" title="Close">Close</button>
           </div>
         </div>
       </div>
@@ -1948,6 +1946,16 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
     <div class="modal-actions">
       <button class="btn-cancel" id="btnCancelShare">Cancel</button>
       <button class="btn-save" id="btnConfirmShare">Share it</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="broadcastModal">
+  <div class="modal" style="max-width:420px">
+    <h3 id="broadcastModalTitle">📢 Announcement</h3>
+    <p id="broadcastModalBody" style="font-size:.88rem;color:var(--navy2);line-height:1.6;white-space:pre-wrap"></p>
+    <div class="modal-actions">
+      <button class="btn-save" id="btnBroadcastModalOk">Got it</button>
     </div>
   </div>
 </div>
@@ -5189,6 +5197,23 @@ let appNotifUnsub = null;
 let appNotifRepliesUnsub = null;
 let currentNotifThreadId = null;
 let notifComposeType = 'book_request';
+let _broadcastModalShownThisSession = false;
+
+function maybeShowBroadcastModal() {
+  if (_broadcastModalShownThisSession || !currentUser) return;
+  const unread = appNotifications.find(n =>
+    n.type === 'broadcast' && !(n.readBy || []).includes(currentUser.uid)
+  );
+  if (!unread) return;
+  _broadcastModalShownThisSession = true;
+  document.getElementById('broadcastModalTitle').textContent = '📢 ' + (unread.title || 'Announcement');
+  document.getElementById('broadcastModalBody').textContent = unread.body || '';
+  document.getElementById('broadcastModal').style.display = 'flex';
+  document.getElementById('btnBroadcastModalOk').onclick = () => {
+    document.getElementById('broadcastModal').style.display = 'none';
+    markNotifRead(unread.id);
+  };
+}
 const notifThreadInlineEl = document.getElementById('notifThreadInline');
 function startAppNotifListener() {
   if(appNotifUnsub || !currentUser) return;
@@ -5227,6 +5252,17 @@ function updateNotifBadge() {
     badge.style.display = 'none';
   }
 }
+
+appNotifUnsub = onSnapshot(q, snap => {
+  appNotifications = snap.docs
+    .map(d => ({ id: d.id, ...d.data() }))
+    .filter(n => !n.deleted);
+  updateNotifBadge();
+  maybeShowBroadcastModal();
+  if(document.getElementById('notifFullOverlay').classList.contains('open')) {
+    renderNotifList();
+  }
+}, e => console.warn('App notif listener:', e));
 
 async function maybeShowNotifReminder() {
   if(!currentUser) return;
@@ -5388,7 +5424,7 @@ function closeNotifThreadInline() {
 function renderNotifThread(replies) {
   const listEl = document.getElementById('notifThreadList');
   if(!replies.length) {
-    listEl.innerHTML = `<div style="text-align:center;color:var(--muted);font-size:.78rem;padding:.5rem 0 1rem;">No replies yet — be the first to respond.</div>`;
+    listEl.innerHTML = '';
     return;
   }
   listEl.innerHTML = replies.map(r => {
@@ -5415,8 +5451,6 @@ function renderNotifThread(replies) {
     });
   });
 }
-
-document.getElementById('btnNotifThreadBack').addEventListener('click', closeNotifThreadInline);
 
 document.getElementById('btnNotifThreadDelete').addEventListener('click', async () => {
   if(!currentNotifThreadId) return;
@@ -6005,10 +6039,11 @@ function _attachReaderTapHandlers(doc) {
   }, { passive: false });
 
   overlay.addEventListener('touchmove', e => {
+    e.preventDefault();
     const dx = e.touches[0].clientX - tx0;
     const dy = e.touches[0].clientY - ty0;
     if (Math.abs(dx) > 10 || Math.abs(dy) > 10) clearTimeout(lpTimer);
-  }, { passive: true });
+  }, { passive: false });
 
   overlay.addEventListener('touchend', e => {
     clearTimeout(lpTimer);
@@ -6158,12 +6193,7 @@ body {
   box-sizing: content-box;
   padding: 0;
   margin: 0;
-  /* PATCH: was orphans:3/widows:3 — that forces at least 3 lines of a
-     paragraph to fit before/after a column break, so whenever fewer than
-     3 lines of a new paragraph would fit at the bottom of a column, the
-     browser pushed the ENTIRE paragraph to the next column instead,
-     leaving a big blank gap. orphans/widows:1 lets a column fill almost
-     all the way to the bottom before breaking. */
+  -webkit-backface-visibility: hidden;
   orphans: 1;
   widows: 1;
 }
