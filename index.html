@@ -7647,17 +7647,27 @@ function ttsPageOfRange(range) {
   return page;
 }
 
+let _ttsPendingWordPage = null; // last measured target page, awaiting confirmation
+
 function ttsFollowToWordOffset(block, charIndex) {
   if(!_readerColW || charIndex == null) return;
   const range = ttsRangeAtCharOffset(block.el, charIndex);
   if(!range) return;
   const page = ttsPageOfRange(range);
-  if(page == null) return;
-  // Same forward-only guard as ttsFollowToElement — a word sitting right
-  // at a column break can measure as "the previous page" on one check
-  // and "this page" on the next; only ever follow forward.
-  if(page > readerPage && page < readerPageCount) {
+  if(page == null || page < 0 || page >= readerPageCount || page === readerPage) {
+    _ttsPendingWordPage = null;
+    return;
+  }
+  // A word sitting right at a column break can be mis-measured as the
+  // wrong page on a single sample. Require the SAME target page on two
+  // consecutive checks before acting on it — filters out one-off
+  // mismeasurements while still following within a word or two of a
+  // genuine page change.
+  if(_ttsPendingWordPage === page) {
     goToPage(page, { animate: true });
+    _ttsPendingWordPage = null;
+  } else {
+    _ttsPendingWordPage = page;
   }
 }
 
@@ -7755,6 +7765,7 @@ async function ttsAdvanceChapter(dir) {
 // ── SPEAK ONE BLOCK, TURNING THE READER PAGE TO MATCH ─────────────────────────
 function ttsSpeakNextParagraph() {
   if(!ttsPlaying) return;
+  _ttsPendingWordPage = null;
 
   // The reader can be navigated manually (Contents panel, a link tap) while
   // TTS is speaking — if that happened, our block list belongs to a chapter
