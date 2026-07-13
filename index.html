@@ -47,6 +47,8 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .header-right{display:flex;gap:.5rem;align-items:center;flex-shrink:0;}
 .hbtn{border:none;padding:.42rem .85rem;font-family:'Lato',sans-serif;font-size:.72rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;border-radius:2px;transition:background .2s;white-space:nowrap;}
 /* ── Notifications bell + dropdown ───────────────────────────────────────── */
+.notif-scrim{display:none;position:fixed;inset:0;z-index:94;background:transparent;}
+.notif-scrim.open{display:block;}
 .notif-bell-wrap{position:relative;display:flex;align-items:center;}
 .notif-bell-btn{background:none;border:none;color:var(--cream);font-size:1.15rem;cursor:pointer;padding:.3rem .4rem;line-height:1;position:relative;-webkit-tap-highlight-color:transparent;}
 .notif-badge{position:absolute;top:-2px;right:-2px;background:#c0392b;color:#fff;font-size:.6rem;font-weight:700;border-radius:10px;min-width:16px;height:16px;display:flex;align-items:center;justify-content:center;padding:0 3px;line-height:1;pointer-events:none;}
@@ -1484,6 +1486,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
     <button class="hbtn hbtn-home btnToggleSettingsDesk" id="btnDeskHome">📚 Home</button>
     <button class="hbtn hbtn-upload" id="btnHeaderUpload">📤 Upload</button>
     <button class="hbtn hbtn-ghost btnToggleSettingsDesk" id="btnToggleSettings">⚙</button>
+    <div id="notifScrim" class="notif-scrim"></div>
     <div class="notif-bell-wrap">
       <button class="notif-bell-btn" id="btnNotifBell" title="Notifications">🔔<div id="notifBadge" class="notif-badge" style="display:none;"></div></button>
       <div id="notifFullOverlay">
@@ -2376,10 +2379,6 @@ document.getElementById('headerUser').addEventListener('click',e=>{e.stopPropaga
 document.addEventListener('click',(e)=>{
   document.getElementById('userDropdown').classList.remove('open');
   document.querySelectorAll('.action-dropdown-menu.open').forEach(m=>m.classList.remove('open'));
-  const notifDrop = document.getElementById('notifFullOverlay');
-  if(notifDrop.classList.contains('open') && !notifDrop.contains(e.target)) {
-    closeNotifFullList();
-  }
   const drawer = document.getElementById('bookDrawer');
 if (
     drawer.classList.contains('open') &&
@@ -5245,6 +5244,7 @@ async function maybeShowNotifReminder() {
 
 function openNotifFullList() {
   document.getElementById('notifFullOverlay').classList.add('open');
+  document.getElementById('notifScrim').classList.add('open');
   renderNotifList();
   if(currentUser) {
     setDoc(doc(db, 'users', currentUser.uid), { notifLastSeenAt: serverTimestamp() }, { merge: true }).catch(()=>{});
@@ -5253,9 +5253,11 @@ function openNotifFullList() {
 }
 function closeNotifFullList() {
   document.getElementById('notifFullOverlay').classList.remove('open');
+  document.getElementById('notifScrim').classList.remove('open');
   closeNotifThreadInline();
   closeNotifCompose();
 }
+document.getElementById('notifScrim').addEventListener('click', closeNotifFullList);
 document.getElementById('btnNotifBell').addEventListener('click', e => {
   e.stopPropagation();
   const overlay = document.getElementById('notifFullOverlay');
@@ -5282,6 +5284,15 @@ function notifTypeEmoji(type) {
 
 function renderNotifList() {
   const listEl = document.getElementById('notifListEl');
+  const detail = document.getElementById('notifThreadInline');
+  // openNotifThread() reparents `detail` into listEl (right after the tapped
+  // row) so it reads as an inline accordion. If it's in there when we wipe
+  // listEl.innerHTML below, the node itself gets destroyed — not just hidden
+  // — which is why expanding a second notification stopped working after the
+  // first: `notifThreadInline` no longer existed in the document at all.
+  // Detach it first so it survives the rebuild, then reattach afterward.
+  if(detail.parentNode) detail.parentNode.removeChild(detail);
+
   if(!appNotifications.length) {
     listEl.innerHTML = `<div style="padding:2rem 1.2rem;text-align:center;color:var(--muted);font-size:.85rem;">No notifications yet.</div>`;
     return;
@@ -5304,10 +5315,15 @@ function renderNotifList() {
   listEl.querySelectorAll('[data-notifid]').forEach(el => {
     el.addEventListener('click', () => openNotifThread(el.dataset.notifid));
   });
-  // Realtime updates rebuild this list — re-apply the "open" highlight so an
-  // expanded thread doesn't visually disconnect from its row mid-conversation.
+  // Realtime updates rebuild this list — re-apply the "open" highlight and
+  // reattach the (still-live) detail panel so an expanded thread doesn't
+  // visually disconnect from its row mid-conversation.
   if(currentNotifThreadId) {
-    listEl.querySelector(`[data-notifid="${currentNotifThreadId}"]`)?.classList.add('expanded');
+    const row = listEl.querySelector(`[data-notifid="${currentNotifThreadId}"]`);
+    if(row) {
+      row.classList.add('expanded');
+      row.insertAdjacentElement('afterend', detail);
+    }
   }
 }
 
