@@ -79,11 +79,31 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 }
 .notif-dropdown-head{
   display:flex;align-items:center;justify-content:space-between;gap:.5rem;
-  padding:.7rem .9rem;border-bottom:1px solid var(--border);flex-shrink:0;
+  padding:.7rem .9rem;border-bottom:2px double var(--gold);flex-shrink:0;
   font-family:'Playfair Display',serif;font-weight:700;font-size:.85rem;color:var(--navy2);
+  letter-spacing:.03em;
 }
-.notif-dropdown-head button{background:none;border:none;cursor:pointer;font-size:.72rem;font-weight:700;letter-spacing:.03em;color:var(--teal-dark);opacity:.85;padding:.2rem .3rem;}
-.notif-dropdown-head button:hover{opacity:1;}
+
+.notif-btn{
+  font-family:'Playfair Display',serif;font-weight:700;letter-spacing:.04em;
+  cursor:pointer;border-radius:5px;
+  transition:transform .1s ease, box-shadow .15s ease, background .15s ease, border-color .15s ease;
+}
+.notif-btn:active{ transform:scale(.95); }
+.notif-btn-fill{
+  background:linear-gradient(180deg, var(--gold2) 0%, var(--gold) 100%);
+  color:var(--navy);border:1px solid var(--gold2);
+  box-shadow:0 1px 0 rgba(255,255,255,.4) inset, 0 2px 4px rgba(15,26,46,.18);
+  font-size:.74rem;padding:.42rem 1rem;
+}
+.notif-btn-fill:hover{ background:linear-gradient(180deg, var(--gold) 0%, var(--gold2) 100%); }
+.notif-btn-ghost{
+  background:var(--warm-white);color:var(--navy2);
+  border:1px solid var(--border);box-shadow:none;
+  text-transform:uppercase;font-size:.62rem;padding:.32rem .7rem;
+}
+.notif-btn-ghost:hover{ border-color:var(--gold);color:var(--rust); }
+.notif-btn-sm{ padding:.28rem .65rem;font-size:.66rem;border-radius:4px; }
 #notifListEl{overflow-y:auto;flex:1;padding:.4rem .4rem 0;}
 
 .notif-list-item{
@@ -109,6 +129,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 @keyframes notifSeal{from{transform:scale(0);}70%{transform:scale(1.25);}to{transform:scale(1);}}
 .notif-title{font-family:'Playfair Display',serif;font-weight:700;font-size:.85rem;color:var(--navy2);line-height:1.25;}
 .notif-preview{font-size:.73rem;color:var(--muted);margin-top:.15rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-style:italic;}
+.notif-list-item.expanded .notif-preview{ display:none; }
 .notif-meta{font-size:.62rem;color:var(--muted);margin-top:.25rem;letter-spacing:.02em;}
 
 /* "New notification" — an inline accordion under the header, not a bottom sheet */
@@ -123,10 +144,6 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
   border-radius:8px;font-size:16px;margin-bottom:.6rem;font-family:'Lato',sans-serif;background:var(--warm-white);
 }
 .notif-compose-inline textarea{resize:vertical;}
-.notif-compose-inline .notif-compose-post{
-  width:100%;background:var(--teal);color:var(--gold2);border:none;border-radius:8px;
-  padding:.6rem;font-weight:700;font-size:.85rem;cursor:pointer;
-}
 
 /* Type chip already used elsewhere (hero context removed) — kept for the compose form */
 .notif-type-chip{font-family:'Playfair Display',serif;font-size:.6rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;padding:.15rem .5rem;border-radius:2px;display:inline-block;margin-bottom:.3rem;border:1px solid currentColor;background:var(--warm-white);}
@@ -145,8 +162,6 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 }
 .notif-inline-body{font-size:.78rem;color:var(--navy2);white-space:pre-wrap;word-break:break-word;line-height:1.5;padding:.6rem .8rem .2rem;}
 .notif-inline-foot{display:flex;justify-content:flex-end;gap:.9rem;padding:.2rem .8rem .5rem;}
-.notif-inline-foot button{background:none;border:none;cursor:pointer;font-size:.66rem;font-weight:700;letter-spacing:.03em;text-transform:uppercase;color:var(--muted);padding:.15rem .2rem;}
-.notif-inline-foot button:hover{color:var(--rust);}
 .notif-chat-area{
   background:rgba(200,149,42,.05);
   box-shadow:inset 0 1px 4px rgba(15,26,46,.06);
@@ -176,9 +191,6 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .notif-thread-del:hover{color:var(--rust);}
 .notif-compose-bar{display:flex;gap:.5rem;padding:.6rem .8rem;border-top:1px solid var(--border);background:var(--cream);flex-shrink:0;}
 .notif-compose-bar textarea{flex:1;resize:none;border:1px solid var(--border);border-radius:8px;padding:.5rem .7rem;font-family:'Lato',sans-serif;font-size:16px;min-height:2.4rem;max-height:6rem;background:var(--warm-white);}
-.notif-compose-bar button{flex-shrink:0;background:var(--gold);color:var(--navy);border:none;border-radius:20px;padding:0 1.1rem;font-weight:700;font-size:.8rem;cursor:pointer;transition:background .15s, transform .1s;}
-.notif-compose-bar button:active{transform:scale(.94);}
-.notif-compose-bar button:hover{background:var(--gold2);}
 @media(max-width:768px){
   #notifFullOverlay{
     position:fixed;top:calc(var(--header-h) + 10px);left:50%;right:auto;
@@ -1493,7 +1505,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
       <div id="notifFullOverlay">
         <div class="notif-dropdown-head">
           <span>Notifications</span>
-          <button id="btnNotifNew" title="New notification">+ New</button>
+          <button id="btnNotifNew" class="notif-btn notif-btn-fill notif-btn-sm" title="New notification">+ New</button>
         </div>
         <div class="notif-compose-inline" id="notifComposeInline">
           <div style="display:flex;gap:.4rem;margin-bottom:.6rem;flex-wrap:wrap;">
@@ -1504,7 +1516,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
           </div>
           <input id="notifComposeTitle" placeholder="Title"/>
           <textarea id="notifComposeBody" placeholder="Details…" rows="3"></textarea>
-          <button id="btnNotifComposeSend" class="notif-compose-post">Post</button>
+          <button id="btnNotifComposeSend" class="notif-btn notif-btn-fill" style="width:100%">Post</button>
         </div>
         <div class="mob-detail-scroll" id="notifListEl"></div>
         <div id="notifThreadInline" class="notif-inline-detail">
@@ -1514,11 +1526,11 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
           </div>
           <div class="notif-compose-bar">
             <textarea id="notifReplyInput" placeholder="Write a reply…" rows="1"></textarea>
-            <button id="btnNotifReplySend">Send</button>
+            <button id="btnNotifReplySend" class="notif-btn notif-btn-fill">Send</button>
           </div>
           <div class="notif-inline-foot">
-            <button id="btnNotifThreadEdit" title="Edit notification" style="display:none;">✎ Edit</button>
-            <button id="btnNotifThreadDelete" title="Delete notification" style="display:none;">🗑 Delete</button>
+            <button id="btnNotifThreadEdit" class="notif-btn notif-btn-ghost" title="Edit notification" style="display:none;">✎ Edit</button>
+            <button id="btnNotifThreadDelete" class="notif-btn notif-btn-ghost" title="Delete notification" style="display:none;">🗑 Delete</button>
           </div>
         </div>
       </div>
