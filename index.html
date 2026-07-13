@@ -5324,15 +5324,25 @@ function renderNotifList() {
 
   const TWO_WEEKS = 14*24*60*60*1000;
   const now = Date.now();
+
+  // Notifications with no confirmed server timestamp yet (just posted,
+  // still pending) are treated as "right now" — never archived, and
+  // always sorted to the top, regardless of where Firestore's raw
+  // array happened to place the unconfirmed doc.
+  const withAge = appNotifications.map(n => ({
+    n,
+    ts: n.createdAt?.toDate ? n.createdAt.toDate().getTime() : now
+  }));
+  withAge.sort((a, b) => b.ts - a.ts);
+
   const visible = [], archived = [];
-  appNotifications.forEach((n, i) => {
+  withAge.forEach(({ n, ts }, i) => {
     const unread = currentUser && !(n.readBy||[]).includes(currentUser.uid);
-    const ageMs = n.createdAt?.toDate ? now - n.createdAt.toDate().getTime() : 0;
-    const isOld = ageMs > TWO_WEEKS || i >= 10;
+    const isOld = (now - ts) > TWO_WEEKS || i >= 10;
     if(!unread && isOld) archived.push(n); else visible.push(n);
   });
 
-  const list = notifShowArchived ? appNotifications : visible;
+  const list = notifShowArchived ? withAge.map(x => x.n) : visible;
 
   const rowHTML = n => {
     const unread = currentUser && !(n.readBy||[]).includes(currentUser.uid);
