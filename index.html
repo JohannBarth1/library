@@ -95,7 +95,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .notif-list-item:hover{box-shadow:2px 4px 10px rgba(15,26,46,.13);}
 .notif-list-item.unread{background:linear-gradient(rgba(200,149,42,.07),rgba(200,149,42,.07)),var(--warm-white);border-color:rgba(200,149,42,.4);}
 .notif-list-item.expanded{
-  border-color:var(--teal);box-shadow:0 0 0 2px rgba(42,124,138,.18);
+  border-color:var(--gold);box-shadow:0 0 0 2px rgba(200,149,42,.22);
   border-bottom-left-radius:0;border-bottom-right-radius:0;margin-bottom:0;
 }
 .notif-emoji-wrap{position:relative;flex-shrink:0;margin-top:.05rem;}
@@ -139,7 +139,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
    same card (matching border/edges), not a repeated "hero" summary. */
 .notif-inline-detail{
   display:none;flex-direction:column;
-  background:var(--warm-white);border:1px solid var(--teal);border-top:1px dashed rgba(42,124,138,.35);
+  background:var(--warm-white);border:1px solid var(--gold);border-top:1px dashed rgba(200,149,42,.4);
   border-radius:0 0 8px 8px;margin:0 .1rem .4rem;
   box-shadow:1px 2px 5px rgba(15,26,46,.08);
 }
@@ -148,8 +148,8 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .notif-inline-foot button{background:none;border:none;cursor:pointer;font-size:.66rem;font-weight:700;letter-spacing:.03em;text-transform:uppercase;color:var(--muted);padding:.15rem .2rem;}
 .notif-inline-foot button:hover{color:var(--rust);}
 .notif-chat-area{
-  background:rgba(15,26,46,.03);
-  box-shadow:inset 0 1px 4px rgba(15,26,46,.08);
+  background:rgba(200,149,42,.05);
+  box-shadow:inset 0 1px 4px rgba(15,26,46,.06);
   margin:0 .6rem .6rem;border-radius:8px;padding:.2rem .6rem .6rem;
   max-height:230px;overflow-y:auto;
 }
@@ -158,26 +158,27 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .notif-avatar{width:26px;height:26px;border-radius:50%;flex-shrink:0;object-fit:cover;background:var(--teal-dark);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'Playfair Display',serif;font-size:.7rem;font-weight:700;}
 .notif-hero-meta .notif-avatar{width:22px;height:22px;font-size:.62rem;}
 .notif-thread-msg{
-  padding:.4rem .6rem;border-radius:4px;margin:.5rem 0;background:var(--warm-white);
+  padding:.4rem .6rem;border-radius:10px;margin:.5rem 0;background:var(--warm-white);
   border:1px solid var(--border);border-top:2px solid var(--gold);position:relative;max-width:88%;
   display:flex;gap:.4rem;align-items:flex-start;box-shadow:1px 1px 5px rgba(15,26,46,.06);
   animation:notifMsgIn .25s ease both;
 }
 .notif-thread-msg .notif-avatar{width:20px;height:20px;font-size:.58rem;}
-.notif-thread-msg.mine{margin-left:auto;flex-direction:row-reverse;background:rgba(42,124,138,0.09);border-top-color:var(--teal-dark);}
+.notif-thread-msg.mine{margin-left:auto;flex-direction:row-reverse;background:rgba(200,149,42,.13);border-top-color:var(--rust);}
 @keyframes notifMsgIn{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}
 .notif-thread-bubble{min-width:0;flex:1;}
 .notif-thread-head{display:flex;align-items:center;justify-content:space-between;gap:.4rem;}
-.notif-thread-author{font-family:'Playfair Display',serif;font-size:.66rem;font-weight:700;color:var(--teal-dark);}
+.notif-thread-head.solo{justify-content:flex-end;}
+.notif-thread-author{font-family:'Playfair Display',serif;font-size:.66rem;font-weight:700;color:var(--rust);}
 .notif-thread-text{font-size:.8rem;color:var(--navy2);white-space:pre-wrap;word-break:break-word;margin-top:.1rem;}
 .notif-thread-time{font-size:.6rem;color:var(--muted);margin-top:.15rem;}
 .notif-thread-del{flex-shrink:0;background:none;border:none;color:var(--muted);cursor:pointer;font-size:.68rem;padding:.05rem .2rem;line-height:1;}
 .notif-thread-del:hover{color:var(--rust);}
 .notif-compose-bar{display:flex;gap:.5rem;padding:.6rem .8rem;border-top:1px solid var(--border);background:var(--cream);flex-shrink:0;}
 .notif-compose-bar textarea{flex:1;resize:none;border:1px solid var(--border);border-radius:8px;padding:.5rem .7rem;font-family:'Lato',sans-serif;font-size:16px;min-height:2.4rem;max-height:6rem;background:var(--warm-white);}
-.notif-compose-bar button{flex-shrink:0;background:var(--teal);color:var(--gold2);border:none;border-radius:20px;padding:0 1.1rem;font-weight:700;font-size:.8rem;cursor:pointer;transition:background .15s, transform .1s;}
+.notif-compose-bar button{flex-shrink:0;background:var(--gold);color:var(--navy);border:none;border-radius:20px;padding:0 1.1rem;font-weight:700;font-size:.8rem;cursor:pointer;transition:background .15s, transform .1s;}
 .notif-compose-bar button:active{transform:scale(.94);}
-.notif-compose-bar button:hover{background:var(--teal-dark);}
+.notif-compose-bar button:hover{background:var(--gold2);}
 @media(max-width:768px){
   #notifFullOverlay{
     position:fixed;top:calc(var(--header-h) + 10px);left:50%;right:auto;
@@ -1516,6 +1517,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
             <button id="btnNotifReplySend">Send</button>
           </div>
           <div class="notif-inline-foot">
+            <button id="btnNotifThreadEdit" title="Edit notification" style="display:none;">✎ Edit</button>
             <button id="btnNotifThreadDelete" title="Delete notification" style="display:none;">🗑 Delete</button>
           </div>
         </div>
@@ -5308,22 +5310,31 @@ function notifTypeEmoji(type) {
   return '📗';
 }
 
+let notifShowArchived = false;
+
 function renderNotifList() {
   const listEl = document.getElementById('notifListEl');
-  const detail = notifThreadInlineEl;
-  // openNotifThread() reparents `detail` into listEl (right after the tapped
-  // row) so it reads as an inline accordion. If it's in there when we wipe
-  // listEl.innerHTML below, the node itself gets destroyed — not just hidden
-  // — which is why expanding a second notification stopped working after the
-  // first: `notifThreadInline` no longer existed in the document at all.
-  // Detach it first so it survives the rebuild, then reattach afterward.
+  const detail = document.getElementById('notifThreadInline');
   if(detail.parentNode) detail.parentNode.removeChild(detail);
 
   if(!appNotifications.length) {
     listEl.innerHTML = `<div style="padding:2rem 1.2rem;text-align:center;color:var(--muted);font-size:.85rem;">No notifications yet.</div>`;
     return;
   }
-  listEl.innerHTML = appNotifications.map(n => {
+
+  const TWO_WEEKS = 14*24*60*60*1000;
+  const now = Date.now();
+  const visible = [], archived = [];
+  appNotifications.forEach((n, i) => {
+    const unread = currentUser && !(n.readBy||[]).includes(currentUser.uid);
+    const ageMs = n.createdAt?.toDate ? now - n.createdAt.toDate().getTime() : 0;
+    const isOld = ageMs > TWO_WEEKS || i >= 10;
+    if(!unread && isOld) archived.push(n); else visible.push(n);
+  });
+
+  const list = notifShowArchived ? appNotifications : visible;
+
+  const rowHTML = n => {
     const unread = currentUser && !(n.readBy||[]).includes(currentUser.uid);
     const when = n.createdAt?.toDate ? timeAgo(n.createdAt.toDate()) : '';
     return `<div class="notif-list-item ${unread?'unread':''}" data-notifid="${n.id}">
@@ -5337,13 +5348,19 @@ function renderNotifList() {
         <div class="notif-meta">${esc(n.creatorName||'Someone')} · ${when}</div>
       </div>
     </div>`;
-  }).join('');
+  };
+
+  listEl.innerHTML = list.map(rowHTML).join('') +
+    (archived.length ? `<button id="btnNotifToggleArchive" style="width:100%;background:none;border:none;color:var(--muted);font-size:.7rem;font-weight:700;letter-spacing:.03em;padding:.6rem 0;cursor:pointer;">${notifShowArchived ? 'Hide archived' : `Archived (${archived.length})`}</button>` : '');
+
   listEl.querySelectorAll('[data-notifid]').forEach(el => {
     el.addEventListener('click', () => openNotifThread(el.dataset.notifid));
   });
-  // Realtime updates rebuild this list — re-apply the "open" highlight and
-  // reattach the (still-live) detail panel so an expanded thread doesn't
-  // visually disconnect from its row mid-conversation.
+  document.getElementById('btnNotifToggleArchive')?.addEventListener('click', () => {
+    notifShowArchived = !notifShowArchived;
+    renderNotifList();
+  });
+
   if(currentNotifThreadId) {
     const row = listEl.querySelector(`[data-notifid="${currentNotifThreadId}"]`);
     if(row) {
@@ -5390,6 +5407,8 @@ async function openNotifThread(notifId) {
   document.getElementById('notifThreadBody').textContent = n.body || '';
   document.getElementById('btnNotifThreadDelete').style.display =
     (currentUser && n.creatorId === currentUser.uid) ? 'inline-block' : 'none';
+  document.getElementById('btnNotifThreadEdit').style.display =
+    (currentUser && n.creatorId === currentUser.uid) ? 'inline-block' : 'none';
 
   if(currentUser && !(n.readBy||[]).includes(currentUser.uid)) markNotifRead(notifId);
 
@@ -5422,8 +5441,8 @@ function renderNotifThread(replies) {
     return `<div class="notif-thread-msg ${mine?'mine':''}">
       ${notifAvatarHTML(r.authorName, r.authorPhoto)}
       <div class="notif-thread-bubble">
-        <div class="notif-thread-head">
-          <div class="notif-thread-author">${esc(r.authorName||'Someone')}</div>
+        <div class="notif-thread-head ${mine?'solo':''}">
+          ${mine?'':`<div class="notif-thread-author">${esc(r.authorName||'Someone')}</div>`}
           ${mine?`<button class="notif-thread-del" data-delreply="${r.id}">✕</button>`:''}
         </div>
         <div class="notif-thread-text">${esc(r.text||'')}</div>
@@ -5441,6 +5460,30 @@ function renderNotifThread(replies) {
     });
   });
 }
+
+  document.getElementById('btnNotifThreadEdit').addEventListener('click', () => {
+  const n = appNotifications.find(x => x.id === currentNotifThreadId);
+  if(!n) return;
+  const bodyEl = document.getElementById('notifThreadBody');
+  const original = n.body || '';
+  bodyEl.innerHTML = `
+    <textarea id="notifEditBodyInput" rows="3" style="width:100%;box-sizing:border-box;padding:.5rem .6rem;border:1px solid var(--border);border-radius:6px;font-family:'Lato',sans-serif;font-size:.8rem;resize:vertical;">${esc(original)}</textarea>
+    <div style="display:flex;gap:.5rem;margin-top:.4rem;">
+      <button id="btnNotifEditSave" style="flex:1;background:var(--gold);color:var(--navy);border:none;border-radius:6px;padding:.4rem;font-weight:700;font-size:.75rem;cursor:pointer;">Save</button>
+      <button id="btnNotifEditCancel" style="flex:1;background:none;border:1px solid var(--border);border-radius:6px;padding:.4rem;font-weight:700;font-size:.75rem;cursor:pointer;color:var(--muted);">Cancel</button>
+    </div>`;
+  document.getElementById('btnNotifEditCancel').addEventListener('click', () => {
+    bodyEl.textContent = original;
+  });
+  document.getElementById('btnNotifEditSave').addEventListener('click', async () => {
+    const newBody = document.getElementById('notifEditBodyInput').value.trim();
+    if(!newBody) return;
+    try {
+      await updateDoc(doc(db, 'app_notifications', currentNotifThreadId), { body: newBody, editedAt: serverTimestamp() });
+      bodyEl.textContent = newBody;
+    } catch(e) { showToast('Edit failed'); }
+  });
+});
 
 document.getElementById('btnNotifThreadDelete').addEventListener('click', async () => {
   if(!currentNotifThreadId) return;
@@ -5516,6 +5559,7 @@ document.getElementById('btnNotifComposeSend').addEventListener('click', async (
   if(!title) { showToast('Please add a title'); return; }
   if(!currentUser) return;
   try {
+    const oneYearMs = 365*24*60*60*1000;
     await addDoc(collection(db, 'app_notifications'), {
       type: notifComposeType,
       title,
@@ -5525,6 +5569,7 @@ document.getElementById('btnNotifComposeSend').addEventListener('click', async (
       creatorPhoto: currentUser.photoURL || null,
       createdAt: serverTimestamp(),
       readBy: [currentUser.uid],
+      expireAt: Timestamp.fromMillis(Date.now() + oneYearMs),
       deleted: false
     });
     closeNotifCompose();
