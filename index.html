@@ -124,7 +124,9 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 @keyframes notifSeal{from{transform:scale(0);}70%{transform:scale(1.25);}to{transform:scale(1);}}
 .notif-title{font-family:'Playfair Display',serif;font-weight:700;font-size:.85rem;color:var(--navy2);line-height:1.25;}
 .notif-preview{font-size:.73rem;color:var(--muted);margin-top:.15rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-style:italic;}
-.notif-list-item.expanded .notif-preview{ display:none; }
+.notif-list-item.expanded .notif-preview{
+  white-space:normal;overflow:visible;text-overflow:clip;margin-bottom:.3rem;
+}
 .notif-meta{font-size:.62rem;color:var(--muted);margin-top:.25rem;letter-spacing:.02em;}
 
 /* "New notification" — an inline accordion under the header, not a bottom sheet */
@@ -1515,7 +1517,6 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
         </div>
         <div class="mob-detail-scroll" id="notifListEl"></div>
         <div id="notifThreadInline" class="notif-inline-detail">
-          <div class="notif-inline-body" id="notifThreadBody"></div>
           <div class="notif-chat-area">
             <div id="notifThreadList"></div>
           </div>
@@ -5421,7 +5422,6 @@ async function openNotifThread(notifId) {
   }
   detail.style.display = 'flex';
 
-  document.getElementById('notifThreadBody').textContent = n.body || '';
   document.getElementById('btnNotifThreadDelete').style.display =
     (currentUser && n.creatorId === currentUser.uid) ? 'inline-block' : 'none';
   document.getElementById('btnNotifThreadEdit').style.display =
@@ -5481,7 +5481,9 @@ function renderNotifThread(replies) {
   document.getElementById('btnNotifThreadEdit').addEventListener('click', () => {
   const n = appNotifications.find(x => x.id === currentNotifThreadId);
   if(!n) return;
-  const bodyEl = document.getElementById('notifThreadBody');
+  const row = document.querySelector(`#notifListEl [data-notifid="${currentNotifThreadId}"]`);
+  const bodyEl = row?.querySelector('.notif-preview');
+  if(!bodyEl) return;
   const original = n.body || '';
   bodyEl.innerHTML = `
     <textarea id="notifEditBodyInput" rows="3" style="width:100%;box-sizing:border-box;padding:.5rem .6rem;border:1px solid var(--border);border-radius:6px;font-family:'Lato',sans-serif;font-size:.8rem;resize:vertical;">${esc(original)}</textarea>
