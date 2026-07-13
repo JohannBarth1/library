@@ -7388,6 +7388,7 @@ let ttsRate = 1;
 let ttsVoice = null;
 let ttsBlocks = [];   // [{ text, el }] for the chapter currently loaded in the reader
 let ttsIdx = 0;
+let _ttsLastBoundaryCheck = 0;   // throttles onboundary-driven page checks (word-level follow)
 
 const TTS_RATES = [0.75, 1, 1.25, 1.5, 2];
 const TTS_BLOCK_TAGS = ['p','h1','h2','h3','h4','h5','h6','li','td','blockquote'];
@@ -7491,7 +7492,82 @@ function ttsFollowToElement(el) {
   }
 }
 
-// The first block whose page is at or after the one the reader is
+// Finds the DOM position inside `rootEl` corresponding to `targetOffset`
+// characters into rootEl's *normalized* text — i.e. the same
+// whitespace-collapsed, trimmed string that .textContent was reduced to when
+// building the block passed to SpeechSynthesisUtterance. That normalization
+// is why we can't just do rootEl's raw text node offsets directly: the
+// browser's onboundary charIndex is an index into the collapsed string, not
+// the raw markup, so this walk has to collapse whitespace the same way to
+// stay in sync.
+function ttsRangeAtCharOffset(rootEl, targetOffset) {
+  const doc = rootEl.ownerDocument;
+  const walker = doc.createTreeWalker(rootEl, NodeFilter.SHOW_TEXT);
+  let normalized = 0;
+  let lastWasSpace = true; // true at start so leading whitespace collapses away, like .trim()
+  let node;
+  while(node = walker.nextNode()) {
+    const raw = node.nodeValue;
+    for(let i = 0; i < raw.length; i++) {
+      const isSpace = /\s/.test(raw[i]);
+      if(isSpace) {
+        if(lastWasSpace) continue; // run of whitespace collapses to nothing extra
+        if(normalized === targetOffset) {
+          const r = doc.createRange(); r.setStart(node, i); r.collapse(true); return r;
+        }
+        normalized++;
+        lastWasSpace = true;
+      } else {
+        if(normalized === targetOffset) {
+          const r = doc.createRange(); r.setStart(node, i); r.collapse(true); return r;
+        }
+        normalized++;
+        lastWasSpace = false;
+      }
+    }
+  }
+  const r = doc.createRange(); r.selectNodeContents(rootEl); r.collapse(false); return r;
+}
+
+// Measures which page a collapsed Range sits on by briefly inserting a
+// zero-size marker at that exact point and reusing ttsPageOfEl's
+// offsetParent-walk — the same "insert, measure, remove" trick used
+// elsewhere, since a live Range has no offsetLeft of its own.
+function ttsPageOfRange(range) {
+  if(!_readerColW) return null;
+  const doc = range.startContainer.ownerDocument;
+  const marker = doc.createElement('span');
+  marker.style.cssText = 'display:inline-block;width:0;height:0;overflow:hidden;';
+  let page = null;
+  try {
+    range.insertNode(marker);
+    page = ttsPageOfEl(marker);
+  } catch(e) {
+    return null;
+  } finally {
+    const parent = marker.parentNode;
+    if(parent) { parent.removeChild(marker); parent.normalize(); }
+  }
+  return page;
+}
+
+// Word-level refinement of ttsFollowToElement: turns to whatever page the
+// *current word* — not just the paragraph's start — has scrolled onto.
+// Driven by SpeechSynthesisUtterance's onboundary event; harmless no-op on
+// engines that never fire it (notably iOS/WebKit), which simply keep the
+// paragraph-level turning that already happens at the start of each block.
+function ttsFollowToWordOffset(block, charIndex) {
+  if(!_readerColW || charIndex == null) return;
+  const range = ttsRangeAtCharOffset(block.el, charIndex);
+  if(!range) return;
+  const page = ttsPageOfRange(range);
+  if(page == null) return;
+  if(page !== readerPage && page >= 0 && page < readerPageCount) {
+    goToPage(page, { animate: true });
+  }
+}
+
+
 // currently showing — i.e. wherever reading should resume from.
 function ttsFindStartIndex(blocks) {
   const idx = blocks.findIndex(b => ttsPageOfEl(b.el) >= readerPage);
@@ -7619,6 +7695,14 @@ function ttsSpeakNextParagraph() {
   ttsUtterance.onend = () => {
     clearInterval(ttsWatchdog);
     if(ttsPlaying) ttsSpeakNextParagraph();
+  };
+
+  ttsUtterance.onboundary = (ev) => {
+    if(ev.name && ev.name !== 'word') return; // ignore sentence/other boundary kinds some engines also report
+    const now = Date.now();
+    if(now - _ttsLastBoundaryCheck < 180) return; // throttle: a page-check per word is unnecessary work
+    _ttsLastBoundaryCheck = now;
+    ttsFollowToWordOffset(block, ev.charIndex);
   };
 
   ttsUtterance.onerror = (e) => {
