@@ -7580,12 +7580,10 @@ function ttsJumpToElement(el) {
   }
 }
 
-// Turns to `el`'s page (animated) if it's not the one currently shown —
-// the "watch it follow along" turn during playback.
 function ttsFollowToElement(el) {
   if(!el || !_readerColW) return;
   const target = ttsPageOfEl(el);
-  if(target !== readerPage && target >= 0 && target < readerPageCount) {
+  if(target > readerPage && target < readerPageCount) {
     goToPage(target, { animate: true });
   }
 }
@@ -7649,22 +7647,19 @@ function ttsPageOfRange(range) {
   return page;
 }
 
-// Word-level refinement of ttsFollowToElement: turns to whatever page the
-// *current word* — not just the paragraph's start — has scrolled onto.
-// Driven by SpeechSynthesisUtterance's onboundary event; harmless no-op on
-// engines that never fire it (notably iOS/WebKit), which simply keep the
-// paragraph-level turning that already happens at the start of each block.
 function ttsFollowToWordOffset(block, charIndex) {
   if(!_readerColW || charIndex == null) return;
   const range = ttsRangeAtCharOffset(block.el, charIndex);
   if(!range) return;
   const page = ttsPageOfRange(range);
   if(page == null) return;
-  if(page !== readerPage && page >= 0 && page < readerPageCount) {
+  // Same forward-only guard as ttsFollowToElement — a word sitting right
+  // at a column break can measure as "the previous page" on one check
+  // and "this page" on the next; only ever follow forward.
+  if(page > readerPage && page < readerPageCount) {
     goToPage(page, { animate: true });
   }
 }
-
 
 // currently showing — i.e. wherever reading should resume from.
 function ttsFindStartIndex(blocks) {
