@@ -5189,7 +5189,7 @@ let appNotifUnsub = null;
 let appNotifRepliesUnsub = null;
 let currentNotifThreadId = null;
 let notifComposeType = 'book_request';
-
+const notifThreadInlineEl = document.getElementById('notifThreadInline');
 function startAppNotifListener() {
   if(appNotifUnsub || !currentUser) return;
   const q = query(collection(db, 'app_notifications'), orderBy('createdAt', 'desc'), limit(200));
@@ -5284,7 +5284,7 @@ function notifTypeEmoji(type) {
 
 function renderNotifList() {
   const listEl = document.getElementById('notifListEl');
-  const detail = document.getElementById('notifThreadInline');
+  const detail = notifThreadInlineEl;
   // openNotifThread() reparents `detail` into listEl (right after the tapped
   // row) so it reads as an inline accordion. If it's in there when we wipe
   // listEl.innerHTML below, the node itself gets destroyed — not just hidden
@@ -5344,7 +5344,7 @@ async function openNotifThread(notifId) {
   const n = appNotifications.find(x => x.id === notifId);
   if(!n) return;
 
-  const detail = document.getElementById('notifThreadInline');
+  const detail = notifThreadInlineEl;
 
   // Tapping the already-open notification again collapses it.
   if(currentNotifThreadId === notifId && detail.style.display !== 'none') {
@@ -5378,7 +5378,7 @@ async function openNotifThread(notifId) {
 }
 
 function closeNotifThreadInline() {
-  const detail = document.getElementById('notifThreadInline');
+  const detail = notifThreadInlineEl;
   detail.style.display = 'none';
   document.querySelectorAll('#notifListEl .notif-list-item.expanded').forEach(el => el.classList.remove('expanded'));
   if(appNotifRepliesUnsub) { appNotifRepliesUnsub(); appNotifRepliesUnsub = null; }
