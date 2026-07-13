@@ -5223,6 +5223,7 @@ function startAppNotifListener() {
       .map(d => ({ id: d.id, ...d.data() }))
       .filter(n => !n.deleted);
     updateNotifBadge();
+    maybeShowBroadcastModal();
     if(document.getElementById('notifFullOverlay').classList.contains('open')) {
       renderNotifList();
     }
@@ -5252,17 +5253,6 @@ function updateNotifBadge() {
     badge.style.display = 'none';
   }
 }
-
-appNotifUnsub = onSnapshot(q, snap => {
-  appNotifications = snap.docs
-    .map(d => ({ id: d.id, ...d.data() }))
-    .filter(n => !n.deleted);
-  updateNotifBadge();
-  maybeShowBroadcastModal();
-  if(document.getElementById('notifFullOverlay').classList.contains('open')) {
-    renderNotifList();
-  }
-}, e => console.warn('App notif listener:', e));
 
 async function maybeShowNotifReminder() {
   if(!currentUser) return;
