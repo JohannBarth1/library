@@ -66,11 +66,10 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
   border-radius:12px;box-shadow:0 12px 34px rgba(15,26,46,.28);
   z-index:95;flex-direction:column;overflow:hidden;transform-origin:top right;
 }
-#notifFullOverlay.open{display:flex;animation:notifBounceOut .32s cubic-bezier(.34,1.56,.64,1);}
+#notifFullOverlay.open{display:flex;animation:notifBounceOut .2s ease-out;}
 @keyframes notifBounceOut{
-  0%{opacity:0;transform:scale(.35) translateY(-16px);}
-  55%{opacity:1;transform:scale(1.05) translateY(2px);}
-  100%{transform:scale(1) translateY(0);}
+  0%{opacity:0;transform:scale(.92) translateY(-8px);}
+  100%{opacity:1;transform:scale(1) translateY(0);}
 }
 /* little caret pointing up at the bell */
 #notifFullOverlay::before{
@@ -194,12 +193,11 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
     transform:translateX(-50%);
     width:min(340px,92vw);max-height:min(72vh,540px);
   }
-  #notifFullOverlay.open{animation:notifBounceOutMobile .32s cubic-bezier(.34,1.56,.64,1);}
+  #notifFullOverlay.open{animation:notifBounceOutMobile .2s ease-out;}
   #notifFullOverlay::before{display:none;}
   @keyframes notifBounceOutMobile{
-    0%{opacity:0;transform:translateX(-50%) scale(.35) translateY(-16px);}
-    55%{opacity:1;transform:translateX(-50%) scale(1.05) translateY(2px);}
-    100%{transform:translateX(-50%) scale(1) translateY(0);}
+    0%{opacity:0;transform:translateX(-50%) scale(.92) translateY(-8px);}
+    100%{opacity:1;transform:translateX(-50%) scale(1) translateY(0);}
   }
 }
 #notifReminderModal{position:fixed;inset:0;z-index:300;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;}
