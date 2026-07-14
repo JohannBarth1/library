@@ -7486,7 +7486,8 @@ let ttsRate = 1;
 let ttsVoice = null;
 let ttsBlocks = [];   // [{ text, el }] for the chapter currently loaded in the reader
 let ttsIdx = 0;
-let _ttsLastBoundaryCheck = 0;   // throttles onboundary-driven page checks (word-level follow)
+let ttsChunkQueue = [];     // remaining page-chunks of the paragraph currently being read
+let ttsCurrentChunk = null; // the chunk actively speaking (put back on pause)
 
 const TTS_RATES = [0.75, 1, 1.25, 1.5, 2];
 const TTS_BLOCK_TAGS = ['p','h1','h2','h3','h4','h5','h6','li','td','blockquote'];
@@ -7568,26 +7569,6 @@ function ttsPageOfEl(el) {
   return Math.max(0, Math.round(x / _readerColW));
 }
 
-// Instantly (no animation) jump to whatever page `el` is on. Used for
-// initial positioning — starting TTS, resuming after a manual navigation,
-// landing at the top of a new chapter — where we want to land in the right
-// spot, not watch it flip.
-function ttsJumpToElement(el) {
-  if(!el || !_readerColW) return;
-  const target = ttsPageOfEl(el);
-  if(target !== readerPage && target >= 0 && target < readerPageCount) {
-    goToPage(target, { animate: false });
-  }
-}
-
-function ttsFollowToElement(el) {
-  if(!el || !_readerColW) return;
-  const target = ttsPageOfEl(el);
-  if(target > readerPage && target < readerPageCount) {
-    goToPage(target, { animate: true });
-  }
-}
-
 // Finds the DOM position inside `rootEl` corresponding to `targetOffset`
 // characters into rootEl's *normalized* text — i.e. the same
 // whitespace-collapsed, trimmed string that .textContent was reduced to when
@@ -7647,34 +7628,70 @@ function ttsPageOfRange(range) {
   return page;
 }
 
-let _ttsPendingWordPage = null; // last measured target page, awaiting confirmation
+// Which page a given character offset within block.text falls on.
+function ttsPageAtCharOffset(block, offset) {
+  const range = ttsRangeAtCharOffset(block.el, offset);
+  return range ? ttsPageOfRange(range) : null;
+}
 
-function ttsFollowToWordOffset(block, charIndex) {
-  if(!_readerColW || charIndex == null) return;
-  const range = ttsRangeAtCharOffset(block.el, charIndex);
-  if(!range) return;
-  const page = ttsPageOfRange(range);
-  if(page == null || page < 0 || page >= readerPageCount || page === readerPage) {
-    _ttsPendingWordPage = null;
-    return;
+// Binary-searches for the char offset where the text crosses from page
+// `fromPage` onto the next page, then snaps back to a word boundary so a
+// chunk never ends mid-word. Page number is monotonic non-decreasing with
+// reading-order offset, which is what makes the binary search valid.
+function ttsFindPageBreak(block, fromPage, lo, hi) {
+  let a = lo, b = hi;
+  while (a < b) {
+    const mid = (a + b) >> 1;
+    const p = ttsPageAtCharOffset(block, mid);
+    if (p !== null && p > fromPage) b = mid; else a = mid + 1;
   }
-  // A word sitting right at a column break can be mis-measured as the
-  // wrong page on a single sample. Require the SAME target page on two
-  // consecutive checks before acting on it — filters out one-off
-  // mismeasurements while still following within a word or two of a
-  // genuine page change.
-  if(_ttsPendingWordPage === page) {
-    goToPage(page, { animate: true });
-    _ttsPendingWordPage = null;
-  } else {
-    _ttsPendingWordPage = page;
+  const text = block.text;
+  let i = a;
+  while (i > lo && !/\s/.test(text[i - 1])) i--;
+  return i;
+}
+
+// Splits one paragraph's text into page-aligned chunks: [{text, page}, ...].
+// Paragraphs that live entirely on one page come back as a single chunk;
+// only ones that straddle a page break get split, at the point the layout
+// actually breaks — measured up front, not inferred from speech timing.
+function ttsSplitBlockByPage(block) {
+  const len = block.text.length;
+  const startPage = ttsPageAtCharOffset(block, 0);
+  const endPage = ttsPageAtCharOffset(block, Math.max(0, len - 1));
+  if (startPage == null || endPage == null || startPage === endPage) {
+    return [{ text: block.text, page: startPage }];
   }
+  const chunks = [];
+  let offset = 0;
+  for (let p = startPage; p < endPage; p++) {
+    const brk = ttsFindPageBreak(block, p, offset, len);
+    if (brk > offset) chunks.push({ text: block.text.slice(offset, brk).trim(), page: p });
+    offset = brk;
+  }
+  chunks.push({ text: block.text.slice(offset).trim(), page: endPage });
+  return chunks.filter(c => c.text.length > 0);
 }
 
 // currently showing — i.e. wherever reading should resume from.
 function ttsFindStartIndex(blocks) {
   const idx = blocks.findIndex(b => ttsPageOfEl(b.el) >= readerPage);
   return idx >= 0 ? idx : 0;
+}
+
+// Sets ttsIdx/ttsChunkQueue to resume from wherever the reader is showing
+// right now. If the current paragraph straddles a page break and the
+// reader is already partway into it, this drops chunks for pages already
+// shown so playback picks up on the current page, not the paragraph start.
+function ttsPrimeFromCurrentPage() {
+  ttsIdx = ttsFindStartIndex(ttsBlocks);
+  ttsChunkQueue = [];
+  ttsCurrentChunk = null;
+  if (ttsIdx < ttsBlocks.length) {
+    ttsChunkQueue = ttsSplitBlockByPage(ttsBlocks[ttsIdx])
+      .filter(c => c.page == null || c.page >= readerPage);
+    ttsIdx++;
+  }
 }
 
 function ttsUpdatePanelInfo() {
@@ -7709,7 +7726,7 @@ async function startTTS(bookId) {
   }
 
   // Start from current page, not the top of the chapter.
-  ttsIdx = ttsFindStartIndex(ttsBlocks);
+  ttsPrimeFromCurrentPage();
 
   ttsLoadVoices();
   ttsUpdatePanelInfo();
@@ -7731,6 +7748,8 @@ function ttsStop() {
   ttsBookId = null;
   ttsBlocks = [];
   ttsIdx = 0;
+  ttsChunkQueue = [];
+  ttsCurrentChunk = null;
   document.getElementById('ttsPanel').classList.remove('open');
   document.getElementById('ttsBtnPlay').textContent = '▶';
   document.getElementById('ttsBtnPlay').classList.remove('active');
@@ -7756,6 +7775,8 @@ async function ttsAdvanceChapter(dir) {
   ttsChapter = readerChapter;
   ttsBlocks = ttsCollectBlocks();
   ttsIdx = 0;
+  ttsChunkQueue = [];
+  ttsCurrentChunk = null;
   ttsUpdatePanelInfo();
 
   if(!ttsBlocks.length) { await ttsAdvanceChapter(1); return; }
@@ -7765,7 +7786,6 @@ async function ttsAdvanceChapter(dir) {
 // ── SPEAK ONE BLOCK, TURNING THE READER PAGE TO MATCH ─────────────────────────
 function ttsSpeakNextParagraph() {
   if(!ttsPlaying) return;
-  _ttsPendingWordPage = null;
 
   // The reader can be navigated manually (Contents panel, a link tap) while
   // TTS is speaking — if that happened, our block list belongs to a chapter
@@ -7773,46 +7793,53 @@ function ttsSpeakNextParagraph() {
   if(ttsChapter !== readerChapter) {
     ttsChapter = readerChapter;
     ttsBlocks = ttsCollectBlocks();
-    ttsIdx = ttsFindStartIndex(ttsBlocks);
+    ttsPrimeFromCurrentPage();
     ttsUpdatePanelInfo();
   }
 
-  if(ttsIdx >= ttsBlocks.length) {
-    ttsAdvanceChapter(1);
-    return;
+  // Refill the chunk queue from the next paragraph once the current one's
+  // page-chunks are exhausted.
+  if(!ttsChunkQueue.length) {
+    if(ttsIdx >= ttsBlocks.length) {
+      ttsAdvanceChapter(1);
+      return;
+    }
+    const block = ttsBlocks[ttsIdx];
+    ttsIdx++;
+    ttsChunkQueue = ttsSplitBlockByPage(block);
   }
 
-  const block = ttsBlocks[ttsIdx];
-  ttsIdx++;
+  const chunk = ttsChunkQueue.shift();
+  ttsCurrentChunk = chunk;
+  if(!chunk || !chunk.text) { ttsSpeakNextParagraph(); return; }
 
-  // Pages turn as reading progresses: if this block has scrolled off the
-  // page currently shown, turn the reader to it (animated) before speaking.
-  ttsFollowToElement(block.el);
+  // Each chunk was already measured against the live layout up front, so
+  // we know exactly which page it belongs to — turn straight to it before
+  // speaking, instead of waiting for the paragraph to finish or watching
+  // word-boundary events mid-utterance (many TTS engines don't fire those
+  // reliably, which was the root cause of the old page-turn lag).
+  if(chunk.page != null && chunk.page !== readerPage && chunk.page < readerPageCount) {
+    goToPage(chunk.page, { animate: true });
+  }
 
   window.speechSynthesis.cancel();
 
-  ttsUtterance = new SpeechSynthesisUtterance(block.text);
+  ttsUtterance = new SpeechSynthesisUtterance(chunk.text);
   ttsUtterance.rate = ttsRate;
   if(ttsVoice) ttsUtterance.voice = ttsVoice;
   ttsUtterance.lang = ttsVoice?.lang || 'en-US';
 
   ttsUtterance.onend = () => {
     clearInterval(ttsWatchdog);
+    ttsCurrentChunk = null;
     if(ttsPlaying) ttsSpeakNextParagraph();
-  };
-
-  ttsUtterance.onboundary = (ev) => {
-    if(ev.name && ev.name !== 'word') return; // ignore sentence/other boundary kinds some engines also report
-    const now = Date.now();
-    if(now - _ttsLastBoundaryCheck < 180) return; // throttle: a page-check per word is unnecessary work
-    _ttsLastBoundaryCheck = now;
-    ttsFollowToWordOffset(block, ev.charIndex);
   };
 
   ttsUtterance.onerror = (e) => {
     clearInterval(ttsWatchdog);
     if(e.error === 'interrupted' || e.error === 'canceled') return;
     console.warn('TTS error:', e.error);
+    ttsCurrentChunk = null;
     if(ttsPlaying) ttsSpeakNextParagraph();
   };
 
@@ -7842,8 +7869,9 @@ function ttsPause() {
   clearInterval(ttsWatchdog);
   clearInterval(ttsKeepAlive);
   window.speechSynthesis.cancel(); // more reliable than pause() on iOS
-  // Back up one block so resume repeats the interrupted one
-  ttsIdx = Math.max(0, ttsIdx - 1);
+  // Put the interrupted chunk back at the front of the queue so resume
+  // repeats just that page-sized piece, not the whole paragraph.
+  if(ttsCurrentChunk) { ttsChunkQueue.unshift(ttsCurrentChunk); ttsCurrentChunk = null; }
   document.getElementById('ttsBtnPlay').textContent = '▶';
   document.getElementById('ttsBtnPlay').classList.remove('active');
   document.getElementById('btnReaderTTS')?.classList.remove('active');
@@ -7858,13 +7886,15 @@ function ttsResume() {
   if(!ttsBlocks.length || ttsChapter !== readerChapter) {
     ttsChapter = readerChapter;
     ttsBlocks = ttsCollectBlocks();
-    ttsIdx = ttsFindStartIndex(ttsBlocks);
+    ttsPrimeFromCurrentPage();
     ttsUpdatePanelInfo();
   } else {
     // Same chapter — but the page may have moved (e.g. a swipe while
-    // paused); land back on the right page before resuming.
-    const block = ttsBlocks[Math.min(ttsIdx, ttsBlocks.length - 1)];
-    if(block) ttsJumpToElement(block.el);
+    // paused); land back on whatever page the next queued chunk belongs to.
+    const nextPage = ttsChunkQueue[0]?.page;
+    if(nextPage != null && nextPage !== readerPage && nextPage < readerPageCount) {
+      goToPage(nextPage, { animate: false });
+    }
   }
 
   _acquireWakeLock();
@@ -7890,9 +7920,9 @@ function ttsCycleSpeed() {
   const btn = document.getElementById('ttsBtnSpeed');
   btn.textContent = ttsRate + '×';
   btn.classList.toggle('active', ttsRate !== 1);
-  // Restart current block at new speed
+  // Restart the current chunk at the new speed
   if(ttsPlaying) {
-    ttsIdx = Math.max(0, ttsIdx - 1);
+    if(ttsCurrentChunk) { ttsChunkQueue.unshift(ttsCurrentChunk); ttsCurrentChunk = null; }
     window.speechSynthesis.cancel();
     clearInterval(ttsWatchdog);
     setTimeout(() => ttsSpeakNextParagraph(), 80);
