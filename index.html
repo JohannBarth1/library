@@ -124,7 +124,9 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 @keyframes notifSeal{from{transform:scale(0);}70%{transform:scale(1.25);}to{transform:scale(1);}}
 .notif-title{font-family:'Playfair Display',serif;font-weight:700;font-size:.85rem;color:var(--navy2);line-height:1.25;}
 .notif-preview{font-size:.73rem;color:var(--muted);margin-top:.15rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-style:italic;}
-.notif-list-item.expanded .notif-preview{ display:none; }
+/* When expanded, the description stays put under the title — it just grows
+   from a truncated one-liner into its full wrapped text instead of vanishing. */
+.notif-list-item.expanded .notif-preview{ white-space:normal;overflow:visible;text-overflow:unset; }
 .notif-meta{font-size:.62rem;color:var(--muted);margin-top:.25rem;letter-spacing:.02em;}
 
 /* "New notification" — an inline accordion under the header, not a bottom sheet */
@@ -3241,16 +3243,18 @@ document.getElementById('btnCancelPrivateShare').addEventListener('click',()=>do
 
 // Posts a private notification visible only to `recipientUid`, letting them
 // know a book was shared with them, with a link straight to its detail page.
-async function notifyBookShared(recipientUid, book) {
+async function notifyBookShared(recipientUid, book, recipientName) {
   if(!currentUser || !recipientUid || recipientUid === currentUser.uid) return;
+  const oneYearMs = 365*24*60*60*1000;
+  const creatorName = currentUser.displayName || currentUser.email || 'Someone';
   try {
-    const oneYearMs = 365*24*60*60*1000;
+    // Notification for the recipient — recipientId scopes it to them only.
     await addDoc(collection(db, 'app_notifications'), {
       type: 'book_shared',
       title: book.title,
-      body: `${currentUser.displayName || currentUser.email || 'Someone'} shared "${book.title}" with you.`,
+      body: `${creatorName} shared "${book.title}" with you.`,
       creatorId: currentUser.uid,
-      creatorName: currentUser.displayName || currentUser.email || 'Someone',
+      creatorName,
       creatorPhoto: currentUser.photoURL || null,
       createdAt: serverTimestamp(),
       readBy: [currentUser.uid],
@@ -3259,7 +3263,27 @@ async function notifyBookShared(recipientUid, book) {
       expireAt: Timestamp.fromMillis(Date.now() + oneYearMs),
       deleted: false
     });
-  } catch(e) { console.warn('notifyBookShared:', e); }
+  } catch(e) { console.warn('notifyBookShared (recipient):', e); }
+
+  try {
+    // Confirmation notification for the sharer themselves — same "Open Book"
+    // link, recipientId set to the sharer so it only shows up for them, and
+    // pre-marked read since it's their own action, not something new to check.
+    await addDoc(collection(db, 'app_notifications'), {
+      type: 'book_shared',
+      title: book.title,
+      body: `You shared "${book.title}" with ${recipientName || 'another user'}.`,
+      creatorId: currentUser.uid,
+      creatorName,
+      creatorPhoto: currentUser.photoURL || null,
+      createdAt: serverTimestamp(),
+      readBy: [currentUser.uid],
+      recipientId: currentUser.uid,
+      bookId: book.id,
+      expireAt: Timestamp.fromMillis(Date.now() + oneYearMs),
+      deleted: false
+    });
+  } catch(e) { console.warn('notifyBookShared (sharer):', e); }
 }
 
 // Posts a public notification (no recipientId, so it's visible to everyone,
@@ -3282,7 +3306,14 @@ async function notifyNewSeasonalBookmark(templateData) {
       createdAt: serverTimestamp(),
       readBy: [currentUser.uid],
       expireAt: Timestamp.fromMillis(Date.now() + oneYearMs),
-      deleted: false
+      deleted: false,
+      // Small snapshot of the bookmark's look (not the full doc) so the
+      // notification row can render the actual bookmark shape/colors.
+      bmTemplate: {
+        shape: templateData.shape,
+        colors: templateData.colors,
+        label: templateData.label
+      }
     });
   } catch(e) { console.warn('notifyNewSeasonalBookmark:', e); }
 }
@@ -3298,7 +3329,8 @@ document.getElementById('btnConfirmPrivateShare').addEventListener('click',async
     if(!allowed.includes(uid))allowed.push(uid);
     await updateDoc(doc(db,'books',currentId),{allowedUsers:allowed,updatedAt:serverTimestamp()});
     book.allowedUsers=allowed;hideLoading();
-    notifyBookShared(uid, book);
+    const recipientName = sel.selectedOptions[0]?.textContent;
+    notifyBookShared(uid, book, recipientName);
     const link=getDirectLink(currentId);
     document.getElementById('privateShareLink').textContent=link;
     document.getElementById('privateShareLinkWrap').style.display='block';
@@ -5373,6 +5405,16 @@ function notifTypeEmoji(type) {
   if(type === 'seasonal_bookmark') return '🔖';
   return '📗';
 }
+// Icon shown at the left of a notification row. Seasonal bookmark
+// notifications get the actual bookmark shape/colors (via renderBookmarkSVG)
+// instead of a generic emoji, so the notification reads as "the same icon"
+// as the bookmark it's announcing.
+function notifTypeIconHTML(n) {
+  if(n.type === 'seasonal_bookmark' && n.bmTemplate) {
+    return renderBookmarkSVG(n.bmTemplate, 22, 34, 'notif' + n.id, false, true);
+  }
+  return `<span class="notif-emoji">${notifTypeEmoji(n.type)}</span>`;
+}
 
 let notifShowArchived = false;
 
@@ -5413,7 +5455,7 @@ function renderNotifList() {
     const when = n.createdAt?.toDate ? timeAgo(n.createdAt.toDate()) : '';
     return `<div class="notif-list-item ${unread?'unread':''}" data-notifid="${n.id}">
       <div class="notif-emoji-wrap">
-        <span class="notif-emoji">${notifTypeEmoji(n.type)}</span>
+        ${notifTypeIconHTML(n)}
         ${unread?'<span class="notif-unread-dot"></span>':''}
       </div>
       <div style="flex:1;min-width:0;">
@@ -5478,16 +5520,25 @@ async function openNotifThread(notifId) {
   }
   detail.style.display = 'flex';
 
-  document.getElementById('notifThreadBody').textContent = n.body || '';
+  // The description already lives under the title in the row itself (and
+  // stays visible there when expanded), so this area is reserved for
+  // contextual actions only — not a second copy of the same text.
+  const bodyEl = document.getElementById('notifThreadBody');
+  bodyEl.innerHTML = '';
+  bodyEl.style.display = 'none';
   document.getElementById('notifChatArea').style.display = 'none';
   document.getElementById('notifThreadList').innerHTML = '';
   if(n.type === 'book_shared' && n.bookId) {
-    const bodyEl = document.getElementById('notifThreadBody');
-    bodyEl.innerHTML = `${esc(n.body||'')}<div style="margin-top:.6rem;"><a href="${esc(getDirectLink(n.bookId))}" id="notifOpenSharedBook" class="notif-btn notif-btn-fill" style="display:inline-block;text-decoration:none;">🎁 Open Book</a></div>`;
+    bodyEl.style.display = '';
+    bodyEl.innerHTML = `<div><a href="${esc(getDirectLink(n.bookId))}" id="notifOpenSharedBook" class="notif-btn notif-btn-fill" style="display:inline-block;text-decoration:none;">🎁 Open Book</a></div>`;
     document.getElementById('notifOpenSharedBook').addEventListener('click', (e) => {
       e.preventDefault();
       closeNotifFullList();
-      showBookById(n.bookId);
+      // Match the same mobile/desktop branching used everywhere else book
+      // detail is opened (see checkUrlHash) — calling showBookById alone
+      // only opens the desktop drawer, which is why this did nothing on mobile.
+      if(window.innerWidth > 768) showBookById(n.bookId);
+      else mob_showBook(n.bookId);
     });
   }
   document.getElementById('btnNotifThreadDelete').style.display =
