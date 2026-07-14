@@ -779,7 +779,30 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .mob-detail-title{font-family:'Playfair Display',serif;font-size:1rem;line-height:1.2;margin-bottom:.2rem;}
 .mob-detail-author{font-size:.8rem;color:var(--muted);font-style:italic;margin-bottom:.5rem;}
 .mob-detail-actions{display:flex;flex-wrap:wrap;gap:.4rem;margin-bottom:1rem;}
+/* Lists section: quick emoji toggles for the two most-used lists, an "Other
+   Lists" entry point for the rest, and (when relevant) Mark Finished. */
+.mob-list-section{width:100%;margin-bottom:.2rem;}
+.mob-list-section-label{font-size:.6rem;letter-spacing:.15em;text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:.4rem;}
+.mob-list-row{display:flex;flex-wrap:wrap;gap:.4rem;}
+.mob-list-quickbtn{display:flex;align-items:center;gap:.35rem;padding:.42rem .75rem;border-radius:18px;border:1.5px solid var(--border);background:var(--warm-white);color:var(--navy2);font-size:.72rem;font-weight:700;cursor:pointer;white-space:nowrap;transition:background .15s,border-color .15s,color .15s;}
+.mob-list-quickbtn .lq-icon{font-size:.9rem;line-height:1;}
+.mob-list-quickbtn.active[data-list="favourites"]{background:#e11d48;border-color:#e11d48;color:#fff;}
+.mob-list-quickbtn.active[data-list="want-to-read"]{background:#7c3aed;border-color:#7c3aed;color:#fff;}
+.mob-list-other-btn{padding:.42rem .75rem;border-radius:18px;border:1.5px dashed var(--border);background:transparent;color:var(--muted);font-size:.72rem;font-weight:700;cursor:pointer;white-space:nowrap;}
+.mob-list-markfinished-btn{padding:.42rem .75rem;border-radius:18px;border:1.5px solid #276749;background:transparent;color:#276749;font-size:.72rem;font-weight:700;cursor:pointer;white-space:nowrap;display:flex;align-items:center;gap:.35rem;}
+/* Tags/Categories: a visually distinct card, separate from Lists */
+.mob-taxonomy-card{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:.7rem .8rem;margin-bottom:.8rem;}
+.mob-taxonomy-card-label{font-size:.6rem;letter-spacing:.15em;text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:.5rem;}
 .mob-detail-desc{font-size:.84rem;line-height:1.7;color:#3a4a5a;}
+/* Swipe-up reveal: starts clipped to nothing so the panel opens as a compact
+   peek (cover/title/primary actions/Lists); expanding is either a tap on the
+   handle or an upward swipe starting from the handle area. */
+.mob-sheet-handle{text-align:center;padding:.3rem 0 .6rem;cursor:pointer;user-select:none;-webkit-user-select:none;touch-action:none;}
+.mob-sheet-handle-bar{width:36px;height:4px;background:var(--border);border-radius:2px;margin:0 auto .45rem;}
+.mob-sheet-handle-label{font-size:.66rem;color:var(--muted);font-weight:700;letter-spacing:.03em;transition:opacity .2s;}
+.mob-sheet-more{max-height:0;overflow:hidden;opacity:0;transition:max-height .38s cubic-bezier(.4,0,.2,1),opacity .3s ease;}
+.mob-sheet-more.expanded{max-height:4000px;opacity:1;}
+.mob-sheet-handle.expanded .mob-sheet-handle-label{opacity:.55;}
 
 /* mobile settings */
 .mob-settings-scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:1.4rem 1rem calc(var(--mob-nav-h) + 1.5rem);background:var(--cream);}
@@ -1719,11 +1742,11 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
   </div>
 
   <!-- ── BOOK DETAIL PANEL ── -->
-  <div class="mob-panel" id="mobPanelDetail">
+  <div class="mob-panel mob-sheet" id="mobPanelDetail">
     <div class="mob-detail-header">
       <button class="mob-back-btn" id="btnMobBack">← Back</button>
     </div>
-    <div class="mob-detail-scroll">
+    <div class="mob-detail-scroll" id="mobDetailScroll">
       <div class="mob-detail-top">
         <div class="mob-detail-cover-wrap">
           <img class="mob-detail-cover" id="mobDetailCoverImg" src="" style="display:none"/>
@@ -1740,10 +1763,22 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
           </div>
         </div>
       </div>
+      <!-- ── PEEK: primary actions + Lists — visible the moment the sheet opens ── -->
       <div class="mob-detail-actions" id="mobDetailActions"></div>
-      <hr style="border:none;border-top:1px solid var(--border);margin:.5rem 0 1rem"/>
-      <p class="mob-detail-desc" id="mobDetailDesc"></p>
-      <div id="mobDetailHighlights" style="display:none;"></div>
+
+      <!-- ── Drag handle: swipe up (or tap) to reveal everything else ────────── -->
+      <div class="mob-sheet-handle" id="mobSheetHandle">
+        <div class="mob-sheet-handle-bar"></div>
+        <div class="mob-sheet-handle-label" id="mobSheetHandleLabel">▲ Swipe up for tags, description &amp; more</div>
+      </div>
+
+      <!-- ── REVEALED ON SWIPE-UP: tags/categories, description, highlights, more ── -->
+      <div class="mob-sheet-more" id="mobSheetMore">
+        <div class="mob-detail-more-actions" id="mobDetailMoreActions"></div>
+        <hr style="border:none;border-top:1px solid var(--border);margin:.5rem 0 1rem"/>
+        <p class="mob-detail-desc" id="mobDetailDesc"></p>
+        <div id="mobDetailHighlights" style="display:none;"></div>
+      </div>
     </div>
   </div>
 
@@ -2965,7 +3000,7 @@ async function showBookById(id){
   renderBookHighlightsSummary(document.getElementById('drawerHighlights'), id);
 }
 
-function renderDetailActionRows(container, book, isMine){
+function renderDetailActionRows(peekContainer, moreContainer, book, isMine){
   const bigBtn = (icon, label, action, bg, col) => `
     <button class="detail-row-btn" data-action="${action}" style="
       display:inline-flex;align-items:center;justify-content:center;gap:.4rem;
@@ -3005,31 +3040,58 @@ function renderDetailActionRows(container, book, isMine){
   const readingPosBm = _myBookmarks.find(b => b.type === 'reading_position' && b.bookId === book.id);
   const hasStarted = !!readingPosBm && (readingPosBm.progress || 0) > 0;
 
-  // ── Row 1: primary, large ──────────────────────────────────────────────
-  let html = `<div style="display:flex;gap:.5rem;margin-bottom:.55rem;flex-wrap:wrap;">
+  // ═══════════════════════════════════════════════════════════════════════
+  // PEEK — visible the moment the sheet opens: primary actions + Lists
+  // ═══════════════════════════════════════════════════════════════════════
+  let peekHtml = `<div style="display:flex;gap:.5rem;margin-bottom:.7rem;flex-wrap:wrap;">
     ${bigBtn('📖', hasStarted ? 'Continue Reading' : 'Read', 'read','#3d7a96','var(--gold)')}
     ${bigBtn('🔲','Send to Kobo','sendtokobo','var(--teal)','var(--gold)')}
   </div>`;
 
-  // ── Row 2: secondary, medium ─────────────────────────────────────────────
-  html += `<div style="display:flex;gap:.4rem;margin-bottom:.6rem;">
-    ${medBtn('🗂️','Lists','addtolist','#5a48b0','#d0c8f0')}
-    ${medBtn('🏷','Tags','tags','var(--teal)','var(--teal)')}
-    ${medBtn('🚪','Shelf','category','var(--gold)','rgba(200,149,42,.4)')}
-  </div>`;
-
-  // ── General small actions (always visible, everyone) ────────────────────
+  const isFav = !!_userLists.find(l => l.id === 'favourites')?.bookIds?.includes(book.id);
+  const isWtr = !!_userLists.find(l => l.id === 'want-to-read')?.bookIds?.includes(book.id);
   const hasReadingBookmark = _myBookmarks.some(b =>
     b.type === 'reading_position' && b.bookId === book.id
   );
+
+  peekHtml += `<div class="mob-list-section">
+    <div class="mob-list-section-label">🗂️ Lists</div>
+    <div class="mob-list-row">
+      <button class="mob-list-quickbtn ${isFav?'active':''}" data-list="favourites" data-action="quicklist">
+        <span class="lq-icon">${isFav?'❤️':'🤍'}</span><span>Favourites</span>
+      </button>
+      <button class="mob-list-quickbtn ${isWtr?'active':''}" data-list="want-to-read" data-action="quicklist">
+        <span class="lq-icon">🔖</span><span>Want to Read</span>
+      </button>
+      <button class="mob-list-other-btn" data-action="addtolist">Other Lists ▾</button>
+      ${hasReadingBookmark ? `
+      <button class="mob-list-markfinished-btn" data-action="markfinished">
+        <span>✓</span><span>Mark Finished</span>
+      </button>` : ''}
+    </div>
+  </div>`;
+
+  peekContainer.innerHTML = peekHtml;
+  peekContainer.querySelectorAll('[data-action]').forEach(b => b.addEventListener('click', handleAction));
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // REVEALED ON SWIPE-UP — Tags/Categories (visually separate card), then
+  // secondary actions and the "More options" collapse.
+  // ═══════════════════════════════════════════════════════════════════════
+  let html = `<div class="mob-taxonomy-card">
+    <div class="mob-taxonomy-card-label">🏷 Tags &amp; Categories</div>
+    <div style="display:flex;gap:.4rem;">
+      ${medBtn('🏷','Tags','tags','var(--teal)','var(--teal)')}
+      ${medBtn('🚪','Category','category','var(--gold)','rgba(200,149,42,.4)')}
+    </div>
+  </div>`;
+
+  // ── General small actions (always visible, everyone) ────────────────────
   const generalBtns = [
     smBtn(book.recommended?'☆':'⭐', book.recommended?'Unrecommend':'Recommend', 'recommend'),
     smBtn('📎','Copy Link','link'),
     smBtn('⬇','Download','download'),
   ];
-  if(hasReadingBookmark){
-    generalBtns.push(smBtn('✓','Mark Finished','markfinished'));
-  }
   html += `<div style="display:flex;flex-wrap:wrap;gap:.35rem;margin-bottom:.3rem;">
     ${generalBtns.join('')}
   </div>`;
@@ -3083,20 +3145,62 @@ function renderDetailActionRows(container, book, isMine){
     </div>`;
   }
 
-  container.innerHTML = html;
-  container.querySelectorAll('[data-action]').forEach(b => b.addEventListener('click', handleAction));
+  moreContainer.innerHTML = html;
+  moreContainer.querySelectorAll('[data-action]').forEach(b => b.addEventListener('click', handleAction));
 
-  const toggleBtn = container.querySelector('#'+moreId+'Toggle');
+  const toggleBtn = moreContainer.querySelector('#'+moreId+'Toggle');
   if(toggleBtn){
     toggleBtn.addEventListener('click', () => {
-      const body = container.querySelector('#'+moreId+'Body');
-      const chevron = container.querySelector('#'+moreId+'Chevron');
+      const body = moreContainer.querySelector('#'+moreId+'Body');
+      const chevron = moreContainer.querySelector('#'+moreId+'Chevron');
       const isOpen = body.style.display !== 'none';
       body.style.display = isOpen ? 'none' : 'block';
       chevron.style.transform = isOpen ? '' : 'rotate(180deg)';
     });
   }
 }
+
+// Quick favourite / want-to-read toggle straight from the Lists row —
+// no need to open the full list picker for the two most common lists.
+async function handleQuickListToggle(btn){
+  if(!currentId) return;
+  const listId = btn.dataset.list;
+  await toggleBookInList(listId, currentId);
+  const nowIn = (_userLists.find(l => l.id === listId)?.bookIds || []).includes(currentId);
+  btn.classList.toggle('active', nowIn);
+  const iconEl = btn.querySelector('.lq-icon');
+  if(listId === 'favourites' && iconEl) iconEl.textContent = nowIn ? '❤️' : '🤍';
+  renderMobHome();
+  renderDeskHome();
+}
+
+// ── Sheet expand/collapse (swipe up or tap the handle) ──────────────────────
+function mobSheetSetExpanded(expanded){
+  const more = document.getElementById('mobSheetMore');
+  const handle = document.getElementById('mobSheetHandle');
+  const label = document.getElementById('mobSheetHandleLabel');
+  if(!more || !handle) return;
+  more.classList.toggle('expanded', expanded);
+  handle.classList.toggle('expanded', expanded);
+  if(label) label.textContent = expanded ? '▾ Show less' : '▲ Swipe up for tags, description & more';
+}
+(function initMobSheetHandle(){
+  const handle = document.getElementById('mobSheetHandle');
+  if(!handle) return;
+  handle.addEventListener('click', () => {
+    const more = document.getElementById('mobSheetMore');
+    mobSheetSetExpanded(!more.classList.contains('expanded'));
+  });
+  let startY = null;
+  handle.addEventListener('touchstart', e => { startY = e.touches[0].clientY; }, {passive:true});
+  handle.addEventListener('touchmove', e => {
+    if(startY === null) return;
+    const dy = startY - e.touches[0].clientY;
+    if(dy > 24) { mobSheetSetExpanded(true); startY = null; }
+    else if(dy < -24) { mobSheetSetExpanded(false); startY = null; }
+  }, {passive:true});
+  handle.addEventListener('touchend', () => { startY = null; });
+})();
 
 function buildDrawerIconBar(book, isMine){
   const bar = document.getElementById('drawerIconBar');
