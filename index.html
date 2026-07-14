@@ -7696,7 +7696,15 @@ function ttsPageOfEl(el) {
     x += node.offsetLeft || 0;
     node = node.offsetParent;
   }
-  return Math.max(0, Math.round(x / _readerColW));
+  // A page is the band [n*colW, (n+1)*colW) — this must floor, not round.
+  // Math.round was flipping to the next page as soon as x passed the
+  // *halfway* point of the current column, so any text in the right half
+  // of the visible page got misreported as already being on the next page,
+  // and TTS would turn early — well before the text was actually done.
+  // The tiny epsilon guards against sub-pixel measurement noise landing an
+  // element that's exactly ON a column boundary just under it (e.g.
+  // x/colW = 1.9999998 for something that's really at column 2).
+  return Math.max(0, Math.floor(x / _readerColW + 1e-3));
 }
 
 // Finds the DOM position inside `rootEl` corresponding to `targetOffset`
