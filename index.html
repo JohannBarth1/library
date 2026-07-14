@@ -1516,7 +1516,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
         <div class="mob-detail-scroll" id="notifListEl"></div>
         <div id="notifThreadInline" class="notif-inline-detail">
           <div class="notif-inline-body" id="notifThreadBody"></div>
-          <div class="notif-chat-area">
+          <div class="notif-chat-area" id="notifChatArea" style="display:none;">
             <div id="notifThreadList"></div>
           </div>
           <div class="notif-compose-bar">
@@ -3238,7 +3238,55 @@ async function showPrivateShare(){
   sel.innerHTML='<option value="">— Select a user —</option>'+users.map(u=>`<option value="${u.uid}">${esc(u.displayName||u.email||u.uid)}</option>`).join('');
 }
 document.getElementById('btnCancelPrivateShare').addEventListener('click',()=>document.getElementById('privateShareModal').classList.remove('open'));
-  
+
+// Posts a private notification visible only to `recipientUid`, letting them
+// know a book was shared with them, with a link straight to its detail page.
+async function notifyBookShared(recipientUid, book) {
+  if(!currentUser || !recipientUid || recipientUid === currentUser.uid) return;
+  try {
+    const oneYearMs = 365*24*60*60*1000;
+    await addDoc(collection(db, 'app_notifications'), {
+      type: 'book_shared',
+      title: book.title,
+      body: `${currentUser.displayName || currentUser.email || 'Someone'} shared "${book.title}" with you.`,
+      creatorId: currentUser.uid,
+      creatorName: currentUser.displayName || currentUser.email || 'Someone',
+      creatorPhoto: currentUser.photoURL || null,
+      createdAt: serverTimestamp(),
+      readBy: [currentUser.uid],
+      recipientId: recipientUid,
+      bookId: book.id,
+      expireAt: Timestamp.fromMillis(Date.now() + oneYearMs),
+      deleted: false
+    });
+  } catch(e) { console.warn('notifyBookShared:', e); }
+}
+
+// Posts a public notification (no recipientId, so it's visible to everyone,
+// same as a broadcast) announcing a newly-created seasonal bookmark.
+async function notifyNewSeasonalBookmark(templateData) {
+  if(!currentUser) return;
+  try {
+    const oneYearMs = 365*24*60*60*1000;
+    const fmt = ts => ts?.toDate ? ts.toDate().toLocaleDateString(undefined, { day: 'numeric', month: 'short' }) : '';
+    const range = templateData.condition?.startsAt && templateData.condition?.endsAt
+      ? ` — active ${fmt(templateData.condition.startsAt)} to ${fmt(templateData.condition.endsAt)}`
+      : '';
+    await addDoc(collection(db, 'app_notifications'), {
+      type: 'seasonal_bookmark',
+      title: templateData.name,
+      body: `A new seasonal bookmark is here: "${templateData.name}"${range}.`,
+      creatorId: currentUser.uid,
+      creatorName: currentUser.displayName || currentUser.email || 'Someone',
+      creatorPhoto: currentUser.photoURL || null,
+      createdAt: serverTimestamp(),
+      readBy: [currentUser.uid],
+      expireAt: Timestamp.fromMillis(Date.now() + oneYearMs),
+      deleted: false
+    });
+  } catch(e) { console.warn('notifyNewSeasonalBookmark:', e); }
+}
+
 document.getElementById('btnConfirmPrivateShare').addEventListener('click',async()=>{
   const uid=document.getElementById('privateShareUserSelect').value;
   if(!uid){showToast('Please select a user');return;}
@@ -3250,6 +3298,7 @@ document.getElementById('btnConfirmPrivateShare').addEventListener('click',async
     if(!allowed.includes(uid))allowed.push(uid);
     await updateDoc(doc(db,'books',currentId),{allowedUsers:allowed,updatedAt:serverTimestamp()});
     book.allowedUsers=allowed;hideLoading();
+    notifyBookShared(uid, book);
     const link=getDirectLink(currentId);
     document.getElementById('privateShareLink').textContent=link;
     document.getElementById('privateShareLinkWrap').style.display='block';
@@ -5230,7 +5279,11 @@ function startAppNotifListener() {
   appNotifUnsub = onSnapshot(q, snap => {
     appNotifications = snap.docs
       .map(d => ({ id: d.id, ...d.data() }))
-      .filter(n => !n.deleted);
+      .filter(n => !n.deleted)
+      // book_shared notifications carry a recipientId and are meant for
+      // that one user only — everything else (book requests, broadcasts,
+      // feature requests, bugs) has no recipientId and stays visible to all.
+      .filter(n => !n.recipientId || n.recipientId === currentUser.uid);
     updateNotifBadge();
     maybeShowBroadcastModal();
     if(document.getElementById('notifFullOverlay').classList.contains('open')) {
@@ -5308,12 +5361,16 @@ function notifTypeLabel(type) {
   if(type === 'broadcast') return '📢 Broadcast';
   if(type === 'feature_request') return '💡 Feature Request';
   if(type === 'bug') return '🐞 Bug';
+  if(type === 'book_shared') return '🎁 Book Shared';
+  if(type === 'seasonal_bookmark') return '🔖 New Bookmark';
   return '📗 Book Request';
 }
 function notifTypeEmoji(type) {
   if(type === 'broadcast') return '📢';
   if(type === 'feature_request') return '💡';
   if(type === 'bug') return '🐞';
+  if(type === 'book_shared') return '🎁';
+  if(type === 'seasonal_bookmark') return '🔖';
   return '📗';
 }
 
@@ -5422,10 +5479,21 @@ async function openNotifThread(notifId) {
   detail.style.display = 'flex';
 
   document.getElementById('notifThreadBody').textContent = n.body || '';
+  document.getElementById('notifChatArea').style.display = 'none';
+  document.getElementById('notifThreadList').innerHTML = '';
+  if(n.type === 'book_shared' && n.bookId) {
+    const bodyEl = document.getElementById('notifThreadBody');
+    bodyEl.innerHTML = `${esc(n.body||'')}<div style="margin-top:.6rem;"><a href="${esc(getDirectLink(n.bookId))}" id="notifOpenSharedBook" class="notif-btn notif-btn-fill" style="display:inline-block;text-decoration:none;">🎁 Open Book</a></div>`;
+    document.getElementById('notifOpenSharedBook').addEventListener('click', (e) => {
+      e.preventDefault();
+      closeNotifFullList();
+      showBookById(n.bookId);
+    });
+  }
   document.getElementById('btnNotifThreadDelete').style.display =
-    (currentUser && n.creatorId === currentUser.uid) ? 'inline-block' : 'none';
+    (currentUser && n.creatorId === currentUser.uid && n.type !== 'book_shared') ? 'inline-block' : 'none';
   document.getElementById('btnNotifThreadEdit').style.display =
-    (currentUser && n.creatorId === currentUser.uid) ? 'inline-block' : 'none';
+    (currentUser && n.creatorId === currentUser.uid && n.type !== 'book_shared') ? 'inline-block' : 'none';
 
   if(currentUser && !(n.readBy||[]).includes(currentUser.uid)) markNotifRead(notifId);
 
@@ -5449,10 +5517,13 @@ function closeNotifThreadInline() {
 
 function renderNotifThread(replies) {
   const listEl = document.getElementById('notifThreadList');
+  const areaEl = document.getElementById('notifChatArea');
   if(!replies.length) {
     listEl.innerHTML = '';
+    if(areaEl) areaEl.style.display = 'none';
     return;
   }
+  if(areaEl) areaEl.style.display = '';
   listEl.innerHTML = replies.map(r => {
     const mine = currentUser && r.authorId === currentUser.uid;
     return `<div class="notif-thread-msg ${mine?'mine':''}">
@@ -5494,11 +5565,19 @@ function renderNotifThread(replies) {
   });
   document.getElementById('btnNotifEditSave').addEventListener('click', async () => {
     const newBody = document.getElementById('notifEditBodyInput').value.trim();
-    if(!newBody) return;
+    if(!newBody) { showToast('Body cannot be empty'); return; }
     try {
       await updateDoc(doc(db, 'app_notifications', currentNotifThreadId), { body: newBody, editedAt: serverTimestamp() });
       bodyEl.textContent = newBody;
-    } catch(e) { showToast('Edit failed'); }
+    } catch(e) {
+      console.warn('Notif edit failed:', e);
+      // permission-denied here means Firestore rules aren't letting the
+      // creator update their own app_notifications doc — surface that
+      // distinctly so it isn't mistaken for a dead button.
+      showToast(e.code === 'permission-denied'
+        ? "Edit failed — Firestore rules don't allow updating this notification"
+        : 'Edit failed: ' + (e.message || e.code || 'unknown error'));
+    }
   });
 });
 
@@ -11500,6 +11579,10 @@ function showBookmarkEditor(templateId) {
         templateData.createdAt = serverTimestamp();
         templateData.createdBy = currentUser.uid;
         await addDoc(collection(db, 'bookmarks'), templateData);
+        // New seasonal bookmark, not just an edit of an existing one — let
+        // everyone know it's available. No recipientId, so (like broadcasts)
+        // it lands in every user's notification feed.
+        if(condType === 'seasonal') notifyNewSeasonalBookmark(templateData);
       }
       showToast(`Bookmark ${existing?'updated':'created'} ✓`);
       await loadBookmarkTemplates();
