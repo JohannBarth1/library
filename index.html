@@ -803,6 +803,26 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .mob-otherlists-item.in-list .oli-check{visibility:visible;}
 .mob-otherlists-newbtn{width:100%;text-align:left;background:none;border:none;border-top:1px solid var(--border);
   margin-top:.25rem;padding:.55rem .6rem 0;font-size:.74rem;font-weight:700;color:var(--teal);cursor:pointer;}
+/* Shared centered popover — used by Other Lists, Category and Tags, so
+   pickers launched from inside the book sheet are always fully visible
+   and centred on screen, never clipped by the sheet's current height or
+   stacked (invisibly) behind it. */
+.mob-picker-scrim{position:fixed;inset:0;z-index:600;background:rgba(15,25,35,.5);
+  display:flex;align-items:center;justify-content:center;padding:1.2rem;}
+.mob-picker-card{width:100%;max-width:340px;max-height:72vh;overflow-y:auto;
+  background:var(--warm-white);border-radius:16px;box-shadow:0 14px 44px rgba(20,30,45,.35);
+  padding:1rem;}
+.mob-picker-title{display:flex;align-items:center;justify-content:space-between;
+  font-family:'Playfair Display',serif;font-size:1rem;color:var(--navy2);
+  margin-bottom:.7rem;padding-bottom:.6rem;border-bottom:1px solid var(--border);}
+.mob-picker-close{background:none;border:none;font-size:1.2rem;color:var(--muted);cursor:pointer;line-height:1;}
+.mob-picker-item{display:flex;align-items:center;gap:.5rem;padding:.55rem .6rem;
+  border-radius:8px;cursor:pointer;font-size:.82rem;color:var(--navy2);}
+.mob-picker-item:active{background:var(--panel);}
+.mob-picker-item .mpi-check{margin-left:auto;color:var(--teal);font-weight:700;visibility:hidden;}
+.mob-picker-item.selected .mpi-check{visibility:visible;}
+.mob-picker-newbtn{width:100%;text-align:left;background:none;border:none;border-top:1px solid var(--border);
+  margin-top:.4rem;padding:.6rem .6rem 0;font-size:.76rem;font-weight:700;color:var(--teal);cursor:pointer;}
 .mob-list-markfinished-btn{padding:.42rem .75rem;border-radius:18px;border:1.5px solid #276749;background:transparent;color:#276749;font-size:.72rem;font-weight:700;cursor:pointer;white-space:nowrap;display:flex;align-items:center;gap:.35rem;}
 /* Tags/Categories: a visually distinct card, separate from Lists */
 .mob-taxonomy-card{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:.7rem .8rem;margin-bottom:.8rem;}
@@ -3109,7 +3129,6 @@ function renderDetailActionRows(peekContainer, moreContainer, book, isMine){
         <span class="lq-icon">🔖</span><span>Want to Read</span>
       </button>
       <button class="mob-list-other-btn" data-action="otherlists" id="mobOtherListsBtn">Other Lists ▾</button>
-      <div class="mob-otherlists-dropdown" id="mobOtherListsDropdown" style="display:none;"></div>
       ${hasReadingBookmark ? `
       <button class="mob-list-markfinished-btn" data-action="markfinished">
         <span>✓</span><span>Mark Finished</span>
@@ -3126,8 +3145,8 @@ function renderDetailActionRows(peekContainer, moreContainer, book, isMine){
   // ═══════════════════════════════════════════════════════════════════════
   let html = `<div class="mob-taxonomy-card">
     <div style="display:flex;gap:.4rem;">
-      ${medBtn('🏷','Tags','tags','var(--teal)','var(--teal)')}
       ${medBtn('📚','Category','category','var(--gold)','rgba(200,149,42,.4)')}
+      ${medBtn('🏷','Tags','tags','var(--teal)','var(--teal)')}
     </div>
   </div>`;
 
@@ -3219,48 +3238,48 @@ async function handleQuickListToggle(btn){
   renderDeskHome();
 }
 
-// Other Lists — a small inline dropdown anchored under its own button,
-// listing every list except Favourites/Want to Read (which already have
-// their own quick-toggle buttons). Deliberately NOT a second bottom sheet,
-// so it can never get stuck behind the book sheet itself.
+// Other Lists — a small centered popover, not anchored under its button
+// (which would clip off-screen when the sheet isn't fully expanded), and
+// not a second bottom sheet stacking behind the first.
 function toggleOtherListsDropdown(){
-  const dd = document.getElementById('mobOtherListsDropdown');
-  const btn = document.getElementById('mobOtherListsBtn');
-  if(!dd || !btn) return;
-
-  const isOpen = dd.style.display !== 'none';
-  if(isOpen){ dd.style.display = 'none'; return; }
-
   const otherLists = _userLists.filter(l => l.id !== 'favourites' && l.id !== 'want-to-read');
-  dd.innerHTML = otherLists.map(l => {
-    const inList = (l.bookIds || []).includes(currentId);
-    return `<div class="mob-otherlists-item ${inList?'in-list':''}" data-listid="${l.id}">
-      <span>${l.icon || '📚'}</span><span>${esc(l.name)}</span>
-      <span class="oli-check">✓</span>
+
+  const scrim = document.createElement('div');
+  scrim.className = 'mob-picker-scrim';
+  scrim.innerHTML = `
+    <div class="mob-picker-card">
+      <div class="mob-picker-title">
+        <span>Other Lists</span>
+        <button class="mob-picker-close" id="mobOtherListsCloseBtn">✕</button>
+      </div>
+      <div id="mobOtherListsItems">
+        ${otherLists.map(l => {
+          const inList = (l.bookIds || []).includes(currentId);
+          return `<div class="mob-picker-item ${inList?'selected':''}" data-listid="${l.id}">
+            <span>${l.icon || '📚'}</span><span>${esc(l.name)}</span>
+            <span class="mpi-check">✓</span>
+          </div>`;
+        }).join('')}
+      </div>
+      <button class="mob-picker-newbtn" id="mobOtherListsNewBtn">+ Create New List</button>
     </div>`;
-  }).join('') + `<button class="mob-otherlists-newbtn" id="mobOtherListsNewBtn">+ Create New List</button>`;
+  document.body.appendChild(scrim);
 
-  dd.style.left = btn.offsetLeft + 'px';
-  dd.style.display = 'block';
-
-  dd.querySelectorAll('[data-listid]').forEach(item => {
+  scrim.addEventListener('click', e => { if(e.target === scrim) scrim.remove(); });
+  scrim.querySelector('#mobOtherListsCloseBtn').addEventListener('click', () => scrim.remove());
+  scrim.querySelectorAll('[data-listid]').forEach(item => {
     item.addEventListener('click', async () => {
       await toggleBookInList(item.dataset.listid, currentId);
-      item.classList.toggle('in-list');
+      item.classList.toggle('selected');
       renderMobHome();
       renderDeskHome();
     });
   });
-  dd.querySelector('#mobOtherListsNewBtn').addEventListener('click', () => {
-    dd.style.display = 'none';
+  scrim.querySelector('#mobOtherListsNewBtn').addEventListener('click', () => {
+    scrim.remove();
     showCreateListModal(currentId);
   });
 }
-document.addEventListener('click', e => {
-  const dd = document.getElementById('mobOtherListsDropdown');
-  if(!dd || dd.style.display === 'none') return;
-  if(!dd.contains(e.target) && e.target.id !== 'mobOtherListsBtn') dd.style.display = 'none';
-});
 
 // ── Sheet expand/collapse (swipe up or tap the handle) ──────────────────────
 function mobSheetSetExpanded(expanded){
@@ -3684,8 +3703,6 @@ async function mob_showBook(id){
 function openMobBookSheet(){
   document.getElementById('mobBookSheetScrim').classList.add('open');
   document.getElementById('mobPanelDetail').classList.add('open');
-  const dd = document.getElementById('mobOtherListsDropdown');
-  if(dd) dd.style.display = 'none';
   mobSheetSetExpanded(false); // always opens as a peek; swipe up for full screen
 }
 function closeMobBookSheet(){
@@ -10485,47 +10502,46 @@ function showQuickCategoryModal() {
   const book = [...library, ...communityLib].find(b => b.id === currentId);
   if(!book) { showToast("Couldn't find that book"); return; }
 
-  const overlay = document.createElement('div');
-  overlay.className = 'modal-overlay open';
-  overlay.innerHTML = `
-    <div class="modal" style="max-width:360px">
-      <h3>📚 Shelf</h3>
-      <p style="font-size:.82rem;color:var(--muted);margin-bottom:.8rem;line-height:1.5">
-        Set the category for <strong>${esc(book.title)}</strong>.
-      </p>
-      <div class="form-row">
-        <select id="quickCatSelect" style="width:100%;padding:.6rem .85rem;
-          font-family:'Lato',sans-serif;font-size:.95rem;color:var(--navy);
-          background:var(--cream);border:1px solid var(--border);border-radius:3px;outline:none">
-          ${_categories.map(c =>
-            `<option value="${esc(c)}" ${(book.category||'Uncategorised')===c?'selected':''}>${esc(c)}</option>`
-          ).join('')}
-        </select>
+  const scrim = document.createElement('div');
+  scrim.className = 'mob-picker-scrim';
+  scrim.innerHTML = `
+    <div class="mob-picker-card">
+      <div class="mob-picker-title">
+        <span>📚 Category</span>
+        <button class="mob-picker-close" id="quickCatCloseBtn">✕</button>
       </div>
-      <div class="modal-actions">
-        <button class="btn-cancel" id="quickCatCancel">Cancel</button>
-        <button class="btn-save" id="quickCatSave">Save</button>
+      <div id="quickCatItems">
+        ${_categories.map(c => {
+          const selected = (book.category || 'Uncategorised') === c;
+          return `<div class="mob-picker-item ${selected?'selected':''}" data-cat="${esc(c)}">
+            <span>${esc(c)}</span>
+            <span class="mpi-check">✓</span>
+          </div>`;
+        }).join('')}
       </div>
     </div>`;
-  document.body.appendChild(overlay);
-  overlay.addEventListener('click', e => { if(e.target === overlay) overlay.remove(); });
-  overlay.querySelector('#quickCatCancel').addEventListener('click', () => overlay.remove());
-  overlay.querySelector('#quickCatSave').addEventListener('click', async () => {
-    const newCat = overlay.querySelector('#quickCatSelect').value;
-    overlay.remove();
-    showLoading('Saving…');
-    try {
-      await updateDoc(doc(db, 'books', currentId), { category: newCat, updatedAt: serverTimestamp() });
-      book.category = newCat;
-      hideLoading();
-      renderAll();
-      if(window.innerWidth > 768) showBookById(currentId);
-      else mob_showBook(currentId);
-      showToast('Category updated ✓');
-    } catch(e) {
-      hideLoading();
-      showToast('Failed: ' + e.message);
-    }
+  document.body.appendChild(scrim);
+
+  scrim.addEventListener('click', e => { if(e.target === scrim) scrim.remove(); });
+  scrim.querySelector('#quickCatCloseBtn').addEventListener('click', () => scrim.remove());
+  scrim.querySelectorAll('[data-cat]').forEach(item => {
+    item.addEventListener('click', async () => {
+      const newCat = item.dataset.cat;
+      scrim.remove();
+      showLoading('Saving…');
+      try {
+        await updateDoc(doc(db, 'books', currentId), { category: newCat, updatedAt: serverTimestamp() });
+        book.category = newCat;
+        hideLoading();
+        renderAll();
+        if(window.innerWidth > 768) showBookById(currentId);
+        else mob_showBook(currentId);
+        showToast('Category updated ✓');
+      } catch(e) {
+        hideLoading();
+        showToast('Failed: ' + e.message);
+      }
+    });
   });
 }
 
@@ -10957,8 +10973,7 @@ function showTagsModal() {
   if(!book) return;
 
   const overlay = document.createElement('div');
-  overlay.className = 'modal-overlay open';
-  overlay.style.cssText = 'align-items:flex-end;padding:0;';
+  overlay.className = 'mob-picker-scrim';
 
   const render = () => {
     const currentTags = book.tags || [];
@@ -11051,18 +11066,10 @@ function showTagsModal() {
   };
 
   overlay.innerHTML = `
-    <div style="width:100%;background:var(--warm-white);border-radius:16px 16px 0 0;
-                box-shadow:0 -4px 24px rgba(0,0,0,.2);overflow:hidden;
-                padding-bottom:env(safe-area-inset-bottom);">
-      <div style="width:36px;height:4px;background:var(--border);border-radius:2px;
-                  margin:.75rem auto .5rem;"></div>
-      <div style="font-family:'Playfair Display',serif;font-size:1rem;color:var(--navy2);
-                  padding:.25rem 1.2rem .75rem;border-bottom:1px solid var(--border);
-                  display:flex;align-items:center;justify-content:space-between;">
+    <div class="mob-picker-card" style="padding:0;">
+      <div class="mob-picker-title" style="padding:.75rem 1.2rem;margin-bottom:0;">
         <span>Edit Tags — ${esc(book.title)}</span>
-        <button onclick="this.closest('.modal-overlay').remove()"
-          style="background:none;border:none;font-size:1.2rem;cursor:pointer;
-                 color:var(--muted);line-height:1;">✕</button>
+        <button class="mob-picker-close" onclick="this.closest('.mob-picker-scrim').remove()">✕</button>
       </div>
       <div id="tagsSheetBody"></div>
     </div>`;
