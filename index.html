@@ -4275,21 +4275,14 @@ function recommendedSection(books) {
       </div>
     </div>`;
 
-// ── Bind book taps (all shelves; Current Reads opens the reader, everything
-  //    else opens the book detail screen) ─────────────────────────────────
+// ── Bind book taps (every shelf, including Current Reads, opens the same
+  //    unified peek sheet — Read/Continue Reading is just the primary
+  //    action inside it, not a bypass around it) ───────────────────────────
   container.querySelectorAll('.home-shelf-book[data-bookid]').forEach(el => {
     if(!el.dataset.bookid) return;
     el.addEventListener('click', () => {
       mobPrevPanel = 'mobPanelHome';
-      const bookId = el.dataset.bookid;
-      const shelf = el.closest('.home-shelf-section');
-      const isReadingShelf = shelf?.id === 'homeSection_home_reading';
-      if(isReadingShelf){
-        currentId = bookId;
-        readCurrentBook();
-      } else {
-        mob_showBook(bookId);
-      }
+      mob_showBook(el.dataset.bookid);
     });
   });
 
