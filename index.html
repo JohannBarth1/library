@@ -4011,6 +4011,7 @@ function updateMobBulkBar(){
       color:${color};white-space:nowrap">${label}</button>`;
 
   let html = `<span style="font-size:.78rem;font-weight:700;flex-shrink:0">${n} selected</span>`;
+  html += btn('📚 Category','category');
   if(hasUnpublished) html += btn('⇧ Publish','publish');
   if(hasPublished)   html += btn('↓ Unpublish','unpublish');
   if(hasUnrecommended) html += btn('★ Rec','recommend');
@@ -4028,6 +4029,8 @@ function updateMobBulkBar(){
 
 async function handleMobBulkAction(action){
   if(action === 'done'){ exitMobSelectMode(); return; }
+
+  if(action === 'category'){ showMobBulkCategoryPicker(); return; }
 
   if(action === 'delete'){
     if(!confirm(`Delete ${mobSelectedIds.size} book${mobSelectedIds.size!==1?'s':''}?`)) return;
@@ -4117,6 +4120,49 @@ async function handleMobBulkAction(action){
     exitMobSelectMode();
     return;
   }
+}
+
+// Bulk-set category for every book currently selected in mobile multi-select.
+// Same list-with-checkmark design as the single-book Quick Category picker;
+// since category is single-select per book, picking one here applies it to
+// every selected book (only "your" books, matching the other bulk actions).
+function showMobBulkCategoryPicker(){
+  const ids = [...mobSelectedIds].filter(id => library.some(b => b.id === id));
+  if(!ids.length){ showToast('No editable books selected'); return; }
+
+  const scrim = document.createElement('div');
+  scrim.className = 'mob-picker-scrim';
+  scrim.innerHTML = `
+    <div class="mob-picker-card">
+      <div class="mob-picker-title">
+        <span>📚 Set Category for ${ids.length} book${ids.length!==1?'s':''}</span>
+        <button class="mob-picker-close" id="mobBulkCatCloseBtn">✕</button>
+      </div>
+      <div id="mobBulkCatItems">
+        ${_categories.map(c => `<div class="mob-picker-item" data-cat="${esc(c)}">
+            <span>${catIcon(c)} ${esc(c)}</span>
+          </div>`).join('')}
+      </div>
+    </div>`;
+  document.body.appendChild(scrim);
+
+  scrim.addEventListener('click', e => { if(e.target === scrim) scrim.remove(); });
+  scrim.querySelector('#mobBulkCatCloseBtn').addEventListener('click', () => scrim.remove());
+  scrim.querySelectorAll('[data-cat]').forEach(item => {
+    item.addEventListener('click', async () => {
+      const newCat = item.dataset.cat;
+      scrim.remove();
+      showLoading('Updating category…');
+      try{
+        for(const id of ids){
+          await updateDoc(doc(db,'books',id),{category:newCat,updatedAt:serverTimestamp()});
+          const book = library.find(b=>b.id===id); if(book) book.category=newCat;
+        }
+        hideLoading(); exitMobSelectMode(); renderAll();
+        showToast(`Category updated for ${ids.length} book${ids.length!==1?'s':''} ✓`);
+      }catch(e){ hideLoading(); showToast('Failed: '+e.message); }
+    });
+  });
 }
 
 // Search panel
@@ -8651,7 +8697,9 @@ function updateBulkBar(){
 document.getElementById('btnCancelBulkEdit').addEventListener('click',()=>document.getElementById('bulkEditModal').classList.remove('open'));
 document.getElementById('bulkBtnEdit').addEventListener('click',()=>{
   if(!selectedIds.size){showToast('Select books first');return;}
-  document.getElementById('bulkEditCount').textContent=selectedIds.size;
+  const editableCount=[...selectedIds].filter(id=>library.some(b=>b.id===id)).length;
+  if(!editableCount){showToast("None of the selected books are yours to edit");return;}
+  document.getElementById('bulkEditCount').textContent=editableCount;
   document.getElementById('bulkCat').value='';document.getElementById('bulkLang').value='';document.getElementById('bulkDesc').value='';document.getElementById('bulkTags').value='';document.getElementById('bulkSetRecommended').checked=false;document.getElementById('bulkUnsetRecommended').checked=false;
   const cats=[...new Set(library.map(b=>b.category).filter(Boolean))].sort();
   document.getElementById('bulkCatSuggestions').innerHTML=cats.map(c=>`<option value="${esc(c)}">`).join('');
@@ -8688,12 +8736,25 @@ document.getElementById('btnSaveBulkEdit').addEventListener('click',async()=>{
   const updates={updatedAt:serverTimestamp()};
   if(cat)updates.category=cat;if(lang)updates.language=lang;if(desc)updates.description=desc;
   if(setRec)updates.recommended=true;if(unsetRec)updates.recommended=false;
-  const ids=[...selectedIds];
+  // Bulk edit only applies to books you own — e.g. while browsing the
+  // Community shelf you can select books that aren't yours, and those would
+  // otherwise be silently skipped below with no feedback at all.
+  const allIds=[...selectedIds];
+  const ids=allIds.filter(id=>library.some(b=>b.id===id));
+  const skipped=allIds.length-ids.length;
+  if(!ids.length){
+    document.getElementById('bulkEditModal').classList.remove('open');
+    showToast("None of the selected books are yours to edit");
+    return;
+  }
   document.getElementById('bulkEditModal').classList.remove('open');
   showLoading(`Updating ${ids.length} book${ids.length!==1?'s':''}…`);
   try{
     for(const id of ids){const book=library.find(b=>b.id===id);if(!book)continue;const bookUpdates={...updates};if(newTags.length)bookUpdates.tags=[...new Set([...(book.tags||[]),...newTags])];await updateDoc(doc(db,'books',id),bookUpdates);Object.assign(book,bookUpdates);}
-    hideLoading();toggleSelectMode();renderAll();showToast(`${ids.length} book${ids.length!==1?'s':''} updated ✓`);
+    hideLoading();toggleSelectMode();renderAll();
+    showToast(skipped
+      ? `${ids.length} book${ids.length!==1?'s':''} updated ✓ (${skipped} skipped — not yours)`
+      : `${ids.length} book${ids.length!==1?'s':''} updated ✓`);
   }catch(e){hideLoading();showToast('Update failed: '+e.message);}
 });
 document.getElementById('bulkBtnPublish').addEventListener('click', async () => {
