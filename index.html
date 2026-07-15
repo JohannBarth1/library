@@ -803,6 +803,27 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .mob-sheet-more{max-height:0;overflow:hidden;opacity:0;transition:max-height .38s cubic-bezier(.4,0,.2,1),opacity .3s ease;}
 .mob-sheet-more.expanded{max-height:4000px;opacity:1;}
 .mob-sheet-handle.expanded .mob-sheet-handle-label{opacity:.55;}
+/* The sheet itself: a real bottom-sheet overlay, independent of the
+   .mob-panel tab-switching system, so it floats on top of whichever tab
+   (Home, Library, wherever) is open behind it — never a separate "page". */
+.mob-sheet{
+  position:fixed;left:0;right:0;bottom:0;
+  height:52vh;max-height:52vh;
+  background:var(--warm-white);border-radius:20px 20px 0 0;
+  box-shadow:0 -10px 34px rgba(20,30,45,.28);
+  display:flex;flex-direction:column;overflow:hidden;
+  transform:translateY(105%);
+  transition:transform .34s cubic-bezier(.32,.72,0,1),height .34s cubic-bezier(.32,.72,0,1),max-height .34s cubic-bezier(.32,.72,0,1);
+  z-index:520;
+}
+.mob-sheet.open{transform:translateY(0);}
+.mob-sheet.full{height:96vh;max-height:96vh;}
+.mob-book-sheet-scrim{
+  position:fixed;inset:0;background:rgba(15,25,35,.42);z-index:510;
+  opacity:0;pointer-events:none;transition:opacity .3s ease;
+}
+.mob-book-sheet-scrim.open{opacity:1;pointer-events:auto;}
+@media (min-width:769px){ .mob-sheet, .mob-book-sheet-scrim{ display:none; } }
 
 /* mobile settings */
 .mob-settings-scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:1.4rem 1rem calc(var(--mob-nav-h) + 1.5rem);background:var(--cream);}
@@ -1742,9 +1763,10 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
   </div>
 
   <!-- ── BOOK DETAIL PANEL ── -->
-  <div class="mob-panel mob-sheet" id="mobPanelDetail">
+  <div class="mob-book-sheet-scrim" id="mobBookSheetScrim"></div>
+  <div class="mob-sheet" id="mobPanelDetail">
     <div class="mob-detail-header">
-      <button class="mob-back-btn" id="btnMobBack">← Back</button>
+      <button class="mob-back-btn" id="btnMobBack">✕ Close</button>
     </div>
     <div class="mob-detail-scroll" id="mobDetailScroll">
       <div class="mob-detail-top">
@@ -3176,10 +3198,12 @@ async function handleQuickListToggle(btn){
 
 // ── Sheet expand/collapse (swipe up or tap the handle) ──────────────────────
 function mobSheetSetExpanded(expanded){
+  const sheet = document.getElementById('mobPanelDetail');
   const more = document.getElementById('mobSheetMore');
   const handle = document.getElementById('mobSheetHandle');
   const label = document.getElementById('mobSheetHandleLabel');
-  if(!more || !handle) return;
+  if(!sheet || !more || !handle) return;
+  sheet.classList.toggle('full', expanded);
   more.classList.toggle('expanded', expanded);
   handle.classList.toggle('expanded', expanded);
   if(label) label.textContent = expanded ? '▾ Show less' : '▲ Swipe up for tags, description & more';
@@ -3188,16 +3212,23 @@ function mobSheetSetExpanded(expanded){
   const handle = document.getElementById('mobSheetHandle');
   if(!handle) return;
   handle.addEventListener('click', () => {
-    const more = document.getElementById('mobSheetMore');
-    mobSheetSetExpanded(!more.classList.contains('expanded'));
+    const sheet = document.getElementById('mobPanelDetail');
+    mobSheetSetExpanded(!sheet.classList.contains('full'));
   });
   let startY = null;
   handle.addEventListener('touchstart', e => { startY = e.touches[0].clientY; }, {passive:true});
   handle.addEventListener('touchmove', e => {
     if(startY === null) return;
     const dy = startY - e.touches[0].clientY;
+    const sheet = document.getElementById('mobPanelDetail');
     if(dy > 24) { mobSheetSetExpanded(true); startY = null; }
-    else if(dy < -24) { mobSheetSetExpanded(false); startY = null; }
+    else if(dy < -24) {
+      // Swiping down: if already full, drop back to peek; if already at
+      // peek, that downward swipe means "dismiss the sheet entirely".
+      if(sheet.classList.contains('full')) mobSheetSetExpanded(false);
+      else closeMobBookSheet();
+      startY = null;
+    }
   }, {passive:true});
   handle.addEventListener('touchend', () => { startY = null; });
 })();
@@ -3562,15 +3593,26 @@ async function mob_showBook(id){
 
   renderBookHighlightsSummary(document.getElementById('mobDetailHighlights'), id);
 
-  // Every book opens as a compact peek, regardless of whether it was
-  // reached from Home or Library — swipe up (or tap the handle) for the rest.
-  mobSheetSetExpanded(false);
+  // Every book opens as a compact peek — regardless of whether it was
+  // reached from Home, Library, or anywhere else — layered as an overlay
+  // on top of whatever tab is currently showing, not a separate "page".
   document.getElementById('mobDetailScroll')?.scrollTo(0, 0);
-
-  mob_showPanel('mobPanelDetail');
+  openMobBookSheet();
 }
 
-document.getElementById('btnMobBack').addEventListener('click',()=>mob_showPanel(mobPrevPanel||'mobPanelHome'));
+function openMobBookSheet(){
+  document.getElementById('mobBookSheetScrim').classList.add('open');
+  document.getElementById('mobPanelDetail').classList.add('open');
+  mobSheetSetExpanded(false); // always opens as a peek; swipe up for full screen
+}
+function closeMobBookSheet(){
+  document.getElementById('mobBookSheetScrim').classList.remove('open');
+  document.getElementById('mobPanelDetail').classList.remove('open');
+  mobSheetSetExpanded(false);
+}
+
+document.getElementById('btnMobBack').addEventListener('click', closeMobBookSheet);
+document.getElementById('mobBookSheetScrim').addEventListener('click', closeMobBookSheet);
 function mob_showPanel(id){document.querySelectorAll('.mob-panel').forEach(p=>p.classList.remove('active'));document.getElementById(id)?.classList.add('active');}
 
 // ── MOBILE NAV ───────────────────────────────────────────────────────────────
