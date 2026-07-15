@@ -843,6 +843,12 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .mob-sheet{
   position:fixed;left:0;right:0;bottom:0;
   height:52vh;max-height:52vh;
+  /* dvh fallback (see .full below for why): plain vh is based on iOS
+     Safari's viewport with the address bar hidden, so a peek sized only in
+     vh can end up partly behind the address bar / home-indicator area when
+     it's showing, clipping the handle + "Swipe up…" label at the bottom. */
+  height:52dvh;max-height:52dvh;
+  padding-bottom:var(--sab);box-sizing:border-box;
   background:var(--warm-white);border-radius:20px 20px 0 0;
   box-shadow:0 -10px 34px rgba(20,30,45,.28);
   display:flex;flex-direction:column;overflow:hidden;
@@ -10975,28 +10981,20 @@ function showTagsModal() {
   const overlay = document.createElement('div');
   overlay.className = 'mob-picker-scrim';
 
+  // Same design language as the "Other Lists" scrim: one list of items,
+  // each toggled on/off in place (checkmark + highlight colour) rather than
+  // being moved between separate "current" / "suggested" sections — so it's
+  // immediately clear which tags are selected.
   const render = () => {
     const currentTags = book.tags || [];
-    const suggestedTags = _globalTags.filter(t => !currentTags.includes(t));
+    // Union of global tags and any custom tags already on this book, so a
+    // custom tag the book already has still shows up (and shows selected).
+    const allTags = [...new Set([...(_globalTags || []), ...currentTags])].sort();
 
     overlay.querySelector('#tagsSheetBody').innerHTML = `
-      <!-- Current tags -->
-      <div style="padding:.7rem 1.2rem .4rem;">
-        <div style="font-size:.62rem;letter-spacing:.15em;text-transform:uppercase;
-                    color:var(--muted);font-weight:700;margin-bottom:.5rem;">
-          Current Tags</div>
-        <div style="display:flex;flex-wrap:wrap;gap:.3rem;min-height:28px;" id="tagsCurrentChips">
-          ${currentTags.length
-            ? currentTags.map(t => `
-                <span class="tag-chip removable" data-remove="${esc(t)}">${esc(t)}</span>
-              `).join('')
-            : `<span style="font-size:.8rem;color:var(--muted);font-style:italic;">No tags yet</span>`
-          }
-        </div>
-      </div>
       <!-- Add custom tag -->
-      <div style="padding:.4rem 1.2rem .5rem;display:flex;gap:.4rem;
-                  border-top:1px solid var(--border);border-bottom:1px solid var(--border);">
+      <div style="padding:.7rem 1.2rem .6rem;display:flex;gap:.4rem;
+                  border-bottom:1px solid var(--border);">
         <input id="tagsCustomInput" type="text" placeholder="Add a custom tag…"
           style="flex:1;padding:.45rem .7rem;font-size:1rem;font-family:'Lato',sans-serif;
                  border:1px solid var(--border);border-radius:20px;background:var(--cream);
@@ -11006,39 +11004,33 @@ function showTagsModal() {
                  padding:.45rem 1rem;font-family:'Lato',sans-serif;font-size:.78rem;
                  font-weight:700;cursor:pointer;">Add</button>
       </div>
-      <!-- Suggested tags -->
-      <div style="padding:.6rem 1.2rem .8rem;max-height:35vh;overflow-y:auto;">
-        <div style="font-size:.62rem;letter-spacing:.15em;text-transform:uppercase;
-                    color:var(--muted);font-weight:700;margin-bottom:.5rem;">
-          Suggested</div>
-        <div style="display:flex;flex-wrap:wrap;gap:.3rem;">
-          ${suggestedTags.map(t => `
-            <span class="tag-chip" data-add="${esc(t)}">${esc(t)}</span>
-          `).join('')}
-        </div>
+      <!-- All tags — tap to select/deselect -->
+      <div style="padding:.6rem 1.2rem .8rem;max-height:45vh;overflow-y:auto;" id="tagsAllList">
+        ${allTags.length
+          ? allTags.map(t => {
+              const selected = currentTags.includes(t);
+              return `<div class="mob-picker-item ${selected?'selected':''}" data-tag="${esc(t)}">
+                <span>${esc(t)}</span>
+                <span class="mpi-check">✓</span>
+              </div>`;
+            }).join('')
+          : `<span style="font-size:.8rem;color:var(--muted);font-style:italic;">No tags yet — add one above</span>`
+        }
       </div>`;
 
-    // Bind remove
-    overlay.querySelectorAll('[data-remove]').forEach(chip => {
-      chip.addEventListener('click', async () => {
-        const tag = chip.dataset.remove;
-        const tags = (book.tags || []).filter(t => t !== tag);
+    // Toggle a tag on/off — updates in place, no re-render needed, so the
+    // colour/checkmark change is the only thing the user sees (nothing
+    // visually "moves" or disappears from view).
+    overlay.querySelectorAll('[data-tag]').forEach(item => {
+      item.addEventListener('click', async () => {
+        const tag = item.dataset.tag;
+        const isSelected = item.classList.contains('selected');
+        const tags = isSelected
+          ? (book.tags || []).filter(t => t !== tag)
+          : [...new Set([...(book.tags || []), tag])];
         book.tags = tags;
+        item.classList.toggle('selected');
         await updateDoc(doc(db, 'books', currentId), { tags, updatedAt: serverTimestamp() });
-        // Add back to global suggestions if it was custom
-        render();
-        renderAll();
-      });
-    });
-
-    // Bind add suggestion
-    overlay.querySelectorAll('[data-add]').forEach(chip => {
-      chip.addEventListener('click', async () => {
-        const tag = chip.dataset.add;
-        const tags = [...new Set([...(book.tags || []), tag])];
-        book.tags = tags;
-        await updateDoc(doc(db, 'books', currentId), { tags, updatedAt: serverTimestamp() });
-        render();
         renderAll();
       });
     });
