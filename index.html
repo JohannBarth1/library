@@ -244,6 +244,18 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
   cursor:pointer;padding:.25rem .35rem;display:none;border-radius:50%;}
 .search-clear-btn:hover{color:var(--navy2);background:rgba(0,0,0,.05);}
 .search-input-wrap.has-value .search-clear-btn{display:block;}
+/* Tag filter button — sits beside the search box, opens a chip picker rather
+   than adding a permanent row, so filtering by tag costs no extra space. */
+.tag-filter-btn{position:relative;flex-shrink:0;width:2.3rem;height:2.3rem;
+  display:flex;align-items:center;justify-content:center;
+  border:1px solid var(--border);border-radius:3px;background:var(--warm-white);
+  cursor:pointer;font-size:1rem;color:var(--navy2);padding:0;}
+.tag-filter-btn:hover{background:var(--light-blue);}
+.tag-filter-btn.active{background:var(--teal);border-color:var(--teal);color:#fff;}
+.tag-filter-btn .tfb-badge{position:absolute;top:-5px;right:-5px;background:var(--gold);
+  color:#fff;font-size:.6rem;font-weight:700;border-radius:50%;min-width:16px;height:16px;
+  display:flex;align-items:center;justify-content:center;padding:0 2px;
+  border:2px solid var(--warm-white);}
 .shelf-tabs{display:flex;border-bottom:1px solid var(--border);flex-shrink:0;}
 .shelf-tab{flex:1;padding:.55rem .3rem;font-family:'Lato',sans-serif;font-size:.68rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);background:none;border:none;border-bottom:2px solid transparent;cursor:pointer;transition:color .15s;}
 .shelf-tab.active{color:var(--teal);border-bottom-color:var(--teal);}
@@ -1656,7 +1668,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
       <div class="filter-sidebar-top">
         <h3>Browse</h3>
         <div class="search-input-wrap">
-          <input class="filter-search" type="text" id="deskSearch" placeholder="Search title, author, tags…"/>
+          <input class="filter-search" type="text" id="deskSearch" placeholder="Search title, author…"/>
           <button type="button" class="search-clear-btn" id="deskSearchClear" aria-label="Clear search">✕</button>
         </div>
       </div>
@@ -1739,7 +1751,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
     <div class="mob-lib-top">
       <div class="mob-search-bar">
         <div class="search-input-wrap" style="flex:1;">
-          <input type="text" id="mobSearchLibrary" placeholder="Search title, author, tags…"/>
+          <input type="text" id="mobSearchLibrary" placeholder="Search books…"/>
           <button type="button" class="search-clear-btn" id="mobSearchClear" aria-label="Clear search">✕</button>
         </div>
       </div>
@@ -2398,6 +2410,8 @@ let currentUser=null,library=[],allUsers=[],userRatings={},currentId=null,commun
 // cached tiles show correctly even when opening the app offline.
 let _coverCachePrimed = primeCoverCache();
 let shelfMode='mine',activeCat='All',activeCatPublic='All',searchQ='';
+let deskActiveTags = new Set();   // tag-filter picker selections, desktop Library
+let mobActiveTags = new Set();    // tag-filter picker selections, mobile Library
 let selectMode=false,selectedIds=new Set(),deskView='library';
 let myCheckedOutIds=new Set();
 let koboDevices = [];
@@ -2849,7 +2863,8 @@ function filteredBooks(){
   let books=activeBooks();
   const cat=shelfMode==='community'?activeCatPublic:activeCat;
     if(cat!=='All')books=books.filter(b=>(b.category||'Uncategorised')===cat);
-  if(searchQ)books=books.filter(b=>b.title?.toLowerCase().includes(searchQ)||b.author?.toLowerCase().includes(searchQ)||b.category?.toLowerCase().includes(searchQ)||(b.tags||[]).some(t=>t.toLowerCase().includes(searchQ)));
+  if(searchQ)books=books.filter(b=>b.title?.toLowerCase().includes(searchQ)||b.author?.toLowerCase().includes(searchQ)||b.category?.toLowerCase().includes(searchQ));
+  if(deskActiveTags.size)books=books.filter(b=>(b.tags||[]).some(t=>deskActiveTags.has(t)));
   return sortBooks(books);
 }
 function sortBooks(books,sort){
@@ -4202,7 +4217,7 @@ function showMobBulkCategoryPicker(){
 
 // Search panel
 
-function matchesQ(b,q){return(b.title||'').toLowerCase().includes(q)||(b.author||'').toLowerCase().includes(q)||(b.category||'').toLowerCase().includes(q)||(b.tags||[]).some(t=>t.toLowerCase().includes(q));}
+function matchesQ(b,q){return(b.title||'').toLowerCase().includes(q)||(b.author||'').toLowerCase().includes(q)||(b.category||'').toLowerCase().includes(q);}
 
 
 // ── HOME PANEL (mobile) ───────────────────────────────────────────────────────
