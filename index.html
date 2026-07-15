@@ -1446,6 +1446,12 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 }
 .tag-chip:hover { background: #d8d0f0; }
 .tag-chip.removable::after { content: '×'; opacity: .6; font-size: .8rem; }
+/* Selected state for the tag picker: the whole chip flips to a solid fill —
+   colour change instead of a checkmark or moving position, distinct from
+   the Categories picker's list-with-checkmark (single-select) look. */
+.tag-chip.selectable{ user-select:none; -webkit-user-select:none; }
+.tag-chip.selectable.selected{ background:var(--teal); color:#fff; border-color:var(--teal); }
+.tag-chip.selectable.selected:hover{ background:var(--teal); }
 
 /* ── LIST PICKER ── */
 .list-picker-item {
@@ -2384,6 +2390,8 @@ let koboDevices = [];
 let _userLists = [];
 let _categories = [];
 let _globalTags = [];
+let _categoryIcons = {};   // { "Fiction": "📖", ... } — per-item emoji, editable in Admin
+let _tagIcons = {};        // { "Favourite": "❤️", ... } — per-item emoji, editable in Admin
   
 let loungePresenceUnsub = null;
 let loungeChatUnsub = null;
@@ -2862,7 +2870,7 @@ function renderFilterCats(){
   const cats=getCats(),total=activeBooks().length;
   const el=document.getElementById('deskFilterCats');
   const currentCat = shelfMode==='community' ? activeCatPublic : activeCat;
-  el.innerHTML=`<div class="filter-cat-item ${currentCat==='All'?'active':''}" data-cat="All"><span>All</span><span class="filter-cat-count">${total}</span></div>`+cats.map(([cat,cnt])=>`<div class="filter-cat-item ${currentCat===cat?'active':''}" data-cat="${encodeURIComponent(cat)}"><span>${esc(cat)}</span><span class="filter-cat-count">${cnt}</span></div>`).join('');
+  el.innerHTML=`<div class="filter-cat-item ${currentCat==='All'?'active':''}" data-cat="All"><span>All</span><span class="filter-cat-count">${total}</span></div>`+cats.map(([cat,cnt])=>`<div class="filter-cat-item ${currentCat===cat?'active':''}" data-cat="${encodeURIComponent(cat)}"><span>${catIcon(cat)} ${esc(cat)}</span><span class="filter-cat-count">${cnt}</span></div>`).join('');
 }
 function renderGrid(gridId){
   const grid=document.getElementById(gridId);if(!grid)return;
@@ -3026,7 +3034,7 @@ async function showBookById(id){
   document.getElementById('drawerCoverReadBtn').onclick=()=>readCurrentBook();
 
   // Meta
-  document.getElementById('drawerCat').textContent=book.category||'';
+  document.getElementById('drawerCat').textContent=book.category?`${catIcon(book.category)} ${book.category}`:'';
   document.getElementById('drawerTitle').textContent=book.title||'';
   document.getElementById('drawerAuthor').textContent=book.author||'';
   document.getElementById('drawerDesc').textContent=stripHtml(book.description||'');
@@ -3052,7 +3060,7 @@ async function showBookById(id){
 
   // Badges
   let badges='';
-  if(book.category)badges+=`<span class="dbadge dbadge-cat">${esc(book.category)}</span>`;
+  if(book.category)badges+=`<span class="dbadge dbadge-cat">${catIcon(book.category)} ${esc(book.category)}</span>`;
   if(book.language)badges+=`<span class="dbadge dbadge-lang">${esc(book.language.toUpperCase())}</span>`;
   if(book.visibility==='public')badges+=`<span class="dbadge dbadge-shared">Public</span>`;
   if(book.recommended)badges+=`<span class="dbadge" style="background:#fff8ec;color:var(--gold)">⭐ Pick</span>`;
@@ -3637,7 +3645,7 @@ function showEditMeta(){
   document.getElementById('metaDesc').value=stripHtml(book.description||'');
   const catSelect = document.getElementById('metaCategory');
   catSelect.innerHTML = _categories.map(c =>
-    `<option value="${esc(c)}" ${(book.category||'Uncategorised')===c?'selected':''}>${esc(c)}</option>`
+    `<option value="${esc(c)}" ${(book.category||'Uncategorised')===c?'selected':''}>${catIcon(c)} ${esc(c)}</option>`
   ).join('');
   document.getElementById('editMetaModal').classList.add('open');
 }
@@ -3681,7 +3689,7 @@ async function mob_showBook(id){
   coverEl.style.cursor='pointer';
   coverEl.onclick=()=>{ const b=[...library,...communityLib].find(x=>x.id===currentId); if(b&&(b.ownerId===currentUser?.uid||myCheckedOutIds.has(b.id))) readCurrentBook(); else showToast('Sign out this book to read it'); };
 
-  document.getElementById('mobDetailCat').textContent=book.category||'';
+  document.getElementById('mobDetailCat').textContent=book.category?`${catIcon(book.category)} ${book.category}`:'';
   document.getElementById('mobDetailTitle').textContent=book.title||'';
   document.getElementById('mobDetailAuthor').textContent=book.author||'';
 
@@ -3836,7 +3844,7 @@ function renderMobLibrary() {
   srcForCats.forEach(b => { const c = b.category || 'Uncategorised'; cats[c] = (cats[c] || 0) + 1; });
   document.getElementById('mobLibCatChips').innerHTML =
     [['All', srcForCats.length], ...Object.entries(cats).sort()]
-      .map(([cat, cnt]) => `<div class="mob-chip ${mobLibCat === cat ? 'active' : ''}" data-cat="${encodeURIComponent(cat)}">${esc(cat)} <span style="opacity:.65">${cnt}</span></div>`)
+      .map(([cat, cnt]) => `<div class="mob-chip ${mobLibCat === cat ? 'active' : ''}" data-cat="${encodeURIComponent(cat)}">${cat === 'All' ? '' : catIcon(cat) + ' '}${esc(cat)} <span style="opacity:.65">${cnt}</span></div>`)
       .join('');
 
   // Grid
@@ -10476,6 +10484,29 @@ const SYSTEM_TAGS = [
   'Lent Out'
 ];
 
+// Default emoji, keyed by name — only used to seed config/categoryIcons and
+// config/tagIcons in Firebase the first time (same pattern as SYSTEM_CATEGORIES
+// / SYSTEM_TAGS above). After that, Firebase is the source of truth and these
+// are editable per-item from the Admin panel.
+const DEFAULT_CATEGORY_ICONS = {
+  'Fiction':'📖','Literary Fiction':'🖋️','Historical Fiction':'🏛️','Science Fiction':'🚀',
+  'Fantasy':'🐉','Horror':'👻','Thriller':'🔪','Mystery':'🔍','Romance':'💘','Adventure':'🧭',
+  'Short Stories':'📄','Poetry':'🪶','Drama':'🎭','Graphic Novel':'💥',"Children's":'🧸',
+  'Young Adult':'🌟','Biography':'👤','Autobiography':'🪞','Memoir':'📓','History':'🏺',
+  'Science':'🔬','Nature':'🌿','Travel':'✈️','Philosophy':'🤔','Religion':'🙏',
+  'Spirituality':'✨','Psychology':'🧠','Self-Help':'🌱','Business':'💼','Economics':'📈',
+  'Politics':'🏛️','Law':'⚖️','Art':'🎨','Music':'🎵','Cooking':'🍳','Health':'🩺',
+  'Sport':'⚽','Reference':'📚','Academic':'🎓','Essays':'📝','Journalism':'📰',
+  'Uncategorised':'🗂️'
+};
+const DEFAULT_TAG_ICONS = {
+  'Favourite':'❤️','To Read':'📌','Currently Reading':'👀','Finished':'✅','Classic':'🏛️',
+  'Quick Read':'⚡','Long Read':'⏳','Challenging':'🧗','Inspiring':'🌟','Funny':'😂',
+  'Dark':'🌑','Thought-provoking':'💭','Illustrated':'🖼️','Award Winner':'🏆','Series':'🔗',
+  'Translated':'🌍','Gift':'🎁','Reference':'📚','Christmas':'🎄','Holiday':'🏖️',
+  'Children':'🧒','Family':'👪','Book Club':'🗣️','Recommended to Me':'👍','Lent Out':'📤'
+};
+
 async function loadConfig() {
   try {
     const catSnap = await getDoc(doc(db, 'config', 'categories'));
@@ -10493,15 +10524,45 @@ async function loadConfig() {
     if(!tagSnap.exists()) {
       await setDoc(doc(db, 'config', 'tags'), { list: _globalTags });
     }
+
+    const catIconSnap = await getDoc(doc(db, 'config', 'categoryIcons'));
+    _categoryIcons = catIconSnap.exists()
+      ? catIconSnap.data().map || {}
+      : { ...DEFAULT_CATEGORY_ICONS };
+    if(!catIconSnap.exists()) {
+      await setDoc(doc(db, 'config', 'categoryIcons'), { map: _categoryIcons });
+    }
+
+    const tagIconSnap = await getDoc(doc(db, 'config', 'tagIcons'));
+    _tagIcons = tagIconSnap.exists()
+      ? tagIconSnap.data().map || {}
+      : { ...DEFAULT_TAG_ICONS };
+    if(!tagIconSnap.exists()) {
+      await setDoc(doc(db, 'config', 'tagIcons'), { map: _tagIcons });
+    }
   } catch(e) {
     console.warn('loadConfig:', e);
     _categories = [...SYSTEM_CATEGORIES];
     _globalTags = [...SYSTEM_TAGS];
+    _categoryIcons = { ...DEFAULT_CATEGORY_ICONS };
+    _tagIcons = { ...DEFAULT_TAG_ICONS };
   }
 }
 
 function getCategoryList() { return _categories; }
 function getTagList() { return _globalTags; }
+// Per-item emoji, with sensible fallbacks for anything not yet set
+// (e.g. a brand-new category/tag an admin just added).
+function catIcon(name){ return _categoryIcons[name] || '🗂️'; }
+function tagIcon(name){ return _tagIcons[name] || '🏷️'; }
+async function setCatIcon(name, icon){
+  _categoryIcons[name] = icon;
+  await setDoc(doc(db, 'config', 'categoryIcons'), { map: _categoryIcons });
+}
+async function setTagIcon(name, icon){
+  _tagIcons[name] = icon;
+  await setDoc(doc(db, 'config', 'tagIcons'), { map: _tagIcons });
+}
 
 function showQuickCategoryModal() {
   if(!currentId) return;
@@ -10520,7 +10581,7 @@ function showQuickCategoryModal() {
         ${_categories.map(c => {
           const selected = (book.category || 'Uncategorised') === c;
           return `<div class="mob-picker-item ${selected?'selected':''}" data-cat="${esc(c)}">
-            <span>${esc(c)}</span>
+            <span>${catIcon(c)} ${esc(c)}</span>
             <span class="mpi-check">✓</span>
           </div>`;
         }).join('')}
@@ -11004,15 +11065,16 @@ function showTagsModal() {
                  padding:.45rem 1rem;font-family:'Lato',sans-serif;font-size:.78rem;
                  font-weight:700;cursor:pointer;">Add</button>
       </div>
-      <!-- All tags — tap to select/deselect -->
-      <div style="padding:.6rem 1.2rem .8rem;max-height:45vh;overflow-y:auto;" id="tagsAllList">
+      <!-- All tags — a running list of chips; tap to select/deselect.
+           Deliberately not one-per-line like the Categories picker: tags are
+           multi-select, so the whole chip flips colour when picked instead
+           of showing a checkmark, and chips flow together like labels. -->
+      <div style="padding:.6rem 1.2rem .8rem;max-height:45vh;overflow-y:auto;
+                  display:flex;flex-wrap:wrap;gap:.35rem;align-content:flex-start;" id="tagsAllList">
         ${allTags.length
           ? allTags.map(t => {
               const selected = currentTags.includes(t);
-              return `<div class="mob-picker-item ${selected?'selected':''}" data-tag="${esc(t)}">
-                <span>${esc(t)}</span>
-                <span class="mpi-check">✓</span>
-              </div>`;
+              return `<span class="tag-chip selectable ${selected?'selected':''}" data-tag="${esc(t)}">${tagIcon(t)} ${esc(t)}</span>`;
             }).join('')
           : `<span style="font-size:.8rem;color:var(--muted);font-style:italic;">No tags yet — add one above</span>`
         }
@@ -11114,6 +11176,10 @@ async function adminLoadCategories() {
     <div id="adminCatList">
       ${cats.map((c, i) => `
         <div class="cat-admin-row" data-catidx="${i}">
+          <input class="cat-admin-icon" data-cat-icon="${i}" value="${esc(catIcon(c))}"
+            maxlength="4" title="Emoji for this category"
+            style="width:2.1rem;text-align:center;padding:.25rem 0;font-size:.95rem;
+                   border:1px solid var(--border);border-radius:6px;background:var(--cream);"/>
           <span class="cat-admin-name">${esc(c)}</span>
           <button class="admin-copy-btn" data-cat-edit="${i}">✎</button>
           <button class="admin-copy-btn" style="color:var(--danger);border-color:#e0b0b0;"
@@ -11126,6 +11192,19 @@ async function adminLoadCategories() {
       <button class="btn-save" style="font-size:.72rem;padding:.4rem .8rem;"
         id="adminCatAddBtn">+ Add</button>
     </div>`;
+
+  // Icon change
+  el.querySelectorAll('[data-cat-icon]').forEach(input => {
+    input.addEventListener('change', async () => {
+      const idx = parseInt(input.dataset.catIcon);
+      const name = _categories[idx];
+      const icon = input.value.trim() || '🗂️';
+      input.value = icon;
+      await setCatIcon(name, icon);
+      renderAll();
+      showToast('Icon updated ✓');
+    });
+  });
 
   // Edit
   el.querySelectorAll('[data-cat-edit]').forEach(btn => {
@@ -11150,6 +11229,12 @@ async function adminLoadCategories() {
           // Update config
           _categories[idx] = newName;
           await setDoc(doc(db, 'config', 'categories'), { list: _categories });
+          // Carry the icon over to the new name
+          if(_categoryIcons[orig]){
+            _categoryIcons[newName] = _categoryIcons[orig];
+            delete _categoryIcons[orig];
+            await setDoc(doc(db, 'config', 'categoryIcons'), { map: _categoryIcons });
+          }
           // Batch update all books with old category
           const q = query(collection(db, 'books'), where('category', '==', orig));
           const snap = await getDocs(q);
@@ -11181,6 +11266,10 @@ async function adminLoadCategories() {
       try {
         _categories.splice(idx, 1);
         await setDoc(doc(db, 'config', 'categories'), { list: _categories });
+        if(_categoryIcons[name]){
+          delete _categoryIcons[name];
+          await setDoc(doc(db, 'config', 'categoryIcons'), { map: _categoryIcons });
+        }
         // Move affected books
         const q = query(collection(db, 'books'), where('category', '==', name));
         const snap = await getDocs(q);
@@ -11227,9 +11316,12 @@ async function adminLoadTags() {
   el.innerHTML = `
     <div style="display:flex;flex-wrap:wrap;gap:.3rem;margin-bottom:.7rem;" id="adminTagChips">
       ${tags.map((t, i) => `
-        <span style="display:inline-flex;align-items:center;gap:.25rem;padding:.2rem .6rem;
+        <span style="display:inline-flex;align-items:center;gap:.3rem;padding:.2rem .5rem .2rem .3rem;
                      font-size:.65rem;font-weight:700;border-radius:20px;
                      background:#ece8f8;color:#5a48b0;border:1px solid #d0c8f0;">
+          <input data-tag-icon="${i}" value="${esc(tagIcon(t))}" maxlength="4" title="Emoji for this tag"
+            style="width:1.6rem;text-align:center;border:none;background:transparent;
+                   font-size:.8rem;padding:0;"/>
           ${esc(t)}
           <button data-tag-delete="${i}"
             style="background:none;border:none;cursor:pointer;font-size:.7rem;
@@ -11243,6 +11335,19 @@ async function adminLoadTags() {
         id="adminTagAddBtn">+ Add</button>
     </div>`;
 
+  // Icon change
+  el.querySelectorAll('[data-tag-icon]').forEach(input => {
+    input.addEventListener('change', async () => {
+      const idx = parseInt(input.dataset.tagIcon);
+      const name = _globalTags[idx];
+      const icon = input.value.trim() || '🏷️';
+      input.value = icon;
+      await setTagIcon(name, icon);
+      renderAll();
+      showToast('Icon updated ✓');
+    });
+  });
+
   // Delete tag
   el.querySelectorAll('[data-tag-delete]').forEach(btn => {
     btn.addEventListener('click', async () => {
@@ -11251,6 +11356,10 @@ async function adminLoadTags() {
       if(!confirm(`Remove tag "${name}" from the global list?\n\nExisting book tags are not affected.`)) return;
       _globalTags.splice(idx, 1);
       await updateDoc(doc(db, 'config', 'tags'), { list: _globalTags });
+      if(_tagIcons[name]){
+        delete _tagIcons[name];
+        await setDoc(doc(db, 'config', 'tagIcons'), { map: _tagIcons });
+      }
       showToast(`"${name}" removed ✓`);
       adminLoadTags();
     });
@@ -11583,7 +11692,7 @@ function showBookmarkEditor(templateId) {
           font-family:'Lato',sans-serif;font-size:.85rem;border:1px solid var(--border);
           border-radius:3px;background:var(--cream);color:var(--navy)">
           <option value="">— Add a category —</option>
-          ${_categories.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('')}
+          ${_categories.map(c => `<option value="${esc(c)}">${catIcon(c)} ${esc(c)}</option>`).join('')}
         </select>
       </div>
 
