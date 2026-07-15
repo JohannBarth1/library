@@ -236,6 +236,14 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .filter-sidebar-top h3{font-family:'Playfair Display',serif;font-size:1rem;color:var(--navy2);margin-bottom:.7rem;}
 .filter-search{width:100%;padding:.45rem .7rem;font-family:'Lato',sans-serif;font-size:.83rem;border:1px solid var(--border);border-radius:3px;background:var(--warm-white);color:var(--navy);outline:none;}
 .filter-search:focus{border-color:var(--teal);}
+/* Clear ("×") button shared by desktop + mobile library search bars */
+.search-input-wrap{position:relative;min-width:0;}
+.search-input-wrap input{width:100%;padding-right:1.9rem;box-sizing:border-box;}
+.search-clear-btn{position:absolute;right:.35rem;top:50%;transform:translateY(-50%);
+  background:none;border:none;color:var(--muted);font-size:.85rem;line-height:1;
+  cursor:pointer;padding:.25rem .35rem;display:none;border-radius:50%;}
+.search-clear-btn:hover{color:var(--navy2);background:rgba(0,0,0,.05);}
+.search-input-wrap.has-value .search-clear-btn{display:block;}
 .shelf-tabs{display:flex;border-bottom:1px solid var(--border);flex-shrink:0;}
 .shelf-tab{flex:1;padding:.55rem .3rem;font-family:'Lato',sans-serif;font-size:.68rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);background:none;border:none;border-bottom:2px solid transparent;cursor:pointer;transition:color .15s;}
 .shelf-tab.active{color:var(--teal);border-bottom-color:var(--teal);}
@@ -1647,7 +1655,10 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
     <aside class="filter-sidebar">
       <div class="filter-sidebar-top">
         <h3>Browse</h3>
-        <input class="filter-search" type="text" id="deskSearch" placeholder="Search title, author…"/>
+        <div class="search-input-wrap">
+          <input class="filter-search" type="text" id="deskSearch" placeholder="Search title, author, tags…"/>
+          <button type="button" class="search-clear-btn" id="deskSearchClear" aria-label="Clear search">✕</button>
+        </div>
       </div>
       <div class="shelf-tabs">
         <button class="shelf-tab active" id="tabMineDesk">My Library</button>
@@ -1727,7 +1738,10 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
   <div class="mob-panel" id="mobPanelLibrary">
     <div class="mob-lib-top">
       <div class="mob-search-bar">
-        <input type="text" id="mobSearchLibrary" placeholder="Search books…"/>
+        <div class="search-input-wrap" style="flex:1;">
+          <input type="text" id="mobSearchLibrary" placeholder="Search title, author, tags…"/>
+          <button type="button" class="search-clear-btn" id="mobSearchClear" aria-label="Clear search">✕</button>
+        </div>
       </div>
       <!-- Source filter: All / Private / Public / Shared with me -->
       <div class="lib-filter-pills" id="mobLibFilterPills">
@@ -2835,7 +2849,7 @@ function filteredBooks(){
   let books=activeBooks();
   const cat=shelfMode==='community'?activeCatPublic:activeCat;
     if(cat!=='All')books=books.filter(b=>(b.category||'Uncategorised')===cat);
-  if(searchQ)books=books.filter(b=>b.title?.toLowerCase().includes(searchQ)||b.author?.toLowerCase().includes(searchQ)||b.category?.toLowerCase().includes(searchQ));
+  if(searchQ)books=books.filter(b=>b.title?.toLowerCase().includes(searchQ)||b.author?.toLowerCase().includes(searchQ)||b.category?.toLowerCase().includes(searchQ)||(b.tags||[]).some(t=>t.toLowerCase().includes(searchQ)));
   return sortBooks(books);
 }
 function sortBooks(books,sort){
@@ -2911,7 +2925,18 @@ document.getElementById('deskBookGrid').addEventListener('click',e=>{
   if(selectMode){const id=card.dataset.bookid;if(selectedIds.has(id)){selectedIds.delete(id);card.classList.remove('selected');}else{selectedIds.add(id);card.classList.add('selected');}updateBulkBar();return;}
   showBookById(card.dataset.bookid);
 });
-document.getElementById('deskSearch').addEventListener('input',e=>{searchQ=e.target.value.toLowerCase().trim();renderAll();});
+document.getElementById('deskSearch').addEventListener('input',e=>{
+  searchQ=e.target.value.toLowerCase().trim();
+  e.target.closest('.search-input-wrap').classList.toggle('has-value', !!e.target.value);
+  renderAll();
+});
+document.getElementById('deskSearchClear').addEventListener('click',()=>{
+  const input=document.getElementById('deskSearch');
+  input.value=''; searchQ='';
+  input.closest('.search-input-wrap').classList.remove('has-value');
+  input.focus();
+  renderAll();
+});
 document.getElementById('deskSortSelect').addEventListener('change',()=>renderAll());
 document.getElementById('deskSortBtns').addEventListener('click', e => {
   const btn = e.target.closest('.sort-btn[data-sort]');
@@ -2930,7 +2955,9 @@ function switchShelf(mode){
   activeCat='All';
   searchQ='';
   document.getElementById('deskSearch').value='';
+  document.getElementById('deskSearch').closest('.search-input-wrap').classList.remove('has-value');
   document.getElementById('mobSearchLibrary').value=''; mobLibSearch='';
+  document.getElementById('mobSearchLibrary').closest('.search-input-wrap').classList.remove('has-value');
   document.getElementById('tabMineDesk').classList.toggle('active',mode==='mine');
   document.getElementById('tabCommDesk').classList.toggle('active',mode==='community');
   renderAll();
@@ -3781,6 +3808,14 @@ document.getElementById('mobLibCatChips').addEventListener('click', e => {
 // Search
 document.getElementById('mobSearchLibrary').addEventListener('input', e => {
   mobLibSearch = e.target.value.toLowerCase().trim();
+  e.target.closest('.search-input-wrap').classList.toggle('has-value', !!e.target.value);
+  renderMobLibrary();
+});
+document.getElementById('mobSearchClear').addEventListener('click', () => {
+  const input = document.getElementById('mobSearchLibrary');
+  input.value=''; mobLibSearch='';
+  input.closest('.search-input-wrap').classList.remove('has-value');
+  input.focus();
   renderMobLibrary();
 });
 
@@ -4167,7 +4202,7 @@ function showMobBulkCategoryPicker(){
 
 // Search panel
 
-function matchesQ(b,q){return(b.title||'').toLowerCase().includes(q)||(b.author||'').toLowerCase().includes(q)||(b.category||'').toLowerCase().includes(q);}
+function matchesQ(b,q){return(b.title||'').toLowerCase().includes(q)||(b.author||'').toLowerCase().includes(q)||(b.category||'').toLowerCase().includes(q)||(b.tags||[]).some(t=>t.toLowerCase().includes(q));}
 
 
 // ── HOME PANEL (mobile) ───────────────────────────────────────────────────────
