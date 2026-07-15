@@ -769,6 +769,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 /* mobile book detail */
 .mob-detail-header{padding:.65rem 1rem;border-bottom:1px solid var(--border);background:var(--warm-white);display:flex;align-items:center;gap:.6rem;flex-shrink:0;}
 .mob-back-btn{background:none;border:none;font-size:.78rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--teal);cursor:pointer;-webkit-tap-highlight-color:transparent;display:flex;align-items:center;gap:.3rem;padding:0;}
+.mob-sheet-close-btn{margin-left:auto;background:none;border:none;font-size:1.2rem;font-weight:400;color:var(--muted);cursor:pointer;-webkit-tap-highlight-color:transparent;display:flex;align-items:center;line-height:1;padding:0;}
 .mob-detail-scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:1rem 1rem calc(var(--mob-nav-h) + 1.5rem);}
 .mob-detail-top{display:flex;gap:.9rem;margin-bottom:1rem;}
 .mob-detail-cover{width:85px;height:125px;object-fit:cover;border-radius:3px;border:1px solid var(--border);flex-shrink:0;}
@@ -1766,7 +1767,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
   <div class="mob-book-sheet-scrim" id="mobBookSheetScrim"></div>
   <div class="mob-sheet" id="mobPanelDetail">
     <div class="mob-detail-header">
-      <button class="mob-back-btn" id="btnMobBack">✕ Close</button>
+      <button class="mob-sheet-close-btn" id="btnMobBack">✕</button>
     </div>
     <div class="mob-detail-scroll" id="mobDetailScroll">
       <div class="mob-detail-top">
@@ -3209,28 +3210,40 @@ function mobSheetSetExpanded(expanded){
   if(label) label.textContent = expanded ? '▾ Show less' : '▲ Swipe up for tags, description & more';
 }
 (function initMobSheetHandle(){
+  const sheet = document.getElementById('mobPanelDetail');
   const handle = document.getElementById('mobSheetHandle');
-  if(!handle) return;
+  if(!sheet || !handle) return;
   handle.addEventListener('click', () => {
-    const sheet = document.getElementById('mobPanelDetail');
     mobSheetSetExpanded(!sheet.classList.contains('full'));
   });
-  let startY = null;
-  handle.addEventListener('touchstart', e => { startY = e.touches[0].clientY; }, {passive:true});
-  handle.addEventListener('touchmove', e => {
+
+  // Swipe anywhere on the sheet — not just the handle — to pop it to full
+  // screen. Only active while collapsed: once full, normal scrolling inside
+  // .mob-detail-scroll takes over, and the handle is what collapses it back.
+  let startY = null, startX = null, decided = false;
+  sheet.addEventListener('touchstart', e => {
+    startY = e.touches[0].clientY;
+    startX = e.touches[0].clientX;
+    decided = false;
+  }, {passive:true});
+  sheet.addEventListener('touchmove', e => {
     if(startY === null) return;
     const dy = startY - e.touches[0].clientY;
-    const sheet = document.getElementById('mobPanelDetail');
-    if(dy > 24) { mobSheetSetExpanded(true); startY = null; }
-    else if(dy < -24) {
-      // Swiping down: if already full, drop back to peek; if already at
-      // peek, that downward swipe means "dismiss the sheet entirely".
-      if(sheet.classList.contains('full')) mobSheetSetExpanded(false);
-      else closeMobBookSheet();
-      startY = null;
+    const dx = Math.abs(e.touches[0].clientX - startX);
+    if(decided || dx > 30) return; // horizontal drag — not our gesture
+    const isFull = sheet.classList.contains('full');
+    const scroller = document.getElementById('mobDetailScroll');
+    const atTop = !scroller || scroller.scrollTop <= 0;
+    if(!isFull && dy > 24) { mobSheetSetExpanded(true); decided = true; startY = null; }
+    else if(dy < -24 && atTop) {
+      // Swiping down from the very top of the content: if full, drop back
+      // to peek; if already at peek, dismiss the sheet entirely. Anywhere
+      // else, a downward drag just scrolls back up through the content.
+      if(isFull) mobSheetSetExpanded(false); else closeMobBookSheet();
+      decided = true; startY = null;
     }
   }, {passive:true});
-  handle.addEventListener('touchend', () => { startY = null; });
+  sheet.addEventListener('touchend', () => { startY = null; startX = null; });
 })();
 
 function buildDrawerIconBar(book, isMine){
@@ -4328,11 +4341,11 @@ function recommendedSection(books) {
     });
   });
 
-  // ── Bind bookmark tile taps → open reading-position sheet ───────────────
+  // ── Bind bookmark tile taps → same unified sheet as everything else ─────
   container.querySelectorAll('.home-bookmark-item[data-ubid]').forEach(el => {
     el.addEventListener('click', () => {
       const ub = _myBookmarks.find(b => b.id === el.dataset.ubid);
-      if(ub) showReadingBookmarkSheet(ub);
+      if(ub) mob_showBook(ub.bookId);
     });
   });
 
@@ -4354,92 +4367,6 @@ function recommendedSection(books) {
   // ── Bind "Create new list" ───────────────────────────────────────────
   document.getElementById('btnHomeNewList')?.addEventListener('click', () => {
     showCreateListModal(null);
-  });
-}
-
-function showReadingBookmarkSheet(ub) {
-  const book = dedupe([...library, ...communityLib, ..._bookmarkBookCache]).find(b => b.id === ub.bookId);
-  if(!book) return;
-  const isReadingPos = ub.type === 'reading_position';
-  const progress = ub.progress || 0;
-  const chapterLabel = ub.chapterLabel || '';
-  const updatedAt = ub.updatedAt?.toDate?.();
-
-  const overlay = document.createElement('div');
-  overlay.className = 'modal-overlay open';
-  overlay.style.cssText = 'align-items:flex-end;padding:0;';
-  overlay.innerHTML = `
-    <div style="width:100%;background:var(--warm-white);border-radius:16px 16px 0 0;
-                box-shadow:0 -4px 24px rgba(0,0,0,.2);overflow:hidden;
-                padding-bottom:env(safe-area-inset-bottom);">
-      <div style="width:36px;height:4px;background:var(--border);border-radius:2px;margin:.75rem auto .5rem;"></div>
-      <div style="display:flex;gap:.9rem;padding:.4rem 1.2rem 1rem;">
-        ${getCoverSrc(book)
-          ? `<img src="${getCoverSrc(book)}" style="width:64px;height:94px;object-fit:cover;
-              border-radius:3px;border:1px solid var(--border);flex-shrink:0"/>`
-          : `<div style="width:64px;height:94px;background:var(--navy2);border-radius:3px;flex-shrink:0"></div>`}
-        <div style="flex:1;min-width:0;">
-          <div style="font-family:'Playfair Display',serif;font-size:1.05rem;color:var(--navy2);
-            line-height:1.25">${esc(book.title)}</div>
-          <div style="font-size:.78rem;color:var(--muted);font-style:italic;margin-top:.15rem">
-            ${esc(book.author||'')}</div>
-          ${isReadingPos ? `<div style="margin-top:.5rem">
-            <div style="height:5px;background:var(--border);border-radius:3px;overflow:hidden;">
-              <div style="height:5px;width:${Math.round(progress*100)}%;background:var(--teal);"></div>
-            </div>
-            <div style="font-size:.7rem;color:var(--muted);margin-top:.3rem;">
-              ${Math.round(progress*100)}% · ${esc(chapterLabel)}
-            </div>
-          </div>` : ''}
-        </div>
-        <button onclick="this.closest('.modal-overlay').remove()" style="background:none;
-          border:none;font-size:1.2rem;cursor:pointer;color:var(--muted);line-height:1;
-          align-self:flex-start;">✕</button>
-      </div>
-
-      <div style="padding:.6rem 1.2rem .9rem;display:flex;flex-direction:column;gap:.5rem;">
-        ${updatedAt ? `<div style="font-size:.7rem;color:var(--muted);">
-          Last read ${timeAgo(updatedAt)}</div>` : ''}
-        <button id="bmContinueBtn" style="width:100%;padding:.65rem;border-radius:24px;border:none;
-          background:#3d7a96;color:var(--gold);font-family:'Lato',sans-serif;font-size:.85rem;
-          font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:.4rem;">
-          📖 ${isReadingPos && progress > 0 ? 'Continue Reading' : 'Open Book'}
-        </button>
-        <button id="bmViewDetailsBtn" style="width:100%;padding:.55rem;border-radius:24px;
-          border:1px solid var(--border);background:transparent;color:var(--navy2);
-          font-family:'Lato',sans-serif;font-size:.78rem;font-weight:700;cursor:pointer;">
-          View Book Details</button>
-        ${isReadingPos ? `<button id="bmMarkCompleteBtn" style="width:100%;padding:.5rem;
-          border-radius:24px;border:1px solid #86efac;background:transparent;color:#276749;
-          font-family:'Lato',sans-serif;font-size:.76rem;font-weight:700;cursor:pointer;">
-          ✓ Mark Complete</button>` : ''}
-      </div>
-    </div>`;
-
-  document.body.appendChild(overlay);
-  overlay.addEventListener('click', e => { if(e.target === overlay) overlay.remove(); });
-
-  overlay.querySelector('#bmContinueBtn').addEventListener('click', () => {
-    overlay.remove();
-    currentId = book.id;
-    readCurrentBook();
-  });
-  overlay.querySelector('#bmViewDetailsBtn').addEventListener('click', () => {
-    overlay.remove();
-    mobPrevPanel = 'mobPanelHome';
-    mob_showBook(book.id);
-  });
-  overlay.querySelector('#bmMarkCompleteBtn')?.addEventListener('click', async () => {
-    overlay.remove();
-    showLoading('Marking as finished…');
-    try {
-      await markBookFinished(book.id);
-      hideLoading();
-      showToast('Marked as Finished ✓');
-    } catch(e) {
-      hideLoading();
-      showToast('Failed: ' + e.message);
-    }
   });
 }
 
