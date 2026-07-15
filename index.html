@@ -782,7 +782,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .mob-detail-actions{display:flex;flex-wrap:wrap;gap:.4rem;margin-bottom:1rem;}
 /* Lists section: quick emoji toggles for the two most-used lists, an "Other
    Lists" entry point for the rest, and (when relevant) Mark Finished. */
-.mob-list-section{width:100%;margin-bottom:.2rem;}
+.mob-list-section{width:100%;margin-bottom:.2rem;position:relative;}
 .mob-list-section-label{font-size:.6rem;letter-spacing:.15em;text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:.4rem;}
 .mob-list-row{display:flex;flex-wrap:wrap;gap:.4rem;}
 .mob-list-quickbtn{display:flex;align-items:center;gap:.35rem;padding:.42rem .75rem;border-radius:18px;border:1.5px solid var(--border);background:var(--warm-white);color:var(--navy2);font-size:.72rem;font-weight:700;cursor:pointer;white-space:nowrap;transition:background .15s,border-color .15s,color .15s;}
@@ -790,6 +790,19 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .mob-list-quickbtn.active[data-list="favourites"]{background:#e11d48;border-color:#e11d48;color:#fff;}
 .mob-list-quickbtn.active[data-list="want-to-read"]{background:#7c3aed;border-color:#7c3aed;color:#fff;}
 .mob-list-other-btn{padding:.42rem .75rem;border-radius:18px;border:1.5px dashed var(--border);background:transparent;color:var(--muted);font-size:.72rem;font-weight:700;cursor:pointer;white-space:nowrap;}
+/* Other Lists: a small inline dropdown anchored under its button, not a
+   second bottom sheet stacking behind the first. */
+.mob-otherlists-dropdown{position:absolute;top:calc(100% + 4px);left:0;z-index:8;
+  min-width:200px;max-width:80vw;max-height:45vh;overflow-y:auto;
+  background:var(--warm-white);border:1px solid var(--border);border-radius:12px;
+  box-shadow:0 8px 24px rgba(20,30,45,.18);padding:.35rem;}
+.mob-otherlists-item{display:flex;align-items:center;gap:.5rem;padding:.5rem .6rem;
+  border-radius:8px;cursor:pointer;font-size:.78rem;color:var(--navy2);}
+.mob-otherlists-item:active{background:var(--panel);}
+.mob-otherlists-item .oli-check{margin-left:auto;color:var(--teal);font-weight:700;visibility:hidden;}
+.mob-otherlists-item.in-list .oli-check{visibility:visible;}
+.mob-otherlists-newbtn{width:100%;text-align:left;background:none;border:none;border-top:1px solid var(--border);
+  margin-top:.25rem;padding:.55rem .6rem 0;font-size:.74rem;font-weight:700;color:var(--teal);cursor:pointer;}
 .mob-list-markfinished-btn{padding:.42rem .75rem;border-radius:18px;border:1.5px solid #276749;background:transparent;color:#276749;font-size:.72rem;font-weight:700;cursor:pointer;white-space:nowrap;display:flex;align-items:center;gap:.35rem;}
 /* Tags/Categories: a visually distinct card, separate from Lists */
 .mob-taxonomy-card{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:.7rem .8rem;margin-bottom:.8rem;}
@@ -818,7 +831,16 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
   z-index:520;
 }
 .mob-sheet.open{transform:translateY(0);}
-.mob-sheet.full{height:96vh;max-height:96vh;}
+/* NOTE: 92dvh (dynamic viewport height) accounts for the mobile browser's
+   address bar; 92vh alone is based on the *largest* possible viewport and
+   can be taller than what's actually visible, pushing the header (and its
+   close button) off the top of the screen. Browsers without dvh support
+   just ignore that line and keep the vh fallback above it. */
+.mob-sheet.full{height:92vh;max-height:92vh;height:92dvh;max-height:92dvh;}
+/* While collapsed (peek), the scroll container shouldn't scroll on its own —
+   otherwise a swipe-up gesture both expands the sheet *and* scrolls its
+   content, so it lands already scrolled down instead of at the top. */
+.mob-sheet:not(.full) #mobDetailScroll{overflow:hidden;touch-action:none;}
 .mob-book-sheet-scrim{
   position:fixed;inset:0;background:rgba(15,25,35,.42);z-index:510;
   opacity:0;pointer-events:none;transition:opacity .3s ease;
@@ -3086,7 +3108,8 @@ function renderDetailActionRows(peekContainer, moreContainer, book, isMine){
       <button class="mob-list-quickbtn ${isWtr?'active':''}" data-list="want-to-read" data-action="quicklist">
         <span class="lq-icon">🔖</span><span>Want to Read</span>
       </button>
-      <button class="mob-list-other-btn" data-action="addtolist">Other Lists ▾</button>
+      <button class="mob-list-other-btn" data-action="otherlists" id="mobOtherListsBtn">Other Lists ▾</button>
+      <div class="mob-otherlists-dropdown" id="mobOtherListsDropdown" style="display:none;"></div>
       ${hasReadingBookmark ? `
       <button class="mob-list-markfinished-btn" data-action="markfinished">
         <span>✓</span><span>Mark Finished</span>
@@ -3102,10 +3125,9 @@ function renderDetailActionRows(peekContainer, moreContainer, book, isMine){
   // secondary actions and the "More options" collapse.
   // ═══════════════════════════════════════════════════════════════════════
   let html = `<div class="mob-taxonomy-card">
-    <div class="mob-taxonomy-card-label">🏷 Tags &amp; Categories</div>
     <div style="display:flex;gap:.4rem;">
       ${medBtn('🏷','Tags','tags','var(--teal)','var(--teal)')}
-      ${medBtn('🚪','Category','category','var(--gold)','rgba(200,149,42,.4)')}
+      ${medBtn('📚','Category','category','var(--gold)','rgba(200,149,42,.4)')}
     </div>
   </div>`;
 
@@ -3197,17 +3219,62 @@ async function handleQuickListToggle(btn){
   renderDeskHome();
 }
 
+// Other Lists — a small inline dropdown anchored under its own button,
+// listing every list except Favourites/Want to Read (which already have
+// their own quick-toggle buttons). Deliberately NOT a second bottom sheet,
+// so it can never get stuck behind the book sheet itself.
+function toggleOtherListsDropdown(){
+  const dd = document.getElementById('mobOtherListsDropdown');
+  const btn = document.getElementById('mobOtherListsBtn');
+  if(!dd || !btn) return;
+
+  const isOpen = dd.style.display !== 'none';
+  if(isOpen){ dd.style.display = 'none'; return; }
+
+  const otherLists = _userLists.filter(l => l.id !== 'favourites' && l.id !== 'want-to-read');
+  dd.innerHTML = otherLists.map(l => {
+    const inList = (l.bookIds || []).includes(currentId);
+    return `<div class="mob-otherlists-item ${inList?'in-list':''}" data-listid="${l.id}">
+      <span>${l.icon || '📚'}</span><span>${esc(l.name)}</span>
+      <span class="oli-check">✓</span>
+    </div>`;
+  }).join('') + `<button class="mob-otherlists-newbtn" id="mobOtherListsNewBtn">+ Create New List</button>`;
+
+  dd.style.left = btn.offsetLeft + 'px';
+  dd.style.display = 'block';
+
+  dd.querySelectorAll('[data-listid]').forEach(item => {
+    item.addEventListener('click', async () => {
+      await toggleBookInList(item.dataset.listid, currentId);
+      item.classList.toggle('in-list');
+      renderMobHome();
+      renderDeskHome();
+    });
+  });
+  dd.querySelector('#mobOtherListsNewBtn').addEventListener('click', () => {
+    dd.style.display = 'none';
+    showCreateListModal(currentId);
+  });
+}
+document.addEventListener('click', e => {
+  const dd = document.getElementById('mobOtherListsDropdown');
+  if(!dd || dd.style.display === 'none') return;
+  if(!dd.contains(e.target) && e.target.id !== 'mobOtherListsBtn') dd.style.display = 'none';
+});
+
 // ── Sheet expand/collapse (swipe up or tap the handle) ──────────────────────
 function mobSheetSetExpanded(expanded){
   const sheet = document.getElementById('mobPanelDetail');
   const more = document.getElementById('mobSheetMore');
   const handle = document.getElementById('mobSheetHandle');
   const label = document.getElementById('mobSheetHandleLabel');
+  const scroller = document.getElementById('mobDetailScroll');
   if(!sheet || !more || !handle) return;
   sheet.classList.toggle('full', expanded);
   more.classList.toggle('expanded', expanded);
   handle.classList.toggle('expanded', expanded);
   if(label) label.textContent = expanded ? '▾ Show less' : '▲ Swipe up for tags, description & more';
+  if(scroller) scroller.scrollTop = 0;
 }
 (function initMobSheetHandle(){
   const sheet = document.getElementById('mobPanelDetail');
@@ -3326,6 +3393,7 @@ function handleAction(e){
   if(a==='delete')       deleteCurrentBook();
   if(a==='sendtokobo') { loadKoboDevices().then(()=>showKoboDevicePicker(currentId)); }
   if(a==='addtolist') showListPicker(currentId);
+  if(a==='otherlists') toggleOtherListsDropdown();
   if(a==='quicklist')  handleQuickListToggle(btn);
   if(a==='category')     showQuickCategoryModal();
   if(a==='markfinished')  doMarkFinishedFromDetail();
@@ -3616,6 +3684,8 @@ async function mob_showBook(id){
 function openMobBookSheet(){
   document.getElementById('mobBookSheetScrim').classList.add('open');
   document.getElementById('mobPanelDetail').classList.add('open');
+  const dd = document.getElementById('mobOtherListsDropdown');
+  if(dd) dd.style.display = 'none';
   mobSheetSetExpanded(false); // always opens as a peek; swipe up for full screen
 }
 function closeMobBookSheet(){
@@ -10412,8 +10482,8 @@ function getTagList() { return _globalTags; }
 
 function showQuickCategoryModal() {
   if(!currentId) return;
-  const book = library.find(b => b.id === currentId);
-  if(!book) { showToast('Only the owner can change category'); return; }
+  const book = [...library, ...communityLib].find(b => b.id === currentId);
+  if(!book) { showToast("Couldn't find that book"); return; }
 
   const overlay = document.createElement('div');
   overlay.className = 'modal-overlay open';
@@ -10885,8 +10955,6 @@ function showTagsModal() {
   if(!currentId) return;
   const book = [...library, ...communityLib].find(b => b.id === currentId);
   if(!book) return;
-  const isMine = book.ownerId === currentUser?.uid;
-  if(!isMine && !isAdmin) { showToast('Only the owner can edit tags'); return; }
 
   const overlay = document.createElement('div');
   overlay.className = 'modal-overlay open';
