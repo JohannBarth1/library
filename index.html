@@ -2267,12 +2267,12 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
     <div id="readerChapterItems"></div>
   </div>
   <div class="reader-chapter-list" id="readerBookmarkListPanel">
-    <div style="display:flex;border-bottom:1px solid rgba(128,128,128,0.2);">
-      <button class="bm-panel-tab active" id="bmPanelTabBookmarks">🔖 Bookmarks</button>
-      <button class="bm-panel-tab" id="bmPanelTabHighlights">✎ Highlights</button>
-    </div>
+    <h3>Bookmarks</h3>
     <div id="readerBookmarkListItems"></div>
-    <div id="readerHighlightListItems" style="display:none;"></div>
+  </div>
+  <div class="reader-chapter-list" id="readerHighlightListPanel">
+    <h3>Highlights</h3>
+    <div id="readerHighlightListItems"></div>
   </div>
   <div class="reader-content" id="readerContent">
 
@@ -2292,6 +2292,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
     <div class="reader-nav">
   <button class="reader-btn" id="btnToggleChapters" title="Contents">☰</button>
   <button class="reader-btn" id="btnToggleBookmarkList" title="Bookmarks">🔖</button>
+  <button class="reader-btn" id="btnToggleHighlightList" title="Highlights">🖍️</button>
   <button class="reader-btn" id="btnToggleSelectMode" title="Select & Highlight">✎</button>
   </div>
     <div class="reader-nav">
@@ -4962,6 +4963,7 @@ document.getElementById('btnReaderTTS').addEventListener('click', (e) => {
   const wasOpen = panel.classList.contains('open');
   document.getElementById('readerChapterList').classList.remove('open');
   document.getElementById('readerBookmarkListPanel').classList.remove('open');
+  document.getElementById('readerHighlightListPanel').classList.remove('open');
   document.getElementById('readerSettingsBar').classList.remove('open');
   panel.classList.toggle('open', !wasOpen);
   positionReaderToolbar();
@@ -5041,6 +5043,7 @@ document.getElementById('btnToggleReaderSettings').addEventListener('click', e =
 });
 document.getElementById('btnToggleChapters').addEventListener('click',()=>{
   document.getElementById('readerBookmarkListPanel').classList.remove('open');
+  document.getElementById('readerHighlightListPanel').classList.remove('open');
   document.getElementById('ttsPanel').classList.remove('open');
   document.getElementById('readerChapterList').classList.toggle('open');
   positionReaderToolbar();
@@ -5052,6 +5055,7 @@ document.getElementById('btnToggleSelectMode').addEventListener('click', e => {
 document.getElementById('readerOverlay').addEventListener('click', e => {
   const list = document.getElementById('readerChapterList');
   const bmPanel = document.getElementById('readerBookmarkListPanel');
+  const hlPanel = document.getElementById('readerHighlightListPanel');
   const settingsBar = document.getElementById('readerSettingsBar');
   const ttsPanel = document.getElementById('ttsPanel');
 
@@ -5065,6 +5069,12 @@ document.getElementById('readerOverlay').addEventListener('click', e => {
      !e.target.closest('#readerBookmarkListPanel') &&
      !e.target.closest('#btnToggleBookmarkList')){
     bmPanel.classList.remove('open');
+  }
+
+  if(hlPanel.classList.contains('open') &&
+     !e.target.closest('#readerHighlightListPanel') &&
+     !e.target.closest('#btnToggleHighlightList')){
+    hlPanel.classList.remove('open');
   }
 
   if(settingsBar.classList.contains('open') &&
@@ -5361,6 +5371,7 @@ async function readCurrentBook(){
   if(!currentId)return;
   const book=await findBookById(currentId);
   if(!book){showToast("Couldn't open that book — try again in a moment");return;}
+  closeMobBookSheet(); // the mobile peek/detail sheet must not stay open behind the reader
   recordBookOpened(book);
   addBookToViewedList(book.id);
   let storagePath=book.storagePath;
@@ -5545,6 +5556,7 @@ function positionReaderToolbar() {
   const handle   = document.getElementById('readerToolbarHandle');
   const chapterList = document.getElementById('readerChapterList');
   const bookmarkList = document.getElementById('readerBookmarkListPanel');
+  const highlightList = document.getElementById('readerHighlightListPanel');
   if(!toolbar) return;
   const baseOffset = infoBar?.offsetHeight || 0;
   toolbar.style.bottom = baseOffset + 'px';
@@ -5562,6 +5574,7 @@ function positionReaderToolbar() {
   const panelBottom = (baseOffset + toolbar.offsetHeight) + 'px';
   if(chapterList) chapterList.style.bottom = panelBottom;
   if(bookmarkList) bookmarkList.style.bottom = panelBottom;
+  if(highlightList) highlightList.style.bottom = panelBottom;
 }
 
 function _getReaderDimensions() {
@@ -6482,7 +6495,7 @@ function _showHighlightPopup(doc, range) {
       if(!offsets) return;
       const id = await saveHighlight(offsets.startOffset, offsets.endOffset, color, text);
       if(id) applyHighlightsToChapter(doc);
-      if(_bmPanelTab === 'highlights') renderReaderHighlightList();
+      if(document.getElementById('readerHighlightListPanel')?.classList.contains('open')) renderReaderHighlightList();
     });
   });
 }
@@ -6514,14 +6527,14 @@ function openHighlightMenu(markEl, clientX, clientY) {
       await updateHighlightColor(id, color);
       markEl.style.background = HIGHLIGHT_COLORS[color];
       _removeHighlightPopup();
-      if(_bmPanelTab === 'highlights') renderReaderHighlightList();
+      if(document.getElementById('readerHighlightListPanel')?.classList.contains('open')) renderReaderHighlightList();
     });
   });
   popup.querySelector('[data-hldelete]').addEventListener('click', async () => {
     await deleteHighlight(id);
     markEl.replaceWith(...markEl.childNodes);
     _removeHighlightPopup();
-    if(_bmPanelTab === 'highlights') renderReaderHighlightList();
+    if(document.getElementById('readerHighlightListPanel')?.classList.contains('open')) renderReaderHighlightList();
   });
 }
 
@@ -6693,8 +6706,9 @@ function _fireReaderLongPress(doc, clientX, clientY) {
   if (!doc || readerSelectMode) return;
   const list = document.getElementById('readerChapterList');
   const bmPanel = document.getElementById('readerBookmarkListPanel');
+  const hlPanel = document.getElementById('readerHighlightListPanel');
   const settingsBar = document.getElementById('readerSettingsBar');
-  if (list?.classList.contains('open') || bmPanel?.classList.contains('open') || settingsBar?.classList.contains('open')) return;
+  if (list?.classList.contains('open') || bmPanel?.classList.contains('open') || hlPanel?.classList.contains('open') || settingsBar?.classList.contains('open')) return;
 
   setReaderSelectMode(true);
   _handleSentenceTap(doc, clientX, clientY);
@@ -6784,14 +6798,16 @@ function _attachReaderTapHandlers(doc) {
 
     const list = document.getElementById('readerChapterList');
     const bmPanel = document.getElementById('readerBookmarkListPanel');
+    const hlPanel = document.getElementById('readerHighlightListPanel');
     const settingsBar = document.getElementById('readerSettingsBar');
     const ttsPanel = document.getElementById('ttsPanel');
     const readerOv = document.getElementById('readerOverlay');
     const toolbarVisible = !readerOv.classList.contains('toolbar-hidden');
     
-    if (list.classList.contains('open') || bmPanel.classList.contains('open') || settingsBar.classList.contains('open') || ttsPanel.classList.contains('open') || toolbarVisible) {
+    if (list.classList.contains('open') || bmPanel.classList.contains('open') || hlPanel.classList.contains('open') || settingsBar.classList.contains('open') || ttsPanel.classList.contains('open') || toolbarVisible) {
       list.classList.remove('open');
       bmPanel.classList.remove('open');
+      hlPanel.classList.remove('open');
       settingsBar.classList.remove('open');
       ttsPanel.classList.remove('open');
       if (toolbarVisible) { readerOv.classList.add('toolbar-hidden'); _updateToolbarHandleIcon(); }
@@ -7583,31 +7599,24 @@ document.getElementById('btnToggleBookmarkList').addEventListener('click', () =>
   document.getElementById('ttsPanel').classList.remove('open');
   const panel = document.getElementById('readerBookmarkListPanel');
   document.getElementById('readerChapterList').classList.remove('open'); // mutually exclusive
+  document.getElementById('readerHighlightListPanel').classList.remove('open'); // mutually exclusive
   const willOpen = !panel.classList.contains('open');
   panel.classList.toggle('open');
   positionReaderToolbar();
-  if(willOpen) _renderActiveBmPanelTab();
+  if(willOpen) renderReaderBookmarkList();
 });
 
-// ── Bookmarks / Highlights tab switcher (same side panel, two lists) ────────
-let _bmPanelTab = 'bookmarks'; // 'bookmarks' | 'highlights'
-
-function _renderActiveBmPanelTab() {
-  if(_bmPanelTab === 'highlights') renderReaderHighlightList();
-  else renderReaderBookmarkList();
-}
-
-function _setBmPanelTab(tab) {
-  _bmPanelTab = tab;
-  document.getElementById('bmPanelTabBookmarks').classList.toggle('active', tab === 'bookmarks');
-  document.getElementById('bmPanelTabHighlights').classList.toggle('active', tab === 'highlights');
-  document.getElementById('readerBookmarkListItems').style.display = tab === 'bookmarks' ? '' : 'none';
-  document.getElementById('readerHighlightListItems').style.display = tab === 'highlights' ? '' : 'none';
-  _renderActiveBmPanelTab();
-}
-
-document.getElementById('bmPanelTabBookmarks').addEventListener('click', () => _setBmPanelTab('bookmarks'));
-document.getElementById('bmPanelTabHighlights').addEventListener('click', () => _setBmPanelTab('highlights'));
+// ── Highlights panel — standalone, next to Bookmarks (no longer a hidden tab) ──
+document.getElementById('btnToggleHighlightList').addEventListener('click', () => {
+  document.getElementById('ttsPanel').classList.remove('open');
+  const panel = document.getElementById('readerHighlightListPanel');
+  document.getElementById('readerChapterList').classList.remove('open'); // mutually exclusive
+  document.getElementById('readerBookmarkListPanel').classList.remove('open'); // mutually exclusive
+  const willOpen = !panel.classList.contains('open');
+  panel.classList.toggle('open');
+  positionReaderToolbar();
+  if(willOpen) renderReaderHighlightList();
+});
 
 function renderReaderHighlightList() {
   const container = document.getElementById('readerHighlightListItems');
@@ -7649,7 +7658,7 @@ function renderReaderHighlightList() {
     el.addEventListener('click', e => {
       if(e.target.closest('[data-hremove]')) return;
       const h = items[parseInt(el.dataset.hidx)];
-      document.getElementById('readerBookmarkListPanel').classList.remove('open');
+      document.getElementById('readerHighlightListPanel').classList.remove('open');
       readerGoToChapter(h.chapterIdx, 0);
     });
   });
@@ -8029,6 +8038,7 @@ function closeReader(){
   document.getElementById('readerOverlay').classList.remove('open');
   document.getElementById('readerChapterList').classList.remove('open');
   document.getElementById('readerBookmarkListPanel').classList.remove('open');
+  document.getElementById('readerHighlightListPanel').classList.remove('open');
   document.getElementById('readerSettingsBar').classList.remove('open');
 
   if(_readerIframe) { _readerIframe.remove(); _readerIframe = null; }
