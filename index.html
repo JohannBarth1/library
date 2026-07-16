@@ -293,16 +293,22 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .hide-scrollbar::-webkit-scrollbar{display:none;}
 
 /* ── DESKTOP HOME PANEL ── */
-.desk-home{display:none;flex:1;overflow-y:auto;flex-direction:column;padding:1.8rem 2rem;gap:2rem;}
+.desk-home{display:none;flex:1;overflow:hidden;flex-direction:column;padding:0;gap:0;}
 .desk-home.active{display:flex;}
+/* Greeting row pinned at the top */
+.desk-home > div:first-child{padding:1.6rem 2rem 1rem;flex-shrink:0;border-bottom:1px solid var(--border);background:var(--warm-white);}
+/* Dynamic shelf content fills the rest and scrolls */
+#deskHomeDynamic{flex:1;overflow-y:auto;padding:1.4rem 2rem 2rem;display:flex;flex-direction:column;gap:0;}
 .desk-home-greeting{font-family:'Playfair Display',serif;font-size:1.6rem;color:var(--navy2);}
 .desk-home-sub{font-size:.85rem;color:var(--muted);margin-top:.2rem;}
 .desk-home-section{margin-top:.5rem;}
 .desk-home-section-label{font-size:.65rem;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:.9rem;padding-bottom:.4rem;border-bottom:1px solid var(--border);}
 .desk-home-section-label.gold{color:var(--gold);}
 .desk-home-section-label.teal{color:var(--teal);}
-/* PATCH 3: 140px to match main grid */
+/* Legacy grid (kept for any remaining references) */
 .desk-home-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:1rem;}
+/* Desktop home shelf rows hide scrollbar */
+#deskHomeDynamic .home-shelf-section div[style*="overflow-x"]::-webkit-scrollbar{display:none;}
 
 /* ── BOOK CARD ── */
 .book-card{cursor:pointer;border-radius:4px;overflow:hidden;transition:transform .15s,box-shadow .15s;position:relative;}
@@ -1000,12 +1006,6 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .reader-bookmark-ghost:hover {
   opacity: 0.55;
 }
-
-  <div style="margin-top:1rem;padding-top:.8rem;border-top:1px solid var(--border)">
-  <div style="font-family:'Playfair Display',serif;font-size:.9rem;color:var(--navy2);margin-bottom:.7rem">🏷 Categories &amp; Tags</div>
-  <button class="btn-save" style="width:100%;margin-bottom:.4rem;font-size:.72rem;padding:.45rem" id="deskManageCatsBtn">Manage Categories</button>
-  <button class="btn-save" style="width:100%;font-size:.72rem;padding:.45rem;background:var(--navy2)" id="deskManageTagsBtn">Manage Tags</button>
-</div>
 
 /* CHECKOUT */
 .checkout-badge{display:inline-block;font-size:.65rem;font-weight:700;padding:2px 8px;border-radius:10px;background:#fff4e0;color:#a87820;margin-top:.3rem;}
@@ -1712,7 +1712,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
         <div class="desk-home-section-label" style="color:#5a48b0">🔒 Shared with Me</div>
         <div class="desk-home-grid" id="deskHomeSharedWithMeGrid"></div>
       </div>     
-      <div class="desk-home-section">
+      <div class="desk-home-section" id="deskHomeRecentSection">
         <div class="desk-home-section-label">Recently Added to My Library</div>
         <div class="desk-home-grid" id="deskHomeRecentGrid"></div>
       </div>
@@ -2030,6 +2030,11 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
     <div style="font-family:'Playfair Display',serif;font-size:.9rem;color:var(--navy2);
                 margin-bottom:.7rem">📖 Kobo Devices</div>
     <div id="deskKoboSettings"></div>
+  </div>
+  <div style="margin-top:1rem;padding-top:.8rem;border-top:1px solid var(--border)">
+    <div style="font-family:'Playfair Display',serif;font-size:.9rem;color:var(--navy2);margin-bottom:.7rem">🏷 Categories &amp; Tags</div>
+    <button class="btn-save" style="width:100%;margin-bottom:.4rem;font-size:.72rem;padding:.45rem" id="deskManageCatsBtn">Manage Categories</button>
+    <button class="btn-save" style="width:100%;font-size:.72rem;padding:.45rem;background:var(--navy2)" id="deskManageTagsBtn">Manage Tags</button>
   </div>
 </div>
 
@@ -2984,77 +2989,304 @@ function hideDeskHome(){deskView='library';document.getElementById('deskHomePane
 document.getElementById('btnDeskHome').addEventListener('click',()=>{if(deskView==='home')hideDeskHome();else showDeskHome();});
 
 async function renderDeskHome(){
-  const el=document.getElementById('deskHomePanel');if(!el)return;
-  const name=(currentUser?.displayName||'').split(' ')[0]||'Reader';
-  document.getElementById('deskHomeGreeting').textContent=`Hello, ${name}`;
+  const panel = document.getElementById('deskHomePanel');
+  if(!panel) return;
+  const name = (currentUser?.displayName||'').split(' ')[0] || 'Reader';
+  document.getElementById('deskHomeGreeting').textContent = `Hello, ${name}`;
 
-  // Recommended — includes your own recommended books
-  const recommended=[...library,...communityLib]
-    .filter(b=>b.recommended)
-    .filter((b,i,arr)=>arr.findIndex(x=>x.id===b.id)===i);
-  const recSection=document.getElementById('deskHomeRecSection');
-  const recGrid=document.getElementById('deskHomeRecGrid');
-  if(recommended.length){
-    recSection.style.display='';
-    recGrid.innerHTML=recommended.map(b=>bookCardHtml(b,communityLib.some(x=>x.id===b.id))).join('');
-    recGrid.querySelectorAll('.book-card[data-bookid]').forEach(c=>c.addEventListener('click',()=>{hideDeskHome();showBookById(c.dataset.bookid);}));
-  } else recSection.style.display='none';
+  if(!currentUser) return;
 
-  // Signed out books
-  // Hide the checkout section — "Currently Reading" list covers this use case
-  const checkoutSection=document.getElementById('deskHomeCheckoutSection');
-  if(checkoutSection) checkoutSection.style.display='none';
+  const allBooks = dedupe([...library, ...communityLib]);
+  const resolve = ids => ids.map(id => allBooks.find(b => b.id === id)).filter(Boolean);
 
-  // Books I have shared privately with others
-  const sharedByMe=library.filter(b=>b.allowedUsers&&b.allowedUsers.length>0);
-  const sharedByMeSection=document.getElementById('deskHomeSharedByMeSection');
-  const sharedByMeGrid=document.getElementById('deskHomeSharedByMeGrid');
-  if(sharedByMe.length){
-    sharedByMeSection.style.display='';
-    sharedByMeGrid.innerHTML=sharedByMe.map(b=>bookCardHtml(b,false)).join('');
-    sharedByMeGrid.querySelectorAll('.book-card[data-bookid]').forEach(c=>c.addEventListener('click',()=>{hideDeskHome();showBookById(c.dataset.bookid);}));
-  } else sharedByMeSection.style.display='none';
+  // ── shelf section helper (reuses mobile's collapsible row design) ────────
+  function deskShelfSection(id, label, icon, color, books, opts={}) {
+    const { defaultOpen=true, editable=false, listId=null, showAddTile=false, alwaysShow=false } = opts;
+    if(!books.length && !showAddTile && !alwaysShow) return '';
 
-  // Books others have shared privately with me
-  const sharedWithMe=communityLib.filter(b=>
-    b.ownerId!==currentUser?.uid&&
-    b.allowedUsers&&
-    b.allowedUsers.includes(currentUser?.uid)
-  );
-  const sharedWithMeSection=document.getElementById('deskHomeSharedWithMeSection');
-  const sharedWithMeGrid=document.getElementById('deskHomeSharedWithMeGrid');
-  if(sharedWithMe.length){
-    sharedWithMeSection.style.display='';
-    sharedWithMeGrid.innerHTML=sharedWithMe.map(b=>bookCardHtml(b,true)).join('');
-    sharedWithMeGrid.querySelectorAll('.book-card[data-bookid]').forEach(c=>c.addEventListener('click',()=>{hideDeskHome();showBookById(c.dataset.bookid);}));
-  } else sharedWithMeSection.style.display='none';
-// List shelves on desktop home
-  const listSection = document.getElementById('deskHomeListsSection');
-  const listHtml = renderListShelves();
-  if(listHtml) {
-    let listsEl = document.getElementById('deskHomeListsSection');
-    if(!listsEl) {
-      listsEl = document.createElement('div');
-      listsEl.id = 'deskHomeListsSection';
-      listsEl.className = 'desk-home-section';
-      const deskHomePanel = document.getElementById('deskHomePanel');
-      const lastSection = deskHomePanel.querySelector('.desk-home-section:last-child');
-      deskHomePanel.insertBefore(listsEl, lastSection);
-      }
-    listsEl.innerHTML = `<div class="desk-home-section-label">📚 My Lists</div>` + listHtml;
-    listsEl.querySelectorAll('.book-card[data-bookid]').forEach(c =>
-      c.addEventListener('click', () => { hideDeskHome(); showBookById(c.dataset.bookid); })
-    );
+    const coverRow = books.length
+      ? books.slice(0,14).map(b => {
+          const src = getCoverSrc(b);
+          const bmTpl = (_bookmarkTemplates.length && _myBookmarks !== undefined)
+            ? getDisplayBookmarkTemplate(b.id) : null;
+          const ribbonHtml = bmTpl
+            ? `<div style="position:absolute;top:0;right:0;z-index:3;
+                           filter:drop-shadow(1px 2px 3px rgba(0,0,0,0.5))">
+                ${renderBookmarkSVG(bmTpl, 20, 32, 'dshelf'+b.id, true)}
+               </div>` : '';
+          return `<div class="home-shelf-book" data-bookid="${b.id}" style="
+            flex-shrink:0;width:72px;cursor:pointer;position:relative;">
+            ${src
+              ? `<img src="${src}" loading="lazy" style="
+                  width:72px;height:108px;object-fit:cover;border-radius:2px 4px 4px 2px;
+                  display:block;box-shadow:2px 3px 8px rgba(0,0,0,.3);"/>`
+              : `<div style="width:72px;height:108px;background:linear-gradient(145deg,var(--navy2),#2a3d5a);
+                  border-radius:2px 4px 4px 2px;box-shadow:2px 3px 8px rgba(0,0,0,.3);
+                  display:flex;align-items:center;justify-content:center;
+                  font-size:.55rem;color:rgba(200,180,140,0.8);text-align:center;
+                  padding:4px;line-height:1.2;">${esc(b.title)}</div>`
+            }
+            ${ribbonHtml}
+          </div>`;
+        }).join('')
+      : '';
+
+    const addTileHtml = showAddTile
+      ? `<div class="home-shelf-addtile" data-listid="${listId}" style="
+          flex-shrink:0;width:54px;height:81px;align-self:center;
+          border:1px dashed var(--border);border-radius:6px;
+          display:flex;align-items:center;justify-content:center;
+          font-size:1.4rem;color:var(--muted);cursor:pointer;">+</div>`
+      : '';
+
+    const menuHtml = editable
+      ? `<button class="home-shelf-menu-btn" data-listid="${listId}" data-listname="${esc(label)}"
+          style="background:none;border:none;font-size:.95rem;color:var(--muted);
+                 cursor:pointer;padding:.1rem .3rem;line-height:1;">⋯</button>`
+      : '';
+
+    return `<div class="home-shelf-section" id="deskHomeSection_${id}" style="margin-bottom:1.2rem;">
+      <div style="display:flex;align-items:center;justify-content:space-between;
+                  padding:.1rem 0 .45rem;-webkit-tap-highlight-color:transparent;">
+        <div onclick="toggleDeskShelf('${id}')"
+          style="display:flex;align-items:center;gap:.5rem;cursor:pointer;user-select:none;flex:1;min-width:0;">
+          <span style="font-size:.95rem;flex-shrink:0;">${icon}</span>
+          <span style="font-size:.74rem;font-weight:700;letter-spacing:.04em;
+            color:${color};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(label)}</span>
+          <span style="font-size:.65rem;color:var(--muted);font-weight:400;flex-shrink:0;">
+            ${books.length}</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:.2rem;flex-shrink:0;">
+          ${menuHtml}
+          <span id="deskShelf_${id}_chevron" onclick="toggleDeskShelf('${id}')"
+            style="font-size:.75rem;color:var(--muted);cursor:pointer;padding:.1rem .3rem;
+            transition:transform .2s;${defaultOpen?'':'transform:rotate(-90deg)'}">▾</span>
+        </div>
+      </div>
+      <div style="height:2px;border-radius:1px;margin-bottom:.65rem;
+        background:linear-gradient(90deg,${color},${color} 40px,transparent 40px);"></div>
+      <div id="deskShelf_${id}_body" style="overflow:hidden;
+        max-height:${defaultOpen?'600px':'0'};transition:max-height .3s ease;">
+        <div style="display:flex;gap:8px;overflow-x:auto;padding-bottom:6px;
+          scrollbar-width:none;-webkit-overflow-scrolling:touch;">
+          ${coverRow}${addTileHtml}
+          ${books.length > 14
+            ? `<div style="flex-shrink:0;width:54px;height:108px;display:flex;
+                align-items:center;justify-content:center;font-size:.65rem;
+                color:var(--muted);font-weight:700;text-align:center;
+                line-height:1.4;">+${books.length - 14}<br>more</div>`
+            : ''}
+        </div>
+      </div>
+    </div>`;
   }
-  
-  // Recently added to my library
-  const recent=library.slice(0,12);
-  const recentGrid=document.getElementById('deskHomeRecentGrid');
-  if(recent.length){
-    recentGrid.innerHTML=recent.map(b=>bookCardHtml(b,false)).join('');
-    recentGrid.querySelectorAll('.book-card[data-bookid]').forEach(c=>c.addEventListener('click',()=>{hideDeskHome();showBookById(c.dataset.bookid);}));
-  } else recentGrid.innerHTML='<div style="color:var(--muted);font-size:.88rem;padding:1rem 0">Upload books to get started</div>';
+
+  // ── Current Reads (reading-position bookmarks × currently-reading list) ──
+  function deskCurrentReads() {
+    const crIds = new Set(_userLists.find(l => l.id === 'currently-reading')?.bookIds || []);
+    const readingPosBookmarks = _myBookmarks
+      .filter(b => b.type === 'reading_position' && b.bookId && crIds.has(b.bookId))
+      .sort((a,b) => (b.updatedAt?.toMillis?.()||0) - (a.updatedAt?.toMillis?.()||0))
+      .filter((b,i,arr) => arr.findIndex(x => x.bookId === b.bookId) === i);
+    if(!readingPosBookmarks.length) return '';
+
+    const COVER_W = 80; const COVER_H = 120;
+    const RIB_W = 24; const RIB_VIS = 28; const RIB_H = RIB_VIS + 55;
+    const RIB_RIGHT = 11;
+
+    const tiles = readingPosBookmarks.map(ub => {
+      const book = allBooks.find(b => b.id === ub.bookId);
+      if(!book) return '';
+      const progress = ub.progress || 0;
+      const tpl = getDisplayBookmarkTemplate(ub.bookId) || {
+        shape:'classic', icon:'📖', label:'',
+        colors:{body:'#0f1a2e', accent:'#c8952a', text:'#faf7f2'}
+      };
+      const src = getCoverSrc(book);
+      const coverHtml = src
+        ? `<img src="${src}" loading="lazy" style="
+            width:${COVER_W}px;height:${COVER_H}px;object-fit:cover;
+            display:block;border-radius:2px 5px 5px 2px;
+            box-shadow:2px 4px 12px rgba(0,0,0,.35);"/>`
+        : `<div style="width:${COVER_W}px;height:${COVER_H}px;
+            background:linear-gradient(145deg,var(--navy2),#2a3d5a);
+            border-radius:2px 5px 5px 2px;box-shadow:2px 4px 12px rgba(0,0,0,.35);
+            display:flex;align-items:center;justify-content:center;
+            font-size:.55rem;color:rgba(200,180,140,0.8);text-align:center;padding:6px;line-height:1.3;">
+            ${esc(book.title)}</div>`;
+      const progBar = progress > 0
+        ? `<div style="position:absolute;bottom:0;left:0;right:0;height:3px;
+            background:rgba(0,0,0,.25);border-radius:0 0 5px 5px;overflow:hidden;">
+            <div style="height:3px;width:${Math.round(progress*100)}%;background:var(--gold);"></div>
+          </div>` : '';
+      return `<div class="home-bookmark-item" data-bookid="${book.id}" style="
+        display:flex;flex-direction:column;align-items:center;gap:5px;cursor:pointer;flex-shrink:0;">
+        <div style="position:relative;width:${COVER_W}px;height:${COVER_H+RIB_VIS}px;display:flex;align-items:flex-end;">
+          <div style="position:absolute;top:0;right:${RIB_RIGHT}px;z-index:1;
+            filter:drop-shadow(1px 2px 4px rgba(0,0,0,.4));pointer-events:none;">
+            ${renderBookmarkSVG(tpl, RIB_W, RIB_H, 'dh'+ub.id, false, true)}
+          </div>
+          <div style="position:absolute;bottom:0;left:0;z-index:2;">
+            ${coverHtml}${progBar}
+          </div>
+        </div>
+      </div>`;
+    }).join('');
+
+    return `<div style="margin-bottom:1.4rem;">
+      <div style="display:flex;align-items:center;gap:.5rem;padding:.1rem 0 .5rem;">
+        <span style="font-size:.74rem;font-weight:700;letter-spacing:.04em;color:var(--gold);">Current Reads</span>
+      </div>
+      <div style="height:2px;border-radius:1px;margin-bottom:.7rem;
+        background:linear-gradient(90deg,var(--gold),var(--gold) 40px,transparent 40px);"></div>
+      <div style="display:flex;gap:10px;overflow-x:auto;padding-bottom:6px;scrollbar-width:none;">
+        ${tiles}
+      </div>
+    </div>`;
+  }
+
+  // ── Styled Recommended section (matching mobile design language) ──────────
+  function deskRecommendedSection(books) {
+    if(!books.length) return '';
+    const tileHtml = books.map(b => {
+      const src = getCoverSrc(b);
+      const coverContent = src
+        ? `<img src="${src}" loading="lazy" style="width:100%;aspect-ratio:2/3;object-fit:cover;display:block;border-radius:4px;"/>`
+        : `<div style="width:100%;aspect-ratio:2/3;background:linear-gradient(160deg,#2a3d5a,var(--navy2));border-radius:4px;
+            display:flex;align-items:center;justify-content:center;padding:8px;text-align:center;">
+            <span style="font-size:.55rem;color:rgba(200,180,140,.85);line-height:1.4;">${esc(b.title)}</span></div>`;
+      return `<div class="home-shelf-book" data-bookid="${b.id}" style="
+        cursor:pointer;box-shadow:0 4px 16px rgba(200,149,42,.18),0 1px 4px rgba(200,149,42,.12);
+        border-radius:4px;transition:transform .15s,box-shadow .15s;">
+        ${coverContent}
+      </div>`;
+    }).join('');
+    return `<div style="margin-bottom:1.4rem;padding:.8rem .9rem .75rem;
+      background:linear-gradient(135deg,rgba(200,149,42,.07),rgba(200,149,42,.015));
+      border:1px solid rgba(200,149,42,.25);border-radius:10px;">
+      <div style="display:flex;align-items:center;gap:.6rem;margin-bottom:.8rem;padding-bottom:.6rem;
+        border-bottom:1px solid rgba(200,149,42,.2);">
+        <div style="font-family:'Playfair Display',serif;font-size:.95rem;font-style:italic;
+          color:var(--gold);letter-spacing:.03em;">Recommended</div>
+        <div style="flex:1;height:1px;background:linear-gradient(to right,rgba(200,149,42,.3),transparent);"></div>
+        <span style="font-size:.8rem;opacity:.5;">⭐</span>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(80px,1fr));gap:.65rem;">
+        ${tileHtml}
+      </div>
+    </div>`;
+  }
+
+  // ── Shared with/by me compact sections ───────────────────────────────────
+  function deskSharedSection(label, icon, color, books) {
+    if(!books.length) return '';
+    const tiles = books.slice(0,12).map(b => {
+      const src = getCoverSrc(b);
+      return `<div class="home-shelf-book" data-bookid="${b.id}" style="
+        flex-shrink:0;width:64px;cursor:pointer;position:relative;">
+        ${src
+          ? `<img src="${src}" loading="lazy" style="width:64px;height:96px;object-fit:cover;
+              border-radius:2px 4px 4px 2px;display:block;box-shadow:2px 3px 8px rgba(0,0,0,.3);"/>`
+          : `<div style="width:64px;height:96px;background:linear-gradient(145deg,var(--navy2),#2a3d5a);
+              border-radius:2px 4px 4px 2px;box-shadow:2px 3px 8px rgba(0,0,0,.3);
+              display:flex;align-items:center;justify-content:center;font-size:.5rem;
+              color:rgba(200,180,140,0.8);text-align:center;padding:4px;line-height:1.2;">${esc(b.title)}</div>`
+        }
+      </div>`;
+    }).join('');
+    return `<div style="margin-bottom:1.2rem;">
+      <div style="display:flex;align-items:center;gap:.5rem;padding:.1rem 0 .45rem;">
+        <span style="font-size:.95rem;flex-shrink:0;">${icon}</span>
+        <span style="font-size:.74rem;font-weight:700;letter-spacing:.04em;color:${color};">${esc(label)}</span>
+        <span style="font-size:.65rem;color:var(--muted);font-weight:400;">${books.length}</span>
+      </div>
+      <div style="height:2px;border-radius:1px;margin-bottom:.65rem;
+        background:linear-gradient(90deg,${color},${color} 40px,transparent 40px);"></div>
+      <div style="display:flex;gap:8px;overflow-x:auto;padding-bottom:6px;scrollbar-width:none;">
+        ${tiles}
+      </div>
+    </div>`;
+  }
+
+  // ── Gather data ───────────────────────────────────────────────────────────
+  const finBooks     = resolve(_userLists.find(l => l.id === 'finished')?.bookIds || []);
+  const wtrBooks     = resolve(_userLists.find(l => l.id === 'want-to-read')?.bookIds || []);
+  const favBooks     = resolve(_userLists.find(l => l.id === 'favourites')?.bookIds || []);
+  const viewedBooks  = resolve([...(_userLists.find(l => l.id === 'viewed')?.bookIds || [])].reverse().slice(0,20));
+  const recBooks     = dedupe([...library, ...communityLib]).filter(b => b.recommended);
+  const recentBooks  = library.slice(0, 14);
+  const customLists  = _userLists.filter(l => !l.system);
+  const sharedByMe   = library.filter(b => b.allowedUsers?.length > 0);
+  const sharedWithMe = communityLib.filter(b =>
+    b.ownerId !== currentUser?.uid && b.allowedUsers?.includes(currentUser?.uid)
+  );
+
+  // ── Build content and inject into the static containers ──────────────────
+  // Greeting row stays in the static HTML; everything else goes into a dynamic container.
+  let dynamicEl = document.getElementById('deskHomeDynamic');
+  if(!dynamicEl) {
+    dynamicEl = document.createElement('div');
+    dynamicEl.id = 'deskHomeDynamic';
+    dynamicEl.style.cssText = 'display:flex;flex-direction:column;gap:0;';
+    panel.appendChild(dynamicEl);
+  }
+
+  dynamicEl.innerHTML = `
+    ${deskCurrentReads()}
+    ${deskRecommendedSection(recBooks)}
+    ${deskSharedWithMeSection(sharedWithMe)}
+    ${deskSharedByMeSection(sharedByMe)}
+    ${deskShelfSection('desk_fav', 'Favourites', '❤️', '#e11d48', favBooks, {defaultOpen:false, showAddTile:true, listId:'favourites', alwaysShow:true})}
+    ${deskShelfSection('desk_wtr', 'Want to Read', '🔖', '#7c3aed', wtrBooks, {defaultOpen:false, showAddTile:true, listId:'want-to-read', alwaysShow:true})}
+    ${customLists.map(l =>
+      deskShelfSection('desk_list_'+l.id, l.name, l.icon||'📚', 'var(--teal)',
+        resolve(l.bookIds||[]), {defaultOpen:false, editable:true, listId:l.id, showAddTile:true})
+    ).join('')}
+    ${deskShelfSection('desk_recent', 'Recently Added', '🕐', 'var(--muted)', recentBooks, {defaultOpen:true})}
+    ${deskShelfSection('desk_viewed', 'Recently Viewed', '👁', 'var(--muted)', viewedBooks, {defaultOpen:false})}
+    ${deskShelfSection('desk_fin', 'Finished', '✓', '#276749', finBooks, {defaultOpen:false})}
+    <div style="text-align:center;padding:.8rem 0 .4rem;border-top:1px dashed var(--border);margin-top:.4rem;">
+      <button id="btnDeskHomeNewList" style="background:none;border:none;
+        color:var(--teal);font-size:.78rem;font-weight:700;cursor:pointer;padding:.4rem;">+ Create new list</button>
+    </div>`;
+
+  function deskSharedWithMeSection(books) {
+    if(!books.length) return '';
+    return deskSharedSection('Shared with Me', '🔒', '#5a48b0', books);
+  }
+  function deskSharedByMeSection(books) {
+    if(!books.length) return '';
+    return deskSharedSection('Shared by Me', '🔗', 'var(--teal)', books);
+  }
+
+  // ── Bind clicks ───────────────────────────────────────────────────────────
+  dynamicEl.querySelectorAll('.home-shelf-book[data-bookid],.home-bookmark-item[data-bookid]').forEach(el => {
+    el.addEventListener('click', () => { hideDeskHome(); showBookById(el.dataset.bookid); });
+  });
+  dynamicEl.querySelectorAll('.home-shelf-addtile[data-listid]').forEach(el => {
+    el.addEventListener('click', () => showHomeListBookPicker(el.dataset.listid));
+  });
+  dynamicEl.querySelectorAll('.home-shelf-menu-btn[data-listid]').forEach(btn => {
+    btn.addEventListener('click', e => { e.stopPropagation(); showHomeShelfMenu(btn.dataset.listid, btn.dataset.listname); });
+  });
+  document.getElementById('btnDeskHomeNewList')?.addEventListener('click', () => showCreateListModal(null));
+
+  // Hide all old static sections — replaced entirely by dynamic content above
+  ['deskHomeCheckoutSection','deskHomeRecSection','deskHomeSharedByMeSection',
+   'deskHomeSharedWithMeSection','deskHomeListsSection','deskHomeRecentSection'].forEach(id => {
+    const el = document.getElementById(id);
+    if(el) el.style.display = 'none';
+  });
 }
+
+window.toggleDeskShelf = function(id) {
+  const body    = document.getElementById('deskShelf_' + id + '_body');
+  const chevron = document.getElementById('deskShelf_' + id + '_chevron');
+  if(!body || !chevron) return;
+  const isOpen  = body.style.maxHeight !== '0px' && body.style.maxHeight !== '0';
+  body.style.maxHeight    = isOpen ? '0' : '600px';
+  chevron.style.transform = isOpen ? 'rotate(-90deg)' : '';
+};
 
 // ── BOOK DETAIL ───────────────────────────────────────────────────────────────
 async function showBookById(id){
@@ -3391,32 +3623,66 @@ function mobSheetSetExpanded(expanded){
 function buildDrawerIconBar(book, isMine){
   const bar = document.getElementById('drawerIconBar');
 
+  // Check if the user has started reading this book (same logic as mobile)
+  const readingPosBm = _myBookmarks.find(b => b.type === 'reading_position' && b.bookId === book.id);
+  const hasStarted = !!readingPosBm && (readingPosBm.progress || 0) > 0;
+
+  // Quick-list state
+  const isFav = !!_userLists.find(l => l.id === 'favourites')?.bookIds?.includes(book.id);
+  const isWtr = !!_userLists.find(l => l.id === 'want-to-read')?.bookIds?.includes(book.id);
+  const hasReadingBookmark = _myBookmarks.some(b => b.type === 'reading_position' && b.bookId === book.id);
+
   let html = `
-    <!-- Primary actions: available to all -->
-    <div style="display:flex;gap:.5rem;padding:.6rem 1.5rem .4rem;border-bottom:1px solid var(--border)">
-      <button class="btn-action btn-read" style="flex:1;justify-content:center;padding:.55rem 1rem;font-size:.82rem;border-radius:20px" data-action="read">
-        📖 Read
+    <!-- Primary: Read / Continue Reading + Send to Kobo -->
+    <div style="display:flex;gap:.5rem;padding:.65rem 1.5rem .5rem;border-bottom:1px solid var(--border);">
+      <button class="btn-action btn-read" style="flex:1;justify-content:center;padding:.6rem 1rem;font-size:.83rem;border-radius:24px;gap:.4rem;" data-action="read">
+        <span style="font-size:1rem;line-height:1;">📖</span>
+        <span>${hasStarted ? 'Continue Reading' : 'Read'}</span>
       </button>
-      <button class="btn-action btn-kobo" style="flex:1;justify-content:center;padding:.55rem 1rem;font-size:.82rem;border-radius:20px" data-action="sendtokobo">
-        📲 Send to Kobo
+      <button class="btn-action btn-kobo" style="flex:1;justify-content:center;padding:.6rem 1rem;font-size:.83rem;border-radius:24px;gap:.4rem;" data-action="sendtokobo">
+        <span style="font-size:1rem;line-height:1;">🔲</span>
+        <span>Send to Kobo</span>
       </button>
     </div>
 
+    <!-- Lists: Favourites / Want to Read quick-toggles + Mark Finished -->
+    <div style="padding:.55rem 1.5rem .45rem;border-bottom:1px solid var(--border);">
+      <div style="font-size:.58rem;letter-spacing:.15em;text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:.4rem;">🗂️ Lists</div>
+      <div style="display:flex;flex-wrap:wrap;gap:.4rem;">
+        <button class="mob-list-quickbtn ${isFav?'active':''}" data-list="favourites" data-action="quicklist">
+          <span class="lq-icon">${isFav?'❤️':'🤍'}</span><span>Favourites</span>
+        </button>
+        <button class="mob-list-quickbtn ${isWtr?'active':''}" data-list="want-to-read" data-action="quicklist">
+          <span class="lq-icon">🔖</span><span>Want to Read</span>
+        </button>
+        <button class="mob-list-other-btn" data-action="addtolist">Other Lists ▾</button>
+        ${hasReadingBookmark ? `
+        <button class="mob-list-markfinished-btn" data-action="markfinished">
+          <span>✓</span><span>Mark Finished</span>
+        </button>` : ''}
+      </div>
+    </div>
+
     <!-- Secondary global actions -->
-    <div style="padding:.4rem 1.5rem .2rem;">
-      <div style="font-size:.58rem;letter-spacing:.15em;text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:.35rem;">Everyone</div>
+    <div style="padding:.4rem 1.5rem .3rem;border-bottom:1px solid var(--border);">
+      <div style="font-size:.58rem;letter-spacing:.15em;text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:.35rem;">Actions</div>
       <div style="display:flex;gap:.4rem;flex-wrap:wrap;">
+        <button class="drawer-icon-btn" data-action="category"><span class="di-icon">📚</span><span class="di-label">Category</span></button>
+        <button class="drawer-icon-btn" data-action="tags"><span class="di-icon">🏷</span><span class="di-label">Tags</span></button>
+        <button class="drawer-icon-btn" data-action="recommend">
+          <span class="di-icon">${book.recommended?'☆':'⭐'}</span>
+          <span class="di-label">${book.recommended?'Unrec':'Rec'}</span>
+        </button>
         <button class="drawer-icon-btn" data-action="download"><span class="di-icon">⬇</span><span class="di-label">Download</span></button>
         <button class="drawer-icon-btn" data-action="link"><span class="di-icon">📎</span><span class="di-label">Copy Link</span></button>
-        <button class="drawer-icon-btn" data-action="history"><span class="di-icon">📋</span><span class="di-label">History</span></button>
-        <button class="drawer-icon-btn" data-action="addtolist"><span class="di-icon">📚</span><span class="di-label">My Lists</span></button>
+        ${isAdmin ? `<button class="drawer-icon-btn" data-action="history"><span class="di-icon">📋</span><span class="di-label">History</span></button>` : ''}
       </div>
     </div>`;
 
   if(isMine){
     html += `
     <!-- Owner-only actions -->
-    <div style="padding:.4rem 1.5rem .6rem;border-top:1px solid var(--border);margin-top:.3rem;background:rgba(15,26,46,0.03);border-radius:0 0 4px 4px;">
+    <div style="padding:.4rem 1.5rem .6rem;background:rgba(15,26,46,0.03);">
       <div style="font-size:.58rem;letter-spacing:.15em;text-transform:uppercase;color:var(--gold);font-weight:700;margin-bottom:.35rem;">🔑 Owner Only</div>
       <div style="display:flex;gap:.4rem;flex-wrap:wrap;">
         <button class="drawer-icon-btn" data-action="share" ${book.visibility==='public'?'style="display:none"':''}>
@@ -3427,11 +3693,6 @@ function buildDrawerIconBar(book, isMine){
           <span class="di-icon">🔗</span><span class="di-label">Share</span></button>
         <button class="drawer-icon-btn" data-action="editmeta">
           <span class="di-icon">✎</span><span class="di-label">Edit</span></button>
-        <button class="drawer-icon-btn" data-action="tags">
-          <span class="di-icon">🏷</span><span class="di-label">Tags</span></button>
-        <button class="drawer-icon-btn" data-action="recommend">
-          <span class="di-icon">${book.recommended?'☆':'⭐'}</span>
-          <span class="di-label">${book.recommended?'Unrec':'Rec'}</span></button>
         <button class="drawer-icon-btn" data-action="chapters">
           <span class="di-icon">📑</span><span class="di-label">Chapters</span></button>
         <button class="drawer-icon-btn di-danger" data-action="delete">
