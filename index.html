@@ -20,7 +20,7 @@
   --gold:#c8952a; --gold2:#e8b84b; --teal:#2a7c8a; --teal-light:#e1f2f5;
   --teal-dark:#1e5f6a; --rust:#b84c1a; --light-blue:#d8e8f0; --border:#c8d8e4;
   --muted:#7a8a9a; --panel:#f0f5f8; --danger:#a02828;
-  --header-h:60px; --mob-nav-h:54px; --filter-w:220px;
+  --header-h:60px; --mob-nav-h:54px; --filter-w:240px;
   --sab: env(safe-area-inset-bottom, 0px);
 }
 *{box-sizing:border-box;margin:0;padding:0;}
@@ -232,7 +232,39 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 
 /* ── DESKTOP FILTER SIDEBAR ── */
 .filter-sidebar{width:var(--filter-w);min-width:var(--filter-w);background:var(--panel);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;flex-shrink:0;}
-.filter-sidebar-top{padding:.9rem 1rem .7rem;border-bottom:1px solid var(--border);}
+/* Split sidebar into fixed-bottom footer + scrollable body */
+.sidebar-scroll{flex:1;overflow-y:auto;overflow-x:hidden;scrollbar-width:thin;scrollbar-color:var(--border) transparent;}
+.sidebar-scroll::-webkit-scrollbar{width:4px;}
+.sidebar-scroll::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
+
+/* Section labels */
+.sb-section{padding:.65rem 1rem .45rem;}
+.sb-section-label{font-size:.56rem;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:.5rem;display:flex;align-items:center;justify-content:space-between;}
+
+/* ── Current Reads strip ── */
+.sb-cr-strip{display:flex;gap:7px;padding:.1rem 0 .5rem;overflow-x:auto;scrollbar-width:none;}
+.sb-cr-strip::-webkit-scrollbar{display:none;}
+.sb-cr-cover{position:relative;flex-shrink:0;width:58px;cursor:pointer;border-radius:2px 4px 4px 2px;overflow:visible;}
+.sb-cr-cover img,.sb-cr-cover .ph{width:58px;height:87px;object-fit:cover;display:block;border-radius:2px 4px 4px 2px;box-shadow:2px 3px 8px rgba(0,0,0,.35);}
+.sb-cr-cover .ph{background:linear-gradient(145deg,var(--navy2),#2a3d5a);display:flex;align-items:center;justify-content:center;font-size:.45rem;color:rgba(200,180,140,.8);text-align:center;padding:3px;line-height:1.3;}
+.sb-cr-prog{position:absolute;bottom:0;left:0;right:0;height:3px;background:rgba(0,0,0,.3);border-radius:0 0 4px 4px;overflow:hidden;}
+.sb-cr-prog-fill{height:3px;background:var(--gold);}
+.sb-cr-ribbon{position:absolute;top:-4px;right:5px;filter:drop-shadow(1px 2px 3px rgba(0,0,0,.45));pointer-events:none;}
+.sb-cr-empty{font-size:.75rem;color:var(--muted);font-style:italic;padding:.25rem 0 .4rem;}
+
+/* ── My Lists nav ── */
+.sb-list-item{display:flex;align-items:center;gap:.55rem;padding:.42rem .85rem .42rem 1rem;cursor:pointer;border-radius:0 20px 20px 0;margin-right:.5rem;transition:background .15s;user-select:none;-webkit-tap-highlight-color:transparent;}
+.sb-list-item:hover{background:rgba(0,0,0,.04);}
+.sb-list-item.active{background:rgba(var(--teal-rgb,20,120,110),.1);color:var(--teal);}
+.sb-list-item.active .sb-list-name{color:var(--teal);font-weight:700;}
+.sb-list-icon{font-size:.95rem;flex-shrink:0;line-height:1;}
+.sb-list-name{font-size:.8rem;color:var(--navy2);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.sb-list-count{font-size:.68rem;color:var(--muted);flex-shrink:0;}
+.sb-new-list-btn{display:flex;align-items:center;gap:.4rem;padding:.35rem .85rem .35rem 1rem;font-size:.76rem;color:var(--teal);cursor:pointer;background:none;border:none;font-family:inherit;opacity:.8;}
+.sb-new-list-btn:hover{opacity:1;}
+
+/* ── Browse section ── */
+.filter-sidebar-top{padding:.9rem 1rem .7rem;}
 .filter-sidebar-top h3{font-family:'Playfair Display',serif;font-size:1rem;color:var(--navy2);margin-bottom:.7rem;}
 .filter-search{width:100%;padding:.45rem .7rem;font-family:'Lato',sans-serif;font-size:.83rem;border:1px solid var(--border);border-radius:3px;background:var(--warm-white);color:var(--navy);outline:none;}
 .filter-search:focus{border-color:var(--teal);}
@@ -243,6 +275,15 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
   background:none;border:none;color:var(--muted);font-size:.85rem;line-height:1;
   cursor:pointer;padding:.25rem .35rem;display:none;border-radius:50%;}
 .search-clear-btn:hover{color:var(--navy2);background:rgba(0,0,0,.05);}
+
+/* ── Grid title list-filter chip ── */
+.grid-list-chip{display:inline-flex;align-items:center;gap:.35rem;font-size:.72rem;
+  background:rgba(var(--teal-rgb,20,120,110),.1);color:var(--teal);
+  border:1px solid rgba(var(--teal-rgb,20,120,110),.25);
+  border-radius:20px;padding:.15rem .6rem .15rem .5rem;cursor:pointer;
+  font-weight:600;transition:background .15s;}
+.grid-list-chip:hover{background:rgba(var(--teal-rgb,20,120,110),.18);}
+.grid-list-chip .clc-x{opacity:.55;font-size:.65rem;margin-left:.1rem;}
 .search-input-wrap.has-value .search-clear-btn{display:block;}
 /* Tag filter button — sits beside the search box, opens a chip picker rather
    than adding a permanent row, so filtering by tag costs no extra space. */
@@ -1610,7 +1651,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
     </div>
   </div>
   <div class="header-right">
-    <button class="hbtn hbtn-home btnToggleSettingsDesk" id="btnDeskHome">📚 Home</button>
+    <button class="hbtn hbtn-home btnToggleSettingsDesk" id="btnDeskHome" title="Show all books">📚 All Books</button>
     <button class="hbtn hbtn-upload" id="btnHeaderUpload">📤 Upload</button>
     <button class="hbtn hbtn-ghost btnToggleSettingsDesk" id="btnToggleSettings">⚙</button>
     <div id="notifScrim" class="notif-scrim"></div>
@@ -1665,25 +1706,56 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
   <!-- DESKTOP -->
   <div class="desktop-main">
     <aside class="filter-sidebar">
-      <div class="filter-sidebar-top">
-        <h3>Browse</h3>
-        <div class="search-input-wrap">
-          <input class="filter-search" type="text" id="deskSearch" placeholder="Search title, author…"/>
-          <button type="button" class="search-clear-btn" id="deskSearchClear" aria-label="Clear search">✕</button>
+      <!-- Scrollable body: Current Reads + My Lists + Browse -->
+      <div class="sidebar-scroll">
+
+        <!-- ── Current Reads ───────────────────────────────── -->
+        <div class="sb-section" id="sbCurrentReadsSection">
+          <div class="sb-section-label">
+            <span>📖 Current Reads</span>
+          </div>
+          <div class="sb-cr-strip" id="sbCurrentReadsStrip">
+            <span class="sb-cr-empty">Start a book to see it here</span>
+          </div>
         </div>
-      </div>
-      <div class="shelf-tabs">
-        <button class="shelf-tab active" id="tabMineDesk">My Library</button>
-        <button class="shelf-tab" id="tabCommDesk">Public Library</button>
-      </div>
-      <div class="filter-cats" id="deskFilterCats"></div>
-      <div class="sort-btn-group" id="deskSortBtns">
-        <button class="sort-btn active" data-sort="recent">Recent</button>
-        <button class="sort-btn" data-sort="title">Title</button>
-        <button class="sort-btn" data-sort="author">Author</button>
-        <button class="sort-btn" data-sort="rating">Rating</button>
-      </div>
-      <select id="deskSortSelect" style="display:none"></select>
+
+        <div style="height:1px;background:var(--border);margin:0 1rem;"></div>
+
+        <!-- ── My Lists ────────────────────────────────────── -->
+        <div class="sb-section" id="sbMyListsSection" style="padding-bottom:.6rem;">
+          <div class="sb-section-label">
+            <span>📚 My Lists</span>
+          </div>
+          <div id="sbListsNav"><!-- populated by renderDeskSidebar --></div>
+          <button class="sb-new-list-btn" id="sbBtnNewList">＋ New list</button>
+        </div>
+
+        <div style="height:1px;background:var(--border);margin:0 1rem;"></div>
+
+        <!-- ── Browse ─────────────────────────────────────── -->
+        <div class="filter-sidebar-top" style="border-bottom:none;padding-top:.75rem;">
+          <h3>Browse</h3>
+          <div class="search-input-wrap">
+            <input class="filter-search" type="text" id="deskSearch" placeholder="Search title, author…"/>
+            <button type="button" class="search-clear-btn" id="deskSearchClear" aria-label="Clear search">✕</button>
+          </div>
+        </div>
+        <div class="shelf-tabs">
+          <button class="shelf-tab active" id="tabMineDesk">My Library</button>
+          <button class="shelf-tab" id="tabCommDesk">Public Library</button>
+        </div>
+        <div class="filter-cats" id="deskFilterCats"></div>
+        <div class="sort-btn-group" id="deskSortBtns">
+          <button class="sort-btn active" data-sort="recent">Recent</button>
+          <button class="sort-btn" data-sort="title">Title</button>
+          <button class="sort-btn" data-sort="author">Author</button>
+          <button class="sort-btn" data-sort="rating">Rating</button>
+        </div>
+        <select id="deskSortSelect" style="display:none"></select>
+
+      </div><!-- end .sidebar-scroll -->
+
+      <!-- Pinned footer -->
       <div class="filter-footer">
         <button class="btn-upload-f" id="btnSideUpload">+ Upload</button>
         <button class="btn-refresh-f" id="btnSideRefresh">↻ Refresh</button>
@@ -1723,6 +1795,10 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
         <div class="grid-header-left">
           <h2 id="deskGridTitle">My Library</h2>
           <span class="grid-count" id="deskGridCount"></span>
+          <span class="grid-list-chip" id="deskListChip" style="display:none;" title="Clear list filter">
+            <span id="deskListChipLabel"></span>
+            <span class="clc-x">✕</span>
+          </span>
         </div>
         <button class="select-mode-toggle" id="btnSelectMode">☑ Select</button>
         <button class="select-mode-toggle" id="btnSelectAll" style="display:none">☑ All</button>
@@ -2478,7 +2554,7 @@ onAuthStateChanged(auth, async user => {
       _coverCachePrimed,
     ]).then(() => {
       renderMobHome();
-      renderDeskHome();
+      renderDeskSidebar();
     });
 
     Promise.all([
@@ -2487,7 +2563,7 @@ onAuthStateChanged(auth, async user => {
     ]).then(async () => {
       await preloadBookmarkBooks();
       renderMobHome();
-      renderDeskHome();
+      renderDeskSidebar();
     });
 
     // ── WAVE 2: library — loads in background, renders when ready ───────
@@ -2507,7 +2583,7 @@ onAuthStateChanged(auth, async user => {
         loadKoboDevices(),
       ]).then(() => {
         renderMobHome();
-        renderDeskHome();
+        renderDeskSidebar();
         renderAll();
       });
 
@@ -2866,8 +2942,15 @@ async function confirmShare() {
 function activeBooks(){return shelfMode==='mine'?library:communityLib;}
 function filteredBooks(){
   let books=activeBooks();
+  // List filter: when a list is active, restrict to its book IDs
+  if(_deskListFilter){
+    const list=_userLists.find(l=>l.id===_deskListFilter);
+    const ids=new Set(list?.bookIds||[]);
+    // List may contain books from either shelf — search both
+    books=dedupe([...library,...communityLib]).filter(b=>ids.has(b.id));
+  }
   const cat=shelfMode==='community'?activeCatPublic:activeCat;
-    if(cat!=='All')books=books.filter(b=>(b.category||'Uncategorised')===cat);
+  if(cat!=='All')books=books.filter(b=>(b.category||'Uncategorised')===cat);
   if(searchQ)books=books.filter(b=>b.title?.toLowerCase().includes(searchQ)||b.author?.toLowerCase().includes(searchQ)||b.category?.toLowerCase().includes(searchQ));
   if(deskActiveTags.size)books=books.filter(b=>(b.tags||[]).some(t=>deskActiveTags.has(t)));
   return sortBooks(books);
@@ -2894,11 +2977,28 @@ function renderSkeleton(gridId,count=12){
 function renderAll(){
   renderFilterCats();
   document.getElementById('deskBookGrid').classList.toggle('select-mode',selectMode);
-  renderGrid('deskBookGrid');renderMobLibrary();
-  renderMobLibrary();renderMobHome();renderDeskHome();
+  renderGrid('deskBookGrid');renderMobLibrary();renderMobHome();
   const books=filteredBooks();
   document.getElementById('deskGridCount').textContent=`${books.length} book${books.length!==1?'s':''}`;
-  document.getElementById('deskGridTitle').textContent=shelfMode==='mine'?'My Library':'Public Library';
+
+  // Grid title + list-filter chip
+  const chip      = document.getElementById('deskListChip');
+  const chipLabel = document.getElementById('deskListChipLabel');
+  const titleEl   = document.getElementById('deskGridTitle');
+  if(_deskListFilter){
+    const list = _userLists.find(l=>l.id===_deskListFilter);
+    const systemLabels = {'favourites':'Favourites','want-to-read':'Want to Read',
+      'currently-reading':'Currently Reading','finished':'Finished'};
+    const name = list ? (systemLabels[list.id] || list.name) : 'List';
+    titleEl.textContent = shelfMode==='mine'?'My Library':'Public Library';
+    if(chipLabel) chipLabel.textContent = name;
+    if(chip) chip.style.display='';
+  } else {
+    titleEl.textContent = shelfMode==='mine'?'My Library':'Public Library';
+    if(chip) chip.style.display='none';
+  }
+
+  renderDeskSidebar();
 }
 function renderFilterCats(){
   const cats=getCats(),total=activeBooks().length;
@@ -2983,12 +3083,127 @@ function switchShelf(mode){
   renderAll();
 }
 
-// ── DESKTOP HOME ──────────────────────────────────────────────────────────────
-function showDeskHome(){deskView='home';document.getElementById('deskHomePanel').classList.add('active');document.getElementById('deskMain').style.display='none';document.getElementById('btnDeskHome').classList.add('active');renderDeskHome();}
-function hideDeskHome(){deskView='library';document.getElementById('deskHomePanel').classList.remove('active');document.getElementById('deskMain').style.display='flex';document.getElementById('btnDeskHome').classList.remove('active');}
-document.getElementById('btnDeskHome').addEventListener('click',()=>{if(deskView==='home')hideDeskHome();else showDeskHome();});
+// ── DESKTOP HOME (panel retired — content lives in sidebar) ───────────────────
+// These stubs prevent crashes from any remaining call-sites.
+function showDeskHome(){}
+function hideDeskHome(){}
 
-async function renderDeskHome(){
+// ── DESKTOP LIST FILTER ───────────────────────────────────────────────────────
+let _deskListFilter = null; // null = all books; otherwise a _userLists entry id
+
+function setDeskListFilter(listId) {
+  _deskListFilter = listId;
+  renderAll();
+  renderDeskSidebar(); // re-highlight active item
+}
+
+function clearDeskListFilter() {
+  _deskListFilter = null;
+  renderAll();
+  renderDeskSidebar();
+}
+
+// "All Books" header button resets any active list filter
+document.getElementById('btnDeskHome').addEventListener('click', () => {
+  clearDeskListFilter();
+});
+
+// Clear chip in grid header
+document.getElementById('deskListChip').addEventListener('click', clearDeskListFilter);
+
+// New list button in sidebar
+document.getElementById('sbBtnNewList').addEventListener('click', () => showCreateListModal(null));
+
+// ── DESKTOP SIDEBAR ───────────────────────────────────────────────────────────
+function renderDeskSidebar() {
+  if(!currentUser) return;
+  const allBooks = dedupe([...library, ...communityLib]);
+
+  // ── Current Reads strip ──────────────────────────────────────────────────
+  const strip = document.getElementById('sbCurrentReadsStrip');
+  if(strip) {
+    // Books with a reading-position bookmark, newest first, deduped by bookId
+    const seen = new Set();
+    const readingBms = _myBookmarks
+      .filter(b => b.type === 'reading_position' && b.bookId)
+      .sort((a, b) => (b.updatedAt?.toMillis?.() || 0) - (a.updatedAt?.toMillis?.() || 0))
+      .filter(b => { if(seen.has(b.bookId)) return false; seen.add(b.bookId); return true; });
+
+    if(!readingBms.length) {
+      strip.innerHTML = '<span class="sb-cr-empty">Start a book to see it here</span>';
+    } else {
+      strip.innerHTML = readingBms.map(bm => {
+        const book = allBooks.find(x => x.id === bm.bookId);
+        if(!book) return '';
+        const src = getCoverSrc(book);
+        const pct = Math.round((bm.progress || 0) * 100);
+        const tpl = getDisplayBookmarkTemplate(bm.bookId);
+        const ribbonHtml = tpl
+          ? `<div class="sb-cr-ribbon">${renderBookmarkSVG(tpl, 16, 26, 'sbr'+bm.bookId, false, true)}</div>`
+          : '';
+        return `<div class="sb-cr-cover" data-bookid="${book.id}" title="${esc(book.title)}">
+          ${src
+            ? `<img src="${src}" loading="lazy" alt="${esc(book.title)}"/>`
+            : `<div class="ph">${esc(book.title)}</div>`}
+          ${ribbonHtml}
+          ${pct > 0 ? `<div class="sb-cr-prog"><div class="sb-cr-prog-fill" style="width:${pct}%"></div></div>` : ''}
+        </div>`;
+      }).join('');
+
+      strip.querySelectorAll('.sb-cr-cover[data-bookid]').forEach(el => {
+        el.addEventListener('click', () => showBookById(el.dataset.bookid));
+      });
+    }
+  }
+
+  // ── My Lists nav ─────────────────────────────────────────────────────────
+  const nav = document.getElementById('sbListsNav');
+  if(!nav) return;
+
+  // System lists shown in the sidebar (order matters)
+  const systemOrder = ['favourites', 'want-to-read', 'currently-reading', 'finished'];
+  const systemMeta = {
+    'favourites':        { icon: '❤️',  label: 'Favourites' },
+    'want-to-read':      { icon: '🔖', label: 'Want to Read' },
+    'currently-reading': { icon: '📖', label: 'Currently Reading' },
+    'finished':          { icon: '✓',  label: 'Finished' },
+  };
+
+  const allLists = [
+    ...systemOrder
+      .map(id => _userLists.find(l => l.id === id))
+      .filter(Boolean),
+    ..._userLists.filter(l => !l.system)
+  ];
+
+  nav.innerHTML = allLists.map(list => {
+    const meta = systemMeta[list.id];
+    const icon  = meta ? meta.icon  : (list.icon || '📋');
+    const label = meta ? meta.label : list.name;
+    const count = (list.bookIds || []).length;
+    const isActive = _deskListFilter === list.id;
+    return `<div class="sb-list-item ${isActive ? 'active' : ''}" data-listid="${list.id}">
+      <span class="sb-list-icon">${icon}</span>
+      <span class="sb-list-name">${esc(label)}</span>
+      <span class="sb-list-count">${count}</span>
+    </div>`;
+  }).join('');
+
+  nav.querySelectorAll('.sb-list-item[data-listid]').forEach(el => {
+    el.addEventListener('click', () => {
+      if(_deskListFilter === el.dataset.listid) {
+        clearDeskListFilter(); // clicking again deselects
+      } else {
+        setDeskListFilter(el.dataset.listid);
+      }
+    });
+  });
+}
+
+// renderDeskHome is kept as a call-site alias so existing references don't break.
+// All real logic moved to renderDeskSidebar (permanent sidebar sections).
+async function renderDeskHome(){ renderDeskSidebar(); }
+async function _renderDeskHome_UNUSED(){
   const panel = document.getElementById('deskHomePanel');
   if(!panel) return;
   const name = (currentUser?.displayName||'').split(' ')[0] || 'Reader';
