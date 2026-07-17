@@ -766,7 +766,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
   align-items:center;gap:.3rem;transition:all .15s;-webkit-tap-highlight-color:transparent;
   flex-shrink:0;font-family:'Lato',sans-serif;}
 .mfp .mfp-caret{opacity:.55;font-size:.6rem;line-height:1;margin-left:.05rem;}
-  padding:0px 4px;min-width:14px;text-align:center;line-height:1.5;}
+.mfp-count{background:rgba(0,0,0,.08);border-radius:8px;padding:0px 4px;min-width:14px;text-align:center;line-height:1.5;font-size:.62rem;}
 
 /* Source pill — navy */
 .mfp-source{color:var(--navy2);border-color:rgba(26,40,64,.3);}
@@ -780,26 +780,51 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 /* Sort pill — teal */
 .mfp-sort{color:var(--teal);border-color:rgba(42,124,138,.35);}
 
+/* Active pill — filled in its own colour */
+.mfp.mfp-active.mfp-source{background:var(--navy2);color:#fff;}
+.mfp.mfp-active.mfp-cat{background:var(--gold);color:#fff;}
+.mfp.mfp-active.mfp-tags{background:#5a48b0;color:#fff;}
+.mfp.mfp-active.mfp-sort{background:var(--teal);color:#fff;}
+.mfp.mfp-open{box-shadow:0 0 0 2px rgba(0,0,0,.08) inset;}
+
 /* ── Floating filter panel ─────────────────────────────────────────────────── */
+.mob-filter-panel{
+  position:fixed;z-index:121;background:var(--warm-white,#fff);
   border:1px solid var(--border);border-radius:12px;
   box-shadow:0 8px 32px rgba(15,26,46,.18);padding:.75rem .85rem .8rem;
   min-width:240px;max-width:88vw;max-height:55vh;overflow-y:auto;
+  display:none;font-family:'Lato',sans-serif;
   animation:fpIn .15s ease;}
+.mob-filter-panel.show{display:block;}
 @keyframes fpIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
+.mob-filter-panel .fp-title{font-size:.68rem;text-transform:uppercase;letter-spacing:.06em;
   font-weight:700;color:var(--muted);margin-bottom:.6rem;}
+.mob-filter-panel .fp-chip-wrap{display:flex;flex-wrap:wrap;gap:.4rem;}
 /* Category chips inside floating panel — gold colour */
+.fp-chip-cat{display:inline-flex;align-items:center;gap:.3rem;padding:.28rem .65rem;font-size:.72rem;font-weight:700;border-radius:20px;cursor:pointer;
   border:1px solid rgba(200,149,42,.35);background:transparent;color:var(--gold);
   white-space:nowrap;transition:all .15s;-webkit-tap-highlight-color:transparent;}
+.fp-chip-cat.active{background:var(--gold);color:#fff;}
 /* Tag chips inside floating panel — purple colour */
+.fp-chip-tag{display:inline-flex;align-items:center;gap:.3rem;padding:.28rem .65rem;font-size:.72rem;font-weight:700;border-radius:20px;cursor:pointer;
   border:1px solid rgba(90,72,176,.3);background:transparent;color:#5a48b0;
   white-space:nowrap;transition:all .15s;-webkit-tap-highlight-color:transparent;}
+.fp-chip-tag.active{background:#5a48b0;color:#fff;}
 /* Source chips inside panel — navy */
+.fp-chip-source{display:inline-flex;align-items:center;gap:.3rem;padding:.28rem .65rem;font-size:.72rem;font-weight:700;border-radius:20px;cursor:pointer;
   border:1px solid rgba(26,40,64,.25);background:transparent;color:var(--navy2);
   white-space:nowrap;transition:all .15s;-webkit-tap-highlight-color:transparent;}
+.fp-chip-source.active{background:var(--navy2);color:#fff;}
 /* Sort items in panel — teal */
+.fp-sort-item{display:flex;align-items:center;justify-content:space-between;padding:.4rem .5rem;
   font-size:.8rem;cursor:pointer;border-radius:6px;transition:background .12s;color:var(--navy2);}
+.fp-sort-item:hover{background:rgba(42,124,138,.08);}
+.fp-sort-item.active{color:var(--teal);font-weight:700;}
+.fp-sort-item .fp-check{opacity:0;color:var(--teal);}
+.fp-sort-item.active .fp-check{opacity:1;}
 /* Scrim to close floating panel on outside tap */
 .mob-filter-scrim{display:none;position:fixed;inset:0;z-index:119;}
+.mob-filter-scrim.show{display:block;}
 .mob-search-bar{padding:.6rem .9rem;display:flex;gap:.5rem;align-items:center;}
 .mob-search-bar input{flex:1;padding:.5rem .75rem;font-size:1rem;font-family:'Lato',sans-serif;border:1px solid var(--border);border-radius:3px;background:var(--cream);color:var(--navy);outline:none;min-width:0;}
 .mob-search-bar input:focus{border-color:var(--teal);}
@@ -1795,6 +1820,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
     <!-- Floating panels (injected into body by JS, anchored to pills) -->
     <!-- Scrim to dismiss any open panel -->
     <div class="mob-filter-scrim" id="mobFilterScrim"></div>
+    <div class="mob-filter-panel" id="mobFilterPanel"></div>
     <div class="mob-grid-scroll">
       <div class="mob-book-grid" id="mobGridLibrary"></div>
     </div>
@@ -2425,6 +2451,7 @@ let mobLibFilter = 'all';
 let mobLibCat    = 'All';
 let mobLibSearch = '';
 let mobLibSort   = 'recent';
+let mobLibTags   = new Set();
 let mobPrevPanel = 'mobPanelLibrary';
 let currentUser=null,library=[],allUsers=[],userRatings={},currentId=null,communityLib = [];
 // Kick off loading any offline-cached covers immediately — Cache Storage isn't
@@ -3907,6 +3934,7 @@ document.getElementById('mobNavSettings').addEventListener('click', () => mob_sw
 document.getElementById('mobNavTimeline')?.addEventListener('click', () => mob_switchTab('timeline'));
 
 function mob_switchTab(tab) {
+  if (typeof closeMobFilterPanel === 'function') closeMobFilterPanel();
   document.querySelectorAll('.mob-tab, .mob-tab-home').forEach(t => t.classList.remove('active'));
   const tabMap = { library:'mobNavLibrary', home:'mobNavHome', community:'mobNavCommunity', settings:'mobNavSettings', timeline:'mobNavTimeline' };
   document.getElementById(tabMap[tab])?.classList.add('active');
@@ -3972,6 +4000,139 @@ document.getElementById('mobLibSortBtns').addEventListener('click', e => {
   renderMobLibrary();
 });
 
+// ── NEW COMPACT FILTER PILLS (floating dropdown panels) ────────────────────
+const mobFilterPanelEl = document.getElementById('mobFilterPanel');
+const mobFilterScrimEl = document.getElementById('mobFilterScrim');
+let mobFilterOpenPill = null; // currently-open pill button, or null
+
+function closeMobFilterPanel() {
+  mobFilterPanelEl.classList.remove('show');
+  mobFilterScrimEl.classList.remove('show');
+  if (mobFilterOpenPill) mobFilterOpenPill.classList.remove('mfp-open');
+  mobFilterOpenPill = null;
+}
+
+function openMobFilterPanel(pillEl, html) {
+  // Toggle off if this same pill's panel is already open
+  if (mobFilterOpenPill === pillEl) { closeMobFilterPanel(); return; }
+  mobFilterPanelEl.innerHTML = html;
+  mobFilterPanelEl.classList.add('show');
+  mobFilterScrimEl.classList.add('show');
+  if (mobFilterOpenPill) mobFilterOpenPill.classList.remove('mfp-open');
+  pillEl.classList.add('mfp-open');
+  mobFilterOpenPill = pillEl;
+  // Position panel under the pill, keeping it inside the viewport
+  const r = pillEl.getBoundingClientRect();
+  const panelW = Math.min(280, window.innerWidth * 0.88);
+  let left = r.left;
+  if (left + panelW > window.innerWidth - 10) left = window.innerWidth - panelW - 10;
+  if (left < 10) left = 10;
+  mobFilterPanelEl.style.width = panelW + 'px';
+  mobFilterPanelEl.style.left = left + 'px';
+  mobFilterPanelEl.style.top = (r.bottom + 6) + 'px';
+}
+
+mobFilterScrimEl.addEventListener('click', closeMobFilterPanel);
+
+function refreshMobFilterPillLabels() {
+  // Source pill
+  const srcLabels = { all: 'All', private: 'Private', public: 'Public', shared: 'Shared' };
+  document.getElementById('mfpSourceLabel').textContent = srcLabels[mobLibFilter] || 'All';
+  document.getElementById('mfpSource').classList.toggle('mfp-active', mobLibFilter !== 'all');
+  // Category pill
+  document.getElementById('mfpCatLabel').textContent = mobLibCat === 'All' ? 'Category' : mobLibCat;
+  document.getElementById('mfpCat').classList.toggle('mfp-active', mobLibCat !== 'All');
+  // Tags pill
+  document.getElementById('mfpTagsLabel').textContent = mobLibTags.size ? `Tags (${mobLibTags.size})` : 'Tags';
+  document.getElementById('mfpTags').classList.toggle('mfp-active', mobLibTags.size > 0);
+  // Sort pill
+  const sortLabels = { recent: 'Recent', title: 'Title', author: 'Author', rating: 'Rating' };
+  document.getElementById('mfpSortLabel').textContent = sortLabels[mobLibSort] || 'Recent';
+  document.getElementById('mfpSort').classList.toggle('mfp-active', mobLibSort !== 'recent');
+}
+
+// Source pill → panel
+document.getElementById('mfpSource').addEventListener('click', e => {
+  const opts = [['all','All'],['private','Private'],['public','Public'],['shared','Shared with Me']];
+  const html = `<div class="fp-title">Filter by source</div><div class="fp-chip-wrap">${
+    opts.map(([val,label]) => `<span class="fp-chip-source ${mobLibFilter===val?'active':''}" data-src="${val}">${esc(label)}</span>`).join('')
+  }</div>`;
+  openMobFilterPanel(e.currentTarget, html);
+  mobFilterPanelEl.querySelectorAll('.fp-chip-source').forEach(chip => {
+    chip.addEventListener('click', () => {
+      mobLibFilter = chip.dataset.src;
+      mobLibCat = 'All'; // reset category when source changes
+      closeMobFilterPanel();
+      refreshMobFilterPillLabels();
+      renderMobLibrary();
+    });
+  });
+});
+
+// Category pill → panel
+document.getElementById('mfpCat').addEventListener('click', e => {
+  const srcForCats = mobLibFilter === 'all'
+    ? dedupe([...library, ...communityLib])
+    : (() => {
+        if (mobLibFilter === 'private') return library.filter(b => b.visibility !== 'public' && !(b.allowedUsers?.length));
+        if (mobLibFilter === 'public')  return communityLib.filter(b => b.visibility === 'public');
+        if (mobLibFilter === 'shared')  return communityLib.filter(b => b.ownerId !== currentUser?.uid && b.allowedUsers?.includes(currentUser?.uid));
+        return [];
+      })();
+  const cats = {};
+  srcForCats.forEach(b => { const c = b.category || 'Uncategorised'; cats[c] = (cats[c] || 0) + 1; });
+  const entries = [['All', srcForCats.length], ...Object.entries(cats).sort()];
+  const html = `<div class="fp-title">Filter by category</div><div class="fp-chip-wrap">${
+    entries.map(([cat,cnt]) => `<span class="fp-chip-cat ${mobLibCat===cat?'active':''}" data-cat="${encodeURIComponent(cat)}">${cat==='All'?'':catIcon(cat)+' '}${esc(cat)} <span style="opacity:.65">${cnt}</span></span>`).join('')
+  }</div>`;
+  openMobFilterPanel(e.currentTarget, html);
+  mobFilterPanelEl.querySelectorAll('.fp-chip-cat').forEach(chip => {
+    chip.addEventListener('click', () => {
+      mobLibCat = decodeURIComponent(chip.dataset.cat);
+      closeMobFilterPanel();
+      refreshMobFilterPillLabels();
+      renderMobLibrary();
+    });
+  });
+});
+
+// Tags pill → panel (multi-select)
+document.getElementById('mfpTags').addEventListener('click', e => {
+  const allTags = [...new Set(dedupe([...library, ...communityLib]).flatMap(b => b.tags || []))].sort();
+  const html = `<div class="fp-title">Filter by tags</div><div class="fp-chip-wrap">${
+    allTags.length ? allTags.map(t => `<span class="fp-chip-tag ${mobLibTags.has(t)?'active':''}" data-tag="${esc(t)}">${esc(t)}</span>`).join('')
+      : '<span style="font-size:.8rem;color:var(--muted)">No tags yet</span>'
+  }</div>`;
+  openMobFilterPanel(e.currentTarget, html);
+  mobFilterPanelEl.querySelectorAll('.fp-chip-tag').forEach(chip => {
+    chip.addEventListener('click', () => {
+      const t = chip.dataset.tag;
+      if (mobLibTags.has(t)) mobLibTags.delete(t); else mobLibTags.add(t);
+      chip.classList.toggle('active');
+      refreshMobFilterPillLabels();
+      renderMobLibrary();
+      // keep panel open for multi-select, don't close
+    });
+  });
+});
+
+// Sort pill → panel
+document.getElementById('mfpSort').addEventListener('click', e => {
+  const opts = [['recent','Recent'],['title','Title'],['author','Author'],['rating','Rating']];
+  const html = `<div class="fp-title">Sort by</div>${
+    opts.map(([val,label]) => `<div class="fp-sort-item ${mobLibSort===val?'active':''}" data-sort="${val}"><span>${esc(label)}</span><span class="fp-check">✓</span></div>`).join('')
+  }`;
+  openMobFilterPanel(e.currentTarget, html);
+  mobFilterPanelEl.querySelectorAll('.fp-sort-item').forEach(item => {
+    item.addEventListener('click', () => {
+      mobLibSort = item.dataset.sort;
+      closeMobFilterPanel();
+      refreshMobFilterPillLabels();
+      renderMobLibrary();
+    });
+  });
+});
+
 function getMobLibBooks() {
   // Build the combined source based on filter
   let src = [];
@@ -3991,6 +4152,8 @@ function getMobLibBooks() {
   }
   // Category filter
   if (mobLibCat !== 'All') src = src.filter(b => (b.category || 'Uncategorised') === mobLibCat);
+  // Tags filter (must have ALL selected tags)
+  if (mobLibTags.size) src = src.filter(b => [...mobLibTags].every(t => (b.tags || []).includes(t)));
   // Search
   if (mobLibSearch) src = src.filter(b => matchesQ(b, mobLibSearch));
   // Sort
@@ -3999,6 +4162,7 @@ function getMobLibBooks() {
 
 function renderMobLibrary() {
   document.getElementById('mobGridLibrary').classList.remove('select-mode');
+  refreshMobFilterPillLabels();
   // Category chips
   const allSrc = mobLibFilter === 'all'
     ? dedupe([...library, ...communityLib])
