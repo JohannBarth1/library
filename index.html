@@ -141,8 +141,6 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 }
 .notif-compose-inline textarea{resize:vertical;}
 
-/* Type chip already used elsewhere (hero context removed) — kept for the compose form */
-
 /* The accordion that expands beneath a tapped row — a continuation of that
    same card (matching border/edges), not a repeated "hero" summary. */
 .notif-inline-detail{
@@ -279,23 +277,15 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .search-input-wrap.has-value .search-clear-btn{display:block;}
 /* Tag filter button — sits beside the search box, opens a chip picker rather
    than adding a permanent row, so filtering by tag costs no extra space. */
+.tag-filter-btn{position:relative;flex-shrink:0;width:2.3rem;height:2.3rem;
   display:flex;align-items:center;justify-content:center;
   border:1px solid var(--border);border-radius:3px;background:var(--warm-white);
   cursor:pointer;font-size:1rem;color:var(--navy2);padding:0;}
-  color:#fff;font-size:.6rem;font-weight:700;border-radius:50%;min-width:16px;height:16px;
-  display:flex;align-items:center;justify-content:center;padding:0 2px;
-  border:2px solid var(--warm-white);}
 .shelf-tabs{display:flex;border-bottom:1px solid var(--border);flex-shrink:0;}
 .shelf-tab{flex:1;padding:.55rem .3rem;font-family:'Lato',sans-serif;font-size:.68rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);background:none;border:none;border-bottom:2px solid transparent;cursor:pointer;transition:color .15s;}
 .shelf-tab.active{color:var(--teal);border-bottom-color:var(--teal);}
 .shelf-tab:hover:not(.active){color:var(--navy2);}
 .filter-cats{flex:1;overflow-y:auto;padding:.5rem 0;}
-/* ── Sidebar Tags section ─────────────────────────────────────────────────── */
-  font-weight:700;padding:.4rem 1rem .35rem;display:flex;align-items:center;justify-content:space-between;}
-  border:1px solid rgba(90,72,176,.3);background:transparent;color:#5a48b0;
-  white-space:nowrap;transition:all .15s;}
-  font-size:.78rem;font-family:'Lato',sans-serif;border:1px solid rgba(90,72,176,.25);
-  border-radius:3px;background:var(--warm-white);color:var(--navy);outline:none;}
 .filter-cat-item{display:flex;align-items:center;justify-content:space-between;padding:.42rem 1rem;font-size:.82rem;cursor:pointer;border-left:3px solid transparent;transition:background .12s,border-color .12s;}
 .filter-cat-item:hover{background:var(--light-blue);}
 .filter-cat-item.active{border-left-color:var(--teal);background:rgba(42,124,138,0.1);font-weight:700;color:var(--teal);}
@@ -405,8 +395,6 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .dbadge-lang{background:#ece8f8;color:#5a48b0;}
 .dbadge-shared{background:#fff4e0;color:#a87820;}
 .drawer-desc{font-size:.85rem;line-height:1.7;color:#3a4a5a;margin-bottom:1rem;}
-
-/* ── DRAWER ACTIONS ── */
 .btn-action{display:inline-flex;align-items:center;gap:.35rem;padding:.42rem .85rem;font-size:.72rem;font-family:'Lato',sans-serif;font-weight:700;letter-spacing:.04em;border-radius:20px;cursor:pointer;border:1px solid;transition:all .15s;white-space:nowrap;position:relative;}
 /* PATCH 6d: gold text on dark read button */
 .btn-read{background:var(--navy2);color:var(--gold);border-color:var(--navy2);}
@@ -578,6 +566,8 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .reader-nav { display: flex; gap: .3rem; align-items: center; flex-shrink: 0; }
 .reader-page-info { font-size: .72rem; opacity: .55; white-space: nowrap; min-width: 36px; text-align: center; }
 .reader-overlay.theme-night .reader-page-info { color: var(--gold); opacity: .7; }
+/* ── NEWW upto hereEPUB READER ── */
+  
 
 .rs-label{font-size:.6rem;letter-spacing:.15em;text-transform:uppercase;font-weight:700;color:var(--muted);white-space:nowrap;}
 .rs-group{display:flex;align-items:center;gap:.35rem;flex-shrink:0;}
@@ -717,7 +707,6 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .modal .form-row input,.modal .form-row select{width:100%;padding:.6rem .85rem;font-family:'Lato',sans-serif;font-size:1rem;color:var(--navy);background:var(--cream);border:1px solid var(--border);border-radius:8px;outline:none;-webkit-appearance:none;appearance:none;}
 .modal .form-row input:focus,.modal .form-row select:focus{border-color:var(--teal);}
 .modal-actions{display:flex;gap:.6rem;margin-top:1.2rem;justify-content:flex-end;}
-/* PATCH 6c: gold text on save button */
 .btn-save{background:var(--teal);color:var(--gold);border:1px solid var(--teal);padding:.6rem 1.4rem;font-family:'Lato',sans-serif;font-size:.72rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;border-radius:20px;cursor:pointer;transition:all .15s;}
 .btn-save:hover{background:var(--teal-dark);border-color:var(--teal-dark);}
 .btn-cancel{background:transparent;color:var(--muted);border:1px solid var(--border);padding:.6rem 1.2rem;font-family:'Lato',sans-serif;font-size:.72rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;border-radius:20px;cursor:pointer;transition:all .15s;}
@@ -766,7 +755,6 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
   align-items:center;gap:.3rem;transition:all .15s;-webkit-tap-highlight-color:transparent;
   flex-shrink:0;font-family:'Lato',sans-serif;}
 .mfp .mfp-caret{opacity:.55;font-size:.6rem;line-height:1;margin-left:.05rem;}
-.mfp-count{background:rgba(0,0,0,.08);border-radius:8px;padding:0px 4px;min-width:14px;text-align:center;line-height:1.5;font-size:.62rem;}
 
 /* Source pill — navy */
 .mfp-source{color:var(--navy2);border-color:rgba(26,40,64,.3);}
@@ -779,52 +767,9 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 
 /* Sort pill — teal */
 .mfp-sort{color:var(--teal);border-color:rgba(42,124,138,.35);}
-
-/* Active pill — filled in its own colour */
-.mfp.mfp-active.mfp-source{background:var(--navy2);color:#fff;}
-.mfp.mfp-active.mfp-cat{background:var(--gold);color:#fff;}
-.mfp.mfp-active.mfp-tags{background:#5a48b0;color:#fff;}
-.mfp.mfp-active.mfp-sort{background:var(--teal);color:#fff;}
-.mfp.mfp-open{box-shadow:0 0 0 2px rgba(0,0,0,.08) inset;}
-
-/* ── Floating filter panel ─────────────────────────────────────────────────── */
-.mob-filter-panel{
-  position:fixed;z-index:121;background:var(--warm-white,#fff);
-  border:1px solid var(--border);border-radius:12px;
-  box-shadow:0 8px 32px rgba(15,26,46,.18);padding:.75rem .85rem .8rem;
-  min-width:240px;max-width:88vw;max-height:55vh;overflow-y:auto;
-  display:none;font-family:'Lato',sans-serif;
-  animation:fpIn .15s ease;}
-.mob-filter-panel.show{display:block;}
 @keyframes fpIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
-.mob-filter-panel .fp-title{font-size:.68rem;text-transform:uppercase;letter-spacing:.06em;
-  font-weight:700;color:var(--muted);margin-bottom:.6rem;}
-.mob-filter-panel .fp-chip-wrap{display:flex;flex-wrap:wrap;gap:.4rem;}
-/* Category chips inside floating panel — gold colour */
-.fp-chip-cat{display:inline-flex;align-items:center;gap:.3rem;padding:.28rem .65rem;font-size:.72rem;font-weight:700;border-radius:20px;cursor:pointer;
-  border:1px solid rgba(200,149,42,.35);background:transparent;color:var(--gold);
-  white-space:nowrap;transition:all .15s;-webkit-tap-highlight-color:transparent;}
-.fp-chip-cat.active{background:var(--gold);color:#fff;}
-/* Tag chips inside floating panel — purple colour */
-.fp-chip-tag{display:inline-flex;align-items:center;gap:.3rem;padding:.28rem .65rem;font-size:.72rem;font-weight:700;border-radius:20px;cursor:pointer;
-  border:1px solid rgba(90,72,176,.3);background:transparent;color:#5a48b0;
-  white-space:nowrap;transition:all .15s;-webkit-tap-highlight-color:transparent;}
-.fp-chip-tag.active{background:#5a48b0;color:#fff;}
-/* Source chips inside panel — navy */
-.fp-chip-source{display:inline-flex;align-items:center;gap:.3rem;padding:.28rem .65rem;font-size:.72rem;font-weight:700;border-radius:20px;cursor:pointer;
-  border:1px solid rgba(26,40,64,.25);background:transparent;color:var(--navy2);
-  white-space:nowrap;transition:all .15s;-webkit-tap-highlight-color:transparent;}
-.fp-chip-source.active{background:var(--navy2);color:#fff;}
-/* Sort items in panel — teal */
-.fp-sort-item{display:flex;align-items:center;justify-content:space-between;padding:.4rem .5rem;
-  font-size:.8rem;cursor:pointer;border-radius:6px;transition:background .12s;color:var(--navy2);}
-.fp-sort-item:hover{background:rgba(42,124,138,.08);}
-.fp-sort-item.active{color:var(--teal);font-weight:700;}
-.fp-sort-item .fp-check{opacity:0;color:var(--teal);}
-.fp-sort-item.active .fp-check{opacity:1;}
 /* Scrim to close floating panel on outside tap */
 .mob-filter-scrim{display:none;position:fixed;inset:0;z-index:119;}
-.mob-filter-scrim.show{display:block;}
 .mob-search-bar{padding:.6rem .9rem;display:flex;gap:.5rem;align-items:center;}
 .mob-search-bar input{flex:1;padding:.5rem .75rem;font-size:1rem;font-family:'Lato',sans-serif;border:1px solid var(--border);border-radius:3px;background:var(--cream);color:var(--navy);outline:none;min-width:0;}
 .mob-search-bar input:focus{border-color:var(--teal);}
@@ -878,11 +823,10 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .mob-list-other-btn{padding:.42rem .75rem;border-radius:18px;border:1.5px dashed var(--border);background:transparent;color:var(--muted);font-size:.72rem;font-weight:700;cursor:pointer;white-space:nowrap;}
 /* Other Lists: a small inline dropdown anchored under its button, not a
    second bottom sheet stacking behind the first. */
+.mob-otherlists-dropdown{position:absolute;top:calc(100% + 4px);left:0;z-index:8;
   min-width:200px;max-width:80vw;max-height:45vh;overflow-y:auto;
   background:var(--warm-white);border:1px solid var(--border);border-radius:12px;
   box-shadow:0 8px 24px rgba(20,30,45,.18);padding:.35rem;}
-  border-radius:8px;cursor:pointer;font-size:.78rem;color:var(--navy2);}
-  margin-top:.25rem;padding:.55rem .6rem 0;font-size:.74rem;font-weight:700;color:var(--teal);cursor:pointer;}
 /* Shared centered popover — used by Other Lists, Category and Tags, so
    pickers launched from inside the book sheet are always fully visible
    and centred on screen, never clipped by the sheet's current height or
@@ -1054,11 +998,6 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
   transform: translateY(0);
   filter: none;
 }
-  opacity: 0.25;
-  transition: opacity .2s;
-}
-  opacity: 0.55;
-}
 
 /* CHECKOUT */
 .checkout-badge{display:inline-block;font-size:.65rem;font-weight:700;padding:2px 8px;border-radius:10px;background:#fff4e0;color:#a87820;margin-top:.3rem;}
@@ -1070,16 +1009,6 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
   /* ── MOBILE 3-TAB NAV ── */
 /* Override mob-nav to only have 3 tabs + home */
 .mob-nav-inner { justify-content: space-around; }
-
-/* Library filter pills (All / Private / Public / Shared) */
-  overflow-x: auto;
-  padding: .35rem .9rem .5rem;
-  display: flex;
-  gap: .4rem;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: none;
-  flex-shrink: 0;
-}
 .lib-filter-pill {
   padding: .26rem .7rem;
   font-size: .7rem;
@@ -1094,22 +1023,6 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
   -webkit-tap-highlight-color: transparent;
 }
 .lib-filter-pill.active { background: var(--teal); color: #fff; border-color: var(--teal); }
-
-/* Community panel placeholder */
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 2rem;
-  text-align: center;
-  color: var(--muted);
-}
-  font-family: 'Playfair Display', serif;
-  font-size: 1.2rem;
-  color: var(--navy2);
-  margin-bottom: .5rem;
-}
 
   /* ── BOTTOM SHEET ── */
 .bottom-sheet-overlay{position:fixed;inset:0;background:rgba(15,26,46,.5);z-index:120;opacity:0;pointer-events:none;transition:opacity .25s;}
@@ -1152,60 +1065,8 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .drawer-icon-btn.di-danger:hover{background:#fbeaea;border-color:#e0b0b0;}
 .drawer-icon-btn.di-danger:hover .di-label{color:var(--danger);}
 
-/* More button in icon bar */
-
 /* Drawer description area */
 .drawer-desc-area{padding:.9rem 1.5rem 1rem;flex:1;overflow-y:auto;}
-
-  /* ── LOUNGE ── */
-
-  background: var(--warm-white);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  margin-bottom: .8rem;
-  overflow: hidden;
-  transition: box-shadow .15s;
-}
-  padding: .7rem .9rem .5rem;
-  display: flex;
-  align-items: flex-start;
-  gap: .5rem;
-}
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  background: var(--teal);
-  color: #fff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: .65rem;
-  font-weight: 700;
-  flex-shrink: 0;
-}
-  font-family: 'Playfair Display', serif;
-  font-size: .95rem;
-  color: var(--navy2);
-  margin-bottom: .2rem;
-}
-  padding: .4rem .9rem .5rem;
-  border-top: 1px solid var(--border);
-  display: flex;
-  align-items: center;
-  gap: .5rem;
-  background: var(--panel);
-}
-
-/* News clip card */
-  background: var(--warm-white);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: .7rem .9rem;
-  margin-bottom: .7rem;
-  display: flex;
-  align-items: center;
-  gap: .7rem;
-}
 
 /* Notification badge */
 .lounge-badge {
@@ -1223,101 +1084,6 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
   align-items: center;
   justify-content: center;
   pointer-events: none;
-}
-
-  /* ── CHAT ── */
-  display: flex;
-  gap: .5rem;
-  align-items: flex-end;
-  max-width: 85%;
-}
-  align-self: flex-end;
-  flex-direction: row-reverse;
-}
-  align-self: flex-start;
-}
-  padding: .45rem .7rem;
-  border-radius: 16px;
-  font-size: .85rem;
-  line-height: 1.5;
-  word-break: break-word;
-  position: relative;
-}
-  background: var(--teal);
-  color: #fff;
-  border-radius: 16px 16px 4px 16px;
-}
-  background: var(--warm-white);
-  border: 1px solid var(--border);
-  color: var(--navy2);
-  border-radius: 16px 16px 16px 4px;
-}
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  object-fit: cover;
-  border: 1px solid var(--border);
-  flex-shrink: 0;
-}
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  background: var(--navy2);
-  color: #fff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: .55rem;
-  font-weight: 700;
-  flex-shrink: 0;
-}
-  background: var(--teal);
-}
-  font-size: .6rem;
-  color: var(--muted);
-  margin-top: 2px;
-  white-space: nowrap;
-}
-  text-align: right;
-}
-  text-align: left;
-}
-  font-size: .62rem;
-  font-weight: 700;
-  color: var(--teal);
-  margin-bottom: 2px;
-}
-  display: none;
-}
-  background: none;
-  border: none;
-  cursor: pointer;
-  font-size: .6rem;
-  color: rgba(255,255,255,.5);
-  padding: 0 .2rem;
-  opacity: 0;
-  transition: opacity .15s;
-  position: absolute;
-  top: 2px;
-  left: -20px;
-}
-  opacity: 1;
-}
-  text-align: center;
-  font-size: .62rem;
-  color: var(--muted);
-  font-weight: 700;
-  letter-spacing: .1em;
-  text-transform: uppercase;
-  padding: .4rem 0;
-  position: relative;
-}
-  content: '';
-  position: absolute;
-  top: 50%;
-  width: 30%;
-  height: 1px;
-  background: var(--border);
 }
 
   /* ── ADMIN ── */
@@ -1413,30 +1179,6 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
   user-select: none;
   -webkit-touch-callout: none;
 }
-
-  /* ── LISTS ── */
-.list-shelf {
-  margin-bottom: 1.2rem;
-}
-.list-shelf-label {
-  font-size: .68rem;
-  letter-spacing: .18em;
-  text-transform: uppercase;
-  font-weight: 700;
-  margin-bottom: .6rem;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-.list-shelf-scroll {
-  display: flex;
-  gap: .7rem;
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: none;
-  padding-bottom: .3rem;
-}
-.list-shelf-scroll::-webkit-scrollbar { display: none; }
 
 /* ── TAG CHIPS ── */
 .tag-chip {
@@ -1820,7 +1562,6 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
     <!-- Floating panels (injected into body by JS, anchored to pills) -->
     <!-- Scrim to dismiss any open panel -->
     <div class="mob-filter-scrim" id="mobFilterScrim"></div>
-    <div class="mob-filter-panel" id="mobFilterPanel"></div>
     <div class="mob-grid-scroll">
       <div class="mob-book-grid" id="mobGridLibrary"></div>
     </div>
@@ -2451,7 +2192,6 @@ let mobLibFilter = 'all';
 let mobLibCat    = 'All';
 let mobLibSearch = '';
 let mobLibSort   = 'recent';
-let mobLibTags   = new Set();
 let mobPrevPanel = 'mobPanelLibrary';
 let currentUser=null,library=[],allUsers=[],userRatings={},currentId=null,communityLib = [];
 // Kick off loading any offline-cached covers immediately — Cache Storage isn't
@@ -2703,9 +2443,6 @@ async function findBookById(id) {
   try {
     const snap = await getDoc(doc(db, 'books', id));
     if (snap.exists()) return { id: snap.id, ...snap.data() };
-    // Doc genuinely doesn't exist — Firestore rules that reference
-    // resource.data on a nonexistent doc report this as permission-denied
-    // rather than not-found, so surface it the same way as that case below.
     _lastFindBookByIdErrorCode = 'permission-denied';
   } catch (e) {
     console.warn('findBookById direct fetch failed:', e);
@@ -3934,7 +3671,6 @@ document.getElementById('mobNavSettings').addEventListener('click', () => mob_sw
 document.getElementById('mobNavTimeline')?.addEventListener('click', () => mob_switchTab('timeline'));
 
 function mob_switchTab(tab) {
-  if (typeof closeMobFilterPanel === 'function') closeMobFilterPanel();
   document.querySelectorAll('.mob-tab, .mob-tab-home').forEach(t => t.classList.remove('active'));
   const tabMap = { library:'mobNavLibrary', home:'mobNavHome', community:'mobNavCommunity', settings:'mobNavSettings', timeline:'mobNavTimeline' };
   document.getElementById(tabMap[tab])?.classList.add('active');
@@ -4000,139 +3736,6 @@ document.getElementById('mobLibSortBtns').addEventListener('click', e => {
   renderMobLibrary();
 });
 
-// ── NEW COMPACT FILTER PILLS (floating dropdown panels) ────────────────────
-const mobFilterPanelEl = document.getElementById('mobFilterPanel');
-const mobFilterScrimEl = document.getElementById('mobFilterScrim');
-let mobFilterOpenPill = null; // currently-open pill button, or null
-
-function closeMobFilterPanel() {
-  mobFilterPanelEl.classList.remove('show');
-  mobFilterScrimEl.classList.remove('show');
-  if (mobFilterOpenPill) mobFilterOpenPill.classList.remove('mfp-open');
-  mobFilterOpenPill = null;
-}
-
-function openMobFilterPanel(pillEl, html) {
-  // Toggle off if this same pill's panel is already open
-  if (mobFilterOpenPill === pillEl) { closeMobFilterPanel(); return; }
-  mobFilterPanelEl.innerHTML = html;
-  mobFilterPanelEl.classList.add('show');
-  mobFilterScrimEl.classList.add('show');
-  if (mobFilterOpenPill) mobFilterOpenPill.classList.remove('mfp-open');
-  pillEl.classList.add('mfp-open');
-  mobFilterOpenPill = pillEl;
-  // Position panel under the pill, keeping it inside the viewport
-  const r = pillEl.getBoundingClientRect();
-  const panelW = Math.min(280, window.innerWidth * 0.88);
-  let left = r.left;
-  if (left + panelW > window.innerWidth - 10) left = window.innerWidth - panelW - 10;
-  if (left < 10) left = 10;
-  mobFilterPanelEl.style.width = panelW + 'px';
-  mobFilterPanelEl.style.left = left + 'px';
-  mobFilterPanelEl.style.top = (r.bottom + 6) + 'px';
-}
-
-mobFilterScrimEl.addEventListener('click', closeMobFilterPanel);
-
-function refreshMobFilterPillLabels() {
-  // Source pill
-  const srcLabels = { all: 'All', private: 'Private', public: 'Public', shared: 'Shared' };
-  document.getElementById('mfpSourceLabel').textContent = srcLabels[mobLibFilter] || 'All';
-  document.getElementById('mfpSource').classList.toggle('mfp-active', mobLibFilter !== 'all');
-  // Category pill
-  document.getElementById('mfpCatLabel').textContent = mobLibCat === 'All' ? 'Category' : mobLibCat;
-  document.getElementById('mfpCat').classList.toggle('mfp-active', mobLibCat !== 'All');
-  // Tags pill
-  document.getElementById('mfpTagsLabel').textContent = mobLibTags.size ? `Tags (${mobLibTags.size})` : 'Tags';
-  document.getElementById('mfpTags').classList.toggle('mfp-active', mobLibTags.size > 0);
-  // Sort pill
-  const sortLabels = { recent: 'Recent', title: 'Title', author: 'Author', rating: 'Rating' };
-  document.getElementById('mfpSortLabel').textContent = sortLabels[mobLibSort] || 'Recent';
-  document.getElementById('mfpSort').classList.toggle('mfp-active', mobLibSort !== 'recent');
-}
-
-// Source pill → panel
-document.getElementById('mfpSource').addEventListener('click', e => {
-  const opts = [['all','All'],['private','Private'],['public','Public'],['shared','Shared with Me']];
-  const html = `<div class="fp-title">Filter by source</div><div class="fp-chip-wrap">${
-    opts.map(([val,label]) => `<span class="fp-chip-source ${mobLibFilter===val?'active':''}" data-src="${val}">${esc(label)}</span>`).join('')
-  }</div>`;
-  openMobFilterPanel(e.currentTarget, html);
-  mobFilterPanelEl.querySelectorAll('.fp-chip-source').forEach(chip => {
-    chip.addEventListener('click', () => {
-      mobLibFilter = chip.dataset.src;
-      mobLibCat = 'All'; // reset category when source changes
-      closeMobFilterPanel();
-      refreshMobFilterPillLabels();
-      renderMobLibrary();
-    });
-  });
-});
-
-// Category pill → panel
-document.getElementById('mfpCat').addEventListener('click', e => {
-  const srcForCats = mobLibFilter === 'all'
-    ? dedupe([...library, ...communityLib])
-    : (() => {
-        if (mobLibFilter === 'private') return library.filter(b => b.visibility !== 'public' && !(b.allowedUsers?.length));
-        if (mobLibFilter === 'public')  return communityLib.filter(b => b.visibility === 'public');
-        if (mobLibFilter === 'shared')  return communityLib.filter(b => b.ownerId !== currentUser?.uid && b.allowedUsers?.includes(currentUser?.uid));
-        return [];
-      })();
-  const cats = {};
-  srcForCats.forEach(b => { const c = b.category || 'Uncategorised'; cats[c] = (cats[c] || 0) + 1; });
-  const entries = [['All', srcForCats.length], ...Object.entries(cats).sort()];
-  const html = `<div class="fp-title">Filter by category</div><div class="fp-chip-wrap">${
-    entries.map(([cat,cnt]) => `<span class="fp-chip-cat ${mobLibCat===cat?'active':''}" data-cat="${encodeURIComponent(cat)}">${cat==='All'?'':catIcon(cat)+' '}${esc(cat)} <span style="opacity:.65">${cnt}</span></span>`).join('')
-  }</div>`;
-  openMobFilterPanel(e.currentTarget, html);
-  mobFilterPanelEl.querySelectorAll('.fp-chip-cat').forEach(chip => {
-    chip.addEventListener('click', () => {
-      mobLibCat = decodeURIComponent(chip.dataset.cat);
-      closeMobFilterPanel();
-      refreshMobFilterPillLabels();
-      renderMobLibrary();
-    });
-  });
-});
-
-// Tags pill → panel (multi-select)
-document.getElementById('mfpTags').addEventListener('click', e => {
-  const allTags = [...new Set(dedupe([...library, ...communityLib]).flatMap(b => b.tags || []))].sort();
-  const html = `<div class="fp-title">Filter by tags</div><div class="fp-chip-wrap">${
-    allTags.length ? allTags.map(t => `<span class="fp-chip-tag ${mobLibTags.has(t)?'active':''}" data-tag="${esc(t)}">${esc(t)}</span>`).join('')
-      : '<span style="font-size:.8rem;color:var(--muted)">No tags yet</span>'
-  }</div>`;
-  openMobFilterPanel(e.currentTarget, html);
-  mobFilterPanelEl.querySelectorAll('.fp-chip-tag').forEach(chip => {
-    chip.addEventListener('click', () => {
-      const t = chip.dataset.tag;
-      if (mobLibTags.has(t)) mobLibTags.delete(t); else mobLibTags.add(t);
-      chip.classList.toggle('active');
-      refreshMobFilterPillLabels();
-      renderMobLibrary();
-      // keep panel open for multi-select, don't close
-    });
-  });
-});
-
-// Sort pill → panel
-document.getElementById('mfpSort').addEventListener('click', e => {
-  const opts = [['recent','Recent'],['title','Title'],['author','Author'],['rating','Rating']];
-  const html = `<div class="fp-title">Sort by</div>${
-    opts.map(([val,label]) => `<div class="fp-sort-item ${mobLibSort===val?'active':''}" data-sort="${val}"><span>${esc(label)}</span><span class="fp-check">✓</span></div>`).join('')
-  }`;
-  openMobFilterPanel(e.currentTarget, html);
-  mobFilterPanelEl.querySelectorAll('.fp-sort-item').forEach(item => {
-    item.addEventListener('click', () => {
-      mobLibSort = item.dataset.sort;
-      closeMobFilterPanel();
-      refreshMobFilterPillLabels();
-      renderMobLibrary();
-    });
-  });
-});
-
 function getMobLibBooks() {
   // Build the combined source based on filter
   let src = [];
@@ -4152,8 +3755,6 @@ function getMobLibBooks() {
   }
   // Category filter
   if (mobLibCat !== 'All') src = src.filter(b => (b.category || 'Uncategorised') === mobLibCat);
-  // Tags filter (must have ALL selected tags)
-  if (mobLibTags.size) src = src.filter(b => [...mobLibTags].every(t => (b.tags || []).includes(t)));
   // Search
   if (mobLibSearch) src = src.filter(b => matchesQ(b, mobLibSearch));
   // Sort
@@ -4162,7 +3763,6 @@ function getMobLibBooks() {
 
 function renderMobLibrary() {
   document.getElementById('mobGridLibrary').classList.remove('select-mode');
-  refreshMobFilterPillLabels();
   // Category chips
   const allSrc = mobLibFilter === 'all'
     ? dedupe([...library, ...communityLib])
@@ -11551,37 +11151,6 @@ function showTagsModal() {
   document.body.appendChild(overlay);
   overlay.addEventListener('click', e => { if(e.target === overlay) overlay.remove(); });
   render();
-}
-
-// ── HOME TAB: LIST SHELVES ────────────────────────────────────────────────────
-
-function renderListShelves(containerEl) {
-  const nonEmpty = _userLists.filter(l => (l.bookIds || []).length > 0);
-  if(!nonEmpty.length) return '';
-
-  return nonEmpty.map(list => {
-    const books = (list.bookIds || [])
-      .map(id => [...library, ...communityLib].find(b => b.id === id))
-      .filter(Boolean);
-    if(!books.length) return '';
-
-    const color = list.id === 'favourites' ? 'var(--gold)'
-      : list.id === 'want-to-read' ? 'var(--teal)'
-      : list.id === 'finished' ? '#276749'
-      : list.id === 'currently-reading' ? '#5a48b0'
-      : 'var(--muted)';
-
-    return `<div class="list-shelf">
-      <div class="list-shelf-label" style="color:${color}">
-        <span>${list.icon || '📚'} ${esc(list.name)}</span>
-        <span style="font-size:.65rem;color:var(--muted);font-weight:400">
-          ${books.length} book${books.length !== 1 ? 's' : ''}</span>
-      </div>
-      <div class="list-shelf-scroll">
-        ${books.map(b => bookCardHtml(b, communityLib.some(x => x.id === b.id))).join('')}
-      </div>
-    </div>`;
-  }).join('');
 }
 
 // ── ADMIN: CATEGORIES + TAGS ──────────────────────────────────────────────────
