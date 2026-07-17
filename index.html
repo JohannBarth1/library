@@ -767,6 +767,13 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 
 /* Sort pill — teal */
 .mfp-sort{color:var(--teal);border-color:rgba(42,124,138,.35);}
+
+/* Active/engaged state — filled, matches each pill's accent colour */
+.mfp.mfp-active{color:#fff;}
+.mfp-source.mfp-active{background:var(--navy2);border-color:var(--navy2);}
+.mfp-cat.mfp-active{background:var(--gold);border-color:var(--gold);}
+.mfp-tags.mfp-active{background:#5a48b0;border-color:#5a48b0;}
+.mfp.mfp-active .mfp-caret{opacity:.8;}
 @keyframes fpIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
 /* Scrim to close floating panel on outside tap */
 .mob-filter-scrim{display:none;position:fixed;inset:0;z-index:119;}
@@ -3672,25 +3679,159 @@ document.getElementById('mobLibSortBtns').addEventListener('click', e => {
   renderMobLibrary();
 });
 
-function getMobLibBooks() {
-  // Build the combined source based on filter
-  let src = [];
-  if (mobLibFilter === 'all') {
-    // All books the user can see: their own + public + shared with them
-    src = dedupe([...library, ...communityLib]);
-  } else if (mobLibFilter === 'private') {
-    src = library.filter(b => b.visibility !== 'public' && !(b.allowedUsers?.length));
-  } else if (mobLibFilter === 'public') {
-    src = communityLib.filter(b => b.visibility === 'public');
-  } else if (mobLibFilter === 'shared') {
-    // Books shared with me privately (not mine, not public)
-    src = communityLib.filter(b =>
+// ── Live filter pills (Category / Tags / Sort / Source) ─────────────────────
+// Each opens the same centered picker used elsewhere in the app (Category on
+// a book, Other Lists, etc.) so the interaction language is consistent —
+// single column on narrow screens, two when there's room, via .mob-picker-grid.
+const MOB_SORT_OPTIONS   = [
+  { id:'recent', label:'Recent', icon:'🕒' },
+  { id:'title',  label:'Title',  icon:'🔤' },
+  { id:'author', label:'Author', icon:'✍️' },
+  { id:'rating', label:'Rating', icon:'⭐' },
+];
+const MOB_SOURCE_OPTIONS = [
+  { id:'all',     label:'All' },
+  { id:'private', label:'Private' },
+  { id:'public',  label:'Public' },
+  { id:'shared',  label:'Shared with Me' },
+];
+
+function getAllMobTags() {
+  const set = new Set();
+  dedupe([...library, ...communityLib]).forEach(b => (b.tags || []).forEach(t => set.add(t)));
+  return [...set].sort();
+}
+
+// Keeps each pill's label + "active" (filled) state in sync with the
+// current filter/sort values — called after render and after any change.
+function updateMobFilterPillLabels() {
+  const catLabel = document.getElementById('mfpCatLabel');
+  if (catLabel) catLabel.textContent = mobLibCat === 'All' ? 'Category' : mobLibCat;
+  document.getElementById('mfpCat')?.classList.toggle('mfp-active', mobLibCat !== 'All');
+
+  const tagsLabel = document.getElementById('mfpTagsLabel');
+  if (tagsLabel) tagsLabel.textContent = mobActiveTags.size ? `Tags (${mobActiveTags.size})` : 'Tags';
+  document.getElementById('mfpTags')?.classList.toggle('mfp-active', mobActiveTags.size > 0);
+
+  const sortLabel = document.getElementById('mfpSortLabel');
+  if (sortLabel) sortLabel.textContent = (MOB_SORT_OPTIONS.find(o => o.id === mobLibSort) || MOB_SORT_OPTIONS[0]).label;
+
+  const sourceLabel = document.getElementById('mfpSourceLabel');
+  if (sourceLabel) sourceLabel.textContent = (MOB_SOURCE_OPTIONS.find(o => o.id === mobLibFilter) || MOB_SOURCE_OPTIONS[0]).label;
+  document.getElementById('mfpSource')?.classList.toggle('mfp-active', mobLibFilter !== 'all');
+}
+
+// Generic centered picker: `items` is [{id,label,icon?,count?}]. `multi`
+// keeps the picker open and lets several items be toggled (used for Tags);
+// otherwise picking an item closes it immediately (Category/Sort/Source).
+function openMobFilterPicker({ title, items, isSelected, onSelect, multi = false, grid = false }) {
+  document.querySelectorAll('.mob-picker-scrim').forEach(el => el.remove()); // close any other picker first
+  const scrim = document.createElement('div');
+  scrim.className = 'mob-picker-scrim';
+  scrim.innerHTML = `
+    <div class="mob-picker-card">
+      <div class="mob-picker-title">
+        <span>${title}</span>
+        <button class="mob-picker-close" id="mobFpCloseBtn">✕</button>
+      </div>
+      <div id="mobFpItems" class="${grid ? 'mob-picker-grid' : ''}">
+        ${items.map((it, i) => `<div class="mob-picker-item ${isSelected(it) ? 'selected' : ''}" data-idx="${i}">
+            <span>${it.icon ? it.icon + ' ' : ''}${esc(it.label)}${it.count != null ? ` <span style="opacity:.55">${it.count}</span>` : ''}</span>
+            <span class="mpi-check">✓</span>
+          </div>`).join('')}
+      </div>
+    </div>`;
+  document.body.appendChild(scrim);
+  scrim.addEventListener('click', e => { if (e.target === scrim) scrim.remove(); });
+  scrim.querySelector('#mobFpCloseBtn').addEventListener('click', () => scrim.remove());
+  scrim.querySelectorAll('[data-idx]').forEach(el => {
+    el.addEventListener('click', () => {
+      const item = items[+el.dataset.idx];
+      onSelect(item);
+      updateMobFilterPillLabels();
+      renderMobLibrary();
+      if (multi) el.classList.toggle('selected', isSelected(item));
+      else scrim.remove();
+    });
+  });
+}
+
+document.getElementById('mfpCat').addEventListener('click', () => {
+  const srcForCats = getMobLibSourceBooks();
+  const cats = {};
+  srcForCats.forEach(b => { const c = b.category || 'Uncategorised'; cats[c] = (cats[c] || 0) + 1; });
+  const items = [
+    { id: 'All', label: 'All', count: srcForCats.length },
+    ...Object.entries(cats).sort(([a], [b]) => a.localeCompare(b))
+      .map(([c, cnt]) => ({ id: c, label: c, icon: catIcon(c), count: cnt })),
+  ];
+  openMobFilterPicker({
+    title: '📚 Category',
+    items,
+    grid: true,
+    isSelected: it => mobLibCat === it.id,
+    onSelect: it => { mobLibCat = it.id; },
+  });
+});
+
+document.getElementById('mfpTags').addEventListener('click', () => {
+  const allTags = getAllMobTags();
+  if (!allTags.length) { showToast('No tags yet'); return; }
+  const items = allTags.map(t => ({ id: t, label: t, icon: tagIcon(t) }));
+  openMobFilterPicker({
+    title: '🏷 Tags',
+    items,
+    grid: true,
+    multi: true,
+    isSelected: it => mobActiveTags.has(it.id),
+    onSelect: it => { mobActiveTags.has(it.id) ? mobActiveTags.delete(it.id) : mobActiveTags.add(it.id); },
+  });
+});
+
+document.getElementById('mfpSort').addEventListener('click', () => {
+  openMobFilterPicker({
+    title: '↕ Sort',
+    items: MOB_SORT_OPTIONS,
+    isSelected: it => mobLibSort === it.id,
+    onSelect: it => { mobLibSort = it.id; },
+  });
+});
+
+document.getElementById('mfpSource').addEventListener('click', () => {
+  openMobFilterPicker({
+    title: '📖 Source',
+    items: MOB_SOURCE_OPTIONS,
+    isSelected: it => mobLibFilter === it.id,
+    onSelect: it => { mobLibFilter = it.id; mobLibCat = 'All'; }, // reset category when source changes, same as legacy pills did
+  });
+});
+
+// Books visible under the current Source filter (all/private/public/shared),
+// before category/tag/search/sort are applied — shared by getMobLibBooks()
+// and the Category filter picker, which needs the same base set for counts.
+function getMobLibSourceBooks() {
+  if (mobLibFilter === 'private') {
+    return library.filter(b => b.visibility !== 'public' && !(b.allowedUsers?.length));
+  }
+  if (mobLibFilter === 'public') {
+    return communityLib.filter(b => b.visibility === 'public');
+  }
+  if (mobLibFilter === 'shared') {
+    return communityLib.filter(b =>
       b.ownerId !== currentUser?.uid &&
       b.allowedUsers?.includes(currentUser?.uid)
     );
   }
+  // 'all': everything the user can see — their own + public + shared with them
+  return dedupe([...library, ...communityLib]);
+}
+
+function getMobLibBooks() {
+  let src = getMobLibSourceBooks();
   // Category filter
   if (mobLibCat !== 'All') src = src.filter(b => (b.category || 'Uncategorised') === mobLibCat);
+  // Tags filter (any-of match against the active tag selection)
+  if (mobActiveTags.size) src = src.filter(b => (b.tags || []).some(t => mobActiveTags.has(t)));
   // Search
   if (mobLibSearch) src = src.filter(b => matchesQ(b, mobLibSearch));
   // Sort
@@ -3699,31 +3840,16 @@ function getMobLibBooks() {
 
 function renderMobLibrary() {
   document.getElementById('mobGridLibrary').classList.remove('select-mode');
-  // Category chips
-  const allSrc = mobLibFilter === 'all'
-    ? dedupe([...library, ...communityLib])
-    : getMobLibBooks(); // a bit redundant but fine for chip counts
-  const catMap = {};
-  dedupe([...library, ...communityLib]).forEach(b => {
-    if (mobLibFilter !== 'all') return; // only count from filtered source for chips
-    const c = b.category || 'Uncategorised';
-    catMap[c] = (catMap[c] || 0) + 1;
-  });
-  // Simpler: just count from whatever source applies
-  const srcForCats = mobLibFilter === 'all'
-    ? dedupe([...library, ...communityLib])
-    : (() => {
-        if (mobLibFilter === 'private')  return library.filter(b => b.visibility !== 'public' && !(b.allowedUsers?.length));
-        if (mobLibFilter === 'public')   return communityLib.filter(b => b.visibility === 'public');
-        if (mobLibFilter === 'shared')   return communityLib.filter(b => b.ownerId !== currentUser?.uid && b.allowedUsers?.includes(currentUser?.uid));
-        return [];
-      })();
+  // Category chips (legacy hidden chip row — kept in sync so nothing errors
+  // if it's ever shown again; the live UI is the mfpCat picker below)
+  const srcForCats = getMobLibSourceBooks();
   const cats = {};
   srcForCats.forEach(b => { const c = b.category || 'Uncategorised'; cats[c] = (cats[c] || 0) + 1; });
   document.getElementById('mobLibCatChips').innerHTML =
     [['All', srcForCats.length], ...Object.entries(cats).sort()]
       .map(([cat, cnt]) => `<div class="mob-chip ${mobLibCat === cat ? 'active' : ''}" data-cat="${encodeURIComponent(cat)}">${cat === 'All' ? '' : catIcon(cat) + ' '}${esc(cat)} <span style="opacity:.65">${cnt}</span></div>`)
       .join('');
+  updateMobFilterPillLabels();
 
   // Grid
   const books = getMobLibBooks();
