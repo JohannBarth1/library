@@ -1068,24 +1068,6 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 /* Drawer description area */
 .drawer-desc-area{padding:.9rem 1.5rem 1rem;flex:1;overflow-y:auto;}
 
-/* Notification badge */
-.lounge-badge {
-  position: absolute;
-  top: -4px;
-  right: -4px;
-  background: var(--rust);
-  color: #fff;
-  font-size: .55rem;
-  font-weight: 700;
-  border-radius: 50%;
-  width: 16px;
-  height: 16px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  pointer-events: none;
-}
-
   /* ── ADMIN ── */
 .admin-card {
   background: var(--warm-white);
@@ -1152,22 +1134,6 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .admin-badge.active { background: #d1fae5; color: #065f46; }
 .admin-badge.returned { background: var(--panel); color: var(--muted); }
 .admin-badge.overdue { background: #fbeaea; color: var(--danger); }
-
-  /* ── LOUNGE STICKY NOTES ── */
-.lounge-sticky{border-radius:2px;padding:7px 9px 8px;position:relative;flex-shrink:0;cursor:pointer;transition:transform .15s,box-shadow .15s;box-shadow:2px 3px 8px rgba(0,0,0,.4);}
-.lounge-sticky:hover{transform:scale(1.03);box-shadow:4px 6px 14px rgba(0,0,0,.5);}
-.ls-pin{width:10px;height:10px;border-radius:50%;position:absolute;top:-5px;left:50%;transform:translateX(-50%);border:1.5px solid rgba(0,0,0,.2);}
-.ls-label{font-size:7.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;opacity:.5;margin-bottom:3px;}
-.ls-text{font-family:'Playfair Display',serif;font-size:10px;line-height:1.4;word-break:break-word;}
-.ls-meta{font-size:7.5px;opacity:.4;margin-top:4px;}
-/* ── LOUNGE PAPER CLIPS ── */
-.lounge-paper{background:#faf7ef;border:1px solid rgba(0,0,0,.1);padding:9px 9px 8px;border-radius:1px;position:relative;flex-shrink:0;cursor:pointer;transition:transform .15s,box-shadow .15s;box-shadow:2px 3px 10px rgba(0,0,0,.35);}
-.lounge-paper:hover{transform:scale(1.03);box-shadow:4px 6px 16px rgba(0,0,0,.45);}
-.lp-clip{position:absolute;top:-7px;left:12px;width:22px;height:13px;border:2.5px solid #999;border-bottom:none;border-radius:4px 4px 0 0;}
-.lp-title{font-family:'Playfair Display',serif;font-size:9.5px;font-weight:700;color:#2c1f0e;line-height:1.35;margin-bottom:4px;}
-.lp-line{height:1.5px;background:rgba(44,31,14,.1);border-radius:1px;margin-bottom:3px;}
-.lp-meta{font-size:7.5px;color:#888;margin-top:4px;}
-.lp-exp{font-size:7px;color:#b84c1a;font-weight:700;margin-top:2px;}
 
   #mobGridLibrary {
   -webkit-user-select: none;
@@ -1578,40 +1544,6 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
     </div>
   </div>
 
-<!-- ── COMMUNITY PANEL ── -->
-<div class="mob-panel" id="mobPanelCommunity">
-  <div style="display:flex;flex-direction:column;height:100%;overflow:hidden;position:relative;">
-
-    <div style="background:#2c1f0e;border-bottom:2px solid #4a2a10;padding:8px 10px;
-                display:flex;gap:6px;align-items:center;flex-shrink:0;">
-      <div style="font-family:'Playfair Display',serif;font-size:.9rem;color:#c8a060;
-                  margin-right:auto;">🛋️ The Lounge</div>
-      <button onclick="showLoungeRequestModal()"
-        style="font-size:9px;background:rgba(254,243,199,.12);border:1px solid rgba(254,243,199,.25);
-               color:#fef3c7;border-radius:20px;padding:4px 10px;font-family:'Lato',sans-serif;
-               font-weight:700;cursor:pointer;">+ Request</button>
-      <button id="loungeBroadcastBtn" onclick="showBroadcastModal()"
-        style="display:none;font-size:9px;background:rgba(248,113,113,.15);
-               border:1px solid rgba(248,113,113,.35);color:#fca5a5;border-radius:20px;
-               padding:4px 10px;font-family:'Lato',sans-serif;font-weight:700;cursor:pointer;">
-        📢 Broadcast</button>
-      <button id="loungeNewsUploadBtn"
-        style="font-size:9px;background:rgba(250,247,239,.1);border:1px solid rgba(250,247,239,.2);
-               color:#faf7ef;border-radius:20px;padding:4px 10px;font-family:'Lato',sans-serif;
-               font-weight:700;cursor:pointer;">+ News clip</button>
-    </div>
-
-    <!-- Table: scrollable notes + news -->
-    <div style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;background:#3d2810;position:relative;border-top:3px solid #5a3a18;">
-      <div id="loungeTableGrain" style="position:absolute;inset:0;pointer-events:none;overflow:hidden;opacity:.1;"></div>
-      <div id="loungeNotesGrid" style="padding:4px 8px 16px;position:relative;z-index:2;display:flex;flex-wrap:wrap;gap:0;align-items:flex-end;min-height:320px;">
-        <div style="color:rgba(200,149,42,.25);font-size:.8rem;text-align:center;width:100%;padding:3rem 0;">Loading…</div>
-      </div>
-    </div>
-
-  </div>
-  </div>
-
   <!-- ── TIMELINE PANEL ── -->
   <div class="mob-panel" id="mobPanelTimeline">
     <div style="display:flex;flex-direction:column;height:100%;overflow:hidden">
@@ -1831,9 +1763,6 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
     </button>
     <button class="mob-tab" id="mobNavLibrary">
       <span class="tab-icon">📚</span><span>Library</span>
-    </button>
-    <button class="mob-tab" id="mobNavCommunity" style="display:none;position:relative">
-      <span class="tab-icon">🛋️</span><span>Lounge</span>
     </button>
     <button class="mob-tab" id="mobNavTimeline">
       <span class="tab-icon" style="display:flex;align-items:center;justify-content:center">
@@ -2209,12 +2138,6 @@ let _categories = [];
 let _globalTags = [];
 let _categoryIcons = {};   // { "Fiction": "📖", ... } — per-item emoji, editable in Admin
 let _tagIcons = {};        // { "Favourite": "❤️", ... } — per-item emoji, editable in Admin
-  
-let loungePresenceUnsub = null;
-let loungeChatUnsub = null;
-let loungeRequestsUnsub = null;
-let loungeNotifsUnsub = null;
-let loungeUnreadKnocks = 0;
 
 // Reader state
 let readerZip=null,readerSpine=[],readerChapter=0,readerOpfBase='',readerBookId = null;
@@ -2295,10 +2218,7 @@ onAuthStateChanged(auth, async user => {
         renderAll();
       });
 
-      startNotifListener();
       startAppNotifListener();
-      loungeJoinPassive();
-      startPresenceHeartbeat();
       checkAdminStatus();
       prewarmTimeline();
       prewarmOfflineEpubs();
@@ -3666,15 +3586,14 @@ function mob_showPanel(id){document.querySelectorAll('.mob-panel').forEach(p=>p.
 // ── MOBILE NAV ───────────────────────────────────────────────────────────────
 document.getElementById('mobNavLibrary').addEventListener('click',  () => mob_switchTab('library'));
 document.getElementById('mobNavHome').addEventListener('click', () => { mob_switchTab('home');});
-document.getElementById('mobNavCommunity').addEventListener('click',() => mob_switchTab('community'));
 document.getElementById('mobNavSettings').addEventListener('click', () => mob_switchTab('settings'));
 document.getElementById('mobNavTimeline')?.addEventListener('click', () => mob_switchTab('timeline'));
 
 function mob_switchTab(tab) {
   document.querySelectorAll('.mob-tab, .mob-tab-home').forEach(t => t.classList.remove('active'));
-  const tabMap = { library:'mobNavLibrary', home:'mobNavHome', community:'mobNavCommunity', settings:'mobNavSettings', timeline:'mobNavTimeline' };
+  const tabMap = { library:'mobNavLibrary', home:'mobNavHome', settings:'mobNavSettings', timeline:'mobNavTimeline' };
   document.getElementById(tabMap[tab])?.classList.add('active');
-  const panelMap = { library:'mobPanelLibrary', home:'mobPanelHome', community:'mobPanelCommunity', settings:'mobPanelSettings', timeline:'mobPanelTimeline' };
+  const panelMap = { library:'mobPanelLibrary', home:'mobPanelHome', settings:'mobPanelSettings', timeline:'mobPanelTimeline' };
   mob_showPanel(panelMap[tab] || 'mobPanelHome');
   if (tab === 'home') {
     renderMobHome();
@@ -9317,283 +9236,6 @@ function _showKoboSetupModal(device) {
 })();
 
 
-function showLoungeRequestModal(existing) {
-  const isEdit = !!existing;
-  // Reuse editMetaModal pattern — inject into a simple inline modal
-  const overlay = document.createElement('div');
-  overlay.className = 'modal-overlay open';
-  overlay.innerHTML = `
-    <div class="modal" style="max-width:440px">
-      <h3>${isEdit ? 'Edit Request' : 'Request a Book'}</h3>
-      <div class="form-row">
-        <label>Title / Author you're looking for</label>
-        <input type="text" id="reqTitleInput" placeholder="e.g. Middlemarch by George Eliot" value="${isEdit ? esc(existing.title) : ''}"/>
-      </div>
-      <div class="form-row">
-        <label>More detail <span style="font-size:.65rem;color:var(--muted);font-weight:400">(optional)</span></label>
-        <textarea id="reqDescInput" rows="3" style="width:100%;padding:.6rem .85rem;font-family:'Lato',sans-serif;font-size:.88rem;color:var(--navy);background:var(--cream);border:1px solid var(--border);border-radius:3px;outline:none;resize:vertical;line-height:1.5" placeholder="Any edition, format preference, context…">${isEdit ? esc(existing.description || '') : ''}</textarea>
-      </div>
-      <div class="modal-actions">
-        <button class="btn-cancel" id="reqCancelBtn">Cancel</button>
-        <button class="btn-save" id="reqSaveBtn">${isEdit ? 'Save' : 'Post Request'}</button>
-      </div>
-    </div>`;
-  document.body.appendChild(overlay);
-  overlay.querySelector('#reqCancelBtn').addEventListener('click', () => overlay.remove());
-  overlay.querySelector('#reqSaveBtn').addEventListener('click', async () => {
-    const title = overlay.querySelector('#reqTitleInput').value.trim();
-    if(!title){ showToast('Please enter a title'); return; }
-    const desc = overlay.querySelector('#reqDescInput').value.trim();
-    overlay.remove();
-    showLoading(isEdit ? 'Saving…' : 'Posting…');
-    try {
-      if(isEdit){
-        await updateDoc(doc(db, 'lounge_requests', existing.id), {
-          title, description: desc, updatedAt: serverTimestamp()
-        });
-      } else {
-        await addDoc(collection(db, 'lounge_requests'), {
-          title,
-          description: desc,
-          authorId: currentUser.uid,
-          authorName: currentUser.displayName || currentUser.email,
-          authorPhoto: currentUser.photoURL || null,
-          createdAt: serverTimestamp(),
-          updatedAt: serverTimestamp(),
-          commentCount: 0,
-        });
-      }
-      hideLoading();
-      showToast(isEdit ? 'Request updated ✓' : 'Request posted ✓');
-    } catch(e) {
-      hideLoading();
-      showToast('Failed: ' + e.message);
-    }
-  });
-}
-
-  function showLoungeRequestDetail(req) {
-  const col = STICKY_COLORS.find(c => c.bg) || STICKY_COLORS[0];
-  // Pick the same colour as the rendered sticky
-  const idx = (req._idx !== undefined) ? req._idx : 0;
-  const stickyCol = STICKY_COLORS[idx % STICKY_COLORS.length];
-
-  const overlay = document.createElement('div');
-  overlay.className = 'modal-overlay open';
-  overlay.style.cssText = 'align-items:flex-end;padding:0;';
-  overlay.innerHTML = `
-    <div style="width:100%;max-height:85vh;display:flex;flex-direction:column;
-                background:${stickyCol.bg};border-radius:16px 16px 0 0;
-                box-shadow:0 -4px 24px rgba(0,0,0,.3);overflow:hidden;">
-      <!-- Pin + header -->
-      <div style="display:flex;align-items:center;justify-content:space-between;
-                  padding:12px 16px 8px;border-bottom:1px solid rgba(0,0,0,.08);">
-        <div style="display:flex;align-items:center;gap:8px;">
-          <div style="width:12px;height:12px;border-radius:50%;background:${stickyCol.pin};
-                      border:2px solid rgba(0,0,0,.15);flex-shrink:0;"></div>
-          <div style="font-size:8px;font-weight:700;letter-spacing:.15em;
-                      text-transform:uppercase;opacity:.5;">
-                      ${req.type==='broadcast'?'📢 broadcast':'📚 book request'}</div>
-        </div>
-        <button onclick="this.closest('.modal-overlay').remove()"
-          style="background:none;border:none;font-size:18px;cursor:pointer;
-                 opacity:.4;line-height:1;padding:0 4px;">✕</button>
-      </div>
-      <!-- Title + desc -->
-      <div style="padding:12px 16px 8px;">
-        <div style="font-family:'Playfair Display',serif;font-size:1.15rem;
-                    line-height:1.3;color:#2c1f0e;margin-bottom:.3rem;">${esc(req.title)}</div>
-        ${req.description?`<div style="font-size:.83rem;color:#3a2a1a;opacity:.7;
-                    line-height:1.6;">${esc(req.description)}</div>`:''}
-      <div style="font-size:.7rem;opacity:.4;margin-top:.4rem;">
-                ${esc((req.authorName||'').split(' ')[0])} · 
-                ${req.createdAt?.toDate?.()?timeAgo(req.createdAt.toDate()):''}
-              </div>
-              ${req.type!=='broadcast'?`
-              <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;">
-                <button onclick="loungeReact('${req.id}')"
-                  style="font-size:11px;background:rgba(0,0,0,.07);border:none;border-radius:20px;
-                         padding:4px 10px;cursor:pointer;">👀 I'm looking for this too</button>
-                <button onclick="loungeHaveIt('${req.id}','${esc(req.title)}')"
-                  style="font-size:11px;background:rgba(74,222,128,.12);border:1px solid rgba(74,222,128,.25);
-                         color:#276749;border-radius:20px;padding:4px 10px;cursor:pointer;border-radius:20px;">
-                  📚 I have it!</button>
-              </div>`:''}
-      </div>
-      <!-- Comments -->
-      <div style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;
-                  padding:0 16px 8px;min-height:120px;max-height:40vh;"
-           id="reqDetailComments_${req.id}">
-        <div style="font-size:.78rem;color:rgba(44,31,14,.4);padding:.5rem 0;">
-          Loading comments…</div>
-      </div>
-      <!-- Comment input -->
-      <div style="padding:8px 12px;border-top:1px solid rgba(0,0,0,.08);
-                  display:flex;gap:8px;align-items:center;
-                  padding-bottom:calc(8px + env(safe-area-inset-bottom));">
-        <input id="reqDetailInput_${req.id}" placeholder="Add a comment…"
-          style="flex:1;padding:8px 12px;font-family:'Lato',sans-serif;
-                 font-size:16px;border:1px solid rgba(0,0,0,.15);border-radius:20px;
-                 background:rgba(255,255,255,.6);color:#2c1f0e;outline:none;"
-          onkeydown="if(event.key==='Enter')sendReqDetailComment('${req.id}')"/>
-        <button onclick="sendReqDetailComment('${req.id}')"
-          style="background:${stickyCol.pin};border:none;border-radius:50%;
-                 width:34px;height:34px;display:flex;align-items:center;
-                 justify-content:center;cursor:pointer;font-size:12px;
-                 color:#fff;flex-shrink:0;">➤</button>
-      </div>
-    </div>`;
-
-  document.body.appendChild(overlay);
-  overlay.addEventListener('click', e => { if(e.target===overlay) overlay.remove(); });
-
-  // Load comments into the detail modal
-  loadCommentsInto(req.id, document.getElementById(`reqDetailComments_${req.id}`));
-}
-
-  function showBroadcastModal() {
-  const overlay = document.createElement('div');
-  overlay.className = 'modal-overlay open';
-  overlay.innerHTML = `
-    <div class="modal" style="max-width:440px;">
-      <h3 style="color:var(--danger);">📢 Broadcast Message</h3>
-      <p style="font-size:.82rem;color:var(--muted);margin-bottom:.8rem;line-height:1.5;">
-        This will appear as a red notice on everyone's lounge table.</p>
-      <div class="form-row">
-        <label>Message</label>
-        <input type="text" id="broadcastTitleInput" placeholder="e.g. Book club meets Friday at 7pm!"/>
-      </div>
-      <div class="form-row">
-        <label>Detail <span style="font-size:.65rem;color:var(--muted);font-weight:400">(optional)</span></label>
-        <textarea id="broadcastDescInput" rows="3"
-          style="width:100%;padding:.6rem .85rem;font-family:'Lato',sans-serif;
-                 font-size:.88rem;color:var(--navy);background:var(--cream);
-                 border:1px solid var(--border);border-radius:3px;outline:none;
-                 resize:vertical;line-height:1.5"
-          placeholder="Any extra detail…"></textarea>
-      </div>
-      <div class="modal-actions">
-        <button class="btn-cancel" id="broadcastCancelBtn">Cancel</button>
-        <button class="btn-save" style="background:var(--danger);" id="broadcastSaveBtn">📢 Post Broadcast</button>
-      </div>
-    </div>`;
-  document.body.appendChild(overlay);
-  overlay.querySelector('#broadcastCancelBtn').addEventListener('click', () => overlay.remove());
-  overlay.querySelector('#broadcastSaveBtn').addEventListener('click', async () => {
-    const title = overlay.querySelector('#broadcastTitleInput').value.trim();
-    if(!title) { showToast('Please enter a message'); return; }
-    const desc = overlay.querySelector('#broadcastDescInput').value.trim();
-    overlay.remove();
-    showLoading('Broadcasting…');
-    try {
-      await addDoc(collection(db, 'lounge_requests'), {
-        title,
-        description: desc,
-        type: 'broadcast',
-        authorId: currentUser.uid,
-        authorName: currentUser.displayName || currentUser.email,
-        authorPhoto: currentUser.photoURL || null,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-        commentCount: 0,
-      });
-      hideLoading();
-      showToast('Broadcast posted ✓');
-    } catch(e) {
-      hideLoading();
-      showToast('Failed: ' + e.message);
-    }
-  });
-}
-
-function loadCommentsInto(reqId, container) {
-  const q = query(
-    collection(db, 'lounge_requests', reqId, 'comments'),
-    orderBy('createdAt', 'asc')
-  );
-  // Store unsub on container so it cleans up when removed
-  const unsub = onSnapshot(q, snap => {
-    const comments = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    if(!container) return;
-    if(!comments.length) {
-      container.innerHTML = `<div style="font-size:.78rem;color:rgba(44,31,14,.4);
-        padding:.5rem 0;">No comments yet — be the first!</div>`;
-      return;
-    }
-    container.innerHTML = comments.map(c => {
-      const isMine = c.authorId === currentUser?.uid;
-      const initials = (c.authorName||'?').split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
-      return `<div style="display:flex;gap:6px;margin-bottom:8px;align-items:flex-start;">
-        <div style="width:24px;height:24px;border-radius:50%;background:#2c1f0e;
-                    color:#c8a060;display:flex;align-items:center;justify-content:center;
-                    font-size:.55rem;font-weight:700;flex-shrink:0;margin-top:2px;">
-                    ${initials}</div>
-        <div style="flex:1;background:rgba(255,255,255,.55);border-radius:0 10px 10px 10px;
-                    padding:5px 9px;">
-          <div style="font-size:.65rem;font-weight:700;color:#5a3a18;margin-bottom:2px;">
-            ${esc(c.authorName||'Unknown')}</div>
-          <div style="font-size:.85rem;color:#2c1f0e;line-height:1.5;">${esc(c.text)}</div>
-          <div style="display:flex;align-items:center;justify-content:space-between;
-                      margin-top:2px;">
-            <div style="font-size:.65rem;opacity:.4;">
-              ${c.createdAt?.toDate?.()?timeAgo(c.createdAt.toDate()):''}</div>
-            ${isMine?`<button onclick="deleteDetailComment('${reqId}','${c.id}',this)"
-              style="font-size:.6rem;background:none;border:none;cursor:pointer;
-                     color:#b84c1a;opacity:.5;">✕ delete</button>`:''}
-          </div>
-        </div>
-      </div>`;
-    }).join('');
-    // Update comment count silently
-    updateDoc(doc(db,'lounge_requests',reqId),{commentCount:comments.length}).catch(()=>{});
-  }, e => console.warn('Detail comments:', e));
-  // Clean up listener when overlay is removed
-  const observer = new MutationObserver(() => {
-    if(!document.contains(container)){ unsub(); observer.disconnect(); }
-  });
-  observer.observe(document.body, { childList: true, subtree: true });
-}
-
-async function sendReqDetailComment(reqId) {
-  const input = document.getElementById('reqDetailInput_' + reqId);
-  if(!input) return;
-  const text = input.value.trim();
-  if(!text || !currentUser) return;
-  input.value = '';
-  try {
-    await addDoc(collection(db, 'lounge_requests', reqId, 'comments'), {
-      text,
-      authorId: currentUser.uid,
-      authorName: currentUser.displayName || currentUser.email,
-      authorPhoto: currentUser.photoURL || null,
-      createdAt: serverTimestamp(),
-    });
-  } catch(e) { showToast('Failed: ' + e.message); }
-}
-
-async function deleteDetailComment(reqId, commentId, btn) {
-  if(!confirm('Delete this comment?')) return;
-  try {
-    await deleteDoc(doc(db, 'lounge_requests', reqId, 'comments', commentId));
-  } catch(e) { showToast('Delete failed: ' + e.message); }
-}
-
-async function deleteRequest(reqId) {
-  if(!confirm('Delete this request and all its comments?')) return;
-  showLoading('Deleting…');
-  try {
-    // Delete all comments first
-    const commSnap = await getDocs(collection(db, 'lounge_requests', reqId, 'comments'));
-    for(const d of commSnap.docs) await deleteDoc(d.ref);
-    await deleteDoc(doc(db, 'lounge_requests', reqId));
-    hideLoading();
-    showToast('Request deleted ✓');
-  } catch(e) {
-    hideLoading();
-    showToast('Delete failed: ' + e.message);
-  }
-}
-
 // ── TIME AGO ──────────────────────────────────────────────────────────────────
 function timeAgo(date) {
   const seconds = Math.floor((new Date() - date) / 1000);
@@ -9607,409 +9249,11 @@ function timeAgo(date) {
   return date.toLocaleDateString();
 }
 
-// ── START LOUNGE WHEN TAB IS OPENED ──────────────────────────────────────────
 document.getElementById('mobNavLibrary').onclick  = () => mob_switchTab('library');
 document.getElementById('mobNavHome').onclick      = () => mob_switchTab('home');
-document.getElementById('mobNavCommunity').onclick = () => {
-  mob_switchTab('community');
-  openLoungePanel();
-  markNotifsRead();
-  loungeSetActive();
-};
 document.getElementById('mobNavSettings').onclick  = () => mob_switchTab('settings');
 
-// ── PRESENCE ──────────────────────────────────────────────────────────────────
-let loungeReadingBookId = null;
-let loungeStatus = 'browsing'; // 'active' | 'browsing'
-let loungeHeartbeatTimer = null;
-
-// Called on login — puts user in presence as 'browsing'
-async function loungeJoinPassive() {
-  if(!currentUser) return;
-  const expires = new Date(Date.now() + 30 * 60 * 1000);
-  const savedBook = localStorage.getItem('elib_reading_status') || '';
-  const savedBookId = localStorage.getItem('elib_reading_book_id') || null;
-  try {
-    await setDoc(doc(db, 'lounge_presence', currentUser.uid), {
-      userId: currentUser.uid,
-      displayName: currentUser.displayName || currentUser.email,
-      photoURL: currentUser.photoURL || null,
-      currentlyReading: savedBook,
-      currentlyReadingBookId: savedBookId,
-      status: 'browsing',
-      expiresAt: Timestamp.fromDate(expires),
-      lastSeen: serverTimestamp(),
-    });
-  } catch(e) {
-    console.error('loungeJoinPassive failed:', e);
-  }
-}
-
-// Called when lounge tab opens — upgrades to 'active'
-async function loungeSetActive() {
-  if(!currentUser) return;
-  loungeStatus = 'active';
-  const expires = new Date(Date.now() + 30 * 60 * 1000);
-  await setDoc(doc(db, 'lounge_presence', currentUser.uid), {
-    userId: currentUser.uid,
-    displayName: currentUser.displayName || currentUser.email,
-    photoURL: currentUser.photoURL || null,
-    currentlyReading: localStorage.getItem('elib_reading_status') || '',
-    currentlyReadingBookId: localStorage.getItem('elib_reading_book_id') || null,
-    status: 'active',
-    expiresAt: Timestamp.fromDate(expires),
-    lastSeen: serverTimestamp(),
-  }, { merge: true });
-}
-
-// Heartbeat — refreshes TTL every 5 minutes
-function startPresenceHeartbeat() {
-  if(loungeHeartbeatTimer) return;
-  loungeHeartbeatTimer = setInterval(async () => {
-    if(!currentUser) return;
-    const expires = new Date(Date.now() + 30 * 60 * 1000);
-    await setDoc(doc(db, 'lounge_presence', currentUser.uid), {
-      status: loungeStatus,
-      expiresAt: Timestamp.fromDate(expires),
-      lastSeen: serverTimestamp(),
-    }, { merge: true }).catch(() => {});
-    // Cumulative time-in-app, counted in 5-minute ticks while the tab stays open
-    await setDoc(doc(db, 'users', currentUser.uid), {
-      totalTimeSeconds: increment(300),
-    }, { merge: true }).catch(() => {});
-  }, 5 * 60 * 1000);
-}
-
-async function saveReadingStatus(bookId, bookTitle) {
-  const title = bookTitle || document.getElementById('loungeReadingInput')?.value.trim() || '';
-  const id = bookId || loungeReadingBookId || null;
-  localStorage.setItem('elib_reading_status', title);
-  localStorage.setItem('elib_reading_book_id', id || '');
-  if(currentUser) {
-    await setDoc(doc(db, 'lounge_presence', currentUser.uid), {
-      currentlyReading: title,
-      currentlyReadingBookId: id,
-      lastSeen: serverTimestamp(),
-    }, { merge: true });
-  }
-  document.getElementById('loungeReadingSaveSheet')?.remove();
-  showToast('Reading status updated ✓');
-}
-
-function showReadingEditSheet() {
-  const existing = document.getElementById('loungeReadingSaveSheet');
-  if(existing) { existing.remove(); return; }
-
-  // Default to last opened book if nothing saved
-  const savedTitle = localStorage.getItem('elib_reading_status') || '';
-  const savedBookId = localStorage.getItem('elib_reading_book_id') || '';
-  const defaultBook = !savedTitle && lastOpenedBookId
-    ? [...library, ...communityLib].find(b => b.id === lastOpenedBookId)
-    : null;
-
-  const sheet = document.createElement('div');
-  sheet.id = 'loungeReadingSaveSheet';
-  sheet.style.cssText = `position:fixed;bottom:var(--mob-nav-h);left:0;right:0;
-    background:#1e1610;border-top:2px solid #5a3a18;padding:10px 12px;
-    z-index:50;display:flex;gap:6px;align-items:center;
-    box-shadow:0 -4px 16px rgba(0,0,0,.4);`;
-  sheet.innerHTML = `
-    <div style="position:relative;flex:1;">
-      <input id="loungeReadingInput" placeholder="What are you reading?"
-        value="${esc(defaultBook ? defaultBook.title : savedTitle)}"
-        autocomplete="off"
-        style="width:100%;font-size:14px;background:#2c1f0e;border:1px solid #5a3a18;
-               border-radius:10px;padding:6px 10px;color:#d8c8a0;outline:none;
-               font-family:'Lato',sans-serif;"/>
-      <div id="loungeReadingDropdown"
-        style="display:none;position:absolute;bottom:100%;left:0;right:0;margin-bottom:3px;
-               background:#1e1610;border:1px solid #5a3a18;border-radius:6px;
-               overflow:hidden;z-index:60;box-shadow:0 -4px 12px rgba(0,0,0,.4);
-               max-height:180px;overflow-y:auto;"></div>
-    </div>
-    <button onclick="saveReadingStatus()"
-      style="font-size:11px;background:#c8a060;border:none;border-radius:10px;
-             padding:6px 10px;color:#2c1f0e;font-weight:700;cursor:pointer;flex-shrink:0;">✓ Save</button>
-    <button onclick="document.getElementById('loungeReadingSaveSheet')?.remove()"
-      style="font-size:13px;background:none;border:none;color:#c8a060;opacity:.5;
-             cursor:pointer;flex-shrink:0;padding:0 4px;">✕</button>`;
-  document.body.appendChild(sheet);
-
-  if(defaultBook) {
-    loungeReadingBookId = defaultBook.id;
-  } else {
-    loungeReadingBookId = savedBookId || null;
-  }
-
-  const input = document.getElementById('loungeReadingInput');
-  input.focus();
-  input.setSelectionRange(input.value.length, input.value.length);
-
-  input.addEventListener('input', () => {
-    loungeReadingBookId = null;
-    const q = input.value.toLowerCase().trim();
-    const dropdown = document.getElementById('loungeReadingDropdown');
-    if(!q) { dropdown.style.display = 'none'; return; }
-    const matches = [...library, ...communityLib]
-      .filter((b,i,a) => a.findIndex(x=>x.id===b.id)===i)
-      .filter(b => b.title?.toLowerCase().includes(q) || b.author?.toLowerCase().includes(q))
-      .slice(0, 6);
-    if(!matches.length) { dropdown.style.display = 'none'; return; }
-    dropdown.style.display = 'block';
-    dropdown.innerHTML = matches.map(b => `
-      <div data-bookid="${b.id}" data-title="${esc(b.title)}"
-        style="padding:6px 10px;cursor:pointer;border-bottom:1px solid #2c1f0e;font-size:11px;color:#d8c8a0;">
-        <div style="font-weight:700;">${esc(b.title)}</div>
-        <div style="opacity:.5;font-size:10px;">${esc(b.author||'')}</div>
-      </div>`).join('');
-    dropdown.querySelectorAll('[data-bookid]').forEach(el => {
-      el.addEventListener('mousedown', e => {
-        e.preventDefault();
-        input.value = el.dataset.title;
-        loungeReadingBookId = el.dataset.bookid;
-        dropdown.style.display = 'none';
-      });
-    });
-  });
-
-  input.addEventListener('blur', () => {
-    setTimeout(() => {
-      const dd = document.getElementById('loungeReadingDropdown');
-      if(dd) dd.style.display = 'none';
-    }, 150);
-  });
-}
-
-// ── NOTIFICATIONS LISTENER ────────────────────────────────────────────────────
-function startNotifListener() {
-  if(loungeNotifsUnsub || !currentUser) return;
-  const q = query(
-    collection(db, 'lounge_notifications'),
-    where('toUserId', '==', currentUser.uid),
-    where('read', '==', false)
-  );
-  loungeNotifsUnsub = onSnapshot(q, snap => {
-    loungeUnreadKnocks = snap.size;
-    updateLoungeBadge();
-    if(snap.docChanges().some(c => c.type === 'added')) {
-      const newest = snap.docChanges().find(c => c.type === 'added');
-      if(newest) {
-        const data = newest.doc.data();
-        showToast(`🔔 ${data.fromName} is knocking — join the lounge!`);
-      }
-    }
-  }, e => console.warn('Notif listener:', e));
-}
-
-async function markNotifsRead() {
-  if(!currentUser) return;
-  try {
-    const q = query(
-      collection(db, 'lounge_notifications'),
-      where('toUserId', '==', currentUser.uid),
-      where('read', '==', false)
-    );
-    const snap = await getDocs(q);
-    for(const d of snap.docs) {
-      await updateDoc(d.ref, { read: true });
-    }
-  } catch(e) { console.warn('Mark notifs read:', e); }
-}
-
-function updateLoungeBadge() {
-  document.querySelectorAll('.lounge-badge').forEach(b => b.remove());
-  const total = loungeUnreadKnocks;
-  if(total > 0) {
-    const badge = document.createElement('div');
-    badge.className = 'lounge-badge';
-    badge.textContent = total > 9 ? '9+' : total;
-    document.getElementById('mobNavCommunity')?.appendChild(badge);
-  }
-}
-
-// ── REQUESTS AS STICKY NOTES ──────────────────────────────────────────────────
-function startRequestsListener() {
-  if(loungeRequestsUnsub) return;
-  const q = query(collection(db, 'lounge_requests'), orderBy('updatedAt', 'desc'));
-  loungeRequestsUnsub = onSnapshot(q, snap => {
-    const requests = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    renderLoungeNotes(requests);
-  }, e => console.warn('Requests listener:', e));
-}
-
-const STICKY_COLORS = [
-  { bg:'#fef3c7', pin:'#f59e0b' },
-  { bg:'#d1fae5', pin:'#10b981' },
-  { bg:'#ede9fe', pin:'#7c3aed' },
-  { bg:'#fce7f3', pin:'#ec4899' },
-  { bg:'#dbeafe', pin:'#3b82f6' },
-  { bg:'#fef9c3', pin:'#eab308' },
-];
-const ROTATIONS = [-3.5, 2.5, -1, 2, -2.5, 1.5, -1.8, 3, -0.5, 2.2];
-
-function renderLoungeNotes(requests) {
-  const grid = document.getElementById('loungeNotesGrid');
-  if(!grid) return;
-
-  // Load news clips inline
-  loadNewsClipsForGrid(requests);
-}
-
-async function loadNewsClipsForGrid(requests) {
-  const grid = document.getElementById('loungeNotesGrid');
-  if(!grid) return;
-
-  let newsClips = [];
-  try {
-    const now = Timestamp.now();
-    const q = query(collection(db,'news_clips'), where('expiresAt','>',now), orderBy('expiresAt','asc'));
-    const snap = await getDocs(q);
-    newsClips = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-  } catch(e) { console.warn('News clips:', e); }
-
-  if(!requests.length && !newsClips.length) {
-    grid.innerHTML = `<div style="color:rgba(200,149,42,.25);font-size:.8rem;text-align:center;width:100%;padding:3rem 0;font-family:'Playfair Display',serif;font-style:italic;">The table is bare — post a request or drop a news clip</div>`;
-    return;
-  }
-
-  // Interleave requests (stickies) and news (papers) with random-ish layout
-  const items = [];
-  requests.forEach((r, i) => items.push({ type:'request', data:{...r, _idx:i}, idx:i }));
-  newsClips.forEach((n, i) => items.push({ type:'news', data:n, idx:i }));
-
-  grid.innerHTML = items.map(({ type, data, idx }) => {
-    const rot = ROTATIONS[idx % ROTATIONS.length];
-    const isMine = data.authorId === currentUser?.uid || data.uploadedBy === currentUser?.uid;
-
-    if(type === 'request') {
-      const col = data.type === 'broadcast'
-        ? { bg:'#fee2e2', pin:'#ef4444' }
-        : STICKY_COLORS[idx % STICKY_COLORS.length];
-      const commentCount = data.commentCount || 0;
-      return `<div class="lounge-sticky" data-reqid="${data.id}" style="background:${col.bg};transform:rotate(${rot}deg);margin:${8+Math.abs(rot)}px ${6+Math.abs(rot)*0.5}px;width:calc(50% - 20px);max-width:155px;">
-        <div class="ls-pin" style="background:${col.pin};"></div>
-        <div class="ls-label" style="${data.type==='broadcast'?'color:#ef4444;opacity:.7;':''}">${data.type==='broadcast'?'📢 broadcast':data.description?.toLowerCase().includes('challenge')?'challenge':'request'}</div>
-        <div class="ls-text">${esc(data.title)}</div>
-        ${data.description?`<div style="font-size:8px;opacity:.45;margin-top:3px;font-style:italic;">${esc(data.description.slice(0,60))}${data.description.length>60?'…':''}</div>`:''}
-        <div class="ls-meta">${esc((data.authorName||'').split(' ')[0])} · ${data.createdAt?.toDate?.()?timeAgo(data.createdAt.toDate()):''}</div>
-        ${commentCount?`<div style="font-size:7.5px;opacity:.4;margin-top:4px;">💬 ${commentCount} comment${commentCount!==1?'s':''}</div>`:''}
-        ${(isMine||isAdmin)?`<div style="display:flex;gap:3px;margin-top:4px;"><button onclick="event.stopPropagation();showLoungeRequestModal({id:'${data.id}',title:'${esc(data.title)}',description:'${esc(data.description||'')}'} )" style="font-size:7px;background:rgba(0,0,0,.08);border:none;border-radius:3px;padding:1px 5px;cursor:pointer;">✎</button><button onclick="event.stopPropagation();deleteRequest('${data.id}')" style="font-size:7px;background:rgba(0,0,0,.08);border:none;border-radius:3px;padding:1px 5px;cursor:pointer;color:#b84c1a;">✕</button></div>`:''}
-        </div>`;
-    } else {
-      // News paper
-      const icon = data.fileType?.includes('pdf') ? '📄' : data.fileType?.startsWith('image') ? '🖼️' : '📎';
-      const expires = data.expiresAt?.toDate?.();
-      const daysLeft = expires ? Math.ceil((expires - new Date()) / 86400000) : '?';
-      return `<div class="lounge-paper" onclick="window.open('${data.url}','_blank')" style="transform:rotate(${rot}deg);margin:${10+Math.abs(rot)}px ${6+Math.abs(rot)*0.5}px;width:calc(50% - 20px);max-width:155px;">
-        <div class="lp-clip"></div>
-        <div class="lp-title">${esc(data.title)}</div>
-        <div class="lp-line"></div><div class="lp-line" style="width:70%"></div>
-        <div class="lp-meta">${icon} ${esc((data.uploaderName||'').split(' ')[0])}</div>
-        <div class="lp-exp">Expires in ${daysLeft} day${daysLeft!==1?'s':''}</div>
-        ${isMine?`<button onclick="event.stopPropagation();deleteNewsClip('${data.id}','${data.storagePath||''}')" style="font-size:7px;background:rgba(180,76,26,.15);border:1px solid rgba(180,76,26,.25);color:#b84c1a;border-radius:3px;padding:1px 5px;cursor:pointer;margin-top:4px;">✕ remove</button>`:''}
-      </div>`;
-    }
-  }).join('');
-
-  // Sticky tap → open request modal for comments
-    grid.querySelectorAll('[data-reqid]').forEach((el, i) => {
-      el.addEventListener('click', () => {
-        const req = requests.find(r => r.id === el.dataset.reqid);
-        if(req) showLoungeRequestDetail({...req, _idx: requests.indexOf(req)});
-      });
-    });
-}
-
-function loungeReact(reqId) {
-  showToast('👀 noted!');
-}
-
-async function loungeHaveIt(reqId, title) {
-  if(!currentUser) return;
-  try {
-    await addDoc(collection(db, 'lounge_requests', reqId, 'comments'), {
-      text: `I have "${title}" — ping me!`,
-      authorId: currentUser.uid,
-      authorName: currentUser.displayName || currentUser.email,
-      authorPhoto: currentUser.photoURL || null,
-      createdAt: serverTimestamp(),
-    });
-    await updateDoc(doc(db, 'lounge_requests', reqId), {
-      commentCount: (await getDoc(doc(db, 'lounge_requests', reqId))).data()?.commentCount + 1 || 1,
-      updatedAt: serverTimestamp(),
-    });
-    showToast('✓ Posted in comments!');
-  } catch(e) { showToast('Failed: ' + e.message); }
-}
-
-  // ── EXPOSE LOUNGE FUNCTIONS TO GLOBAL SCOPE ──────────────────────────────────
-window.saveReadingStatus = saveReadingStatus;
-window.showReadingEditSheet = showReadingEditSheet;
-window.saveReadingStatus = saveReadingStatus;
-window.showLoungeRequestModal = showLoungeRequestModal;
-window.loungeReact = loungeReact;
-window.loungeHaveIt = loungeHaveIt;
-window.deleteRequest = deleteRequest;
-window.deleteNewsClip = deleteNewsClip;
-window.showLoungeRequestDetail = showLoungeRequestDetail;
-window.sendReqDetailComment = sendReqDetailComment;
-window.deleteDetailComment = deleteDetailComment;
-window.showBroadcastModal = showBroadcastModal;
-window.sendReqDetailComment = sendReqDetailComment;
-window.deleteDetailComment = deleteDetailComment;
 window.showBookById = showBookById;
-  
-  document.getElementById('loungeNewsUploadBtn')?.addEventListener('click', () => {
-  const input = document.createElement('input');
-  input.type = 'file';
-  input.accept = '.pdf,.doc,.docx,.txt,.jpg,.jpeg,.png';
-  input.addEventListener('change', async e => {
-    const file = e.target.files[0];
-    if(!file) return;
-    showLoading('Uploading…');
-    try {
-      const path = `news_clips/${currentUser.uid}/${Date.now()}_${file.name}`;
-      const sRef = storageRef(storage, path);
-      await uploadBytes(sRef, file);
-      const url = await getDownloadURL(sRef);
-      const expires = new Date();
-      expires.setDate(expires.getDate() + 30);
-      await addDoc(collection(db, 'news_clips'), {
-        title: file.name, url, storagePath: path,
-        uploadedBy: currentUser.uid,
-        uploaderName: currentUser.displayName || currentUser.email,
-        createdAt: serverTimestamp(),
-        expiresAt: Timestamp.fromDate(expires),
-        fileType: file.type,
-      });
-      hideLoading();
-      showToast('Clip uploaded ✓');
-      startRequestsListener();
-    } catch(e) {
-      hideLoading();
-      showToast('Upload failed: ' + e.message);
-    }
-  });
-  input.click();
-});
-
-// ── ENTRY POINT: open lounge tab ──────────────────────────────────────────────
-function openLoungePanel() {
-  startRequestsListener();
-  startNotifListener();
-  markNotifsRead();
-  updateLoungeBadge();
-}
-
-async function deleteNewsClip(clipId, path) {
-  if(!confirm('Remove this clip?')) return;
-  showLoading('Removing…');
-  try {
-    await deleteDoc(doc(db, 'news_clips', clipId));
-    hideLoading();
-    showToast('Clip removed ✓');
-  } catch(e) { hideLoading(); showToast('Failed: ' + e.message); }
-}
 
 // ── ADMIN ────────────────────────────────────────────────────────────────────
 
@@ -10023,7 +9267,6 @@ async function checkAdminStatus() {
     isAdmin = snap.exists() && snap.data().isAdmin === true;
     if(isAdmin){
       document.getElementById('mobNavAdmin').style.display = '';
-      document.getElementById('loungeBroadcastBtn').style.display = '';
     }
   } catch(e) {
     console.warn('Admin check failed:', e);
@@ -10167,15 +9410,11 @@ async function adminLoadUsers() {
   if(!el) return;
   el.innerHTML = '<div style="color:var(--muted);font-size:.85rem">Loading…</div>';
   try {
-    const [userSnap, presSnap, checkoutSnap, koboQueueSnap] = await Promise.all([
+    const [userSnap, checkoutSnap, koboQueueSnap] = await Promise.all([
       getDocs(collection(db, 'users')),
-      getDocs(collection(db, 'lounge_presence')),
       getDocs(query(collection(db, 'checkouts'), orderBy('checkedOutAt', 'desc'))),
       getDocs(collection(db, 'kobo_queue')),
     ]);
-
-    const presMap = {};
-    presSnap.docs.forEach(d => { presMap[d.id] = d.data(); });
 
     const checkoutsByUser = {};
     checkoutSnap.docs.forEach(d => {
@@ -10191,7 +9430,6 @@ async function adminLoadUsers() {
       koboSendsByUser[data.ownerId].push({ id: d.id, ...data });
     });
 
-    const now = Date.now();
     const users = userSnap.docs
       .map(d => ({ id: d.id, ...d.data() }))
       .sort((a, b) => {
@@ -10206,8 +9444,6 @@ async function adminLoadUsers() {
     }
 
     el.innerHTML = users.map(u => {
-      const pres = presMap[u.uid] || {};
-      const isOnline = (pres.expiresAt?.toMillis?.() || 0) > now;
       const lastConnected = u.lastSeen?.toDate?.();
       const initials = (u.displayName || u.email || '?')
         .split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
@@ -10243,11 +9479,6 @@ async function adminLoadUsers() {
           </div>
           <div style="display:flex;flex-direction:column;align-items:flex-end;
                       gap:3px;flex-shrink:0;">
-            <span style="font-size:.6rem;font-weight:700;padding:1px 6px;border-radius:8px;
-              background:${isOnline ? '#d1fae5' : 'var(--panel)'};
-              color:${isOnline ? '#065f46' : 'var(--muted)'};">
-              ${isOnline ? '● Online' : '○ Offline'}
-            </span>
             ${u.isAdmin
               ? `<span style="font-size:.6rem;font-weight:700;padding:1px 6px;
                   border-radius:8px;background:#fff8ec;color:var(--gold);">Admin</span>`
@@ -10263,11 +9494,6 @@ async function adminLoadUsers() {
             <span style="font-size:.7rem;color:var(--muted);margin-top:1px;">▾</span>
           </div>
         </div>
-
-        ${pres.currentlyReading
-          ? `<div style="padding:0 .8rem .5rem;font-size:.7rem;color:var(--gold);
-                         font-weight:700;">📖 ${esc(pres.currentlyReading)}</div>`
-          : ''}
 
         <div id="adminUserExpand_${u.uid}"
           style="display:none;border-top:1px solid var(--border);background:var(--panel);">
