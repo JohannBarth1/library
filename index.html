@@ -769,7 +769,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .drop-zone .dz-icon{font-size:2rem;color:var(--teal);}
 
 /* ── MODAL ── */
-.modal-overlay{display:none;position:fixed;inset:0;background:rgba(15,26,46,.6);z-index:100;align-items:center;justify-content:center;padding:1rem;}
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(15,26,46,.6);z-index:530;align-items:center;justify-content:center;padding:1rem;}
 .modal-overlay.open{display:flex;}
 .modal{background:var(--warm-white);border:1px solid var(--border);border-radius:6px;padding:1.8rem;width:100%;max-width:400px;}
 .modal h3{font-family:'Playfair Display',serif;font-size:1.2rem;margin-bottom:1rem;color:var(--navy2);}
@@ -797,7 +797,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .progress-bar{height:3px;background:var(--teal);border-radius:2px;transition:width .3s;}
 
 /* ── TOAST ── */
-.toast{position:fixed;bottom:1.5rem;left:auto;right:2rem;background:var(--navy);color:#d8e8f0;padding:.7rem 1.3rem;border-radius:3px;font-size:.85rem;font-weight:700;letter-spacing:.05em;opacity:0;transition:opacity .3s,transform .3s;transform:translateY(6px);pointer-events:none;z-index:220;white-space:nowrap;}
+.toast{position:fixed;bottom:1.5rem;left:auto;right:2rem;background:var(--navy);color:#d8e8f0;padding:.7rem 1.3rem;border-radius:3px;font-size:.85rem;font-weight:700;letter-spacing:.05em;opacity:0;transition:opacity .3s,transform .3s;transform:translateY(6px);pointer-events:none;z-index:610;white-space:nowrap;}
 .toast.show{opacity:1;transform:translateY(0);}
 
 /* ── MOBILE NAV ── */
@@ -921,7 +921,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .mob-detail-header{padding:.65rem 1rem;border-bottom:1px solid var(--border);background:var(--warm-white);display:flex;align-items:center;gap:.6rem;flex-shrink:0;}
 .mob-back-btn{background:none;border:none;font-size:.78rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--teal);cursor:pointer;-webkit-tap-highlight-color:transparent;display:flex;align-items:center;gap:.3rem;padding:0;}
 .mob-sheet-close-btn{margin-left:auto;background:none;border:none;font-size:1.2rem;font-weight:400;color:var(--muted);cursor:pointer;-webkit-tap-highlight-color:transparent;display:flex;align-items:center;line-height:1;padding:0;}
-.mob-detail-scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:1rem 1rem calc(var(--mob-nav-h) + 1.5rem);}
+.mob-detail-scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:1rem 1rem calc(var(--mob-nav-h) + 1.5rem);overscroll-behavior-y:contain;}
 .mob-detail-top{display:flex;gap:.9rem;margin-bottom:1rem;}
 .mob-detail-cover{width:85px;height:125px;object-fit:cover;border-radius:3px;border:1px solid var(--border);flex-shrink:0;}
 .mob-detail-cover-ph{width:85px;height:125px;background:linear-gradient(145deg,var(--navy2),#2a3d5a);border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:2rem;flex-shrink:0;}
@@ -1003,6 +1003,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
   background:var(--warm-white);border-radius:20px 20px 0 0;
   box-shadow:0 -10px 34px rgba(20,30,45,.28);
   display:flex;flex-direction:column;overflow:hidden;
+  overscroll-behavior:contain;
   transform:translateY(105%);
   transition:transform .34s cubic-bezier(.32,.72,0,1),height .34s cubic-bezier(.32,.72,0,1),max-height .34s cubic-bezier(.32,.72,0,1);
   z-index:520;
@@ -2814,7 +2815,15 @@ async function loadLibrary() {
 //      array (not owned, not public, not yet shared-cached).
 // Returns the book object, or null if it truly doesn't exist / isn't
 // accessible.
+// Side-channel for the direct-fetch fallback's error code (e.g.
+// 'permission-denied'), so callers can tell "this book no longer exists /
+// isn't accessible" apart from a transient network failure. Only meaningful
+// immediately after an await on findBookById — reset at the start of every
+// call so a stale value from a previous lookup can't leak through.
+let _lastFindBookByIdErrorCode = null;
+
 async function findBookById(id) {
+  _lastFindBookByIdErrorCode = null;
   if (!id) return null;
   let book = [...library, ...communityLib].find(b => b.id === id);
   if (book) return book;
@@ -2829,8 +2838,13 @@ async function findBookById(id) {
   try {
     const snap = await getDoc(doc(db, 'books', id));
     if (snap.exists()) return { id: snap.id, ...snap.data() };
+    // Doc genuinely doesn't exist — Firestore rules that reference
+    // resource.data on a nonexistent doc report this as permission-denied
+    // rather than not-found, so surface it the same way as that case below.
+    _lastFindBookByIdErrorCode = 'permission-denied';
   } catch (e) {
     console.warn('findBookById direct fetch failed:', e);
+    _lastFindBookByIdErrorCode = e.code || null;
   }
   return null;
 }
@@ -5537,7 +5551,21 @@ async function prewarmOfflineEpubs() {
   const crList = _userLists.find(l => l.id === 'currently-reading');
   const bookIds = crList?.bookIds || [];
   for(const bookId of bookIds) {
-    await cacheEpubForOfflineById(bookId, { silent: true });
+    const ok = await cacheEpubForOfflineById(bookId, { silent: true });
+    if(!ok && _lastFindBookByIdErrorCode === 'permission-denied') {
+      // Book has been deleted or is no longer accessible to this user —
+      // drop the dangling reference so it doesn't keep retrying (and
+      // warning) on every future load.
+      const idx = crList.bookIds.indexOf(bookId);
+      if(idx >= 0) {
+        crList.bookIds.splice(idx, 1);
+        setDoc(
+          doc(db, 'user_lists', currentUser.uid, 'lists', 'currently-reading'),
+          { bookIds: crList.bookIds, updatedAt: serverTimestamp() },
+          { merge: true }
+        ).catch(()=>{});
+      }
+    }
   }
 }
 
@@ -9544,6 +9572,17 @@ async function saveChapterManager(){
     const book=library.find(b=>b.id===chapterMgrBookId);const path=book?.storagePath;if(!path)throw new Error('No storage path found');
     showLoading('Uploading…');await uploadBytes(storageRef(storage,path),newBlob);
     await updateDoc(doc(db,'books',chapterMgrBookId),{updatedAt:serverTimestamp()});
+    // The reader reads from the offline EPUB cache first when present (see
+    // readCurrentBook), so a stale cached copy would otherwise keep showing
+    // the old chapter names/order even though Storage now has the new file.
+    const crList=_userLists.find(l=>l.id==='currently-reading');
+    if(crList?.bookIds?.includes(chapterMgrBookId)){
+      // Was cached for offline reading — reseed with the bytes we already
+      // have in memory rather than evicting and forcing a re-download.
+      newBlob.arrayBuffer().then(buf=>storeCachedEpub(chapterMgrBookId,new Uint8Array(buf))).catch(()=>{});
+    } else {
+      evictCachedEpub(chapterMgrBookId).catch(()=>{});
+    }
     hideLoading();chapterMgrZip=null;chapterMgrSpine=[];showToast(`EPUB saved — ${summary||'no changes'} ✓`);
   }catch(e){hideLoading();showToast('Save failed: '+e.message);console.error(e);}
 }
