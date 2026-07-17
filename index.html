@@ -302,6 +302,21 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .shelf-tab.active{color:var(--teal);border-bottom-color:var(--teal);}
 .shelf-tab:hover:not(.active){color:var(--navy2);}
 .filter-cats{flex:1;overflow-y:auto;padding:.5rem 0;}
+/* ── Sidebar Tags section ─────────────────────────────────────────────────── */
+.sb-tags-section{padding:.5rem 0 .6rem;border-top:1px solid var(--border);}
+.sb-tags-label{font-size:.58rem;letter-spacing:.16em;text-transform:uppercase;color:#5a48b0;
+  font-weight:700;padding:.4rem 1rem .35rem;display:flex;align-items:center;justify-content:space-between;}
+.sb-tags-chips{display:flex;flex-wrap:wrap;gap:.3rem;padding:0 .8rem .2rem;}
+.sb-tag-chip{padding:.22rem .65rem;font-size:.7rem;font-weight:700;border-radius:20px;cursor:pointer;
+  border:1px solid rgba(90,72,176,.3);background:transparent;color:#5a48b0;
+  white-space:nowrap;transition:all .15s;}
+.sb-tag-chip:hover{background:#ece8f8;}
+.sb-tag-chip.active{background:#5a48b0;color:#fff;border-color:#5a48b0;}
+.sb-tags-search{width:calc(100% - 1.6rem);margin:.25rem .8rem .4rem;padding:.32rem .6rem;
+  font-size:.78rem;font-family:'Lato',sans-serif;border:1px solid rgba(90,72,176,.25);
+  border-radius:3px;background:var(--warm-white);color:var(--navy);outline:none;}
+.sb-tags-search:focus{border-color:#5a48b0;}
+.sb-tags-empty{padding:.3rem 1rem;font-size:.75rem;color:var(--muted);font-style:italic;}
 .filter-cat-item{display:flex;align-items:center;justify-content:space-between;padding:.42rem 1rem;font-size:.82rem;cursor:pointer;border-left:3px solid transparent;transition:background .12s,border-color .12s;}
 .filter-cat-item:hover{background:var(--light-blue);}
 .filter-cat-item.active{border-left-color:var(--teal);background:rgba(42,124,138,0.1);font-weight:700;color:var(--teal);}
@@ -800,7 +815,76 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .mob-panel.active{display:flex;}
 
 /* mobile library panel */
-.mob-lib-top{flex-shrink:0;background:var(--warm-white);border-bottom:1px solid var(--border);}
+/* ── MOBILE LIBRARY FILTER PILLS (new compact row) ─────────────────────────── */
+/* Replaces the old 3-row filter area with one scrollable pill row */
+.mob-filter-bar{display:flex;gap:.45rem;padding:.42rem .9rem .55rem;overflow-x:auto;
+  scrollbar-width:none;-webkit-overflow-scrolling:touch;flex-shrink:0;align-items:center;}
+.mob-filter-bar::-webkit-scrollbar{display:none;}
+
+/* Base pill — inactive state */
+.mfp{padding:.28rem .72rem;font-size:.71rem;font-weight:700;border-radius:20px;cursor:pointer;
+  border:1px solid;background:transparent;white-space:nowrap;display:inline-flex;
+  align-items:center;gap:.3rem;transition:all .15s;-webkit-tap-highlight-color:transparent;
+  flex-shrink:0;font-family:'Lato',sans-serif;}
+.mfp .mfp-caret{opacity:.55;font-size:.6rem;line-height:1;margin-left:.05rem;}
+.mfp .mfp-badge{font-size:.6rem;font-weight:700;border-radius:8px;
+  padding:0px 4px;min-width:14px;text-align:center;line-height:1.5;}
+
+/* Source pill — navy */
+.mfp-source{color:var(--navy2);border-color:rgba(26,40,64,.3);}
+.mfp-source.mfp-on{background:var(--navy2);color:#fff;border-color:var(--navy2);}
+.mfp-source .mfp-badge{background:rgba(255,255,255,.25);color:#fff;}
+
+/* Category pill — gold */
+.mfp-cat{color:var(--gold);border-color:rgba(200,149,42,.4);}
+.mfp-cat.mfp-on{background:var(--gold);color:var(--navy);border-color:var(--gold);}
+.mfp-cat .mfp-badge{background:rgba(15,26,46,.15);color:var(--navy);}
+.mfp-cat:not(.mfp-on) .mfp-badge{background:rgba(200,149,42,.15);color:var(--gold);}
+
+/* Tags pill — purple */
+.mfp-tags{color:#5a48b0;border-color:rgba(90,72,176,.3);}
+.mfp-tags.mfp-on{background:#5a48b0;color:#fff;border-color:#5a48b0;}
+.mfp-tags .mfp-badge{background:rgba(255,255,255,.25);color:#fff;}
+.mfp-tags:not(.mfp-on) .mfp-badge{background:#ece8f8;color:#5a48b0;}
+
+/* Sort pill — teal */
+.mfp-sort{color:var(--teal);border-color:rgba(42,124,138,.35);}
+.mfp-sort.mfp-on{background:var(--teal);color:#fff;border-color:var(--teal);}
+
+/* ── Floating filter panel ─────────────────────────────────────────────────── */
+.mob-filter-panel{position:fixed;z-index:120;background:var(--warm-white);
+  border:1px solid var(--border);border-radius:12px;
+  box-shadow:0 8px 32px rgba(15,26,46,.18);padding:.75rem .85rem .8rem;
+  min-width:240px;max-width:88vw;max-height:55vh;overflow-y:auto;
+  animation:fpIn .15s ease;}
+@keyframes fpIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
+.mob-filter-panel-head{font-size:.58rem;letter-spacing:.16em;text-transform:uppercase;
+  font-weight:700;color:var(--muted);margin-bottom:.6rem;}
+.mob-filter-panel-chips{display:flex;flex-wrap:wrap;gap:.35rem;}
+/* Category chips inside floating panel — gold colour */
+.mfpc-cat{padding:.28rem .72rem;font-size:.7rem;font-weight:700;border-radius:20px;cursor:pointer;
+  border:1px solid rgba(200,149,42,.35);background:transparent;color:var(--gold);
+  white-space:nowrap;transition:all .15s;-webkit-tap-highlight-color:transparent;}
+.mfpc-cat.active{background:var(--gold);color:var(--navy);border-color:var(--gold);}
+/* Tag chips inside floating panel — purple colour */
+.mfpc-tag{padding:.28rem .72rem;font-size:.7rem;font-weight:700;border-radius:20px;cursor:pointer;
+  border:1px solid rgba(90,72,176,.3);background:transparent;color:#5a48b0;
+  white-space:nowrap;transition:all .15s;-webkit-tap-highlight-color:transparent;}
+.mfpc-tag.active{background:#5a48b0;color:#fff;border-color:#5a48b0;}
+/* Source chips inside panel — navy */
+.mfpc-source{padding:.28rem .72rem;font-size:.7rem;font-weight:700;border-radius:20px;cursor:pointer;
+  border:1px solid rgba(26,40,64,.25);background:transparent;color:var(--navy2);
+  white-space:nowrap;transition:all .15s;-webkit-tap-highlight-color:transparent;}
+.mfpc-source.active{background:var(--navy2);color:#fff;border-color:var(--navy2);}
+/* Sort items in panel — teal */
+.mfpc-sort{display:flex;align-items:center;gap:.6rem;padding:.42rem .5rem;
+  font-size:.8rem;cursor:pointer;border-radius:6px;transition:background .12s;color:var(--navy2);}
+.mfpc-sort:hover{background:var(--teal-light);}
+.mfpc-sort.active{color:var(--teal);font-weight:700;}
+.mfpc-sort.active::before{content:'✓';color:var(--teal);font-size:.75rem;}
+.mfpc-sort:not(.active)::before{content:'';display:inline-block;width:.75rem;}
+/* Scrim to close floating panel on outside tap */
+.mob-filter-scrim{display:none;position:fixed;inset:0;z-index:119;}
 .mob-search-bar{padding:.6rem .9rem;display:flex;gap:.5rem;align-items:center;}
 .mob-search-bar input{flex:1;padding:.5rem .75rem;font-size:1rem;font-family:'Lato',sans-serif;border:1px solid var(--border);border-radius:3px;background:var(--cream);color:var(--navy);outline:none;min-width:0;}
 .mob-search-bar input:focus{border-color:var(--teal);}
@@ -1825,35 +1909,52 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
   <!-- ── LIBRARY PANEL (all books: private + public + shared) ── -->
   <div class="mob-panel" id="mobPanelLibrary">
     <div class="mob-lib-top">
+      <!-- Row 1: Search -->
       <div class="mob-search-bar">
         <div class="search-input-wrap" style="flex:1;">
           <input type="text" id="mobSearchLibrary" placeholder="Search books…"/>
           <button type="button" class="search-clear-btn" id="mobSearchClear" aria-label="Clear search">✕</button>
         </div>
       </div>
-      <!-- Source filter: All / Private / Public / Shared with me -->
-      <div class="lib-filter-pills" id="mobLibFilterPills">
-        <div class="lib-filter-pill active" data-libfilter="all">All</div>
-        <div class="lib-filter-pill" data-libfilter="private">Private</div>
-        <div class="lib-filter-pill" data-libfilter="public">Public</div>
-        <div class="lib-filter-pill" data-libfilter="shared">Shared with Me</div>
+      <!-- Row 2: Colour-coded filter pills -->
+      <div class="mob-filter-bar" id="mobFilterBar">
+        <button class="mfp mfp-cat" id="mfpCat" aria-label="Filter by category">
+          <span id="mfpCatLabel">Category</span>
+          <span class="mfp-caret">▾</span>
+        </button>
+        <button class="mfp mfp-tags" id="mfpTags" aria-label="Filter by tags">
+          <span>🏷</span>
+          <span id="mfpTagsLabel">Tags</span>
+          <span class="mfp-caret">▾</span>
+        </button>
+        <button class="mfp mfp-sort" id="mfpSort" aria-label="Sort">
+          <span id="mfpSortLabel">Recent</span>
+          <span class="mfp-caret">▾</span>
+        </button>
+        <button class="mfp mfp-source" id="mfpSource" aria-label="Filter by source">
+          <span id="mfpSourceLabel">All</span>
+          <span class="mfp-caret">▾</span>
+        </button>
       </div>
-      <!-- Category chips (populated by JS) -->
-      <div class="mob-filter-scroll" id="mobLibCatChips"></div>
-      <!-- Sort -->
-      <div class="sort-btn-group" id="mobLibSortBtns">
-        <button class="sort-btn active" data-sort="recent">Recent</button>
-        <button class="sort-btn" data-sort="title">Title</button>
-        <button class="sort-btn" data-sort="author">Author</button>
-        <button class="sort-btn" data-sort="rating">Rating</button>
-      </div>
-      <select id="mobLibSortSelect" style="display:none">
-        <option value="recent">Most Recent</option>
-        <option value="title">Title A–Z</option>
-        <option value="author">Author A–Z</option>
-        <option value="rating">Top Rated</option>
-      </select>
     </div>
+    <!-- Hidden legacy elements kept so existing JS listeners don't crash -->
+    <div id="mobLibFilterPills" style="display:none">
+      <div class="lib-filter-pill active" data-libfilter="all">All</div>
+      <div class="lib-filter-pill" data-libfilter="private">Private</div>
+      <div class="lib-filter-pill" data-libfilter="public">Public</div>
+      <div class="lib-filter-pill" data-libfilter="shared">Shared with Me</div>
+    </div>
+    <div id="mobLibCatChips" style="display:none"></div>
+    <div id="mobLibSortBtns" style="display:none">
+      <button class="sort-btn active" data-sort="recent">Recent</button>
+      <button class="sort-btn" data-sort="title">Title</button>
+      <button class="sort-btn" data-sort="author">Author</button>
+      <button class="sort-btn" data-sort="rating">Rating</button>
+    </div>
+    <select id="mobLibSortSelect" style="display:none"></select>
+    <!-- Floating panels (injected into body by JS, anchored to pills) -->
+    <!-- Scrim to dismiss any open panel -->
+    <div class="mob-filter-scrim" id="mobFilterScrim"></div>
     <div class="mob-grid-scroll">
       <div class="mob-book-grid" id="mobGridLibrary"></div>
     </div>
