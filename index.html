@@ -840,26 +840,46 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
   font-family:'Playfair Display',serif;font-size:1rem;color:var(--navy2);
   margin-bottom:.7rem;padding-bottom:.6rem;border-bottom:1px solid var(--border);}
 .mob-picker-close{background:none;border:none;font-size:1.2rem;color:var(--muted);cursor:pointer;line-height:1;}
+.mob-picker-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(135px,1fr));gap:.1rem .4rem;}
 .mob-picker-item{display:flex;align-items:center;gap:.5rem;padding:.55rem .6rem;
-  border-radius:8px;cursor:pointer;font-size:.82rem;color:var(--navy2);}
+  border-radius:8px;cursor:pointer;font-size:.82rem;color:var(--navy2);min-width:0;}
+.mob-picker-item span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .mob-picker-item:active{background:var(--panel);}
 .mob-picker-item .mpi-check{margin-left:auto;color:var(--teal);font-weight:700;visibility:hidden;}
 .mob-picker-item.selected .mpi-check{visibility:visible;}
 .mob-picker-newbtn{width:100%;text-align:left;background:none;border:none;border-top:1px solid var(--border);
   margin-top:.4rem;padding:.6rem .6rem 0;font-size:.76rem;font-weight:700;color:var(--teal);cursor:pointer;}
 .mob-list-markfinished-btn{padding:.42rem .75rem;border-radius:18px;border:1.5px solid #276749;background:transparent;color:#276749;font-size:.72rem;font-weight:700;cursor:pointer;white-space:nowrap;display:flex;align-items:center;gap:.35rem;}
+.mob-list-quickbtn,.mob-list-other-btn,.mob-list-markfinished-btn{transition:background .15s,border-color .15s,color .15s,transform .08s;}
+.mob-list-quickbtn:active,.mob-list-other-btn:active,.mob-list-markfinished-btn:active{transform:scale(.95);}
+/* Shared pill-button language for every secondary/tertiary action in the
+   detail sheet (general actions, share/edit/history/delete, highlights
+   link) — matches the Category/Tags buttons' radius, border weight and
+   tap feedback instead of each row inventing its own look. */
+.mob-pill-btn{display:inline-flex;align-items:center;justify-content:center;gap:.35rem;
+  border:1.5px solid var(--border);background:transparent;cursor:pointer;white-space:nowrap;
+  font-family:'Lato',sans-serif;font-weight:700;
+  transition:background .15s,border-color .15s,color .15s,transform .08s;
+  -webkit-tap-highlight-color:transparent;}
+.mob-pill-btn:active{transform:scale(.95);background:var(--panel);}
+.mob-pill-btn.mob-pill-md{border-radius:18px;padding:.45rem .75rem;font-size:.72rem;}
+.mob-pill-btn.mob-pill-sm{border-radius:16px;padding:.4rem .7rem;font-size:.68rem;}
 /* Tags/Categories: a visually distinct card, separate from Lists */
 .mob-taxonomy-card{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:.7rem .8rem;margin-bottom:.8rem;}
 .mob-detail-desc{font-size:.84rem;line-height:1.7;color:#3a4a5a;}
 /* Swipe-up reveal: starts clipped to nothing so the panel opens as a compact
    peek (cover/title/primary actions/Lists); expanding is either a tap on the
    handle or an upward swipe starting from the handle area. */
-.mob-sheet-handle{text-align:center;padding:.3rem 0 .6rem;cursor:pointer;user-select:none;-webkit-user-select:none;touch-action:none;}
-.mob-sheet-handle-bar{width:36px;height:4px;background:var(--border);border-radius:2px;margin:0 auto .45rem;}
-.mob-sheet-handle-label{font-size:.66rem;color:var(--muted);font-weight:700;letter-spacing:.03em;transition:opacity .2s;}
+.mob-sheet-handle{flex-shrink:0;text-align:center;padding:.5rem 0 calc(.55rem + var(--sab));cursor:pointer;user-select:none;-webkit-user-select:none;touch-action:none;background:var(--warm-white);border-top:1px solid var(--border);}
+.mob-sheet-handle-bar{width:36px;height:4px;background:var(--border);border-radius:2px;margin:0 auto .4rem;}
+/* Higher-contrast colour + slightly larger size than the old var(--muted)
+   label — the low-contrast grey was hard to read in some browsers, and
+   being an ordinary in-flow element (rather than pinned, see HTML) it
+   could also end up partly clipped when the peek content above ran tall. */
+.mob-sheet-handle-label{font-size:.72rem;color:var(--teal-dark);font-weight:700;letter-spacing:.03em;transition:opacity .2s;}
 .mob-sheet-more{max-height:0;overflow:hidden;opacity:0;transition:max-height .38s cubic-bezier(.4,0,.2,1),opacity .3s ease;}
 .mob-sheet-more.expanded{max-height:4000px;opacity:1;}
-.mob-sheet-handle.expanded .mob-sheet-handle-label{opacity:.55;}
+.mob-sheet-handle.expanded .mob-sheet-handle-label{opacity:.65;}
 /* The sheet itself: a real bottom-sheet overlay, independent of the
    .mob-panel tab-switching system, so it floats on top of whichever tab
    (Home, Library, wherever) is open behind it — never a separate "page". */
@@ -871,7 +891,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
      vh can end up partly behind the address bar / home-indicator area when
      it's showing, clipping the handle + "Swipe up…" label at the bottom. */
   height:52dvh;max-height:52dvh;
-  padding-bottom:var(--sab);box-sizing:border-box;
+  box-sizing:border-box;
   background:var(--warm-white);border-radius:20px 20px 0 0;
   box-shadow:0 -10px 34px rgba(20,30,45,.28);
   display:flex;flex-direction:column;overflow:hidden;
@@ -1496,7 +1516,6 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
           <span class="mfp-caret">▾</span>
         </button>
         <button class="mfp mfp-tags" id="mfpTags" aria-label="Filter by tags">
-          <span>🏷</span>
           <span id="mfpTagsLabel">Tags</span>
           <span class="mfp-caret">▾</span>
         </button>
@@ -1585,12 +1604,6 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
       <!-- ── PEEK: primary actions + Lists — visible the moment the sheet opens ── -->
       <div class="mob-detail-actions" id="mobDetailActions"></div>
 
-      <!-- ── Drag handle: swipe up (or tap) to reveal everything else ────────── -->
-      <div class="mob-sheet-handle" id="mobSheetHandle">
-        <div class="mob-sheet-handle-bar"></div>
-        <div class="mob-sheet-handle-label" id="mobSheetHandleLabel">▲ Swipe up for tags, description &amp; more</div>
-      </div>
-
       <!-- ── REVEALED ON SWIPE-UP: tags/categories, description, highlights, more ── -->
       <div class="mob-sheet-more" id="mobSheetMore">
         <div class="mob-detail-more-actions" id="mobDetailMoreActions"></div>
@@ -1598,6 +1611,16 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
         <p class="mob-detail-desc" id="mobDetailDesc"></p>
         <div id="mobDetailHighlights" style="display:none;"></div>
       </div>
+    </div>
+
+    <!-- ── Drag handle: swipe up (or tap) to reveal everything else. Pinned
+         as its own flex-shrink:0 footer row OUTSIDE the scroll container
+         (rather than living inside it) so it can never be clipped by
+         overflow:hidden when the peek content above is tall, and always
+         sits above the safe-area inset regardless of browser chrome ── -->
+    <div class="mob-sheet-handle" id="mobSheetHandle">
+      <div class="mob-sheet-handle-bar"></div>
+      <div class="mob-sheet-handle-label" id="mobSheetHandleLabel">▲ Swipe up for tags, description &amp; more</div>
     </div>
   </div>
 
@@ -1699,7 +1722,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
      mobile detail screen's highlights summary. Reuses the mob-detail-header/
      mob-back-btn/mob-detail-scroll classes for a consistent look without
      introducing a parallel set of styles. -->
-<div id="highlightsFullOverlay" style="display:none;position:fixed;inset:0;z-index:250;background:var(--warm-white);flex-direction:column;">
+<div id="highlightsFullOverlay" style="display:none;position:fixed;inset:0;z-index:540;background:var(--warm-white);flex-direction:column;">
   <div class="mob-detail-header">
     <button class="mob-back-btn" id="btnHighlightsFullBack">← Back</button>
     <div id="highlightsFullTitle" style="font-weight:700;font-size:.85rem;color:var(--navy2);flex:1;"></div>
@@ -2917,11 +2940,8 @@ function renderDetailActionRows(peekContainer, moreContainer, book, isMine){
     </button>`;
 
   const medBtn = (icon, label, action, col, border) => `
-    <button class="detail-row-btn" data-action="${action}" style="
-      flex:1;display:flex;align-items:center;justify-content:center;gap:.3rem;
-      padding:.45rem .4rem;border-radius:18px;border:1px solid ${border};
-      background:transparent;color:${col};cursor:pointer;
-      font-size:.7rem;font-weight:700;">
+    <button class="detail-row-btn mob-pill-btn mob-pill-md" data-action="${action}" style="
+      flex:1;border-color:${border};color:${col};">
       <span style="font-size:.85rem;line-height:1">${icon}</span>
       <span>${label}</span>
     </button>`;
@@ -2930,11 +2950,8 @@ function renderDetailActionRows(peekContainer, moreContainer, book, isMine){
     const { danger=false } = opts;
     const col = danger ? 'var(--danger)' : 'var(--navy2)';
     const border = danger ? '#e0b0b0' : 'var(--border)';
-    return `<button class="detail-row-btn" data-action="${action}" style="
-      display:flex;align-items:center;gap:.3rem;
-      padding:.38rem .65rem;border-radius:16px;border:1px solid ${border};
-      background:transparent;color:${col};cursor:pointer;white-space:nowrap;
-      font-size:.66rem;font-weight:700;">
+    return `<button class="detail-row-btn mob-pill-btn mob-pill-sm" data-action="${action}" style="
+      border-color:${border};color:${col};">
       <span style="font-size:.78rem;line-height:1">${icon}</span><span>${label}</span>
     </button>`;
   };
@@ -3999,7 +4016,7 @@ function showMobBulkCategoryPicker(){
         <span>📚 Set Category for ${ids.length} book${ids.length!==1?'s':''}</span>
         <button class="mob-picker-close" id="mobBulkCatCloseBtn">✕</button>
       </div>
-      <div id="mobBulkCatItems">
+      <div id="mobBulkCatItems" class="mob-picker-grid">
         ${_categories.map(c => `<div class="mob-picker-item" data-cat="${esc(c)}">
             <span>${catIcon(c)} ${esc(c)}</span>
           </div>`).join('')}
@@ -5242,10 +5259,10 @@ async function renderBookHighlightsSummary(containerEl, bookId) {
 
   containerEl.style.display = '';
   containerEl.innerHTML = `
-    <button data-viewhighlights style="
+    <button data-viewhighlights class="mob-pill-btn" style="
       display:flex;align-items:center;justify-content:space-between;width:100%;
-      margin:.9rem 0 0;padding:.7rem .9rem;border-radius:8px;
-      border:1px solid var(--border);background:none;cursor:pointer;text-align:left;">
+      margin:.9rem 0 0;padding:.6rem .9rem;border-radius:16px;
+      background:none;text-align:left;">
       <span style="font-size:.78rem;font-weight:700;color:var(--navy2);">
         ✎ ${highlights.length} Highlight${highlights.length===1?'':'s'}
       </span>
@@ -9823,7 +9840,7 @@ function showQuickCategoryModal() {
         <span>📚 Category</span>
         <button class="mob-picker-close" id="quickCatCloseBtn">✕</button>
       </div>
-      <div id="quickCatItems">
+      <div id="quickCatItems" class="mob-picker-grid">
         ${_categories.map(c => {
           const selected = (book.category || 'Uncategorised') === c;
           return `<div class="mob-picker-item ${selected?'selected':''}" data-cat="${esc(c)}">
