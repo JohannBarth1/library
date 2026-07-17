@@ -777,6 +777,79 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 @keyframes fpIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
 /* Scrim to close floating panel on outside tap */
 .mob-filter-scrim{display:none;position:fixed;inset:0;z-index:119;}
+
+/* ── LIBRARY FILTER DROPDOWN ──────────────────────────────────────────────────
+   Anchored below the filter pill. Dark navy palette = clearly a *view control*,
+   not a book-property editor (those stay as the centered white modal).        */
+.lib-fp-scrim{position:fixed;inset:0;z-index:119;background:transparent;}
+.lib-fp-panel{
+  position:fixed;z-index:120;
+  background:var(--navy2);
+  border:1px solid rgba(200,149,42,.28);
+  border-radius:10px;
+  box-shadow:0 10px 32px rgba(15,26,46,.5);
+  min-width:190px;max-width:min(260px,82vw);
+  max-height:min(55vh,360px);
+  display:flex;flex-direction:column;overflow:hidden;
+  animation:libFpIn .14s ease-out;
+}
+/* Caret pointing up toward the pill */
+.lib-fp-panel::before{
+  content:'';position:absolute;top:-6px;left:22px;
+  width:12px;height:12px;
+  background:var(--navy2);
+  transform:rotate(45deg);border-radius:2px 0 0 0;
+  border-left:1px solid rgba(200,149,42,.28);
+  border-top:1px solid rgba(200,149,42,.28);
+}
+@keyframes libFpIn{
+  from{opacity:0;transform:translateY(-5px) scale(.97);}
+  to{opacity:1;transform:translateY(0) scale(1);}
+}
+.lib-fp-head{
+  font-size:.6rem;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--gold);font-weight:700;
+  padding:.55rem .85rem .45rem;
+  border-bottom:1px solid rgba(200,149,42,.18);
+  flex-shrink:0;
+}
+.lib-fp-body{
+  overflow-y:auto;flex:1;
+  scrollbar-width:thin;scrollbar-color:rgba(200,149,42,.3) transparent;
+}
+.lib-fp-body::-webkit-scrollbar{width:3px;}
+.lib-fp-body::-webkit-scrollbar-thumb{background:rgba(200,149,42,.3);border-radius:2px;}
+.lib-fp-item{
+  display:flex;align-items:center;gap:.5rem;
+  padding:.55rem .85rem;
+  font-size:.82rem;font-family:'Lato',sans-serif;
+  color:rgba(250,247,242,.85);
+  cursor:pointer;
+  border-bottom:1px solid rgba(255,255,255,.04);
+  transition:background .1s;
+}
+.lib-fp-item:last-child{border-bottom:none;}
+.lib-fp-item:hover{background:rgba(255,255,255,.08);}
+.lib-fp-item.lfp-sel{color:var(--gold);}
+.lib-fp-icon{font-size:.9rem;flex-shrink:0;width:1.2rem;text-align:center;}
+.lib-fp-label{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.lib-fp-count{font-size:.68rem;color:rgba(250,247,242,.38);flex-shrink:0;}
+.lib-fp-check{font-size:.75rem;color:var(--gold);opacity:0;flex-shrink:0;transition:opacity .1s;}
+.lib-fp-item.lfp-sel .lib-fp-check{opacity:1;}
+.lib-fp-done{
+  padding:.5rem .85rem;
+  border-top:1px solid rgba(200,149,42,.18);
+  flex-shrink:0;
+}
+.lib-fp-done button{
+  width:100%;padding:.45rem;
+  background:var(--gold);color:var(--navy);
+  border:none;border-radius:6px;
+  font-family:'Lato',sans-serif;font-size:.75rem;font-weight:700;
+  cursor:pointer;letter-spacing:.06em;text-transform:uppercase;
+  transition:opacity .15s;
+}
+.lib-fp-done button:hover{opacity:.85;}
 .mob-search-bar{padding:.6rem .9rem;display:flex;gap:.5rem;align-items:center;}
 .mob-search-bar input{flex:1;padding:.5rem .75rem;font-size:1rem;font-family:'Lato',sans-serif;border:1px solid var(--border);border-radius:3px;background:var(--cream);color:var(--navy);outline:none;min-width:0;}
 .mob-search-bar input:focus{border-color:var(--teal);}
@@ -3756,7 +3829,78 @@ function openMobFilterPicker({ title, items, isSelected, onSelect, multi = false
   });
 }
 
-document.getElementById('mfpCat').addEventListener('click', () => {
+// ── Library-filter anchored dropdown ─────────────────────────────────────────
+// Deliberately different from openMobFilterPicker (the centered white modal
+// used for book-property editing). This one: dark navy palette, no full-screen
+// scrim, anchored below the pill it came from — signals "view control, not
+// data edit" through its entire visual language.
+function openLibFilterDropdown(anchorEl, { title, items, isSelected, onSelect, multi = false }) {
+  // Remove any already-open lib-filter dropdown first
+  document.querySelectorAll('.lib-fp-scrim, .lib-fp-panel').forEach(el => el.remove());
+
+  const scrim = document.createElement('div');
+  scrim.className = 'lib-fp-scrim';
+  document.body.appendChild(scrim);
+
+  const panel = document.createElement('div');
+  panel.className = 'lib-fp-panel';
+
+  // Position anchored below the pill, clamped to viewport edges
+  const rect = anchorEl.getBoundingClientRect();
+  panel.style.top  = (rect.bottom + 7) + 'px';
+  const rawLeft = rect.left;
+  const clampedLeft = Math.max(8, Math.min(rawLeft, window.innerWidth - 270));
+  panel.style.left = clampedLeft + 'px';
+  // Keep caret aligned with the button even when left-clamped
+  const caretLeft = Math.max(12, rect.left + rect.width / 2 - clampedLeft - 6);
+  panel.style.setProperty('--lib-fp-caret-left', caretLeft + 'px');
+
+  const doneHtml = multi
+    ? `<div class="lib-fp-done"><button id="libFpDoneBtn">Done</button></div>`
+    : '';
+
+  panel.innerHTML = `
+    <div class="lib-fp-head">${title}</div>
+    <div class="lib-fp-body" id="libFpBody">
+      ${items.map((it, i) => `
+        <div class="lib-fp-item ${isSelected(it) ? 'lfp-sel' : ''}" data-idx="${i}">
+          ${it.icon ? `<span class="lib-fp-icon">${it.icon}</span>` : ''}
+          <span class="lib-fp-label">${esc(it.label)}</span>
+          ${it.count != null ? `<span class="lib-fp-count">${it.count}</span>` : ''}
+          <span class="lib-fp-check">✓</span>
+        </div>`).join('')}
+    </div>
+    ${doneHtml}`;
+
+  document.body.appendChild(panel);
+
+  // Apply dynamic caret position via inline pseudo-element workaround
+  const styleTag = document.createElement('style');
+  styleTag.textContent = `.lib-fp-panel::before { left: ${caretLeft}px; }`;
+  panel.appendChild(styleTag);
+
+  const close = () => { scrim.remove(); panel.remove(); };
+
+  scrim.addEventListener('click', close);
+  if (multi) panel.querySelector('#libFpDoneBtn')?.addEventListener('click', close);
+
+  panel.querySelectorAll('[data-idx]').forEach(el => {
+    el.addEventListener('click', e => {
+      e.stopPropagation();
+      const item = items[+el.dataset.idx];
+      onSelect(item);
+      updateMobFilterPillLabels();
+      renderMobLibrary();
+      if (multi) {
+        el.classList.toggle('lfp-sel', isSelected(item));
+      } else {
+        close();
+      }
+    });
+  });
+}
+
+document.getElementById('mfpCat').addEventListener('click', function() {
   const srcForCats = getMobLibSourceBooks();
   const cats = {};
   srcForCats.forEach(b => { const c = b.category || 'Uncategorised'; cats[c] = (cats[c] || 0) + 1; });
@@ -3765,31 +3909,29 @@ document.getElementById('mfpCat').addEventListener('click', () => {
     ...Object.entries(cats).sort(([a], [b]) => a.localeCompare(b))
       .map(([c, cnt]) => ({ id: c, label: c, icon: catIcon(c), count: cnt })),
   ];
-  openMobFilterPicker({
+  openLibFilterDropdown(this, {
     title: '📚 Category',
     items,
-    grid: true,
     isSelected: it => mobLibCat === it.id,
     onSelect: it => { mobLibCat = it.id; },
   });
 });
 
-document.getElementById('mfpTags').addEventListener('click', () => {
+document.getElementById('mfpTags').addEventListener('click', function() {
   const allTags = getAllMobTags();
   if (!allTags.length) { showToast('No tags yet'); return; }
   const items = allTags.map(t => ({ id: t, label: t, icon: tagIcon(t) }));
-  openMobFilterPicker({
+  openLibFilterDropdown(this, {
     title: '🏷 Tags',
     items,
-    grid: true,
     multi: true,
     isSelected: it => mobActiveTags.has(it.id),
     onSelect: it => { mobActiveTags.has(it.id) ? mobActiveTags.delete(it.id) : mobActiveTags.add(it.id); },
   });
 });
 
-document.getElementById('mfpSort').addEventListener('click', () => {
-  openMobFilterPicker({
+document.getElementById('mfpSort').addEventListener('click', function() {
+  openLibFilterDropdown(this, {
     title: '↕ Sort',
     items: MOB_SORT_OPTIONS,
     isSelected: it => mobLibSort === it.id,
@@ -3797,12 +3939,12 @@ document.getElementById('mfpSort').addEventListener('click', () => {
   });
 });
 
-document.getElementById('mfpSource').addEventListener('click', () => {
-  openMobFilterPicker({
+document.getElementById('mfpSource').addEventListener('click', function() {
+  openLibFilterDropdown(this, {
     title: '📖 Source',
     items: MOB_SOURCE_OPTIONS,
     isSelected: it => mobLibFilter === it.id,
-    onSelect: it => { mobLibFilter = it.id; mobLibCat = 'All'; }, // reset category when source changes, same as legacy pills did
+    onSelect: it => { mobLibFilter = it.id; mobLibCat = 'All'; },
   });
 });
 
