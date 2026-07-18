@@ -5577,7 +5577,7 @@ function _ledgerCheckTimeOfDayAchievements() {
   if (h >= 4 && h < 6) _ledgerUnlockAchievement('early-bird');
 }
 
-function _ledgerUnlockAchievement(id) {
+function _ledgerUnlockAchievement(id, bookId = readerBookId) {
   if (ledgerState.achievements[id]) return;
   ledgerState.achievements[id] = new Date().toISOString();
   const def = LEDGER_ACHIEVEMENTS.find(a => a.id === id);
@@ -5588,6 +5588,28 @@ function _ledgerUnlockAchievement(id) {
       { merge: true }
     ).catch(e => console.warn('ledger achievement persist:', e));
   }
+  _ledgerAwardBookmarkForAchievement(id, bookId);
+}
+
+// Admin can link a bookmark template to an achievement (see the "Ledger
+// reward" field in the bookmark editor). The moment a reader unlocks that
+// achievement, they get that bookmark on whichever book triggered it.
+async function _ledgerAwardBookmarkForAchievement(achievementId, bookId) {
+  if (!currentUser || !bookId) return;
+  const tpl = _bookmarkTemplates.find(t => t.assignedAchievementId === achievementId);
+  if (!tpl) return;
+  if (_myBookmarks.some(b => b.type === 'award' && b.bookId === bookId && b.achievementId === achievementId)) return;
+  try {
+    const data = {
+      userId: currentUser.uid, bookId, type: 'award',
+      bookmarkId: tpl.id, achievementId,
+      createdAt: serverTimestamp(),
+    };
+    const ref = await addDoc(collection(db, 'user_bookmarks'), data);
+    _myBookmarks.push({ id: ref.id, ...data });
+    renderAll();
+    renderMobHome();
+  } catch(e) { console.warn('ledger award bookmark:', e); }
 }
 
 // Called from closeReader() / markBookFinished() right after a book is
@@ -5604,14 +5626,14 @@ function ledgerRecordBookFinished(bookId) {
     dateStr: ledgerToday.dateStr, pointsEarned: increment(100), updatedAt: serverTimestamp(),
   }, { merge: true }).catch(e => console.warn('ledger finish flush:', e));
 
-  _ledgerUnlockAchievement('first-finish');
-  _ledgerCheckExplorerAchievement();
+  _ledgerUnlockAchievement('first-finish', bookId);
+  _ledgerCheckExplorerAchievement(bookId);
   updateReaderLedgerPill();
   renderHomeLedgerTeaser();
   if (document.getElementById('mobPanelLedger')?.classList.contains('active')) renderLedgerTab();
 }
 
-function _ledgerCheckExplorerAchievement() {
+function _ledgerCheckExplorerAchievement(bookId) {
   const finList = _userLists.find(l => l.id === 'finished');
   const ids = finList?.bookIds || [];
   const cats = new Set();
@@ -5620,7 +5642,7 @@ function _ledgerCheckExplorerAchievement() {
     const book = all.find(b => b.id === id);
     if (book) cats.add(book.category || 'Uncategorised');
   });
-  if (cats.size >= 3) _ledgerUnlockAchievement('explorer');
+  if (cats.size >= 3) _ledgerUnlockAchievement('explorer', bookId);
 }
 
 // ── Firestore flush (debounced — a few seconds after the last page turn,
@@ -9656,14 +9678,21 @@ function getDisplayBookmarkTemplate(bookId) {
   const book = [...library, ...communityLib, ..._bookmarkBookCache]
     .find(b => b.id === bookId);
 
-  // ── PRIORITY 1: Global bookmark assigned to this exact book — always show
+  // ── PRIORITY 1: User-specific achievement award for this exact book ─────
+  const myAward = _myBookmarks.find(b => b.type === 'award' && b.bookId === bookId);
+  if(myAward){
+    const awardTpl = _bookmarkTemplates.find(t => t.id === myAward.bookmarkId);
+    if(awardTpl) return awardTpl;
+  }
+
+  // ── PRIORITY 2: Global bookmark assigned to this exact book — always show
   const bookSpecific = _bookmarkTemplates.find(t =>
     t.scope === 'global' &&
     (t.assignedBookIds || []).includes(bookId)
   );
   if(bookSpecific) return bookSpecific;
 
-  // ── PRIORITY 2: Global bookmark assigned to this book's category — always
+  // ── PRIORITY 3: Global bookmark assigned to this book's category — always
   if(book?.category){
     const catSpecific = _bookmarkTemplates.find(t =>
       t.scope === 'global' &&
@@ -9677,7 +9706,7 @@ function getDisplayBookmarkTemplate(bookId) {
   const isCurrentlyReading = crList && (crList.bookIds || []).includes(bookId);
   if(!isCurrentlyReading) return null;
 
-  // ── PRIORITY 3: Seasonal global bookmark ──────────────────────────────
+  // ── PRIORITY 4: Seasonal global bookmark ──────────────────────────────
   const seasonal = _bookmarkTemplates.find(t => {
     if(t.scope !== 'global' || t.condition?.type !== 'seasonal') return false;
     const from = t.condition.startsAt?.toDate?.();
@@ -9686,7 +9715,7 @@ function getDisplayBookmarkTemplate(bookId) {
   });
   if(seasonal) return seasonal;
 
-  // ── PRIORITY 4: Default reading bookmark ──────────────────────────────
+  // ── PRIORITY 5: Default reading bookmark ──────────────────────────────
   return {
     shape: 'classic', icon: '📖', label: '',
     colors: { body: '#0f1a2e', accent: '#c8952a', text: '#faf7f2' }
@@ -11418,6 +11447,10 @@ async function adminLoadTags() {
                   ${t.assignedCategories?.length && t.assignedBookIds?.length ? ' · ' : ''}
                   ${t.assignedBookIds?.length ? `${t.assignedBookIds.length} book${t.assignedBookIds.length!==1?'s':''}` : ''}
                 </div>` : ''}
+              ${t.assignedAchievementId ? `
+                <div style="font-size:.65rem;color:var(--gold2);margin-top:1px">
+                  🏅 Awarded for: ${esc(LEDGER_ACHIEVEMENTS.find(a=>a.id===t.assignedAchievementId)?.label || t.assignedAchievementId)}
+                </div>` : ''}
             </div>
             <div style="display:flex;gap:.3rem;flex-shrink:0">
               <button class="admin-copy-btn" data-bm-edit="${t.id}">✎</button>
@@ -11714,6 +11747,18 @@ function showBookmarkEditor(templateId) {
           margin-top:2px;"></div>
       </div>
 
+      <div style="font-size:.62rem;letter-spacing:.15em;text-transform:uppercase;
+                  color:var(--muted);font-weight:700;margin:.8rem 0 .4rem">
+        Ledger reward</div>
+      <div class="form-row"><label>Award automatically for achievement
+        <span style="font-size:.65rem;font-weight:400;color:var(--muted)">
+          (given to a reader's currently-open book the moment they unlock it)</span></label>
+        <select id="bmEdAchievement">
+          <option value="">— Not tied to an achievement —</option>
+          ${LEDGER_ACHIEVEMENTS.map(a => `<option value="${a.id}" ${existing?.assignedAchievementId===a.id?'selected':''}>${a.icon} ${esc(a.label)}</option>`).join('')}
+        </select>
+      </div>
+
       <div class="modal-actions" style="margin-top:1.2rem">
         <button class="btn-cancel" id="bmEdCancel">Cancel</button>
         <button class="btn-save" id="bmEdSave">${existing ? 'Save Changes' : 'Create'}</button>
@@ -11880,6 +11925,7 @@ function showBookmarkEditor(templateId) {
       updatedAt: serverTimestamp(),
       assignedCategories: [...selectedCats],
       assignedBookIds:    [...selectedBookIds],
+      assignedAchievementId: overlay.querySelector('#bmEdAchievement').value || null,
     };
 
     overlay.remove();
