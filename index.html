@@ -564,7 +564,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .reader-overlay.theme-night .reader-title { color: var(--cream); }
 
 .reader-nav { display: flex; gap: .3rem; align-items: center; flex-shrink: 0; }
-.reader-page-info { font-size: .72rem; opacity: .55; white-space: nowrap; min-width: 36px; text-align: center; }
+.reader-page-info { font-size: .75rem; opacity: .6; white-space: nowrap; min-width: 36px; text-align: center; flex-shrink: 0; overflow: hidden; text-overflow: ellipsis; }
 .reader-overlay.theme-night .reader-page-info { color: var(--gold); opacity: .7; }
 /* ── NEWW upto hereEPUB READER ── */
   
@@ -580,8 +580,6 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .rs-theme-btn.sepia.active{background:#f4ede0;color:#3b2a1a;border-color:#b8a080;outline:2px solid var(--gold);outline-offset:1px;}
 .rs-theme-btn.night{border-color:rgba(200,200,255,.2);color:#8888aa;}
 .rs-theme-btn.night.active{background:#1a1a2e;color:#c8c8d8;border-color:#4444aa;outline:2px solid var(--gold);outline-offset:1px;}
-.reader-page-info{font-size:.75rem;opacity:.6;white-space:nowrap;}
-
 .reader-settings-bar{
   display:none;
   flex-direction:column;
@@ -2416,6 +2414,7 @@ onAuthStateChanged(auth, async user => {
 
       startAppNotifListener();
       checkAdminStatus();
+      loadLedgerState();
       prewarmTimeline();
       prewarmOfflineEpubs();
     }, 400);
@@ -5254,6 +5253,7 @@ async function readCurrentBook(){
     }
     readerZip=await JSZip.loadAsync(bytes);readerSpine=[];readerChapter=0;
     readerBookId = book.id;
+    _ledgerSessionPages = 0; // new reading sitting — Marathon achievement counts from here
     _readerIsInitialChapterLoad = true;
     const _openTpl = getDisplayBookmarkTemplate(book.id);
     if(_openTpl?.id && !bookmarkAnimEnabled) {
@@ -5324,6 +5324,7 @@ function progressKey(bookId){ return `elib_progress_${bookId}`; }
 
 async function saveReadingProgress(bookId, chapterIdx, pageIdx, totalChapters){
   if(!bookId) return;
+  ledgerRecordPage(bookId, chapterIdx, pageIdx);
   const progress = (chapterIdx + (pageIdx / Math.max(readerPageCount,1))) / Math.max(totalChapters,1);
 
   // Keep localStorage as offline fallback
@@ -5822,7 +5823,18 @@ function showLedgerGoalPicker() {
 
 function _ledgerSetDailyGoal(v) {
   ledgerState.dailyGoal = v;
-  ledgerToday.goalMet = ledgerToday.pagesRead >= v; // re-evaluate against the new target
+  // Only handle the *newly met* transition (goal lowered below today's page
+  // count) through the normal goal-met flow, so the +20 bonus/streak/
+  // achievement checks stay consistent with the reading-driven path. A goal
+  // raised back above today's count must NOT claw back a day already
+  // credited, so goalMet is never flipped back to false here.
+  if (!ledgerToday.goalMet && ledgerToday.pagesRead >= v) {
+    ledgerToday.goalMet = true;
+    ledgerToday.pointsEarned += 20;
+    ledgerState.totalPoints  += 20;
+    _ledgerHandleGoalMet();
+    _ledgerScheduleFlush();
+  }
   _ledgerPersistUserFields({ dailyGoal: v });
   showToast(`Daily goal set to ${v} pages`);
   updateReaderLedgerPill();
@@ -8380,6 +8392,8 @@ function closeReader(){
 
 async function markBookFinished(bookId){
   if(!bookId || !currentUser) return;
+
+  ledgerRecordBookFinished(bookId);
 
   const crList = _userLists.find(l => l.id === 'currently-reading');
   if(crList){
