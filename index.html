@@ -1307,6 +1307,101 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
   .mob-panels{display:none!important;}
   .desktop-main{display:flex;flex:1;overflow:hidden;}
 }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   LEDGER — gamification (streaks / daily goal / points / achievements)
+   Deliberately distinct visual language from the rest of the app so these
+   elements read as "the game layer" at a glance:
+     • rust/ember  → streaks
+     • gold        → points & rank (already the app's "achievement" colour
+                      via categories/bookmark awards, so this reuses an
+                      existing association rather than inventing a new one)
+     • teal        → the daily goal ring (teal already = "active reading")
+     • every ledger surface gets a thin gold double-rule ("bookplate")
+       border so it's recognisable independent of colour alone.
+   ══════════════════════════════════════════════════════════════════════════ */
+.ledger-card{
+  background:var(--warm-white);border-radius:14px;padding:1rem 1.1rem;margin-bottom:.9rem;
+  border:1px solid var(--border);position:relative;
+}
+.ledger-card::before{
+  content:'';position:absolute;inset:4px;border:1px solid rgba(200,149,42,.35);
+  border-radius:10px;pointer-events:none;
+}
+.ledger-card-label{font-size:.62rem;letter-spacing:.16em;text-transform:uppercase;font-weight:700;color:var(--muted);margin-bottom:.6rem;}
+.ledger-row{display:flex;align-items:center;gap:1rem;}
+
+/* Streak card */
+.ledger-streak-flame{font-size:2.4rem;line-height:1;flex-shrink:0;}
+.ledger-streak-flame.cold{filter:grayscale(1);opacity:.35;}
+.ledger-streak-count{font-family:'Playfair Display',serif;font-size:2.1rem;color:var(--rust);line-height:1;}
+.ledger-streak-sub{font-size:.78rem;color:var(--muted);margin-top:.15rem;}
+.ledger-freeze-row{display:flex;gap:.35rem;margin-top:.7rem;flex-wrap:wrap;}
+.ledger-freeze-chip{font-size:.68rem;font-weight:700;padding:.22rem .55rem;border-radius:12px;background:rgba(42,124,138,.1);color:var(--teal-dark);border:1px solid rgba(42,124,138,.25);}
+
+/* Daily goal ring */
+.ledger-goal-num{font-family:'Playfair Display',serif;font-size:1.5rem;color:var(--navy2);}
+.ledger-goal-sub{font-size:.76rem;color:var(--muted);}
+.ledger-goal-edit{margin-top:.7rem;font-size:.7rem;font-weight:700;color:var(--teal);background:none;border:none;cursor:pointer;padding:0;-webkit-tap-highlight-color:transparent;}
+
+/* Points / rank */
+.ledger-points-num{font-family:'Playfair Display',serif;font-size:1.7rem;color:var(--gold2);}
+.ledger-rank-title{font-size:.85rem;font-weight:700;color:var(--navy2);margin-top:.15rem;}
+.ledger-rank-bar{height:6px;border-radius:3px;background:var(--panel);margin-top:.6rem;overflow:hidden;}
+.ledger-rank-bar-fill{height:100%;background:linear-gradient(90deg,var(--gold),var(--gold2));border-radius:3px;transition:width .4s ease;}
+.ledger-rank-next{font-size:.68rem;color:var(--muted);margin-top:.35rem;}
+
+/* Streak calendar heatmap */
+.ledger-cal-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(11px,1fr));gap:3px;}
+.ledger-cal-cell{aspect-ratio:1;border-radius:3px;background:var(--panel);}
+.ledger-cal-cell.met{background:var(--rust);}
+.ledger-cal-cell.today{outline:1.5px solid var(--teal);outline-offset:1px;}
+.ledger-cal-legend{display:flex;align-items:center;gap:.4rem;margin-top:.6rem;font-size:.65rem;color:var(--muted);}
+.ledger-cal-legend-sw{width:10px;height:10px;border-radius:2px;display:inline-block;}
+
+/* Badge case */
+.ledger-badge-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(78px,1fr));gap:.6rem;}
+.ledger-badge{display:flex;flex-direction:column;align-items:center;gap:.3rem;text-align:center;
+  padding:.55rem .3rem;border-radius:10px;background:var(--panel);}
+.ledger-badge.locked{opacity:.4;filter:grayscale(1);}
+.ledger-badge-icon{font-size:1.5rem;}
+.ledger-badge-label{font-size:.62rem;font-weight:700;color:var(--navy2);line-height:1.2;}
+
+/* Reader HUD pill — always visible while a book is open */
+.reader-ledger-pill{font-size:.7rem;font-weight:700;padding:.2rem .55rem;border-radius:12px;white-space:nowrap;
+  display:flex;align-items:center;gap:.3rem;background:rgba(184,76,26,.12);color:var(--rust);
+  border:1px solid rgba(184,76,26,.3);cursor:pointer;-webkit-tap-highlight-color:transparent;flex-shrink:0;}
+.reader-overlay.theme-night .reader-ledger-pill{background:rgba(255,138,92,.15);color:#ff8a5c;border-color:rgba(255,138,92,.35);}
+
+/* Home tab teaser */
+.home-ledger-teaser{display:flex;align-items:center;gap:.8rem;padding:.85rem 1rem;border-radius:14px;
+  background:var(--warm-white);border:1px solid var(--border);margin-bottom:1rem;cursor:pointer;position:relative;
+  -webkit-tap-highlight-color:transparent;}
+.home-ledger-teaser::before{content:'';position:absolute;inset:3px;border:1px solid rgba(200,149,42,.3);border-radius:11px;pointer-events:none;}
+.home-ledger-teaser-flame{font-size:1.8rem;flex-shrink:0;}
+.home-ledger-teaser-text{flex:1;min-width:0;}
+.home-ledger-teaser-title{font-size:.85rem;font-weight:700;color:var(--navy2);}
+.home-ledger-teaser-sub{font-size:.72rem;color:var(--muted);margin-top:.1rem;}
+
+/* Ledger popover (reader HUD tap + goal editor) — a bespoke bottom sheet,
+   deliberately not reusing .mob-picker-scrim, so it doesn't read as "the
+   same kind of dropdown" as ordinary editing pickers. */
+.ledger-popover-scrim{position:fixed;inset:0;z-index:700;background:rgba(15,25,35,.55);
+  display:flex;align-items:flex-end;justify-content:center;animation:fpIn .15s ease;}
+.ledger-popover-card{width:100%;max-width:440px;background:var(--warm-white);
+  border-radius:20px 20px 0 0;padding:1.3rem 1.3rem calc(1.3rem + var(--sab));
+  position:relative;max-height:80vh;overflow-y:auto;}
+.ledger-popover-close{position:absolute;top:.8rem;right:.9rem;background:none;border:none;
+  font-size:1.1rem;color:var(--muted);cursor:pointer;line-height:1;}
+.ledger-popover-title{font-family:'Playfair Display',serif;font-size:1.05rem;color:var(--navy2);margin-bottom:.9rem;}
+.ledger-goal-chip-row{display:flex;flex-wrap:wrap;gap:.5rem;margin-top:.7rem;}
+.ledger-goal-chip{padding:.4rem .8rem;font-size:.74rem;font-weight:700;border-radius:16px;cursor:pointer;
+  border:1.5px solid var(--border);background:transparent;color:var(--navy2);
+  transition:background .15s,border-color .15s,color .15s,transform .08s;-webkit-tap-highlight-color:transparent;}
+.ledger-goal-chip:active{transform:scale(.95);}
+.ledger-goal-chip.active{background:var(--teal);border-color:var(--teal);color:#fff;}
+.ledger-goal-custom-input{width:100%;padding:.55rem .7rem;font-size:.85rem;font-family:'Lato',sans-serif;
+  border:1px solid var(--border);border-radius:10px;background:var(--cream);color:var(--navy);outline:none;margin-top:.6rem;}
 </style>
 </head>
 <body>
@@ -1566,6 +1661,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
     <div class="mob-grid-scroll" style="padding:1rem">
       <div style="font-family:'Playfair Display',serif;font-size:1.3rem;color:var(--navy2);margin-bottom:.2rem" id="mobHomeGreeting">Welcome</div>
       <div style="font-size:.8rem;color:var(--muted);margin-bottom:1.2rem">Discover · Read · Return</div>
+      <div id="mobHomeLedgerTeaser"></div>
       <div id="mobHomeContent">
         <div style="text-align:center;padding:2rem;color:var(--muted);font-size:.88rem">Loading…</div>
       </div>
@@ -1583,6 +1679,19 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
       </div>
       <div class="mob-grid-scroll" id="timelineContent" style="-webkit-overflow-scrolling:touch">
         <div style="text-align:center;padding:3rem 1rem;color:var(--muted);font-size:.85rem">Tap Timeline to load</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── LEDGER PANEL (gamification home) ── -->
+  <div class="mob-panel" id="mobPanelLedger">
+    <div class="mob-settings-scroll" id="ledgerScroll">
+      <div class="settings-header">
+        <div class="settings-header-title">Ledger</div>
+        <div class="settings-header-sub">Your reading record</div>
+      </div>
+      <div id="ledgerContent">
+        <div style="color:var(--muted);font-size:.85rem;text-align:center;padding:2rem 0">Loading…</div>
       </div>
     </div>
   </div>
@@ -1635,6 +1744,9 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 
   <!-- ── ADMIN PANEL ── -->
   <div class="mob-panel" id="mobPanelAdmin">
+    <div class="mob-detail-header" style="flex-shrink:0;">
+      <button class="mob-back-btn" id="btnAdminBack">← Back</button>
+    </div>
     <div class="mob-settings-scroll">
       <h2>🔑 Admin</h2>
       <div style="color:var(--muted);font-size:.85rem">Loading…</div>
@@ -1685,6 +1797,18 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
           <span class="settings-row-chevron">›</span>
         </button>
         <p class="settings-card-note" id="mobInstallNote">Open in your browser's menu and choose "Add to Home Screen" to install.</p>
+      </div>
+
+      <div class="settings-card" id="mobAdminSettingsCard" style="display:none">
+        <div class="settings-card-label">🔑 Admin</div>
+        <button class="settings-row" id="btnMobOpenAdmin">
+          <span class="settings-row-icon" style="background:var(--navy2);color:var(--gold)">🔑</span>
+          <span class="settings-row-text">
+            <span class="settings-row-title">Admin Panel</span>
+            <span class="settings-row-desc">Manage users, categories, tags & more</span>
+          </span>
+          <span class="settings-row-chevron">›</span>
+        </button>
       </div>
 
       <div class="settings-footer">eLibrary · Let's make reading fun again</div>
@@ -1813,11 +1937,11 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
       </span>
       <span>Timeline</span>
     </button>
+    <button class="mob-tab" id="mobNavLedger">
+      <span class="tab-icon">🔥</span><span>Ledger</span>
+    </button>
     <button class="mob-tab" id="mobNavSettings">
       <span class="tab-icon">⚙</span><span>Settings</span>
-    </button>
-    <button class="mob-tab" id="mobNavAdmin" style="display:none">
-      <span class="tab-icon">🔑</span><span>Admin</span>
     </button>
   </div>
 </nav>
@@ -2030,6 +2154,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
       <div class="reader-progress-bar" id="readerProgressBar" style="width:0%"></div>
     </div>
     <div class="reader-title" id="readerTitle">Reading…</div>
+    <span class="reader-ledger-pill" id="readerLedgerPill" title="Today's reading progress">🔥0 · +0</span>
     <span class="reader-page-info" id="readerPageInfo">1/1</span>
   </div>
   <!-- Button bar — hides on center-tap -->
@@ -2163,6 +2288,45 @@ let shelfMode='mine',activeCat='All',activeCatPublic='All',searchQ='';
 let deskActiveTags = new Set();   // tag-filter picker selections, desktop Library
 let mobActiveTags = new Set();    // tag-filter picker selections, mobile Library
 let selectMode=false,selectedIds=new Set(),deskView='library';
+
+// ── LEDGER (gamification) state ─────────────────────────────────────────────
+let ledgerState = {
+  totalPoints: 0,
+  streakCount: 0,
+  longestStreak: 0,
+  dailyGoal: 20,              // pages/day
+  freezesAvailable: 1,
+  lastGoalMetDate: null,      // 'YYYY-MM-DD', most recent day the goal was hit
+  lastFreezeGrantStreak: 0,   // streak length at which a freeze was last granted
+  achievements: {},           // { achievementId: ISO timestamp }
+  loaded: false,
+};
+let ledgerToday = { dateStr: null, pagesRead: 0, pointsEarned: 0, goalMet: false };
+let _ledgerFlushedPages = 0;   // pages already written to Firestore today (for delta increments)
+let _ledgerFlushedPoints = 0;  // points already written to Firestore today
+let _ledgerFlushTimer = null;
+let _ledgerSessionPages = 0;   // pages read this reading session, for the Marathon achievement
+let _ledgerHighWater = {};     // { bookId: chapterIdx*100000+pageIdx } — highest page reached per book this session
+
+const LEDGER_RANKS = [
+  { min: 0,    title: 'Novice Reader' },
+  { min: 250,  title: 'Page Turner' },
+  { min: 750,  title: 'Bookworm' },
+  { min: 2000, title: 'Bibliophile' },
+  { min: 5000, title: 'Literary Sage' },
+];
+
+const LEDGER_ACHIEVEMENTS = [
+  { id: 'first-page',   icon: '📖', label: 'First Page',     desc: 'Read your first page' },
+  { id: 'first-finish', icon: '🏁', label: 'First Finish',   desc: 'Finish your first book' },
+  { id: 'streak-7',     icon: '🔥', label: '7-Day Streak',   desc: 'Hit your goal 7 days running' },
+  { id: 'streak-30',    icon: '🔥', label: '30-Day Streak',  desc: 'Hit your goal 30 days running' },
+  { id: 'streak-100',   icon: '🔥', label: '100-Day Streak', desc: 'Hit your goal 100 days running' },
+  { id: 'night-owl',    icon: '🦉', label: 'Night Owl',      desc: 'Read between midnight and 4am' },
+  { id: 'early-bird',   icon: '🐦', label: 'Early Bird',     desc: 'Read before 6am' },
+  { id: 'marathon',     icon: '🏃', label: 'Marathon',       desc: 'Read 100+ pages in one sitting' },
+  { id: 'explorer',     icon: '🧭', label: 'Genre Explorer', desc: 'Finish books in 3+ categories' },
+];
 let myCheckedOutIds=new Set();
 let koboDevices = [];
 let _userLists = [];
@@ -3611,12 +3775,13 @@ document.getElementById('mobNavLibrary').addEventListener('click',  () => mob_sw
 document.getElementById('mobNavHome').addEventListener('click', () => { mob_switchTab('home');});
 document.getElementById('mobNavSettings').addEventListener('click', () => mob_switchTab('settings'));
 document.getElementById('mobNavTimeline')?.addEventListener('click', () => mob_switchTab('timeline'));
+document.getElementById('mobNavLedger')?.addEventListener('click', () => mob_switchTab('ledger'));
 
 function mob_switchTab(tab) {
   document.querySelectorAll('.mob-tab, .mob-tab-home').forEach(t => t.classList.remove('active'));
-  const tabMap = { library:'mobNavLibrary', home:'mobNavHome', settings:'mobNavSettings', timeline:'mobNavTimeline' };
+  const tabMap = { library:'mobNavLibrary', home:'mobNavHome', settings:'mobNavSettings', timeline:'mobNavTimeline', ledger:'mobNavLedger' };
   document.getElementById(tabMap[tab])?.classList.add('active');
-  const panelMap = { library:'mobPanelLibrary', home:'mobPanelHome', settings:'mobPanelSettings', timeline:'mobPanelTimeline' };
+  const panelMap = { library:'mobPanelLibrary', home:'mobPanelHome', settings:'mobPanelSettings', timeline:'mobPanelTimeline', ledger:'mobPanelLedger' };
   mob_showPanel(panelMap[tab] || 'mobPanelHome');
   if (tab === 'home') {
     renderMobHome();
@@ -3632,6 +3797,7 @@ function mob_switchTab(tab) {
     }
   }
   if (tab === 'settings')  renderKoboSettings(document.getElementById('mobKoboSettings'));
+  if (tab === 'ledger')    renderLedgerTab();
 }
 
 // ── MOBILE LIBRARY PANEL ─────────────────────────────────────────────────────
@@ -5232,6 +5398,475 @@ function getReadingProgress(bookId){
   const p = loadReadingProgress(bookId);
   return p ? p.progress : 0;
 }
+
+// ══════════════════════════════════════════════════════════════════════════
+// LEDGER — gamification core (streaks / daily goal / points / achievements)
+// ══════════════════════════════════════════════════════════════════════════
+
+function ledgerDateStr(d = new Date()) {
+  // Local calendar date (not UTC) so a streak's "day" matches the reader's
+  // own clock rather than snapping over at a UTC boundary mid-afternoon.
+  const y = d.getFullYear(), m = String(d.getMonth()+1).padStart(2,'0'), day = String(d.getDate()).padStart(2,'0');
+  return `${y}-${m}-${day}`;
+}
+function _ledgerAddDays(dateStr, delta) {
+  const [y,m,d] = dateStr.split('-').map(Number);
+  const dt = new Date(y, m-1, d);
+  dt.setDate(dt.getDate() + delta);
+  return ledgerDateStr(dt);
+}
+function _ledgerDaysBetween(fromStr, toStr) {
+  const [y1,m1,d1] = fromStr.split('-').map(Number);
+  const [y2,m2,d2] = toStr.split('-').map(Number);
+  return Math.round((new Date(y2,m2-1,d2) - new Date(y1,m1-1,d1)) / 86400000);
+}
+function ledgerRank(points) {
+  let rank = LEDGER_RANKS[0];
+  for (const r of LEDGER_RANKS) if (points >= r.min) rank = r;
+  const idx = LEDGER_RANKS.indexOf(rank);
+  return { title: rank.title, floor: rank.min, next: LEDGER_RANKS[idx+1] || null };
+}
+
+// ── Load state on app start / sign-in ───────────────────────────────────
+async function loadLedgerState() {
+  if (!currentUser) return;
+  try {
+    const snap = await getDoc(doc(db, 'users', currentUser.uid));
+    const data = snap.exists() ? snap.data() : {};
+    ledgerState.totalPoints           = data.totalPoints || 0;
+    ledgerState.streakCount           = data.streakCount || 0;
+    ledgerState.longestStreak         = data.longestStreak || 0;
+    ledgerState.dailyGoal             = data.dailyGoal || 20;
+    ledgerState.freezesAvailable      = data.freezesAvailable != null ? data.freezesAvailable : 1;
+    ledgerState.lastGoalMetDate       = data.lastGoalMetDate || null;
+    ledgerState.lastFreezeGrantStreak = data.lastFreezeGrantStreak || 0;
+    ledgerState.achievements          = data.ledgerAchievements || {};
+
+    const todayStr = ledgerDateStr();
+    let dayData = {};
+    try {
+      const daySnap = await getDoc(doc(db, 'users', currentUser.uid, 'ledgerDays', todayStr));
+      dayData = daySnap.exists() ? daySnap.data() : {};
+    } catch(e) { console.warn('ledger today load:', e); }
+    ledgerToday = {
+      dateStr: todayStr,
+      pagesRead: dayData.pagesRead || 0,
+      pointsEarned: dayData.pointsEarned || 0,
+      goalMet: !!dayData.goalMet,
+    };
+    _ledgerFlushedPages = ledgerToday.pagesRead;
+    _ledgerFlushedPoints = ledgerToday.pointsEarned;
+
+    _ledgerReconcileStreakOnLoad(todayStr);
+
+    ledgerState.loaded = true;
+    updateReaderLedgerPill();
+    renderHomeLedgerTeaser();
+  } catch(e) {
+    console.warn('loadLedgerState:', e);
+  }
+}
+
+// Reconciles the streak against the calendar gap since it was last extended
+// — bridges a single missed day with a banked freeze, otherwise resets.
+function _ledgerReconcileStreakOnLoad(todayStr) {
+  if (!ledgerState.lastGoalMetDate || ledgerState.lastGoalMetDate === todayStr) return;
+  const gap = _ledgerDaysBetween(ledgerState.lastGoalMetDate, todayStr);
+  if (gap <= 1) return; // yesterday — streak is "at risk" but still intact
+  if (gap === 2 && ledgerState.freezesAvailable > 0) {
+    ledgerState.freezesAvailable -= 1;
+    ledgerState.lastGoalMetDate = _ledgerAddDays(todayStr, -1); // bridge the missed day
+    _ledgerPersistUserFields({ freezesAvailable: ledgerState.freezesAvailable, lastGoalMetDate: ledgerState.lastGoalMetDate });
+    showToast('🧊 Streak freeze used — your streak is safe!');
+    return;
+  }
+  if (ledgerState.streakCount > 0) {
+    ledgerState.streakCount = 0;
+    _ledgerPersistUserFields({ streakCount: 0 });
+  }
+}
+
+function _ledgerPersistUserFields(fields) {
+  if (!currentUser) return;
+  setDoc(doc(db, 'users', currentUser.uid), fields, { merge: true })
+    .catch(e => console.warn('ledger persist:', e));
+}
+
+// ── Earning points ───────────────────────────────────────────────────────
+// Hooked from saveReadingProgress() on every real page turn (manual or
+// TTS-driven — both call goToPage under the hood). Only pages past the
+// highest point reached in this book this session earn anything, so paging
+// back and forth never inflates the count, and a big forward jump (e.g. via
+// the table of contents) is capped rather than paying out a windfall.
+function ledgerRecordPage(bookId, chapterIdx, pageIdx) {
+  if (!currentUser || !ledgerState.loaded || !bookId) return;
+  const key = chapterIdx * 100000 + pageIdx;
+  const prevHigh = _ledgerHighWater[bookId] ?? -1;
+  if (key <= prevHigh) return; // re-reading covered ground, or paging backward
+  const delta = Math.min(key - prevHigh, 5);
+  _ledgerHighWater[bookId] = key;
+
+  _ledgerRolloverDayIfNeeded();
+
+  ledgerToday.pagesRead   += delta;
+  ledgerToday.pointsEarned += delta;
+  ledgerState.totalPoints += delta;
+  _ledgerSessionPages     += delta;
+
+  _ledgerCheckTimeOfDayAchievements();
+  if (_ledgerSessionPages >= 100) _ledgerUnlockAchievement('marathon');
+  if (ledgerToday.pagesRead >= 1) _ledgerUnlockAchievement('first-page');
+
+  if (!ledgerToday.goalMet && ledgerToday.pagesRead >= ledgerState.dailyGoal) {
+    ledgerToday.goalMet = true;
+    ledgerToday.pointsEarned += 20;
+    ledgerState.totalPoints  += 20;
+    _ledgerHandleGoalMet();
+  }
+
+  updateReaderLedgerPill();
+  _ledgerScheduleFlush();
+}
+
+function _ledgerRolloverDayIfNeeded() {
+  const todayStr = ledgerDateStr();
+  if (ledgerToday.dateStr === todayStr) return;
+  // A new local day started mid-session (e.g. reading past midnight) —
+  // flush whatever was pending under the old date, then start fresh.
+  _ledgerFlushNow();
+  ledgerToday = { dateStr: todayStr, pagesRead: 0, pointsEarned: 0, goalMet: false };
+  _ledgerFlushedPages = 0;
+  _ledgerFlushedPoints = 0;
+}
+
+function _ledgerHandleGoalMet() {
+  const todayStr = ledgerDateStr();
+  if (ledgerState.lastGoalMetDate !== todayStr) {
+    ledgerState.streakCount += 1;
+    ledgerState.longestStreak = Math.max(ledgerState.longestStreak, ledgerState.streakCount);
+    ledgerState.lastGoalMetDate = todayStr;
+
+    // One freeze per clean week of streak, capped at 2 banked at a time.
+    if (ledgerState.streakCount - ledgerState.lastFreezeGrantStreak >= 7 && ledgerState.freezesAvailable < 2) {
+      ledgerState.freezesAvailable += 1;
+      ledgerState.lastFreezeGrantStreak = ledgerState.streakCount;
+      showToast('🧊 Earned a streak freeze for a solid week!');
+    }
+
+    if (ledgerState.streakCount === 7)   _ledgerUnlockAchievement('streak-7');
+    if (ledgerState.streakCount === 30)  _ledgerUnlockAchievement('streak-30');
+    if (ledgerState.streakCount === 100) _ledgerUnlockAchievement('streak-100');
+
+    _ledgerPersistUserFields({
+      streakCount: ledgerState.streakCount,
+      longestStreak: ledgerState.longestStreak,
+      lastGoalMetDate: ledgerState.lastGoalMetDate,
+      freezesAvailable: ledgerState.freezesAvailable,
+      lastFreezeGrantStreak: ledgerState.lastFreezeGrantStreak,
+    });
+    showToast(`🔥 Goal met — Day ${ledgerState.streakCount} streak!`);
+  }
+  renderHomeLedgerTeaser();
+  if (document.getElementById('mobPanelLedger')?.classList.contains('active')) renderLedgerTab();
+}
+
+function _ledgerCheckTimeOfDayAchievements() {
+  const h = new Date().getHours();
+  if (h >= 0 && h < 4) _ledgerUnlockAchievement('night-owl');
+  if (h >= 4 && h < 6) _ledgerUnlockAchievement('early-bird');
+}
+
+function _ledgerUnlockAchievement(id) {
+  if (ledgerState.achievements[id]) return;
+  ledgerState.achievements[id] = new Date().toISOString();
+  const def = LEDGER_ACHIEVEMENTS.find(a => a.id === id);
+  if (def) showToast(`${def.icon} Achievement unlocked: ${def.label}`);
+  if (currentUser) {
+    setDoc(doc(db, 'users', currentUser.uid),
+      { [`ledgerAchievements.${id}`]: serverTimestamp() },
+      { merge: true }
+    ).catch(e => console.warn('ledger achievement persist:', e));
+  }
+}
+
+// Called from closeReader() / markBookFinished() right after a book is
+// actually added to the Finished list, so it fires exactly once per book.
+function ledgerRecordBookFinished(bookId) {
+  if (!currentUser || !ledgerState.loaded) return;
+  _ledgerRolloverDayIfNeeded();
+  ledgerState.totalPoints  += 100;
+  ledgerToday.pointsEarned += 100;
+  _ledgerFlushedPoints     += 100; // flushed immediately below — keep the debounced flush from re-sending it
+
+  _ledgerPersistUserFields({ totalPoints: increment(100) });
+  setDoc(doc(db, 'users', currentUser.uid, 'ledgerDays', ledgerToday.dateStr), {
+    dateStr: ledgerToday.dateStr, pointsEarned: increment(100), updatedAt: serverTimestamp(),
+  }, { merge: true }).catch(e => console.warn('ledger finish flush:', e));
+
+  _ledgerUnlockAchievement('first-finish');
+  _ledgerCheckExplorerAchievement();
+  updateReaderLedgerPill();
+  renderHomeLedgerTeaser();
+  if (document.getElementById('mobPanelLedger')?.classList.contains('active')) renderLedgerTab();
+}
+
+function _ledgerCheckExplorerAchievement() {
+  const finList = _userLists.find(l => l.id === 'finished');
+  const ids = finList?.bookIds || [];
+  const cats = new Set();
+  const all = dedupe([...library, ...communityLib]);
+  ids.forEach(id => {
+    const book = all.find(b => b.id === id);
+    if (book) cats.add(book.category || 'Uncategorised');
+  });
+  if (cats.size >= 3) _ledgerUnlockAchievement('explorer');
+}
+
+// ── Firestore flush (debounced — a few seconds after the last page turn,
+//    plus always on tab-close/reader-close) ─────────────────────────────
+function _ledgerScheduleFlush() {
+  if (_ledgerFlushTimer) return;
+  _ledgerFlushTimer = setTimeout(() => { _ledgerFlushTimer = null; _ledgerFlushNow(); }, 3000);
+}
+function _ledgerFlushNow() {
+  if (!currentUser || !ledgerToday.dateStr) return;
+  const pageDelta = ledgerToday.pagesRead - _ledgerFlushedPages;
+  const pointDelta = ledgerToday.pointsEarned - _ledgerFlushedPoints;
+  if (pageDelta <= 0 && pointDelta <= 0) return;
+  _ledgerFlushedPages = ledgerToday.pagesRead;
+  _ledgerFlushedPoints = ledgerToday.pointsEarned;
+
+  setDoc(doc(db, 'users', currentUser.uid, 'ledgerDays', ledgerToday.dateStr), {
+    dateStr: ledgerToday.dateStr,
+    pagesRead: increment(pageDelta),
+    pointsEarned: increment(pointDelta),
+    goalMet: ledgerToday.goalMet,
+    updatedAt: serverTimestamp(),
+  }, { merge: true }).catch(e => console.warn('ledger day flush:', e));
+
+  if (pointDelta > 0) {
+    setDoc(doc(db, 'users', currentUser.uid), { totalPoints: increment(pointDelta) }, { merge: true })
+      .catch(e => console.warn('ledger points flush:', e));
+  }
+}
+window.addEventListener('beforeunload', () => { _ledgerFlushNow(); });
+
+// ── Rendering ────────────────────────────────────────────────────────────
+function updateReaderLedgerPill() {
+  const pill = document.getElementById('readerLedgerPill');
+  if (!pill) return;
+  pill.textContent = `🔥${ledgerState.streakCount} · +${ledgerToday.pointsEarned}`;
+}
+
+function renderHomeLedgerTeaser() {
+  const el = document.getElementById('mobHomeLedgerTeaser');
+  if (!el) return;
+  if (!ledgerState.loaded) { el.innerHTML = ''; return; }
+  const pct = Math.min(100, Math.round((ledgerToday.pagesRead / Math.max(ledgerState.dailyGoal,1)) * 100));
+  el.innerHTML = `
+    <div class="home-ledger-teaser" id="homeLedgerTeaserBtn">
+      <div class="home-ledger-teaser-flame">${ledgerState.streakCount ? '🔥' : '🕯️'}</div>
+      <div class="home-ledger-teaser-text">
+        <div class="home-ledger-teaser-title">${ledgerState.streakCount ? `${ledgerState.streakCount}-day streak` : 'Start a streak today'}</div>
+        <div class="home-ledger-teaser-sub">${ledgerToday.pagesRead}/${ledgerState.dailyGoal} pages today · ${ledgerState.totalPoints.toLocaleString()} pts</div>
+      </div>
+      ${_ledgerGoalRingSvg(pct, 40)}
+    </div>`;
+  document.getElementById('homeLedgerTeaserBtn')?.addEventListener('click', () => mob_switchTab('ledger'));
+}
+
+function _ledgerGoalRingSvg(pct, size = 64) {
+  const r = size/2 - 6, c = 2*Math.PI*r, off = c * (1 - pct/100), cx = size/2;
+  return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" style="flex-shrink:0;transform:rotate(-90deg)">
+    <circle cx="${cx}" cy="${cx}" r="${r}" fill="none" stroke="var(--panel)" stroke-width="6"/>
+    <circle cx="${cx}" cy="${cx}" r="${r}" fill="none" stroke="var(--teal)" stroke-width="6"
+      stroke-linecap="round" stroke-dasharray="${c}" stroke-dashoffset="${off}"/>
+  </svg>`;
+}
+
+function _ledgerRankFloor(title) {
+  const r = LEDGER_RANKS.find(r => r.title === title);
+  return r ? r.min : 0;
+}
+
+async function renderLedgerTab() {
+  const el = document.getElementById('ledgerContent');
+  if (!el) return;
+  if (!ledgerState.loaded) await loadLedgerState();
+
+  const rank = ledgerRank(ledgerState.totalPoints);
+  const floor = _ledgerRankFloor(rank.title);
+  const nextGap = rank.next ? rank.next.min - ledgerState.totalPoints : 0;
+  const rankPct = rank.next ? Math.min(100, Math.round(((ledgerState.totalPoints - floor) / (rank.next.min - floor)) * 100)) : 100;
+  const goalPct = Math.min(100, Math.round((ledgerToday.pagesRead / Math.max(ledgerState.dailyGoal,1)) * 100));
+
+  el.innerHTML = `
+    <div class="ledger-card">
+      <div class="ledger-card-label">Streak</div>
+      <div class="ledger-row">
+        <div class="ledger-streak-flame ${ledgerState.streakCount ? '' : 'cold'}">🔥</div>
+        <div>
+          <div class="ledger-streak-count">${ledgerState.streakCount}</div>
+          <div class="ledger-streak-sub">${ledgerState.streakCount === 1 ? 'day' : 'days'} · longest ${ledgerState.longestStreak}</div>
+        </div>
+      </div>
+      <div class="ledger-freeze-row">
+        ${ledgerState.freezesAvailable > 0
+          ? Array.from({length: ledgerState.freezesAvailable}).map(() => `<span class="ledger-freeze-chip">🧊 Freeze ready</span>`).join('')
+          : `<span class="ledger-freeze-chip" style="opacity:.55">No freezes banked</span>`}
+      </div>
+    </div>
+
+    <div class="ledger-card">
+      <div class="ledger-card-label">Today's Goal</div>
+      <div class="ledger-row">
+        ${_ledgerGoalRingSvg(goalPct, 64)}
+        <div>
+          <div class="ledger-goal-num">${ledgerToday.pagesRead} / ${ledgerState.dailyGoal} pages</div>
+          <div class="ledger-goal-sub">${ledgerToday.goalMet ? 'Goal met — nice work! 🎉' : `${Math.max(0, ledgerState.dailyGoal - ledgerToday.pagesRead)} pages to go`}</div>
+        </div>
+      </div>
+      <button class="ledger-goal-edit" id="btnLedgerEditGoal">Change daily goal</button>
+    </div>
+
+    <div class="ledger-card">
+      <div class="ledger-card-label">Points &amp; Rank</div>
+      <div class="ledger-points-num">${ledgerState.totalPoints.toLocaleString()} pts</div>
+      <div class="ledger-rank-title">${esc(rank.title)}</div>
+      <div class="ledger-rank-bar"><div class="ledger-rank-bar-fill" style="width:${rankPct}%"></div></div>
+      <div class="ledger-rank-next">${rank.next ? `${nextGap.toLocaleString()} pts to ${esc(rank.next.title)}` : 'Highest rank reached'}</div>
+    </div>
+
+    <div class="ledger-card">
+      <div class="ledger-card-label">Reading Streak — Last 12 Weeks</div>
+      <div class="ledger-cal-grid" id="ledgerCalGrid">
+        <div style="grid-column:1/-1;color:var(--muted);font-size:.78rem;">Loading…</div>
+      </div>
+      <div class="ledger-cal-legend">
+        <span class="ledger-cal-legend-sw" style="background:var(--panel)"></span> Missed
+        <span class="ledger-cal-legend-sw" style="background:var(--rust);margin-left:.6rem"></span> Goal met
+      </div>
+    </div>
+
+    <div class="ledger-card">
+      <div class="ledger-card-label">Achievements</div>
+      <div class="ledger-badge-grid">
+        ${LEDGER_ACHIEVEMENTS.map(a => `
+          <div class="ledger-badge ${ledgerState.achievements[a.id] ? '' : 'locked'}" title="${esc(a.desc)}">
+            <span class="ledger-badge-icon">${a.icon}</span>
+            <span class="ledger-badge-label">${esc(a.label)}</span>
+          </div>`).join('')}
+      </div>
+    </div>`;
+
+  document.getElementById('btnLedgerEditGoal')?.addEventListener('click', showLedgerGoalPicker);
+  _ledgerRenderCalendar();
+}
+
+async function _ledgerRenderCalendar() {
+  const grid = document.getElementById('ledgerCalGrid');
+  if (!grid || !currentUser) return;
+  const days = 84; // 12 weeks
+  const todayStr = ledgerDateStr();
+  const startStr = _ledgerAddDays(todayStr, -(days - 1));
+  const metSet = new Set();
+  try {
+    const q = query(collection(db, 'users', currentUser.uid, 'ledgerDays'), where('dateStr', '>=', startStr));
+    const snap = await getDocs(q);
+    snap.forEach(d => { if (d.data().goalMet) metSet.add(d.data().dateStr); });
+  } catch(e) { console.warn('ledger calendar load:', e); }
+  if (ledgerToday.goalMet) metSet.add(ledgerToday.dateStr);
+
+  let html = '';
+  for (let i = days - 1; i >= 0; i--) {
+    const dStr = _ledgerAddDays(todayStr, -i);
+    const met = metSet.has(dStr);
+    const isToday = dStr === todayStr;
+    html += `<div class="ledger-cal-cell ${met ? 'met' : ''} ${isToday ? 'today' : ''}" title="${dStr}${met ? ' — goal met' : ''}"></div>`;
+  }
+  grid.innerHTML = html;
+}
+
+// ── Popovers: daily-goal editor + the reader HUD's tap-to-expand summary ──
+// Both are their own bespoke bottom sheet (not the .mob-picker-scrim used
+// for editing a book's own category/tags) so they read as "the game layer"
+// rather than another instance of the everyday editing picker.
+function showLedgerGoalPicker() {
+  document.getElementById('ledgerPopover')?.remove();
+  const presets = [{ label: 'Casual', value: 10 }, { label: 'Steady', value: 20 }, { label: 'Ambitious', value: 40 }];
+  const pop = document.createElement('div');
+  pop.id = 'ledgerPopover';
+  pop.className = 'ledger-popover-scrim';
+  pop.innerHTML = `
+    <div class="ledger-popover-card">
+      <button class="ledger-popover-close" id="ledgerPopoverClose">✕</button>
+      <div class="ledger-popover-title">Daily Reading Goal</div>
+      <div class="ledger-goal-chip-row">
+        ${presets.map(p => `<button class="ledger-goal-chip ${ledgerState.dailyGoal === p.value ? 'active' : ''}" data-goal="${p.value}">${p.label} · ${p.value}</button>`).join('')}
+      </div>
+      <input type="number" class="ledger-goal-custom-input" id="ledgerGoalCustom" placeholder="Custom page count" min="1"
+        value="${[10,20,40].includes(ledgerState.dailyGoal) ? '' : ledgerState.dailyGoal}"/>
+    </div>`;
+  document.body.appendChild(pop);
+  pop.addEventListener('click', e => { if (e.target === pop) pop.remove(); });
+  pop.querySelector('#ledgerPopoverClose').addEventListener('click', () => pop.remove());
+  pop.querySelectorAll('[data-goal]').forEach(btn => {
+    btn.addEventListener('click', () => { _ledgerSetDailyGoal(+btn.dataset.goal); pop.remove(); });
+  });
+  const input = pop.querySelector('#ledgerGoalCustom');
+  input.addEventListener('change', () => {
+    const v = Math.max(1, Math.round(+input.value || 0));
+    if (v > 0) { _ledgerSetDailyGoal(v); pop.remove(); }
+  });
+}
+
+function _ledgerSetDailyGoal(v) {
+  ledgerState.dailyGoal = v;
+  ledgerToday.goalMet = ledgerToday.pagesRead >= v; // re-evaluate against the new target
+  _ledgerPersistUserFields({ dailyGoal: v });
+  showToast(`Daily goal set to ${v} pages`);
+  updateReaderLedgerPill();
+  if (document.getElementById('mobPanelLedger')?.classList.contains('active')) renderLedgerTab();
+  renderHomeLedgerTeaser();
+}
+
+function showLedgerReaderPopover() {
+  document.getElementById('ledgerPopover')?.remove();
+  const goalPct = Math.min(100, Math.round((ledgerToday.pagesRead / Math.max(ledgerState.dailyGoal,1)) * 100));
+  const pop = document.createElement('div');
+  pop.id = 'ledgerPopover';
+  pop.className = 'ledger-popover-scrim';
+  pop.innerHTML = `
+    <div class="ledger-popover-card">
+      <button class="ledger-popover-close" id="ledgerPopoverClose">✕</button>
+      <div class="ledger-popover-title">🔥 ${ledgerState.streakCount}-Day Streak</div>
+      <div class="ledger-row">
+        ${_ledgerGoalRingSvg(goalPct, 64)}
+        <div>
+          <div class="ledger-goal-num">${ledgerToday.pagesRead} / ${ledgerState.dailyGoal} pages today</div>
+          <div class="ledger-goal-sub">+${ledgerToday.pointsEarned} points today · ${ledgerState.totalPoints.toLocaleString()} total</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:1.2rem;margin-top:.8rem;">
+        <button class="ledger-goal-edit" id="ledgerPopoverGoalBtn">Change goal</button>
+        <button class="ledger-goal-edit" id="ledgerPopoverOpenBtn">Open Ledger →</button>
+      </div>
+    </div>`;
+  document.body.appendChild(pop);
+  pop.addEventListener('click', e => { if (e.target === pop) pop.remove(); });
+  pop.querySelector('#ledgerPopoverClose').addEventListener('click', () => pop.remove());
+  pop.querySelector('#ledgerPopoverGoalBtn').addEventListener('click', () => { pop.remove(); showLedgerGoalPicker(); });
+  pop.querySelector('#ledgerPopoverOpenBtn').addEventListener('click', () => {
+    pop.remove();
+    closeReader();
+    mob_switchTab('ledger');
+  });
+}
+
+document.getElementById('readerLedgerPill')?.addEventListener('click', (e) => {
+  e.stopPropagation();
+  showLedgerReaderPopover();
+});
 
 // ── IFRAME-COLUMN PAGINATION ENGINE ─────────────────────────────────────────
 // Uses CSS columns inside a sandboxed iframe. The browser's own layout engine
@@ -9408,7 +10043,7 @@ async function checkAdminStatus() {
     const snap = await getDoc(doc(db, 'users', currentUser.uid));
     isAdmin = snap.exists() && snap.data().isAdmin === true;
     if(isAdmin){
-      document.getElementById('mobNavAdmin').style.display = '';
+      document.getElementById('mobAdminSettingsCard').style.display = '';
     }
   } catch(e) {
     console.warn('Admin check failed:', e);
@@ -10936,11 +11571,12 @@ function buildAdminSections() {
     ?.addEventListener('click', adminLoadUsers);
 }
 
-document.getElementById('mobNavAdmin')?.addEventListener('click', () => {
-  document.querySelectorAll('.mob-tab').forEach(t => t.classList.remove('active'));
-  document.getElementById('mobNavAdmin').classList.add('active');
+document.getElementById('btnMobOpenAdmin')?.addEventListener('click', () => {
   mob_showPanel('mobPanelAdmin');
   buildAdminSections();
+});
+document.getElementById('btnAdminBack')?.addEventListener('click', () => {
+  mob_showPanel('mobPanelSettings');
 });
 
 function showBookmarkEditor(templateId) {
