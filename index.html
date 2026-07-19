@@ -773,6 +773,25 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .mfp-cat.mfp-active{background:var(--gold);border-color:var(--gold);}
 .mfp-tags.mfp-active{background:#5a48b0;border-color:#5a48b0;}
 .mfp.mfp-active .mfp-caret{opacity:.8;}
+
+/* Library filter/sort dropdowns — anchored directly under their pill button,
+   NOT a centered modal, and deliberately dark so they read as distinct from
+   the light .mob-picker-card used for editing lists/categories elsewhere. */
+.mfp-dd-scrim{position:fixed;inset:0;z-index:600;background:transparent;}
+.mfp-dd{position:absolute;z-index:601;min-width:170px;max-width:250px;
+  max-height:60vh;overflow-y:auto;background:#1a2438;border-radius:10px;
+  box-shadow:0 10px 30px rgba(0,0,0,.35);padding:.4rem;
+  border:1px solid rgba(255,255,255,.08);}
+.mfp-dd.mfp-dd-grid{max-width:300px;}
+.mfp-dd-grid #mfpDdItems{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:.1rem .3rem;}
+.mfp-dd-item{display:flex;align-items:center;gap:.5rem;padding:.5rem .6rem;
+  border-radius:6px;cursor:pointer;font-size:.8rem;color:#f0ede4;
+  -webkit-tap-highlight-color:transparent;}
+.mfp-dd-item span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.mfp-dd-item:active{background:rgba(255,255,255,.08);}
+.mfp-dd-item.selected{background:rgba(255,255,255,.1);font-weight:700;}
+.mfp-dd-item .mfp-dd-check{margin-left:auto;color:var(--gold);font-weight:700;visibility:hidden;flex-shrink:0;}
+.mfp-dd-item.selected .mfp-dd-check{visibility:visible;}
 @keyframes fpIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
 /* Scrim to close floating panel on outside tap */
 .mob-filter-scrim{display:none;position:fixed;inset:0;z-index:119;}
@@ -1620,13 +1639,13 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
           <span id="mfpTagsLabel">Tags</span>
           <span class="mfp-caret">▾</span>
         </button>
+        <button class="mfp mfp-source" id="mfpSource" aria-label="Filter by source">
+          <span id="mfpSourceLabel">All</span>
+          <span class="mfp-caret">▾</span>
+        </button>
         <div class="mfp-divider" aria-hidden="true"></div>
         <button class="mfp mfp-sort" id="mfpSort" aria-label="Sort">
           <span id="mfpSortLabel">Recent</span>
-          <span class="mfp-caret">▾</span>
-        </button>
-        <button class="mfp mfp-source" id="mfpSource" aria-label="Filter by source">
-          <span id="mfpSourceLabel">All</span>
           <span class="mfp-caret">▾</span>
         </button>
       </div>
@@ -2134,12 +2153,8 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
     <div id="readerChapterItems"></div>
   </div>
   <div class="reader-chapter-list" id="readerBookmarkListPanel">
-    <div style="display:flex;border-bottom:1px solid rgba(128,128,128,0.2);">
-      <button class="bm-panel-tab active" id="bmPanelTabBookmarks">🔖 Bookmarks</button>
-      <button class="bm-panel-tab" id="bmPanelTabHighlights">✎ Highlights</button>
-    </div>
+    <h3>Bookmarks &amp; Highlights</h3>
     <div id="readerBookmarkListItems"></div>
-    <div id="readerHighlightListItems" style="display:none;"></div>
   </div>
   <div class="reader-content" id="readerContent">
 
@@ -3885,42 +3900,52 @@ function updateMobFilterPillLabels() {
   document.getElementById('mfpSource')?.classList.toggle('mfp-active', mobLibFilter !== 'all');
 }
 
-// Generic centered picker: `items` is [{id,label,icon?,count?}]. `multi`
-// keeps the picker open and lets several items be toggled (used for Tags);
-// otherwise picking an item closes it immediately (Category/Sort/Source).
-function openMobFilterPicker({ title, items, isSelected, onSelect, multi = false, grid = false }) {
-  document.querySelectorAll('.mob-picker-scrim').forEach(el => el.remove()); // close any other picker first
+// Anchored dropdown for the library filter/sort pills — deliberately its own
+// dark, pill-anchored component (see .mfp-dd CSS) rather than the shared
+// .mob-picker-scrim modal used elsewhere for editing lists/categories.
+// `items` is [{id,label,icon?,count?}]. `multi` keeps the dropdown open and
+// lets several items be toggled (used for Tags, AND-combined); otherwise
+// picking an item closes it immediately (Category/Sort/Source).
+function openMobFilterPicker({ anchor, title, items, isSelected, onSelect, multi = false, grid = false }) {
+  document.querySelectorAll('.mfp-dd-scrim').forEach(el => el.remove()); // close any other dropdown first
+
   const scrim = document.createElement('div');
-  scrim.className = 'mob-picker-scrim';
-  scrim.innerHTML = `
-    <div class="mob-picker-card">
-      <div class="mob-picker-title">
-        <span>${title}</span>
-        <button class="mob-picker-close" id="mobFpCloseBtn">✕</button>
-      </div>
-      <div id="mobFpItems" class="${grid ? 'mob-picker-grid' : ''}">
-        ${items.map((it, i) => `<div class="mob-picker-item ${isSelected(it) ? 'selected' : ''}" data-idx="${i}">
-            <span>${it.icon ? it.icon + ' ' : ''}${esc(it.label)}${it.count != null ? ` <span style="opacity:.55">${it.count}</span>` : ''}</span>
-            <span class="mpi-check">✓</span>
-          </div>`).join('')}
-      </div>
-    </div>`;
+  scrim.className = 'mfp-dd-scrim';
+
+  const dd = document.createElement('div');
+  dd.className = 'mfp-dd' + (grid ? ' mfp-dd-grid' : '');
+  dd.innerHTML = `<div id="mfpDdItems">
+    ${items.map((it, i) => `<div class="mfp-dd-item ${isSelected(it) ? 'selected' : ''}" data-idx="${i}">
+        <span>${it.icon ? it.icon + ' ' : ''}${esc(it.label)}${it.count != null ? ` <span style="opacity:.55">${it.count}</span>` : ''}</span>
+        <span class="mfp-dd-check">✓</span>
+      </div>`).join('')}
+  </div>`;
+
   document.body.appendChild(scrim);
-  scrim.addEventListener('click', e => { if (e.target === scrim) scrim.remove(); });
-  scrim.querySelector('#mobFpCloseBtn').addEventListener('click', () => scrim.remove());
-  scrim.querySelectorAll('[data-idx]').forEach(el => {
+  document.body.appendChild(dd);
+
+  // Anchor directly under the pill button, clamped so it doesn't run off
+  // the right edge of the screen.
+  const rect = anchor.getBoundingClientRect();
+  const ddWidth = grid ? 280 : 190;
+  const left = Math.min(rect.left, window.innerWidth - ddWidth - 12);
+  dd.style.top = (rect.bottom + 6) + 'px';
+  dd.style.left = Math.max(8, left) + 'px';
+
+  scrim.addEventListener('click', () => { scrim.remove(); dd.remove(); });
+  dd.querySelectorAll('[data-idx]').forEach(el => {
     el.addEventListener('click', () => {
       const item = items[+el.dataset.idx];
       onSelect(item);
       updateMobFilterPillLabels();
       renderMobLibrary();
       if (multi) el.classList.toggle('selected', isSelected(item));
-      else scrim.remove();
+      else { scrim.remove(); dd.remove(); }
     });
   });
 }
 
-document.getElementById('mfpCat').addEventListener('click', () => {
+document.getElementById('mfpCat').addEventListener('click', (e) => {
   const srcForCats = getMobLibSourceBooks();
   const cats = {};
   srcForCats.forEach(b => { const c = b.category || 'Uncategorised'; cats[c] = (cats[c] || 0) + 1; });
@@ -3930,6 +3955,7 @@ document.getElementById('mfpCat').addEventListener('click', () => {
       .map(([c, cnt]) => ({ id: c, label: c, icon: catIcon(c), count: cnt })),
   ];
   openMobFilterPicker({
+    anchor: e.currentTarget,
     title: '📚 Category',
     items,
     grid: true,
@@ -3938,11 +3964,12 @@ document.getElementById('mfpCat').addEventListener('click', () => {
   });
 });
 
-document.getElementById('mfpTags').addEventListener('click', () => {
+document.getElementById('mfpTags').addEventListener('click', (e) => {
   const allTags = getAllMobTags();
   if (!allTags.length) { showToast('No tags yet'); return; }
   const items = allTags.map(t => ({ id: t, label: t, icon: tagIcon(t) }));
   openMobFilterPicker({
+    anchor: e.currentTarget,
     title: '🏷 Tags',
     items,
     grid: true,
@@ -3952,8 +3979,9 @@ document.getElementById('mfpTags').addEventListener('click', () => {
   });
 });
 
-document.getElementById('mfpSort').addEventListener('click', () => {
+document.getElementById('mfpSort').addEventListener('click', (e) => {
   openMobFilterPicker({
+    anchor: e.currentTarget,
     title: '↕ Sort',
     items: MOB_SORT_OPTIONS,
     isSelected: it => mobLibSort === it.id,
@@ -3961,8 +3989,9 @@ document.getElementById('mfpSort').addEventListener('click', () => {
   });
 });
 
-document.getElementById('mfpSource').addEventListener('click', () => {
+document.getElementById('mfpSource').addEventListener('click', (e) => {
   openMobFilterPicker({
+    anchor: e.currentTarget,
     title: '📖 Source',
     items: MOB_SOURCE_OPTIONS,
     isSelected: it => mobLibFilter === it.id,
@@ -3994,8 +4023,8 @@ function getMobLibBooks() {
   let src = getMobLibSourceBooks();
   // Category filter
   if (mobLibCat !== 'All') src = src.filter(b => (b.category || 'Uncategorised') === mobLibCat);
-  // Tags filter (any-of match against the active tag selection)
-  if (mobActiveTags.size) src = src.filter(b => (b.tags || []).some(t => mobActiveTags.has(t)));
+  // Tags filter (book must match every selected tag — AND logic)
+  if (mobActiveTags.size) src = src.filter(b => [...mobActiveTags].every(t => (b.tags || []).includes(t)));
   // Search
   if (mobLibSearch) src = src.filter(b => matchesQ(b, mobLibSearch));
   // Sort
@@ -4683,6 +4712,8 @@ function recommendedSection(books) {
   document.getElementById('btnHomeNewList')?.addEventListener('click', () => {
     showCreateListModal(null);
   });
+
+  renderHomeLedgerTeaser();
 }
 
 window.toggleHomeShelf = function(id) {
@@ -5230,6 +5261,7 @@ document.addEventListener('visibilitychange', () => {
 
 async function readCurrentBook(){
   if(!currentId)return;
+  closeMobBookSheet(); // the reader is about to open full-screen — the bottom sheet shouldn't linger behind it
   const book=await findBookById(currentId);
   if(!book){showToast("Couldn't open that book — try again in a moment");return;}
   recordBookOpened(book);
@@ -5685,6 +5717,7 @@ function renderHomeLedgerTeaser() {
   const el = document.getElementById('mobHomeLedgerTeaser');
   if (!el) return;
   if (!ledgerState.loaded) { el.innerHTML = ''; return; }
+  _ledgerRolloverDayIfNeeded();
   const pct = Math.min(100, Math.round((ledgerToday.pagesRead / Math.max(ledgerState.dailyGoal,1)) * 100));
   el.innerHTML = `
     <div class="home-ledger-teaser" id="homeLedgerTeaserBtn">
@@ -5716,6 +5749,7 @@ async function renderLedgerTab() {
   const el = document.getElementById('ledgerContent');
   if (!el) return;
   if (!ledgerState.loaded) await loadLedgerState();
+  _ledgerRolloverDayIfNeeded();
 
   const rank = ledgerRank(ledgerState.totalPoints);
   const floor = _ledgerRankFloor(rank.title);
@@ -6849,7 +6883,7 @@ function _showHighlightPopup(doc, range) {
       if(!offsets) return;
       const id = await saveHighlight(offsets.startOffset, offsets.endOffset, color, text);
       if(id) applyHighlightsToChapter(doc);
-      if(_bmPanelTab === 'highlights') renderReaderHighlightList();
+      renderReaderBookmarkList();
     });
   });
 }
@@ -6881,14 +6915,14 @@ function openHighlightMenu(markEl, clientX, clientY) {
       await updateHighlightColor(id, color);
       markEl.style.background = HIGHLIGHT_COLORS[color];
       _removeHighlightPopup();
-      if(_bmPanelTab === 'highlights') renderReaderHighlightList();
+      renderReaderBookmarkList();
     });
   });
   popup.querySelector('[data-hldelete]').addEventListener('click', async () => {
     await deleteHighlight(id);
     markEl.replaceWith(...markEl.childNodes);
     _removeHighlightPopup();
-    if(_bmPanelTab === 'highlights') renderReaderHighlightList();
+    renderReaderBookmarkList();
   });
 }
 
@@ -7888,60 +7922,110 @@ async function removeReaderBookmarkAt(bookId, chapterIdx, pageIdx) {
   } catch(e) { console.warn('removeReaderBookmarkAt:', e); }
 }
 
-  function renderReaderBookmarkList() {
+function renderReaderBookmarkList() {
   const container = document.getElementById('readerBookmarkListItems');
   if(!container || !readerBookId) return;
 
-  const bookmarks = getReaderBookmarksForBook(readerBookId);
+  const bookmarks = getReaderBookmarksForBook(readerBookId)
+    .map((bm, i) => ({ kind: 'bookmark', ...bm, _i: i }));
+  const highlights = [..._currentBookHighlights]
+    .map((h, i) => ({ kind: 'highlight', ...h, _i: i, startOffset: h.startOffset ?? 0 }));
 
-  if(!bookmarks.length) {
+  const items = [...bookmarks, ...highlights]
+    .sort((a, b) => (a.chapterIdx - b.chapterIdx) || ((a.pageIdx ?? 0) - (b.pageIdx ?? 0)) || ((a.startOffset ?? 0) - (b.startOffset ?? 0)));
+
+  if(!items.length) {
     container.innerHTML = `<div style="padding:1.2rem;font-size:.82rem;
       color:var(--muted);line-height:1.6;text-align:center;">
-      No bookmarks yet — tap the ribbon in the top corner of any page to place one.
+      No bookmarks or highlights yet — tap the ribbon in the top corner of any
+      page to place a bookmark, or tap ✎ to select text and highlight it.
     </div>`;
     return;
   }
 
-  container.innerHTML = bookmarks.map((bm, i) => {
-    const isCurrent = bm.chapterIdx === readerChapter && bm.pageIdx === readerPage;
-    const placedAt = bm.createdAt?.toDate?.();
-    const dateStr = placedAt ? placedAt.toLocaleDateString() : '';
-    return `<div class="chapter-item ${isCurrent ? 'active' : ''}"
-      data-bmidx="${i}" style="display:flex;align-items:center;
-      justify-content:space-between;gap:.5rem;">
-      <div style="min-width:0;flex:1;">
-        <div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
-          ${esc(bm.chapterLabel || ('Chapter ' + (bm.chapterIdx+1)))}
+  container.innerHTML = items.map(it => {
+    if(it.kind === 'bookmark') {
+      const isCurrent = it.chapterIdx === readerChapter && it.pageIdx === readerPage;
+      const placedAt = it.createdAt?.toDate?.();
+      const dateStr = placedAt ? placedAt.toLocaleDateString() : '';
+      return `<div class="chapter-item ${isCurrent ? 'active' : ''}"
+        data-kind="bookmark" data-idx="${it._i}" style="display:flex;align-items:center;
+        justify-content:space-between;gap:.5rem;">
+        <div style="min-width:0;flex:1;display:flex;align-items:center;gap:.5rem;">
+          <span style="flex-shrink:0;opacity:.7;">🔖</span>
+          <div style="min-width:0;flex:1;">
+            <div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+              ${esc(it.chapterLabel || ('Chapter ' + (it.chapterIdx+1)))}
+            </div>
+            <div style="font-size:.65rem;opacity:.55;margin-top:2px;">
+              Page ${it.pageIdx + 1}${dateStr ? ' · ' + dateStr : ''}
+            </div>
+          </div>
         </div>
-        <div style="font-size:.65rem;opacity:.55;margin-top:2px;">
-          Page ${bm.pageIdx + 1}${dateStr ? ' · ' + dateStr : ''}
+        <button data-remove="bookmark:${it._i}" title="Remove bookmark"
+          style="background:none;border:none;cursor:pointer;font-size:.85rem;
+                 color:inherit;opacity:.45;padding:.2rem .3rem;flex-shrink:0;">✕</button>
+      </div>`;
+    }
+    const createdAt = it.createdAt?.toDate?.();
+    const dateStr = createdAt ? createdAt.toLocaleDateString() : '';
+    const dot = HIGHLIGHT_COLORS[it.color] || HIGHLIGHT_COLORS.yellow;
+    const excerpt = esc((it.text || '').trim()).slice(0, 140);
+    return `<div class="highlight-item" data-kind="highlight" data-idx="${it._i}" style="display:flex;align-items:flex-start;gap:.6rem;">
+      <span style="flex-shrink:0;width:10px;height:10px;border-radius:50%;margin-top:.3rem;background:${dot.replace(',.45)', ',1)')};"></span>
+      <div style="min-width:0;flex:1;">
+        <div style="line-height:1.4;">${excerpt || '<em style="opacity:.6">(no preview)</em>'}</div>
+        <div style="font-size:.65rem;opacity:.55;margin-top:3px;">
+          ${esc(it.chapterLabel || ('Chapter ' + (it.chapterIdx+1)))}${dateStr ? ' · ' + dateStr : ''}
         </div>
       </div>
-      <button data-bmremove="${i}" title="Remove bookmark"
+      <button data-remove="highlight:${it._i}" title="Remove highlight"
         style="background:none;border:none;cursor:pointer;font-size:.85rem;
                color:inherit;opacity:.45;padding:.2rem .3rem;flex-shrink:0;">✕</button>
     </div>`;
   }).join('');
 
-  // Tap row → jump to that bookmark
-  container.querySelectorAll('.chapter-item[data-bmidx]').forEach(el => {
+  // Tap a row → jump to that bookmark/highlight's location
+  container.querySelectorAll('[data-kind]').forEach(el => {
     el.addEventListener('click', e => {
-      if(e.target.closest('[data-bmremove]')) return; // handled separately
-      const bm = bookmarks[parseInt(el.dataset.bmidx)];
+      if(e.target.closest('[data-remove]')) return; // handled separately
+      const idx = parseInt(el.dataset.idx);
       document.getElementById('readerBookmarkListPanel').classList.remove('open');
-      readerGoToChapter(bm.chapterIdx, bm.pageIdx);
+      if(el.dataset.kind === 'bookmark') {
+        const bm = bookmarks[idx];
+        readerGoToChapter(bm.chapterIdx, bm.pageIdx);
+      } else {
+        const h = highlights[idx];
+        readerGoToChapter(h.chapterIdx, 0); // offsets aren't page-indexed yet
+      }
     });
   });
 
-  // Tap ✕ → remove that specific bookmark
-  container.querySelectorAll('[data-bmremove]').forEach(btn => {
+  // Tap ✕ → remove that specific bookmark or highlight
+  container.querySelectorAll('[data-remove]').forEach(btn => {
     btn.addEventListener('click', async e => {
       e.stopPropagation();
-      const bm = bookmarks[parseInt(btn.dataset.bmremove)];
-      await removeReaderBookmarkAt(readerBookId, bm.chapterIdx, bm.pageIdx);
-      renderReaderBookmarkList();
-      renderReaderBookmarkTab();
-      renderAll();
+      const [kind, idxStr] = btn.dataset.remove.split(':');
+      const idx = parseInt(idxStr);
+      if(kind === 'bookmark') {
+        const bm = bookmarks[idx];
+        await removeReaderBookmarkAt(readerBookId, bm.chapterIdx, bm.pageIdx);
+        renderReaderBookmarkList();
+        renderReaderBookmarkTab();
+        renderAll();
+      } else {
+        const h = highlights[idx];
+        await deleteHighlight(h.id);
+        renderReaderBookmarkList();
+        if(h.chapterIdx === readerChapter) {
+          const doc = _readerIframe?.contentDocument;
+          if(doc) {
+            doc.querySelectorAll(`mark[data-highlightid="${h.id}"]`).forEach(mark => {
+              mark.replaceWith(...mark.childNodes);
+            });
+          }
+        }
+      }
     });
   });
 }
@@ -7953,92 +8037,8 @@ document.getElementById('btnToggleBookmarkList').addEventListener('click', () =>
   const willOpen = !panel.classList.contains('open');
   panel.classList.toggle('open');
   positionReaderToolbar();
-  if(willOpen) _renderActiveBmPanelTab();
+  if(willOpen) renderReaderBookmarkList();
 });
-
-// ── Bookmarks / Highlights tab switcher (same side panel, two lists) ────────
-let _bmPanelTab = 'bookmarks'; // 'bookmarks' | 'highlights'
-
-function _renderActiveBmPanelTab() {
-  if(_bmPanelTab === 'highlights') renderReaderHighlightList();
-  else renderReaderBookmarkList();
-}
-
-function _setBmPanelTab(tab) {
-  _bmPanelTab = tab;
-  document.getElementById('bmPanelTabBookmarks').classList.toggle('active', tab === 'bookmarks');
-  document.getElementById('bmPanelTabHighlights').classList.toggle('active', tab === 'highlights');
-  document.getElementById('readerBookmarkListItems').style.display = tab === 'bookmarks' ? '' : 'none';
-  document.getElementById('readerHighlightListItems').style.display = tab === 'highlights' ? '' : 'none';
-  _renderActiveBmPanelTab();
-}
-
-document.getElementById('bmPanelTabBookmarks').addEventListener('click', () => _setBmPanelTab('bookmarks'));
-document.getElementById('bmPanelTabHighlights').addEventListener('click', () => _setBmPanelTab('highlights'));
-
-function renderReaderHighlightList() {
-  const container = document.getElementById('readerHighlightListItems');
-  if(!container || !readerBookId) return;
-
-  const items = [..._currentBookHighlights]
-    .sort((a, b) => (a.chapterIdx - b.chapterIdx) || (a.startOffset - b.startOffset));
-
-  if(!items.length) {
-    container.innerHTML = `<div style="padding:1.2rem;font-size:.82rem;
-      color:var(--muted);line-height:1.6;text-align:center;">
-      No highlights yet — tap ✎ to select text and choose a color.
-    </div>`;
-    return;
-  }
-
-  container.innerHTML = items.map((h, i) => {
-    const createdAt = h.createdAt?.toDate?.();
-    const dateStr = createdAt ? createdAt.toLocaleDateString() : '';
-    const dot = HIGHLIGHT_COLORS[h.color] || HIGHLIGHT_COLORS.yellow;
-    const excerpt = esc((h.text || '').trim()).slice(0, 140);
-    return `<div class="highlight-item" data-hidx="${i}" style="display:flex;align-items:flex-start;gap:.6rem;">
-      <span style="flex-shrink:0;width:10px;height:10px;border-radius:50%;margin-top:.3rem;background:${dot.replace(',.45)', ',1)')};"></span>
-      <div style="min-width:0;flex:1;">
-        <div style="line-height:1.4;">${excerpt || '<em style="opacity:.6">(no preview)</em>'}</div>
-        <div style="font-size:.65rem;opacity:.55;margin-top:3px;">
-          ${esc(h.chapterLabel || ('Chapter ' + (h.chapterIdx+1)))}${dateStr ? ' · ' + dateStr : ''}
-        </div>
-      </div>
-      <button data-hremove="${i}" title="Remove highlight"
-        style="background:none;border:none;cursor:pointer;font-size:.85rem;
-               color:inherit;opacity:.45;padding:.2rem .3rem;flex-shrink:0;">✕</button>
-    </div>`;
-  }).join('');
-
-  // Tap row → jump to that highlight's chapter (start of chapter — offsets
-  // aren't page-indexed today, so this can't land on the exact page yet).
-  container.querySelectorAll('.highlight-item[data-hidx]').forEach(el => {
-    el.addEventListener('click', e => {
-      if(e.target.closest('[data-hremove]')) return;
-      const h = items[parseInt(el.dataset.hidx)];
-      document.getElementById('readerBookmarkListPanel').classList.remove('open');
-      readerGoToChapter(h.chapterIdx, 0);
-    });
-  });
-
-  // Tap ✕ → delete that highlight
-  container.querySelectorAll('[data-hremove]').forEach(btn => {
-    btn.addEventListener('click', async e => {
-      e.stopPropagation();
-      const h = items[parseInt(btn.dataset.hremove)];
-      await deleteHighlight(h.id);
-      renderReaderHighlightList();
-      if(h.chapterIdx === readerChapter) {
-        const doc = _readerIframe?.contentDocument;
-        if(doc) {
-          doc.querySelectorAll(`mark[data-highlightid="${h.id}"]`).forEach(mark => {
-            mark.replaceWith(...mark.childNodes);
-          });
-        }
-      }
-    });
-  });
-}
 
   function updateBookmarkNavIcon() {
   const btn = document.getElementById('btnToggleBookmarkList');
