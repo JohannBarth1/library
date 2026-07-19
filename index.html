@@ -1639,13 +1639,13 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
           <span id="mfpTagsLabel">Tags</span>
           <span class="mfp-caret">▾</span>
         </button>
-        <button class="mfp mfp-source" id="mfpSource" aria-label="Filter by source">
-          <span id="mfpSourceLabel">All</span>
-          <span class="mfp-caret">▾</span>
-        </button>
         <div class="mfp-divider" aria-hidden="true"></div>
         <button class="mfp mfp-sort" id="mfpSort" aria-label="Sort">
           <span id="mfpSortLabel">Recent</span>
+          <span class="mfp-caret">▾</span>
+        </button>
+        <button class="mfp mfp-source" id="mfpSource" aria-label="Filter by source">
+          <span id="mfpSourceLabel">All</span>
           <span class="mfp-caret">▾</span>
         </button>
       </div>
@@ -2448,10 +2448,25 @@ function doSignOut(){if(!confirm('Sign out?'))return;signOut(auth);}
 
 function updateUserUI(user){
   const initials=(user.displayName||user.email||'?').split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
-  document.getElementById('userAvatarInitials').textContent=initials;
+  const initialsEl = document.getElementById('userAvatarInitials');
+  const img = document.getElementById('userAvatarImg');
+  initialsEl.textContent=initials;
   document.getElementById('userNameDisplay').textContent=(user.displayName||'').split(' ')[0];
   document.getElementById('userDropdownEmail').textContent=user.email;
-  if(user.photoURL){const img=document.getElementById('userAvatarImg');img.src=user.photoURL;img.style.display='block';document.getElementById('userAvatarInitials').style.display='none';}
+
+  // Always show initials until the photo has actually finished loading, and
+  // fall back to initials again if it errors out — previously the swap
+  // happened the instant .src was set, so a failed/slow load just left a
+  // broken image with the initials fallback hidden underneath it.
+  initialsEl.style.display = '';
+  img.style.display = 'none';
+  if(user.photoURL){
+    img.onload  = () => { img.style.display = 'block'; initialsEl.style.display = 'none'; };
+    img.onerror = () => { img.style.display = 'none';  initialsEl.style.display = ''; };
+    img.src = user.photoURL;
+  } else {
+    img.removeAttribute('src');
+  }
 }
 document.getElementById('headerUser').addEventListener('click',e=>{e.stopPropagation();document.getElementById('userDropdown').classList.toggle('open');});
 document.addEventListener('click',(e)=>{
@@ -3925,12 +3940,17 @@ function openMobFilterPicker({ anchor, title, items, isSelected, onSelect, multi
   document.body.appendChild(dd);
 
   // Anchor directly under the pill button, clamped so it doesn't run off
-  // the right edge of the screen.
+  // the right edge of the screen, or underneath the bottom nav bar.
   const rect = anchor.getBoundingClientRect();
   const ddWidth = grid ? 280 : 190;
   const left = Math.min(rect.left, window.innerWidth - ddWidth - 12);
-  dd.style.top = (rect.bottom + 6) + 'px';
+  const navEl = document.querySelector('.mob-nav');
+  const navTop = (navEl && getComputedStyle(navEl).display !== 'none')
+    ? navEl.getBoundingClientRect().top : window.innerHeight;
+  const top = rect.bottom + 6;
+  dd.style.top = top + 'px';
   dd.style.left = Math.max(8, left) + 'px';
+  dd.style.maxHeight = Math.max(120, navTop - top - 10) + 'px';
 
   scrim.addEventListener('click', () => { scrim.remove(); dd.remove(); });
   dd.querySelectorAll('[data-idx]').forEach(el => {
