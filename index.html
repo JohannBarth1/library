@@ -1362,19 +1362,23 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .ledger-goal-sub{font-size:.76rem;color:var(--muted);}
 .ledger-goal-edit{margin-top:.7rem;font-size:.7rem;font-weight:700;color:var(--teal);background:none;border:none;cursor:pointer;padding:0;-webkit-tap-highlight-color:transparent;}
 
-/* Points / rank — gold surface (was dark navy) so it reads as the
-   "trophy" surface of the tab; text swaps to dark navy for contrast. */
+/* Points / rank — deep navy "royal" surface with a gold bookplate trim.
+   Navy carries the elegance, gold stays as an accent (border, icon glow,
+   the points figure, the label) rather than filling the whole block. */
 .ledger-status-hero{display:flex;align-items:center;gap:.9rem;
-  background:linear-gradient(135deg,var(--gold),var(--gold2));
-  border:1px solid rgba(15,26,46,.18);border-radius:14px;
-  padding:1rem 1.1rem;margin-bottom:.9rem;box-shadow:0 4px 14px rgba(200,149,42,.25);}
+  background:linear-gradient(135deg,var(--navy),var(--navy2));
+  border:1px solid rgba(200,149,42,.4);border-radius:14px;position:relative;
+  padding:1rem 1.1rem;margin-bottom:.9rem;box-shadow:0 4px 14px rgba(15,26,46,.35);}
+.ledger-status-hero::before{
+  content:'';position:absolute;inset:4px;border:1px solid rgba(200,149,42,.28);
+  border-radius:10px;pointer-events:none;}
 .ledger-status-icon{font-size:2.3rem;line-height:1;flex-shrink:0;
-  filter:drop-shadow(0 1px 2px rgba(15,26,46,.25));}
-.ledger-status-label{font-size:.62rem;letter-spacing:.16em;text-transform:uppercase;font-weight:700;color:var(--navy2);}
-.ledger-status-title{font-family:'Playfair Display',serif;font-size:1.4rem;color:var(--navy);margin-top:.1rem;}
-.ledger-status-next{font-size:.72rem;color:rgba(15,26,46,.68);margin-top:.2rem;}
+  filter:drop-shadow(0 0 6px rgba(200,149,42,.45));}
+.ledger-status-label{font-size:.62rem;letter-spacing:.16em;text-transform:uppercase;font-weight:700;color:var(--gold2);}
+.ledger-status-title{font-family:'Playfair Display',serif;font-size:1.4rem;color:var(--cream);margin-top:.1rem;}
+.ledger-status-next{font-size:.72rem;color:rgba(250,247,242,.65);margin-top:.2rem;}
 .ledger-points-num{font-family:'Playfair Display',serif;font-size:1.7rem;color:var(--gold2);}
-.ledger-rank-title{font-size:.85rem;font-weight:700;color:var(--navy2);margin-top:.15rem;}
+.ledger-rank-title{font-size:.85rem;font-weight:700;color:var(--cream);margin-top:.15rem;}
 .ledger-card-note{font-size:.74rem;color:var(--muted);line-height:1.5;margin-bottom:.7rem;}
 .ledger-badge{cursor:pointer;-webkit-tap-highlight-color:transparent;background:none;border:none;font-family:'Lato',sans-serif;padding:.3rem;border-radius:10px;transition:background .15s;}
 .ledger-badge:active{background:var(--panel);}
