@@ -1442,8 +1442,8 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
   margin:-7px 0 0 -4px;background:var(--c,var(--gold));border-radius:1px;
   opacity:0;animation:ledgerConfettiFall var(--dur,2.2s) var(--delay,0s) ease-out forwards;}
 @keyframes ledgerConfettiFall{
-  0%   {opacity:1; transform:translate(0,0) rotate(0deg);}
-  35%  {opacity:1; transform:translate(var(--mx,0px),var(--my,-60px)) rotate(calc(var(--rot,540deg) * .35));}
+  0%   {opacity:1; transform:translate(0,0) rotate(0deg); animation-timing-function:ease-out;}
+  35%  {opacity:1; transform:translate(var(--mx,0px),var(--my,-60px)) rotate(calc(var(--rot,540deg) * .35)); animation-timing-function:ease-in;}
   100% {opacity:0; transform:translate(var(--dx,0px),var(--dy,260px)) rotate(var(--rot,540deg));}
 }
 .ledger-rank-bar{height:6px;border-radius:3px;background:var(--panel);margin-top:.6rem;overflow:hidden;}
