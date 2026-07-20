@@ -6365,30 +6365,33 @@ function positionReaderToolbar() {
 
 function _getReaderDimensions() {
   const overlay   = document.getElementById('readerOverlay');
-  const infoBar   = document.getElementById('readerInfoBar');
+  const content   = document.getElementById('readerContent');
 
   positionReaderToolbar();
 
-  // PATCH: the toolbar and settings bar are now floating overlays (position:
-  // absolute) that sit on top of the text instead of taking up flex space,
-  // so their open/closed state must NOT affect the content height. Only the
-  // always-visible info bar (progress line included, since it's absolutely
-  // positioned inside it) is ever subtracted here — this is what makes
-  // toggling those overlays reflow-free.
-  const infoBarH  = infoBar?.offsetHeight || 0;
+  // PATCH: reader-content is a flex:1 item that already occupies exactly
+  // the space between the top of the overlay and the info bar (the
+  // toolbar/settings bar are floating overlays that don't take up flex
+  // space). Its own clientHeight IS therefore the true, authoritative
+  // reading-pane height — reading it directly, instead of re-deriving an
+  // approximate figure from visualViewport height, keeps the column-height
+  // math in sync with the real layout. Combined with sizing the iframe
+  // itself to 100%/100% of this container (see renderChapterPaged /
+  // recalcReaderHeight), this is what makes the visible reading pane reach
+  // all the way down to the progress bar instead of leaving a gap where
+  // the overlay's background (a slightly different shade) shows through.
+  let h = content.clientHeight;
+  const w = overlay.clientWidth;
 
-  const clientH = overlay.clientHeight;
-  const visualH = window.visualViewport?.height ?? clientH;
-
+  // Reserve the safe-area inset (home-indicator strip) at the bottom,
+  // since reader-content's own box doesn't pad for it.
   let safeBottom = 0;
   try {
     const sab = getComputedStyle(document.documentElement)
       .getPropertyValue('--sab').trim();
     safeBottom = sab ? parseInt(sab) || 0 : 0;
   } catch(e) { safeBottom = 0; }
-
-  let h = visualH - infoBarH - safeBottom - 4;
-  const w = overlay.clientWidth;
+  h -= safeBottom;
 
   // PATCH: snap the column height down to a whole number of text lines.
   // CSS multi-column layout can only break between lines, so if the column
@@ -7655,7 +7658,7 @@ async function renderChapterPaged(bodyHtml) {
   iframe.setAttribute('sandbox', 'allow-same-origin');
   iframe.style.cssText = `
     position: absolute; inset: 0;
-    width: ${w}px; height: ${h}px;
+    width: 100%; height: 100%;
     border: none; background: ${t.bg};
     display: block;
   `;
@@ -8111,8 +8114,8 @@ function recalcReaderHeight() {
 
   doc.body.style.height      = h + 'px';
   doc.body.style.columnWidth = w + 'px';
-  _readerIframe.style.width  = w + 'px';
-  _readerIframe.style.height = h + 'px';
+  _readerIframe.style.width  = '100%';
+  _readerIframe.style.height = '100%';
 
   requestAnimationFrame(() => {
     setTimeout(() => {
