@@ -5687,9 +5687,13 @@ function _ledgerFlushAchievementsNow() {
   if (!currentUser || !_ledgerPendingAchievements.size) return;
   const achievementsToFlush = Array.from(_ledgerPendingAchievements);
   achievementsToFlush.forEach(id => _ledgerPendingAchievements.delete(id));
-  const userFields = {};
-  achievementsToFlush.forEach(id => { userFields[`ledgerAchievements.${id}`] = serverTimestamp(); });
-  setDoc(doc(db, 'users', currentUser.uid), userFields, { merge: true })
+  // NOTE: setDoc(merge:true) does NOT parse dotted string keys as nested paths
+  // (that's only updateDoc's behavior) — build a real nested object so this
+  // actually lands inside the ledgerAchievements map instead of creating a
+  // literal top-level field named "ledgerAchievements.<id>".
+  const achievementFields = {};
+  achievementsToFlush.forEach(id => { achievementFields[id] = serverTimestamp(); });
+  setDoc(doc(db, 'users', currentUser.uid), { ledgerAchievements: achievementFields }, { merge: true })
     .catch(e => {
       console.warn('ledger achievement flush:', e);
       // Put the ids back so the next unlock, or beforeunload, retries them.
