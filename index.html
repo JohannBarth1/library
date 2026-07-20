@@ -2350,6 +2350,7 @@ let ledgerToday = { dateStr: null, pagesRead: 0, pointsEarned: 0, goalMet: false
 let _ledgerFlushedPages = 0;   // pages already written to Firestore today (for delta increments)
 let _ledgerFlushedPoints = 0;  // points already written to Firestore today
 let _ledgerFlushTimer = null;
+let _ledgerPendingAchievements = new Set(); // achievement ids unlocked locally but not yet confirmed persisted
 let _ledgerSessionPages = 0;   // pages read this reading session, for the Marathon achievement
 let _ledgerHighWater = {};     // { bookId: chapterIdx*100000+pageIdx } — highest page reached per book this session
 
@@ -5667,12 +5668,8 @@ function _ledgerUnlockAchievement(id, bookId = readerBookId) {
   ledgerState.achievements[id] = new Date().toISOString();
   const def = LEDGER_ACHIEVEMENTS.find(a => a.id === id);
   if (def) showToast(`${def.icon} Achievement unlocked: ${def.label}`);
-  if (currentUser) {
-    setDoc(doc(db, 'users', currentUser.uid),
-      { [`ledgerAchievements.${id}`]: serverTimestamp() },
-      { merge: true }
-    ).catch(e => console.warn('ledger achievement persist:', e));
-  }
+  _ledgerPendingAchievements.add(id);
+  _ledgerScheduleFlush();
   _ledgerAwardBookmarkForAchievement(id, bookId);
 }
 
@@ -5740,21 +5737,33 @@ function _ledgerFlushNow() {
   if (!currentUser || !ledgerToday.dateStr) return;
   const pageDelta = ledgerToday.pagesRead - _ledgerFlushedPages;
   const pointDelta = ledgerToday.pointsEarned - _ledgerFlushedPoints;
-  if (pageDelta <= 0 && pointDelta <= 0) return;
+  const achievementsToFlush = Array.from(_ledgerPendingAchievements);
+  if (pageDelta <= 0 && pointDelta <= 0 && !achievementsToFlush.length) return;
   _ledgerFlushedPages = ledgerToday.pagesRead;
   _ledgerFlushedPoints = ledgerToday.pointsEarned;
+  if (achievementsToFlush.length) achievementsToFlush.forEach(id => _ledgerPendingAchievements.delete(id));
 
-  setDoc(doc(db, 'users', currentUser.uid, 'ledgerDays', ledgerToday.dateStr), {
-    dateStr: ledgerToday.dateStr,
-    pagesRead: increment(pageDelta),
-    pointsEarned: increment(pointDelta),
-    goalMet: ledgerToday.goalMet,
-    updatedAt: serverTimestamp(),
-  }, { merge: true }).catch(e => console.warn('ledger day flush:', e));
+  if (pageDelta > 0 || pointDelta > 0) {
+    setDoc(doc(db, 'users', currentUser.uid, 'ledgerDays', ledgerToday.dateStr), {
+      dateStr: ledgerToday.dateStr,
+      pagesRead: increment(pageDelta),
+      pointsEarned: increment(pointDelta),
+      goalMet: ledgerToday.goalMet,
+      updatedAt: serverTimestamp(),
+    }, { merge: true }).catch(e => console.warn('ledger day flush:', e));
+  }
 
-  if (pointDelta > 0) {
-    setDoc(doc(db, 'users', currentUser.uid), { totalPoints: increment(pointDelta) }, { merge: true })
-      .catch(e => console.warn('ledger points flush:', e));
+  if (pointDelta > 0 || achievementsToFlush.length) {
+    const userFields = {};
+    if (pointDelta > 0) userFields.totalPoints = increment(pointDelta);
+    achievementsToFlush.forEach(id => { userFields[`ledgerAchievements.${id}`] = serverTimestamp(); });
+    setDoc(doc(db, 'users', currentUser.uid), userFields, { merge: true })
+      .catch(e => {
+        console.warn('ledger points/achievement flush:', e);
+        // Put the achievement ids back so the next flush (or beforeunload) retries them
+        // rather than losing the unlock silently.
+        achievementsToFlush.forEach(id => _ledgerPendingAchievements.add(id));
+      });
   }
 }
 window.addEventListener('beforeunload', () => { _ledgerFlushNow(); });
