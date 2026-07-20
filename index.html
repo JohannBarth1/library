@@ -5987,20 +5987,26 @@ function _ledgerAdvanceAchievementQueue() {
 }
 
 function _ledgerSpawnConfetti(scrim, count) {
+  const vh = window.innerHeight || 800;
+  const vw = window.innerWidth  || 400;
   for (let i = 0; i < count; i++) {
-    // Each piece launches outward at a random angle first (so some fly up
-    // and to the sides, visible above the tile too), then gravity carries
-    // it further down to its final resting point.
-    const angle = Math.random() * Math.PI * 2;
-    const midR  = 60 + Math.random() * 90;
-    const mx    = Math.round(Math.cos(angle) * midR);
-    const my    = Math.round(Math.sin(angle) * midR);
-    const dx    = Math.round(mx + (Math.random() - .5) * 90);
-    const dy    = Math.round(my + 150 + Math.random() * 190);
-    const rot   = Math.round(360 + Math.random() * 540) * (Math.random() < .5 ? -1 : 1);
-    const dur   = (1.8 + Math.random() * 1.2).toFixed(2);
-    const delay = (Math.random() * .25).toFixed(2);
-    const color = LEDGER_CONFETTI_COLORS[i % LEDGER_CONFETTI_COLORS.length];
+    // Each piece launches outward at a random angle first, then gravity
+    // carries it further down to its final resting point. The mid-flight
+    // radius is scaled to the viewport (not a fixed pixel count) — a fixed
+    // ~100px radius only just clears the tile's rim, but scaling to vh
+    // means the upward-angled pieces genuinely reach toward the top of the
+    // screen regardless of device size.
+    const angle  = Math.random() * Math.PI * 2;
+    const burstY = vh * (0.42 + Math.random() * 0.3);
+    const burstX = vw * (0.22 + Math.random() * 0.18);
+    const mx     = Math.round(Math.cos(angle) * burstX);
+    const my     = Math.round(Math.sin(angle) * burstY);
+    const dx     = Math.round(mx + (Math.random() - .5) * 90);
+    const dy     = Math.round(my + 150 + Math.random() * 190);
+    const rot    = Math.round(360 + Math.random() * 540) * (Math.random() < .5 ? -1 : 1);
+    const dur    = (2.1 + Math.random() * 1.4).toFixed(2);
+    const delay  = (Math.random() * .25).toFixed(2);
+    const color  = LEDGER_CONFETTI_COLORS[i % LEDGER_CONFETTI_COLORS.length];
     const span = document.createElement('span');
     span.className = 'ledger-confetti';
     span.style.setProperty('--mx', mx + 'px');
