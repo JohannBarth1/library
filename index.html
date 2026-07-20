@@ -1431,10 +1431,15 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
    deliberately not reusing .mob-picker-scrim, so it doesn't read as "the
    same kind of dropdown" as ordinary editing pickers. */
 .ledger-popover-scrim{position:fixed;inset:0;z-index:700;background:rgba(15,25,35,.55);
-  display:flex;align-items:flex-end;justify-content:center;animation:fpIn .15s ease;}
-.ledger-popover-card{width:100%;max-width:440px;background:var(--warm-white);
-  border-radius:20px 20px 0 0;padding:1.3rem 1.3rem calc(1.3rem + var(--sab));
-  position:relative;max-height:80vh;overflow-y:auto;}
+  display:flex;align-items:center;justify-content:center;padding:1.2rem;box-sizing:border-box;
+  animation:ledgerScrimIn .18s ease;}
+.ledger-popover-card{width:100%;max-width:400px;background:var(--warm-white);
+  border-radius:20px;padding:1.3rem 1.3rem 1.4rem;
+  position:relative;max-height:80vh;overflow-y:auto;
+  box-shadow:0 20px 60px rgba(15,25,35,.35);
+  animation:ledgerModalIn .22s cubic-bezier(.2,.9,.3,1.1);}
+@keyframes ledgerScrimIn{from{opacity:0}to{opacity:1}}
+@keyframes ledgerModalIn{from{opacity:0;transform:scale(.92) translateY(6px)}to{opacity:1;transform:scale(1) translateY(0)}}
 .ledger-popover-close{position:absolute;top:.8rem;right:.9rem;background:none;border:none;
   font-size:1.1rem;color:var(--muted);cursor:pointer;line-height:1;}
 .ledger-popover-title{font-family:'Playfair Display',serif;font-size:1.05rem;color:var(--navy2);margin-bottom:.9rem;}
@@ -5973,9 +5978,9 @@ async function _ledgerRenderCalendar() {
 }
 
 // ── Popovers: daily-goal editor + the reader HUD's tap-to-expand summary ──
-// Both are their own bespoke bottom sheet (not the .mob-picker-scrim used
-// for editing a book's own category/tags) so they read as "the game layer"
-// rather than another instance of the everyday editing picker.
+// Both are their own bespoke centered modal card (not the .mob-picker-scrim
+// used for editing a book's own category/tags) so they read as "the game
+// layer" rather than another instance of the everyday editing picker.
 function showLedgerGoalPicker() {
   document.getElementById('ledgerPopover')?.remove();
   const presets = [{ label: 'Casual', value: 10 }, { label: 'Steady', value: 20 }, { label: 'Ambitious', value: 40 }];
