@@ -1395,15 +1395,13 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 /* Achievement-unlock celebration — bigger cousin of the goal burst above,
    with a confetti burst behind it. Bursts are queued (see
    _ledgerAchievementQueue in JS) so two unlocks in the same beat don't
-   visually collide; only one plays on screen at a time. */
-/* Achievement-unlock celebration — bigger cousin of the goal burst above,
-   with a confetti burst behind it. Bursts are queued (see
-   _ledgerAchievementQueue in JS) so two unlocks in the same beat don't
    visually collide; only one plays on screen at a time. Unlike the goal
    burst, this tile does NOT auto-dismiss — it stays up until the reader
    taps outside it (see _ledgerDismissAchievementBurst), so there's no
    close button. Tapping the tile itself throws more confetti instead of
-   dismissing. */
+   dismissing. Confetti launches outward in every direction (including
+   above the tile) before gravity pulls it down, rather than only falling
+   from the top, so it reads regardless of where the tile sits on screen. */
 .ledger-achievement-scrim{position:fixed;inset:0;z-index:600;cursor:pointer;
   display:flex;align-items:center;justify-content:center;overflow:hidden;}
 .ledger-achievement-burst{position:relative;z-index:1;cursor:pointer;background:var(--navy2);color:#fff;
@@ -1416,7 +1414,12 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
   border:1px solid rgba(232,184,75,.4);border-radius:15px;pointer-events:none;}
 .ledger-achievement-burst-kicker{font-family:'Lato',sans-serif;font-size:.62rem;
   font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--gold2);}
-.ledger-achievement-burst-icon{font-size:2.8rem;margin:.5rem 0 .3rem;line-height:1;}
+.ledger-achievement-burst-icon-wrap{width:92px;height:92px;margin:.6rem auto .4rem;
+  border-radius:50%;display:flex;align-items:center;justify-content:center;
+  background:radial-gradient(circle at 35% 30%, rgba(232,184,75,.4), rgba(232,184,75,.06) 72%);
+  box-shadow:0 0 0 2px rgba(232,184,75,.55), 0 6px 22px rgba(232,184,75,.3);}
+.ledger-achievement-burst-icon{font-size:3.6rem;line-height:1;
+  filter:drop-shadow(0 3px 6px rgba(0,0,0,.4));}
 .ledger-achievement-burst-label{font-family:'Playfair Display',serif;font-size:1.25rem;color:#fff;}
 .ledger-achievement-burst-desc{font-family:'Lato',sans-serif;font-size:.74rem;
   color:var(--light-blue);margin-top:.3rem;line-height:1.4;}
@@ -1432,7 +1435,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
   opacity:0;animation:ledgerConfettiFall var(--dur,2.2s) var(--delay,0s) ease-out forwards;}
 @keyframes ledgerConfettiFall{
   0%   {opacity:1; transform:translate(0,0) rotate(0deg);}
-  85%  {opacity:1;}
+  35%  {opacity:1; transform:translate(var(--mx,0px),var(--my,-60px)) rotate(calc(var(--rot,540deg) * .35));}
   100% {opacity:0; transform:translate(var(--dx,0px),var(--dy,260px)) rotate(var(--rot,540deg));}
 }
 .ledger-rank-bar{height:6px;border-radius:3px;background:var(--panel);margin-top:.6rem;overflow:hidden;}
@@ -5962,7 +5965,7 @@ function _ledgerAdvanceAchievementQueue() {
   scrim.className = 'ledger-achievement-scrim';
   scrim.innerHTML = `<div class="ledger-achievement-burst">
       <div class="ledger-achievement-burst-kicker">Achievement Unlocked</div>
-      <div class="ledger-achievement-burst-icon">${def.icon}</div>
+      <div class="ledger-achievement-burst-icon-wrap"><div class="ledger-achievement-burst-icon">${def.icon}</div></div>
       <div class="ledger-achievement-burst-label">${esc(def.label)}</div>
       <div class="ledger-achievement-burst-desc">${esc(def.desc)}</div>
       <div class="ledger-achievement-burst-hint">Tap for more confetti · tap outside to close</div>
@@ -5981,14 +5984,23 @@ function _ledgerAdvanceAchievementQueue() {
 
 function _ledgerSpawnConfetti(scrim, count) {
   for (let i = 0; i < count; i++) {
-    const dx    = Math.round((Math.random() - .5) * 280);
-    const dy    = Math.round(180 + Math.random() * 200);
+    // Each piece launches outward at a random angle first (so some fly up
+    // and to the sides, visible above the tile too), then gravity carries
+    // it further down to its final resting point.
+    const angle = Math.random() * Math.PI * 2;
+    const midR  = 60 + Math.random() * 90;
+    const mx    = Math.round(Math.cos(angle) * midR);
+    const my    = Math.round(Math.sin(angle) * midR);
+    const dx    = Math.round(mx + (Math.random() - .5) * 90);
+    const dy    = Math.round(my + 150 + Math.random() * 190);
     const rot   = Math.round(360 + Math.random() * 540) * (Math.random() < .5 ? -1 : 1);
     const dur   = (1.8 + Math.random() * 1.2).toFixed(2);
     const delay = (Math.random() * .25).toFixed(2);
     const color = LEDGER_CONFETTI_COLORS[i % LEDGER_CONFETTI_COLORS.length];
     const span = document.createElement('span');
     span.className = 'ledger-confetti';
+    span.style.setProperty('--mx', mx + 'px');
+    span.style.setProperty('--my', my + 'px');
     span.style.setProperty('--dx', dx + 'px');
     span.style.setProperty('--dy', dy + 'px');
     span.style.setProperty('--rot', rot + 'deg');
