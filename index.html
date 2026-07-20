@@ -518,8 +518,8 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
   align-items: center;
   justify-content: space-between;
   gap: .6rem;
-  padding: 6px 1.4rem 0;
-  height: 36px;
+  padding: 9px 1.4rem 0;
+  height: 42px;
   flex-shrink: 0;
   position: relative;
   cursor: pointer;
@@ -553,7 +553,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 
 .reader-title {
   font-family: 'Playfair Display', serif;
-  font-size: .8rem;
+  font-size: .86rem;
   flex: 1;
   min-width: 0;
   white-space: nowrap;
@@ -565,7 +565,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .reader-overlay.theme-night .reader-title { color: var(--cream); }
 
 .reader-nav { display: flex; gap: .3rem; align-items: center; flex-shrink: 0; }
-.reader-page-info { font-size: .75rem; opacity: .6; white-space: nowrap; min-width: 36px; text-align: center; flex-shrink: 0; overflow: hidden; text-overflow: ellipsis; }
+.reader-page-info { font-size: .78rem; opacity: .6; white-space: nowrap; min-width: 40px; text-align: center; flex-shrink: 0; overflow: hidden; text-overflow: ellipsis; }
 .reader-overlay.theme-night .reader-page-info { color: var(--gold); opacity: .7; }
 /* ── NEWW upto hereEPUB READER ── */
   
@@ -1362,13 +1362,17 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .ledger-goal-sub{font-size:.76rem;color:var(--muted);}
 .ledger-goal-edit{margin-top:.7rem;font-size:.7rem;font-weight:700;color:var(--teal);background:none;border:none;cursor:pointer;padding:0;-webkit-tap-highlight-color:transparent;}
 
-/* Points / rank */
-.ledger-status-hero{display:flex;align-items:center;gap:.9rem;background:var(--navy2);border-radius:14px;
-  padding:1rem 1.1rem;margin-bottom:.9rem;}
-.ledger-status-icon{font-size:2.3rem;line-height:1;flex-shrink:0;}
-.ledger-status-label{font-size:.62rem;letter-spacing:.16em;text-transform:uppercase;font-weight:700;color:var(--gold);}
-.ledger-status-title{font-family:'Playfair Display',serif;font-size:1.4rem;color:#fff;margin-top:.1rem;}
-.ledger-status-next{font-size:.72rem;color:var(--light-blue);margin-top:.2rem;}
+/* Points / rank — gold surface (was dark navy) so it reads as the
+   "trophy" surface of the tab; text swaps to dark navy for contrast. */
+.ledger-status-hero{display:flex;align-items:center;gap:.9rem;
+  background:linear-gradient(135deg,var(--gold),var(--gold2));
+  border:1px solid rgba(15,26,46,.18);border-radius:14px;
+  padding:1rem 1.1rem;margin-bottom:.9rem;box-shadow:0 4px 14px rgba(200,149,42,.25);}
+.ledger-status-icon{font-size:2.3rem;line-height:1;flex-shrink:0;
+  filter:drop-shadow(0 1px 2px rgba(15,26,46,.25));}
+.ledger-status-label{font-size:.62rem;letter-spacing:.16em;text-transform:uppercase;font-weight:700;color:var(--navy2);}
+.ledger-status-title{font-family:'Playfair Display',serif;font-size:1.4rem;color:var(--navy);margin-top:.1rem;}
+.ledger-status-next{font-size:.72rem;color:rgba(15,26,46,.68);margin-top:.2rem;}
 .ledger-points-num{font-family:'Playfair Display',serif;font-size:1.7rem;color:var(--gold2);}
 .ledger-rank-title{font-size:.85rem;font-weight:700;color:var(--navy2);margin-top:.15rem;}
 .ledger-card-note{font-size:.74rem;color:var(--muted);line-height:1.5;margin-bottom:.7rem;}
