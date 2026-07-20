@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
 <title>eLibrary</title>
 <meta name="theme-color" content="#0f1a2e"/>
 <meta name="mobile-web-app-capable" content="yes"/>
@@ -564,7 +564,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .reader-overlay.theme-night .reader-title { color: var(--cream); }
 
 .reader-nav { display: flex; gap: .3rem; align-items: center; flex-shrink: 0; }
-.reader-page-info { font-size: .75rem; opacity: .6; white-space: nowrap; min-width: 36px; text-align: center; flex-shrink: 0; overflow: hidden; text-overflow: ellipsis; }
+.reader-page-info { font-size: .72rem; opacity: .55; white-space: nowrap; min-width: 36px; text-align: center; }
 .reader-overlay.theme-night .reader-page-info { color: var(--gold); opacity: .7; }
 /* ── NEWW upto hereEPUB READER ── */
   
@@ -580,6 +580,43 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .rs-theme-btn.sepia.active{background:#f4ede0;color:#3b2a1a;border-color:#b8a080;outline:2px solid var(--gold);outline-offset:1px;}
 .rs-theme-btn.night{border-color:rgba(200,200,255,.2);color:#8888aa;}
 .rs-theme-btn.night.active{background:#1a1a2e;color:#c8c8d8;border-color:#4444aa;outline:2px solid var(--gold);outline-offset:1px;}
+/* ── TIMELINE PANEL HEADER — matches Settings/Home heading look ────────────── */
+.timeline-header{
+  background:var(--cream);padding:.8rem 1rem .65rem;
+  display:flex;align-items:center;justify-content:space-between;
+  border-bottom:2px solid var(--gold);flex-shrink:0;
+}
+.timeline-header-title{
+  font-family:'Playfair Display',serif;font-size:1.3rem;color:var(--navy2);
+}
+/* Year filter styled as a pill to match Library filter pills */
+#timelineYearFilter{
+  -webkit-appearance:none;appearance:none;
+  font-family:'Lato',sans-serif;font-size:.71rem;font-weight:700;
+  letter-spacing:.04em;
+  padding:.28rem 1.5rem .28rem .72rem;
+  border-radius:20px;cursor:pointer;
+  border:1px solid rgba(200,149,42,.4);
+  background:rgba(200,149,42,.07) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 6'%3E%3Cpath fill='%23c8952a' d='M5 6L0 0h10z'/%3E%3C/svg%3E") no-repeat right .45rem center / 8px 5px;
+  color:var(--navy2);outline:none;
+}
+/* ── READER DAILY SCORE CHIP (in info bar) ────────────────────────────────── */
+.reader-daily-score{
+  font-size:.58rem;font-weight:700;letter-spacing:.05em;
+  color:var(--gold);white-space:nowrap;
+  padding:1px 6px;border-radius:10px;
+  border:1px solid rgba(200,149,42,.28);
+  background:rgba(200,149,42,.07);
+  flex-shrink:0;
+}
+.reader-daily-score:empty{display:none;}
+@keyframes _goalReached{
+  0%,100%{transform:scale(1);   background:rgba(200,149,42,.07);}
+  35%     {transform:scale(1.22);background:rgba(200,149,42,.38);color:var(--navy);}
+  65%     {transform:scale(1.1); background:rgba(200,149,42,.18);}
+}
+.reader-daily-score.goal-pop{animation:_goalReached .55s ease-out;}
+
 .reader-settings-bar{
   display:none;
   flex-direction:column;
@@ -727,9 +764,13 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .toast.show{opacity:1;transform:translateY(0);}
 
 /* ── MOBILE NAV ── */
-.mob-nav{display:none;position:fixed;bottom:0;left:0;right:0;z-index:50;height:var(--mob-nav-h);overflow:visible;}
+.mob-nav{display:none;position:fixed;bottom:0;left:0;right:0;z-index:50;
+  /* Grow to cover the home-bar area; nav content is pushed up by the same amount */
+  height:calc(var(--mob-nav-h) + var(--sab));overflow:visible;}
 .mob-nav-bg{position:absolute;inset:0;background:var(--navy);border-top:2px solid rgba(42,124,138,0.5);z-index:0;}
-.mob-nav-inner{display:flex;height:100%;align-items:flex-end;position:relative;z-index:1;overflow:visible;padding-bottom:4px;}
+.mob-nav-inner{display:flex;height:100%;align-items:flex-end;position:relative;z-index:1;overflow:visible;
+  /* max() ensures at least 14 px of clearance on phones without home-bar env() support */
+  padding-bottom:max(14px, calc(10px + var(--sab)));}
 .mob-tab{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;cursor:pointer;color:var(--gold);font-size:.55rem;letter-spacing:.06em;text-transform:uppercase;font-weight:700;border:none;background:none;transition:opacity .2s;-webkit-tap-highlight-color:transparent;padding-bottom:2px;opacity:.5;}
 .mob-tab .tab-icon{font-size:1.4rem;line-height:1;transition:font-size .2s,transform .2s;transform-origin:bottom center;display:block;}
 .mob-tab.active{opacity:1;}
@@ -746,7 +787,6 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .mob-filter-bar{display:flex;gap:.45rem;padding:.42rem .9rem .55rem;overflow-x:auto;
   scrollbar-width:none;-webkit-overflow-scrolling:touch;flex-shrink:0;align-items:center;}
 .mob-filter-bar::-webkit-scrollbar{display:none;}
-.mfp-divider{width:1px;height:18px;background:var(--border);flex-shrink:0;margin:0 .05rem;}
 
 /* Base pill — inactive state */
 .mfp{padding:.28rem .72rem;font-size:.71rem;font-weight:700;border-radius:20px;cursor:pointer;
@@ -773,34 +813,88 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .mfp-cat.mfp-active{background:var(--gold);border-color:var(--gold);}
 .mfp-tags.mfp-active{background:#5a48b0;border-color:#5a48b0;}
 .mfp.mfp-active .mfp-caret{opacity:.8;}
-
-/* Library filter/sort dropdowns — anchored directly under their pill button,
-   NOT a centered modal, and deliberately dark so they read as distinct from
-   the light .mob-picker-card used for editing lists/categories elsewhere. */
-.mfp-dd-scrim{position:fixed;inset:0;z-index:600;background:transparent;}
-.mfp-dd{position:absolute;z-index:601;min-width:170px;max-width:250px;
-  max-height:60vh;overflow-y:auto;background:#1a2438;border-radius:10px;
-  box-shadow:0 10px 30px rgba(0,0,0,.35);padding:.4rem;
-  border:1px solid rgba(255,255,255,.08);}
-.mfp-dd.mfp-dd-grid{max-width:300px;}
-.mfp-dd-grid #mfpDdItems{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:.1rem .3rem;}
-.mfp-dd-item{display:flex;align-items:center;gap:.5rem;padding:.5rem .6rem;
-  border-radius:6px;cursor:pointer;font-size:.8rem;color:#f0ede4;
-  -webkit-tap-highlight-color:transparent;}
-.mfp-dd-item span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.mfp-dd-item:active{background:rgba(255,255,255,.08);}
-.mfp-dd-item.selected{background:rgba(255,255,255,.1);font-weight:700;}
-.mfp-dd-item .mfp-dd-check{margin-left:auto;color:var(--gold);font-weight:700;visibility:hidden;flex-shrink:0;}
-.mfp-dd-item.selected .mfp-dd-check{visibility:visible;}
 @keyframes fpIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
 /* Scrim to close floating panel on outside tap */
 .mob-filter-scrim{display:none;position:fixed;inset:0;z-index:119;}
+
+/* ── LIBRARY FILTER DROPDOWN ──────────────────────────────────────────────────
+   Anchored below the filter pill. Dark navy palette = clearly a *view control*,
+   not a book-property editor (those stay as the centered white modal).        */
+.lib-fp-scrim{position:fixed;inset:0;z-index:119;background:transparent;}
+.lib-fp-panel{
+  position:fixed;z-index:120;
+  background:var(--navy2);
+  border:1px solid rgba(200,149,42,.28);
+  border-radius:10px;
+  box-shadow:0 10px 32px rgba(15,26,46,.5);
+  min-width:190px;max-width:min(260px,82vw);
+  max-height:min(55vh,360px);
+  display:flex;flex-direction:column;overflow:hidden;
+  animation:libFpIn .14s ease-out;
+}
+/* Caret pointing up toward the pill */
+.lib-fp-panel::before{
+  content:'';position:absolute;top:-6px;left:22px;
+  width:12px;height:12px;
+  background:var(--navy2);
+  transform:rotate(45deg);border-radius:2px 0 0 0;
+  border-left:1px solid rgba(200,149,42,.28);
+  border-top:1px solid rgba(200,149,42,.28);
+}
+@keyframes libFpIn{
+  from{opacity:0;transform:translateY(-5px) scale(.97);}
+  to{opacity:1;transform:translateY(0) scale(1);}
+}
+.lib-fp-head{
+  font-size:.6rem;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--gold);font-weight:700;
+  padding:.55rem .85rem .45rem;
+  border-bottom:1px solid rgba(200,149,42,.18);
+  flex-shrink:0;
+}
+.lib-fp-body{
+  overflow-y:auto;flex:1;
+  scrollbar-width:thin;scrollbar-color:rgba(200,149,42,.3) transparent;
+}
+.lib-fp-body::-webkit-scrollbar{width:3px;}
+.lib-fp-body::-webkit-scrollbar-thumb{background:rgba(200,149,42,.3);border-radius:2px;}
+.lib-fp-item{
+  display:flex;align-items:center;gap:.5rem;
+  padding:.55rem .85rem;
+  font-size:.82rem;font-family:'Lato',sans-serif;
+  color:rgba(250,247,242,.85);
+  cursor:pointer;
+  border-bottom:1px solid rgba(255,255,255,.04);
+  transition:background .1s;
+}
+.lib-fp-item:last-child{border-bottom:none;}
+.lib-fp-item:hover{background:rgba(255,255,255,.08);}
+.lib-fp-item.lfp-sel{color:var(--gold);}
+.lib-fp-icon{font-size:.9rem;flex-shrink:0;width:1.2rem;text-align:center;}
+.lib-fp-label{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.lib-fp-count{font-size:.68rem;color:rgba(250,247,242,.38);flex-shrink:0;}
+.lib-fp-check{font-size:.75rem;color:var(--gold);opacity:0;flex-shrink:0;transition:opacity .1s;}
+.lib-fp-item.lfp-sel .lib-fp-check{opacity:1;}
+.lib-fp-done{
+  padding:.5rem .85rem;
+  border-top:1px solid rgba(200,149,42,.18);
+  flex-shrink:0;
+}
+.lib-fp-done button{
+  width:100%;padding:.45rem;
+  background:var(--gold);color:var(--navy);
+  border:none;border-radius:6px;
+  font-family:'Lato',sans-serif;font-size:.75rem;font-weight:700;
+  cursor:pointer;letter-spacing:.06em;text-transform:uppercase;
+  transition:opacity .15s;
+}
+.lib-fp-done button:hover{opacity:.85;}
 .mob-search-bar{padding:.6rem .9rem;display:flex;gap:.5rem;align-items:center;}
 .mob-search-bar input{flex:1;padding:.5rem .75rem;font-size:1rem;font-family:'Lato',sans-serif;border:1px solid var(--border);border-radius:3px;background:var(--cream);color:var(--navy);outline:none;min-width:0;}
 .mob-search-bar input:focus{border-color:var(--teal);}
 .mob-chip{padding:.28rem .7rem;font-size:.7rem;font-weight:700;border-radius:20px;cursor:pointer;border:1px solid var(--border);background:var(--warm-white);color:var(--navy2);white-space:nowrap;transition:all .15s;-webkit-tap-highlight-color:transparent;}
 .mob-chip.active{background:var(--teal);color:#fff;border-color:var(--teal);}
-.mob-grid-scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-bottom:calc(var(--mob-nav-h) + 1rem);}
+.mob-grid-scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-bottom:calc(var(--mob-nav-h) + var(--sab) + 1rem);}
 .mob-book-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(95px,1fr));gap:.7rem;padding:.8rem;}
 .mob-book-grid .book-card {
   -webkit-touch-callout: none;
@@ -826,7 +920,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .mob-detail-header{padding:.65rem 1rem;border-bottom:1px solid var(--border);background:var(--warm-white);display:flex;align-items:center;gap:.6rem;flex-shrink:0;}
 .mob-back-btn{background:none;border:none;font-size:.78rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--teal);cursor:pointer;-webkit-tap-highlight-color:transparent;display:flex;align-items:center;gap:.3rem;padding:0;}
 .mob-sheet-close-btn{margin-left:auto;background:none;border:none;font-size:1.2rem;font-weight:400;color:var(--muted);cursor:pointer;-webkit-tap-highlight-color:transparent;display:flex;align-items:center;line-height:1;padding:0;}
-.mob-detail-scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:1rem 1rem calc(var(--mob-nav-h) + 1.5rem);overscroll-behavior-y:contain;}
+.mob-detail-scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:1rem 1rem calc(var(--mob-nav-h) + var(--sab) + 1.5rem);overscroll-behavior-y:contain;}
 .mob-detail-top{display:flex;gap:.9rem;margin-bottom:1rem;}
 .mob-detail-cover{width:85px;height:125px;object-fit:cover;border-radius:3px;border:1px solid var(--border);flex-shrink:0;}
 .mob-detail-cover-ph{width:85px;height:125px;background:linear-gradient(145deg,var(--navy2),#2a3d5a);border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:2rem;flex-shrink:0;}
@@ -944,7 +1038,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 @media (min-width:769px){ .mob-sheet, .mob-book-sheet-scrim{ display:none; } }
 
 /* mobile settings */
-.mob-settings-scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:1.4rem 1rem calc(var(--mob-nav-h) + 1.5rem);background:var(--cream);}
+.mob-settings-scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:1.4rem 1rem calc(var(--mob-nav-h) + var(--sab) + 1.5rem);background:var(--cream);}
 .settings-header{padding:.2rem .3rem 1.3rem;}
 .settings-header-title{font-family:'Playfair Display',serif;font-size:1.5rem;color:var(--navy2);}
 .settings-header-sub{font-size:.8rem;color:var(--muted);margin-top:.2rem;}
@@ -1324,101 +1418,6 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
   .mob-panels{display:none!important;}
   .desktop-main{display:flex;flex:1;overflow:hidden;}
 }
-
-/* ══════════════════════════════════════════════════════════════════════════
-   LEDGER — gamification (streaks / daily goal / points / achievements)
-   Deliberately distinct visual language from the rest of the app so these
-   elements read as "the game layer" at a glance:
-     • rust/ember  → streaks
-     • gold        → points & rank (already the app's "achievement" colour
-                      via categories/bookmark awards, so this reuses an
-                      existing association rather than inventing a new one)
-     • teal        → the daily goal ring (teal already = "active reading")
-     • every ledger surface gets a thin gold double-rule ("bookplate")
-       border so it's recognisable independent of colour alone.
-   ══════════════════════════════════════════════════════════════════════════ */
-.ledger-card{
-  background:var(--warm-white);border-radius:14px;padding:1rem 1.1rem;margin-bottom:.9rem;
-  border:1px solid var(--border);position:relative;
-}
-.ledger-card::before{
-  content:'';position:absolute;inset:4px;border:1px solid rgba(200,149,42,.35);
-  border-radius:10px;pointer-events:none;
-}
-.ledger-card-label{font-size:.62rem;letter-spacing:.16em;text-transform:uppercase;font-weight:700;color:var(--muted);margin-bottom:.6rem;}
-.ledger-row{display:flex;align-items:center;gap:1rem;}
-
-/* Streak card */
-.ledger-streak-flame{font-size:2.4rem;line-height:1;flex-shrink:0;}
-.ledger-streak-flame.cold{filter:grayscale(1);opacity:.35;}
-.ledger-streak-count{font-family:'Playfair Display',serif;font-size:2.1rem;color:var(--rust);line-height:1;}
-.ledger-streak-sub{font-size:.78rem;color:var(--muted);margin-top:.15rem;}
-.ledger-freeze-row{display:flex;gap:.35rem;margin-top:.7rem;flex-wrap:wrap;}
-.ledger-freeze-chip{font-size:.68rem;font-weight:700;padding:.22rem .55rem;border-radius:12px;background:rgba(42,124,138,.1);color:var(--teal-dark);border:1px solid rgba(42,124,138,.25);}
-
-/* Daily goal ring */
-.ledger-goal-num{font-family:'Playfair Display',serif;font-size:1.5rem;color:var(--navy2);}
-.ledger-goal-sub{font-size:.76rem;color:var(--muted);}
-.ledger-goal-edit{margin-top:.7rem;font-size:.7rem;font-weight:700;color:var(--teal);background:none;border:none;cursor:pointer;padding:0;-webkit-tap-highlight-color:transparent;}
-
-/* Points / rank */
-.ledger-points-num{font-family:'Playfair Display',serif;font-size:1.7rem;color:var(--gold2);}
-.ledger-rank-title{font-size:.85rem;font-weight:700;color:var(--navy2);margin-top:.15rem;}
-.ledger-rank-bar{height:6px;border-radius:3px;background:var(--panel);margin-top:.6rem;overflow:hidden;}
-.ledger-rank-bar-fill{height:100%;background:linear-gradient(90deg,var(--gold),var(--gold2));border-radius:3px;transition:width .4s ease;}
-.ledger-rank-next{font-size:.68rem;color:var(--muted);margin-top:.35rem;}
-
-/* Streak calendar heatmap */
-.ledger-cal-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(11px,1fr));gap:3px;}
-.ledger-cal-cell{aspect-ratio:1;border-radius:3px;background:var(--panel);}
-.ledger-cal-cell.met{background:var(--rust);}
-.ledger-cal-cell.today{outline:1.5px solid var(--teal);outline-offset:1px;}
-.ledger-cal-legend{display:flex;align-items:center;gap:.4rem;margin-top:.6rem;font-size:.65rem;color:var(--muted);}
-.ledger-cal-legend-sw{width:10px;height:10px;border-radius:2px;display:inline-block;}
-
-/* Badge case */
-.ledger-badge-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(78px,1fr));gap:.6rem;}
-.ledger-badge{display:flex;flex-direction:column;align-items:center;gap:.3rem;text-align:center;
-  padding:.55rem .3rem;border-radius:10px;background:var(--panel);}
-.ledger-badge.locked{opacity:.4;filter:grayscale(1);}
-.ledger-badge-icon{font-size:1.5rem;}
-.ledger-badge-label{font-size:.62rem;font-weight:700;color:var(--navy2);line-height:1.2;}
-
-/* Reader HUD pill — always visible while a book is open */
-.reader-ledger-pill{font-size:.7rem;font-weight:700;padding:.2rem .55rem;border-radius:12px;white-space:nowrap;
-  display:flex;align-items:center;gap:.3rem;background:rgba(184,76,26,.12);color:var(--rust);
-  border:1px solid rgba(184,76,26,.3);cursor:pointer;-webkit-tap-highlight-color:transparent;flex-shrink:0;}
-.reader-overlay.theme-night .reader-ledger-pill{background:rgba(255,138,92,.15);color:#ff8a5c;border-color:rgba(255,138,92,.35);}
-
-/* Home tab teaser */
-.home-ledger-teaser{display:flex;align-items:center;gap:.8rem;padding:.85rem 1rem;border-radius:14px;
-  background:var(--warm-white);border:1px solid var(--border);margin-bottom:1rem;cursor:pointer;position:relative;
-  -webkit-tap-highlight-color:transparent;}
-.home-ledger-teaser::before{content:'';position:absolute;inset:3px;border:1px solid rgba(200,149,42,.3);border-radius:11px;pointer-events:none;}
-.home-ledger-teaser-flame{font-size:1.8rem;flex-shrink:0;}
-.home-ledger-teaser-text{flex:1;min-width:0;}
-.home-ledger-teaser-title{font-size:.85rem;font-weight:700;color:var(--navy2);}
-.home-ledger-teaser-sub{font-size:.72rem;color:var(--muted);margin-top:.1rem;}
-
-/* Ledger popover (reader HUD tap + goal editor) — a bespoke bottom sheet,
-   deliberately not reusing .mob-picker-scrim, so it doesn't read as "the
-   same kind of dropdown" as ordinary editing pickers. */
-.ledger-popover-scrim{position:fixed;inset:0;z-index:700;background:rgba(15,25,35,.55);
-  display:flex;align-items:flex-end;justify-content:center;animation:fpIn .15s ease;}
-.ledger-popover-card{width:100%;max-width:440px;background:var(--warm-white);
-  border-radius:20px 20px 0 0;padding:1.3rem 1.3rem calc(1.3rem + var(--sab));
-  position:relative;max-height:80vh;overflow-y:auto;}
-.ledger-popover-close{position:absolute;top:.8rem;right:.9rem;background:none;border:none;
-  font-size:1.1rem;color:var(--muted);cursor:pointer;line-height:1;}
-.ledger-popover-title{font-family:'Playfair Display',serif;font-size:1.05rem;color:var(--navy2);margin-bottom:.9rem;}
-.ledger-goal-chip-row{display:flex;flex-wrap:wrap;gap:.5rem;margin-top:.7rem;}
-.ledger-goal-chip{padding:.4rem .8rem;font-size:.74rem;font-weight:700;border-radius:16px;cursor:pointer;
-  border:1.5px solid var(--border);background:transparent;color:var(--navy2);
-  transition:background .15s,border-color .15s,color .15s,transform .08s;-webkit-tap-highlight-color:transparent;}
-.ledger-goal-chip:active{transform:scale(.95);}
-.ledger-goal-chip.active{background:var(--teal);border-color:var(--teal);color:#fff;}
-.ledger-goal-custom-input{width:100%;padding:.55rem .7rem;font-size:.85rem;font-family:'Lato',sans-serif;
-  border:1px solid var(--border);border-radius:10px;background:var(--cream);color:var(--navy);outline:none;margin-top:.6rem;}
 </style>
 </head>
 <body>
@@ -1639,7 +1638,6 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
           <span id="mfpTagsLabel">Tags</span>
           <span class="mfp-caret">▾</span>
         </button>
-        <div class="mfp-divider" aria-hidden="true"></div>
         <button class="mfp mfp-sort" id="mfpSort" aria-label="Sort">
           <span id="mfpSortLabel">Recent</span>
           <span class="mfp-caret">▾</span>
@@ -1678,7 +1676,6 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
     <div class="mob-grid-scroll" style="padding:1rem">
       <div style="font-family:'Playfair Display',serif;font-size:1.3rem;color:var(--navy2);margin-bottom:.2rem" id="mobHomeGreeting">Welcome</div>
       <div style="font-size:.8rem;color:var(--muted);margin-bottom:1.2rem">Discover · Read · Return</div>
-      <div id="mobHomeLedgerTeaser"></div>
       <div id="mobHomeContent">
         <div style="text-align:center;padding:2rem;color:var(--muted);font-size:.88rem">Loading…</div>
       </div>
@@ -1688,27 +1685,14 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
   <!-- ── TIMELINE PANEL ── -->
   <div class="mob-panel" id="mobPanelTimeline">
     <div style="display:flex;flex-direction:column;height:100%;overflow:hidden">
-      <div style="background:var(--navy);padding:10px 14px 8px;display:flex;align-items:center;justify-content:space-between;border-bottom:2px solid var(--gold);flex-shrink:0">
-        <div style="font-family:'Playfair Display',serif;font-size:.9rem;color:#d8e8f0">Timeline</div>
-        <select id="timelineYearFilter" style="font-size:.72rem;background:#1a2840;border:1px solid #334;color:#d8e8f0;border-radius:4px;padding:3px 6px;outline:none;cursor:pointer">
+      <div class="timeline-header">
+        <div class="timeline-header-title">Timeline</div>
+        <select id="timelineYearFilter">
           <option value="all">All time</option>
         </select>
       </div>
       <div class="mob-grid-scroll" id="timelineContent" style="-webkit-overflow-scrolling:touch">
         <div style="text-align:center;padding:3rem 1rem;color:var(--muted);font-size:.85rem">Tap Timeline to load</div>
-      </div>
-    </div>
-  </div>
-
-  <!-- ── LEDGER PANEL (gamification home) ── -->
-  <div class="mob-panel" id="mobPanelLedger">
-    <div class="mob-settings-scroll" id="ledgerScroll">
-      <div class="settings-header">
-        <div class="settings-header-title">Ledger</div>
-        <div class="settings-header-sub">Your reading record</div>
-      </div>
-      <div id="ledgerContent">
-        <div style="color:var(--muted);font-size:.85rem;text-align:center;padding:2rem 0">Loading…</div>
       </div>
     </div>
   </div>
@@ -1761,9 +1745,6 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 
   <!-- ── ADMIN PANEL ── -->
   <div class="mob-panel" id="mobPanelAdmin">
-    <div class="mob-detail-header" style="flex-shrink:0;">
-      <button class="mob-back-btn" id="btnAdminBack">← Back</button>
-    </div>
     <div class="mob-settings-scroll">
       <h2>🔑 Admin</h2>
       <div style="color:var(--muted);font-size:.85rem">Loading…</div>
@@ -1814,18 +1795,6 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
           <span class="settings-row-chevron">›</span>
         </button>
         <p class="settings-card-note" id="mobInstallNote">Open in your browser's menu and choose "Add to Home Screen" to install.</p>
-      </div>
-
-      <div class="settings-card" id="mobAdminSettingsCard" style="display:none">
-        <div class="settings-card-label">🔑 Admin</div>
-        <button class="settings-row" id="btnMobOpenAdmin">
-          <span class="settings-row-icon" style="background:var(--navy2);color:var(--gold)">🔑</span>
-          <span class="settings-row-text">
-            <span class="settings-row-title">Admin Panel</span>
-            <span class="settings-row-desc">Manage users, categories, tags & more</span>
-          </span>
-          <span class="settings-row-chevron">›</span>
-        </button>
       </div>
 
       <div class="settings-footer">eLibrary · Let's make reading fun again</div>
@@ -1954,11 +1923,11 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
       </span>
       <span>Timeline</span>
     </button>
-    <button class="mob-tab" id="mobNavLedger">
-      <span class="tab-icon">🔥</span><span>Ledger</span>
-    </button>
     <button class="mob-tab" id="mobNavSettings">
       <span class="tab-icon">⚙</span><span>Settings</span>
+    </button>
+    <button class="mob-tab" id="mobNavAdmin" style="display:none">
+      <span class="tab-icon">🔑</span><span>Admin</span>
     </button>
   </div>
 </nav>
@@ -2153,7 +2122,9 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
     <div id="readerChapterItems"></div>
   </div>
   <div class="reader-chapter-list" id="readerBookmarkListPanel">
-    <h3>Bookmarks &amp; Highlights</h3>
+    <div style="padding:.55rem .9rem .45rem;border-bottom:1px solid rgba(128,128,128,0.2);
+                font-size:.6rem;letter-spacing:.13em;text-transform:uppercase;
+                font-weight:700;color:var(--muted);">🔖 Bookmarks &amp; Highlights</div>
     <div id="readerBookmarkListItems"></div>
   </div>
   <div class="reader-content" id="readerContent">
@@ -2167,7 +2138,6 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
       <div class="reader-progress-bar" id="readerProgressBar" style="width:0%"></div>
     </div>
     <div class="reader-title" id="readerTitle">Reading…</div>
-    <span class="reader-ledger-pill" id="readerLedgerPill" title="Today's reading progress">🔥0 · +0</span>
     <span class="reader-page-info" id="readerPageInfo">1/1</span>
   </div>
   <!-- Button bar — hides on center-tap -->
@@ -2301,45 +2271,6 @@ let shelfMode='mine',activeCat='All',activeCatPublic='All',searchQ='';
 let deskActiveTags = new Set();   // tag-filter picker selections, desktop Library
 let mobActiveTags = new Set();    // tag-filter picker selections, mobile Library
 let selectMode=false,selectedIds=new Set(),deskView='library';
-
-// ── LEDGER (gamification) state ─────────────────────────────────────────────
-let ledgerState = {
-  totalPoints: 0,
-  streakCount: 0,
-  longestStreak: 0,
-  dailyGoal: 20,              // pages/day
-  freezesAvailable: 1,
-  lastGoalMetDate: null,      // 'YYYY-MM-DD', most recent day the goal was hit
-  lastFreezeGrantStreak: 0,   // streak length at which a freeze was last granted
-  achievements: {},           // { achievementId: ISO timestamp }
-  loaded: false,
-};
-let ledgerToday = { dateStr: null, pagesRead: 0, pointsEarned: 0, goalMet: false };
-let _ledgerFlushedPages = 0;   // pages already written to Firestore today (for delta increments)
-let _ledgerFlushedPoints = 0;  // points already written to Firestore today
-let _ledgerFlushTimer = null;
-let _ledgerSessionPages = 0;   // pages read this reading session, for the Marathon achievement
-let _ledgerHighWater = {};     // { bookId: chapterIdx*100000+pageIdx } — highest page reached per book this session
-
-const LEDGER_RANKS = [
-  { min: 0,    title: 'Novice Reader' },
-  { min: 250,  title: 'Page Turner' },
-  { min: 750,  title: 'Bookworm' },
-  { min: 2000, title: 'Bibliophile' },
-  { min: 5000, title: 'Literary Sage' },
-];
-
-const LEDGER_ACHIEVEMENTS = [
-  { id: 'first-page',   icon: '📖', label: 'First Page',     desc: 'Read your first page' },
-  { id: 'first-finish', icon: '🏁', label: 'First Finish',   desc: 'Finish your first book' },
-  { id: 'streak-7',     icon: '🔥', label: '7-Day Streak',   desc: 'Hit your goal 7 days running' },
-  { id: 'streak-30',    icon: '🔥', label: '30-Day Streak',  desc: 'Hit your goal 30 days running' },
-  { id: 'streak-100',   icon: '🔥', label: '100-Day Streak', desc: 'Hit your goal 100 days running' },
-  { id: 'night-owl',    icon: '🦉', label: 'Night Owl',      desc: 'Read between midnight and 4am' },
-  { id: 'early-bird',   icon: '🐦', label: 'Early Bird',     desc: 'Read before 6am' },
-  { id: 'marathon',     icon: '🏃', label: 'Marathon',       desc: 'Read 100+ pages in one sitting' },
-  { id: 'explorer',     icon: '🧭', label: 'Genre Explorer', desc: 'Finish books in 3+ categories' },
-];
 let myCheckedOutIds=new Set();
 let koboDevices = [];
 let _userLists = [];
@@ -2429,7 +2360,6 @@ onAuthStateChanged(auth, async user => {
 
       startAppNotifListener();
       checkAdminStatus();
-      loadLedgerState();
       prewarmTimeline();
       prewarmOfflineEpubs();
     }, 400);
@@ -2447,25 +2377,24 @@ document.getElementById('btnSignOut').addEventListener('click',doSignOut);
 function doSignOut(){if(!confirm('Sign out?'))return;signOut(auth);}
 
 function updateUserUI(user){
-  const initials=(user.displayName||user.email||'?').split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
+  const rawName = user.displayName || user.email || '';
+  const initials = rawName.trim().split(/\s+/).map(w=>w[0]).filter(Boolean).join('').toUpperCase().slice(0,2) || '?';
   const initialsEl = document.getElementById('userAvatarInitials');
-  const img = document.getElementById('userAvatarImg');
-  initialsEl.textContent=initials;
-  document.getElementById('userNameDisplay').textContent=(user.displayName||'').split(' ')[0];
-  document.getElementById('userDropdownEmail').textContent=user.email;
-
-  // Always show initials until the photo has actually finished loading, and
-  // fall back to initials again if it errors out — previously the swap
-  // happened the instant .src was set, so a failed/slow load just left a
-  // broken image with the initials fallback hidden underneath it.
-  initialsEl.style.display = '';
-  img.style.display = 'none';
+  const imgEl     = document.getElementById('userAvatarImg');
+  initialsEl.textContent = initials;
+  document.getElementById('userNameDisplay').textContent = (user.displayName||'').split(' ')[0];
+  document.getElementById('userDropdownEmail').textContent = user.email;
   if(user.photoURL){
-    img.onload  = () => { img.style.display = 'block'; initialsEl.style.display = 'none'; };
-    img.onerror = () => { img.style.display = 'none';  initialsEl.style.display = ''; };
-    img.src = user.photoURL;
+    // Show initials until the image actually loads — avoids the brief "?" flash
+    // and the broken-image icon when Google's CDN is slow or blocked.
+    imgEl.style.display = 'none';
+    initialsEl.style.display = '';
+    imgEl.onload  = () => { imgEl.style.display='block'; initialsEl.style.display='none'; };
+    imgEl.onerror = () => { imgEl.style.display='none';  initialsEl.style.display=''; };
+    imgEl.src = user.photoURL;
   } else {
-    img.removeAttribute('src');
+    imgEl.style.display = 'none';
+    initialsEl.style.display = '';
   }
 }
 document.getElementById('headerUser').addEventListener('click',e=>{e.stopPropagation();document.getElementById('userDropdown').classList.toggle('open');});
@@ -3249,12 +3178,15 @@ function renderDetailActionRows(peekContainer, moreContainer, book, isMine){
     </button>
     <div id="${moreId}Body" style="display:none;padding-top:.3rem;">
       ${shareBtns.length ? `
+        <div style="font-size:.6rem;letter-spacing:.15em;text-transform:uppercase;
+                    color:var(--muted);font-weight:700;margin-bottom:.3rem;">Share</div>
         <div style="display:flex;flex-wrap:wrap;gap:.35rem;margin-bottom:.7rem;">
           ${shareBtns.join('')}
         </div>` : ''}
       ${editBtns.length ? `
-        <div style="display:flex;flex-wrap:wrap;gap:.35rem;margin-bottom:.7rem;
-                    ${shareBtns.length ? 'border-top:1px solid var(--border);padding-top:.6rem;' : ''}">
+        <div style="font-size:.6rem;letter-spacing:.15em;text-transform:uppercase;
+                    color:var(--muted);font-weight:700;margin-bottom:.3rem;">Edit</div>
+        <div style="display:flex;flex-wrap:wrap;gap:.35rem;margin-bottom:.7rem;">
           ${editBtns.join('')}
         </div>` : ''}
       ${bottomBtns.length ? `
@@ -3359,33 +3291,74 @@ function mobSheetSetExpanded(expanded){
     mobSheetSetExpanded(!sheet.classList.contains('full'));
   });
 
-  // Swipe anywhere on the sheet — not just the handle — to pop it to full
-  // screen. Only active while collapsed: once full, normal scrolling inside
-  // .mob-detail-scroll takes over, and the handle is what collapses it back.
-  let startY = null, startX = null, decided = false;
+  // Swipe anywhere on the sheet to expand (collapsed→full) or dismiss/collapse
+  // (full→peek, peek→close). Uses {passive:false} so we can preventDefault on
+  // confirmed vertical drags — without it the underlying library grid / scrim
+  // also receive the gesture and produce visible jank when pulling down.
+  let startY = null, startX = null, phase = null;
+  // phase: null (undecided) | 'h' (horizontal, not ours) | 'up' (expand) | 'down' (live drag)
+
   sheet.addEventListener('touchstart', e => {
     startY = e.touches[0].clientY;
     startX = e.touches[0].clientX;
-    decided = false;
+    phase  = null;
+    // Reset any in-flight live drag transform so CSS transition takes over cleanly
+    sheet.style.transition = '';
+    sheet.style.transform  = '';
   }, {passive:true});
+
   sheet.addEventListener('touchmove', e => {
     if(startY === null) return;
-    const dy = startY - e.touches[0].clientY;
-    const dx = Math.abs(e.touches[0].clientX - startX);
-    if(decided || dx > 30) return; // horizontal drag — not our gesture
-    const isFull = sheet.classList.contains('full');
-    const scroller = document.getElementById('mobDetailScroll');
-    const atTop = !scroller || scroller.scrollTop <= 0;
-    if(!isFull && dy > 24) { mobSheetSetExpanded(true); decided = true; startY = null; }
-    else if(dy < -24 && atTop) {
-      // Swiping down from the very top of the content: if full, drop back
-      // to peek; if already at peek, dismiss the sheet entirely. Anywhere
-      // else, a downward drag just scrolls back up through the content.
-      if(isFull) mobSheetSetExpanded(false); else closeMobBookSheet();
-      decided = true; startY = null;
+    const curY = e.touches[0].clientY;
+    const dy   = curY - startY; // positive = finger moving down
+    const dx   = Math.abs(e.touches[0].clientX - startX);
+
+    if(phase === 'h') return;              // horizontal — not our gesture
+    if(phase === 'up') return;             // already triggered expand, let scroll take over
+
+    if(phase === null) {
+      if(dx > 28) { phase = 'h'; return; } // lock to horizontal
+      const isFull   = sheet.classList.contains('full');
+      const scroller = document.getElementById('mobDetailScroll');
+      const atTop    = !scroller || scroller.scrollTop <= 0;
+
+      if(dy < -20 && !isFull) {
+        // Upward swipe on collapsed sheet → expand; doesn't need preventDefault
+        phase = 'up';
+        mobSheetSetExpanded(true);
+        return;
+      }
+      if(dy > 10 && (isFull || atTop)) {
+        phase = 'down'; // confirmed: we own this downward drag
+      }
     }
+
+    if(phase === 'down') {
+      // Prevent the underlying scrim/grid from also receiving this touch —
+      // this was the root cause of the "grabbing underlying layers" bug.
+      e.preventDefault();
+      const clamped = Math.max(0, dy);
+      sheet.style.transition = 'none';
+      sheet.style.transform  = `translateY(${clamped}px)`;
+    }
+  }, {passive:false}); // MUST be false so preventDefault works
+
+  sheet.addEventListener('touchend', e => {
+    if(phase === 'down') {
+      const dy     = e.changedTouches[0].clientY - startY;
+      const isFull = sheet.classList.contains('full');
+      // Reset transition so the snap-back/close animation uses CSS
+      sheet.style.transition = '';
+      sheet.style.transform  = '';
+      if(dy > 90) {
+        // Dragged far enough — commit: collapse to peek or dismiss entirely
+        if(isFull) mobSheetSetExpanded(false);
+        else        closeMobBookSheet();
+      }
+      // dy ≤ 90: not far enough — CSS transition snaps the sheet back to its position
+    }
+    startY = null; startX = null; phase = null;
   }, {passive:true});
-  sheet.addEventListener('touchend', () => { startY = null; startX = null; });
 })();
 
 function buildDrawerIconBar(book, isMine){
@@ -3804,13 +3777,12 @@ document.getElementById('mobNavLibrary').addEventListener('click',  () => mob_sw
 document.getElementById('mobNavHome').addEventListener('click', () => { mob_switchTab('home');});
 document.getElementById('mobNavSettings').addEventListener('click', () => mob_switchTab('settings'));
 document.getElementById('mobNavTimeline')?.addEventListener('click', () => mob_switchTab('timeline'));
-document.getElementById('mobNavLedger')?.addEventListener('click', () => mob_switchTab('ledger'));
 
 function mob_switchTab(tab) {
   document.querySelectorAll('.mob-tab, .mob-tab-home').forEach(t => t.classList.remove('active'));
-  const tabMap = { library:'mobNavLibrary', home:'mobNavHome', settings:'mobNavSettings', timeline:'mobNavTimeline', ledger:'mobNavLedger' };
+  const tabMap = { library:'mobNavLibrary', home:'mobNavHome', settings:'mobNavSettings', timeline:'mobNavTimeline' };
   document.getElementById(tabMap[tab])?.classList.add('active');
-  const panelMap = { library:'mobPanelLibrary', home:'mobPanelHome', settings:'mobPanelSettings', timeline:'mobPanelTimeline', ledger:'mobPanelLedger' };
+  const panelMap = { library:'mobPanelLibrary', home:'mobPanelHome', settings:'mobPanelSettings', timeline:'mobPanelTimeline' };
   mob_showPanel(panelMap[tab] || 'mobPanelHome');
   if (tab === 'home') {
     renderMobHome();
@@ -3826,7 +3798,6 @@ function mob_switchTab(tab) {
     }
   }
   if (tab === 'settings')  renderKoboSettings(document.getElementById('mobKoboSettings'));
-  if (tab === 'ledger')    renderLedgerTab();
 }
 
 // ── MOBILE LIBRARY PANEL ─────────────────────────────────────────────────────
@@ -3915,57 +3886,113 @@ function updateMobFilterPillLabels() {
   document.getElementById('mfpSource')?.classList.toggle('mfp-active', mobLibFilter !== 'all');
 }
 
-// Anchored dropdown for the library filter/sort pills — deliberately its own
-// dark, pill-anchored component (see .mfp-dd CSS) rather than the shared
-// .mob-picker-scrim modal used elsewhere for editing lists/categories.
-// `items` is [{id,label,icon?,count?}]. `multi` keeps the dropdown open and
-// lets several items be toggled (used for Tags, AND-combined); otherwise
-// picking an item closes it immediately (Category/Sort/Source).
-function openMobFilterPicker({ anchor, title, items, isSelected, onSelect, multi = false, grid = false }) {
-  document.querySelectorAll('.mfp-dd-scrim').forEach(el => el.remove()); // close any other dropdown first
-
+// Generic centered picker: `items` is [{id,label,icon?,count?}]. `multi`
+// keeps the picker open and lets several items be toggled (used for Tags);
+// otherwise picking an item closes it immediately (Category/Sort/Source).
+function openMobFilterPicker({ title, items, isSelected, onSelect, multi = false, grid = false }) {
+  document.querySelectorAll('.mob-picker-scrim').forEach(el => el.remove()); // close any other picker first
   const scrim = document.createElement('div');
-  scrim.className = 'mfp-dd-scrim';
-
-  const dd = document.createElement('div');
-  dd.className = 'mfp-dd' + (grid ? ' mfp-dd-grid' : '');
-  dd.innerHTML = `<div id="mfpDdItems">
-    ${items.map((it, i) => `<div class="mfp-dd-item ${isSelected(it) ? 'selected' : ''}" data-idx="${i}">
-        <span>${it.icon ? it.icon + ' ' : ''}${esc(it.label)}${it.count != null ? ` <span style="opacity:.55">${it.count}</span>` : ''}</span>
-        <span class="mfp-dd-check">✓</span>
-      </div>`).join('')}
-  </div>`;
-
+  scrim.className = 'mob-picker-scrim';
+  scrim.innerHTML = `
+    <div class="mob-picker-card">
+      <div class="mob-picker-title">
+        <span>${title}</span>
+        <button class="mob-picker-close" id="mobFpCloseBtn">✕</button>
+      </div>
+      <div id="mobFpItems" class="${grid ? 'mob-picker-grid' : ''}">
+        ${items.map((it, i) => `<div class="mob-picker-item ${isSelected(it) ? 'selected' : ''}" data-idx="${i}">
+            <span>${it.icon ? it.icon + ' ' : ''}${esc(it.label)}${it.count != null ? ` <span style="opacity:.55">${it.count}</span>` : ''}</span>
+            <span class="mpi-check">✓</span>
+          </div>`).join('')}
+      </div>
+    </div>`;
   document.body.appendChild(scrim);
-  document.body.appendChild(dd);
-
-  // Anchor directly under the pill button, clamped so it doesn't run off
-  // the right edge of the screen, or underneath the bottom nav bar.
-  const rect = anchor.getBoundingClientRect();
-  const ddWidth = grid ? 280 : 190;
-  const left = Math.min(rect.left, window.innerWidth - ddWidth - 12);
-  const navEl = document.querySelector('.mob-nav');
-  const navTop = (navEl && getComputedStyle(navEl).display !== 'none')
-    ? navEl.getBoundingClientRect().top : window.innerHeight;
-  const top = rect.bottom + 6;
-  dd.style.top = top + 'px';
-  dd.style.left = Math.max(8, left) + 'px';
-  dd.style.maxHeight = Math.max(120, navTop - top - 10) + 'px';
-
-  scrim.addEventListener('click', () => { scrim.remove(); dd.remove(); });
-  dd.querySelectorAll('[data-idx]').forEach(el => {
+  scrim.addEventListener('click', e => { if (e.target === scrim) scrim.remove(); });
+  scrim.querySelector('#mobFpCloseBtn').addEventListener('click', () => scrim.remove());
+  scrim.querySelectorAll('[data-idx]').forEach(el => {
     el.addEventListener('click', () => {
       const item = items[+el.dataset.idx];
       onSelect(item);
       updateMobFilterPillLabels();
       renderMobLibrary();
       if (multi) el.classList.toggle('selected', isSelected(item));
-      else { scrim.remove(); dd.remove(); }
+      else scrim.remove();
     });
   });
 }
 
-document.getElementById('mfpCat').addEventListener('click', (e) => {
+// ── Library-filter anchored dropdown ─────────────────────────────────────────
+// Deliberately different from openMobFilterPicker (the centered white modal
+// used for book-property editing). This one: dark navy palette, no full-screen
+// scrim, anchored below the pill it came from — signals "view control, not
+// data edit" through its entire visual language.
+function openLibFilterDropdown(anchorEl, { title, items, isSelected, onSelect, multi = false }) {
+  // Remove any already-open lib-filter dropdown first
+  document.querySelectorAll('.lib-fp-scrim, .lib-fp-panel').forEach(el => el.remove());
+
+  const scrim = document.createElement('div');
+  scrim.className = 'lib-fp-scrim';
+  document.body.appendChild(scrim);
+
+  const panel = document.createElement('div');
+  panel.className = 'lib-fp-panel';
+
+  // Position anchored below the pill, clamped to viewport edges
+  const rect = anchorEl.getBoundingClientRect();
+  panel.style.top  = (rect.bottom + 7) + 'px';
+  const rawLeft = rect.left;
+  const clampedLeft = Math.max(8, Math.min(rawLeft, window.innerWidth - 270));
+  panel.style.left = clampedLeft + 'px';
+  // Keep caret aligned with the button even when left-clamped
+  const caretLeft = Math.max(12, rect.left + rect.width / 2 - clampedLeft - 6);
+  panel.style.setProperty('--lib-fp-caret-left', caretLeft + 'px');
+
+  const doneHtml = multi
+    ? `<div class="lib-fp-done"><button id="libFpDoneBtn">Done</button></div>`
+    : '';
+
+  panel.innerHTML = `
+    <div class="lib-fp-head">${title}</div>
+    <div class="lib-fp-body" id="libFpBody">
+      ${items.map((it, i) => `
+        <div class="lib-fp-item ${isSelected(it) ? 'lfp-sel' : ''}" data-idx="${i}">
+          ${it.icon ? `<span class="lib-fp-icon">${it.icon}</span>` : ''}
+          <span class="lib-fp-label">${esc(it.label)}</span>
+          ${it.count != null ? `<span class="lib-fp-count">${it.count}</span>` : ''}
+          <span class="lib-fp-check">✓</span>
+        </div>`).join('')}
+    </div>
+    ${doneHtml}`;
+
+  document.body.appendChild(panel);
+
+  // Apply dynamic caret position via inline pseudo-element workaround
+  const styleTag = document.createElement('style');
+  styleTag.textContent = `.lib-fp-panel::before { left: ${caretLeft}px; }`;
+  panel.appendChild(styleTag);
+
+  const close = () => { scrim.remove(); panel.remove(); };
+
+  scrim.addEventListener('click', close);
+  if (multi) panel.querySelector('#libFpDoneBtn')?.addEventListener('click', close);
+
+  panel.querySelectorAll('[data-idx]').forEach(el => {
+    el.addEventListener('click', e => {
+      e.stopPropagation();
+      const item = items[+el.dataset.idx];
+      onSelect(item);
+      updateMobFilterPillLabels();
+      renderMobLibrary();
+      if (multi) {
+        el.classList.toggle('lfp-sel', isSelected(item));
+      } else {
+        close();
+      }
+    });
+  });
+}
+
+document.getElementById('mfpCat').addEventListener('click', function() {
   const srcForCats = getMobLibSourceBooks();
   const cats = {};
   srcForCats.forEach(b => { const c = b.category || 'Uncategorised'; cats[c] = (cats[c] || 0) + 1; });
@@ -3974,34 +4001,29 @@ document.getElementById('mfpCat').addEventListener('click', (e) => {
     ...Object.entries(cats).sort(([a], [b]) => a.localeCompare(b))
       .map(([c, cnt]) => ({ id: c, label: c, icon: catIcon(c), count: cnt })),
   ];
-  openMobFilterPicker({
-    anchor: e.currentTarget,
+  openLibFilterDropdown(this, {
     title: '📚 Category',
     items,
-    grid: true,
     isSelected: it => mobLibCat === it.id,
     onSelect: it => { mobLibCat = it.id; },
   });
 });
 
-document.getElementById('mfpTags').addEventListener('click', (e) => {
+document.getElementById('mfpTags').addEventListener('click', function() {
   const allTags = getAllMobTags();
   if (!allTags.length) { showToast('No tags yet'); return; }
   const items = allTags.map(t => ({ id: t, label: t, icon: tagIcon(t) }));
-  openMobFilterPicker({
-    anchor: e.currentTarget,
+  openLibFilterDropdown(this, {
     title: '🏷 Tags',
     items,
-    grid: true,
     multi: true,
     isSelected: it => mobActiveTags.has(it.id),
     onSelect: it => { mobActiveTags.has(it.id) ? mobActiveTags.delete(it.id) : mobActiveTags.add(it.id); },
   });
 });
 
-document.getElementById('mfpSort').addEventListener('click', (e) => {
-  openMobFilterPicker({
-    anchor: e.currentTarget,
+document.getElementById('mfpSort').addEventListener('click', function() {
+  openLibFilterDropdown(this, {
     title: '↕ Sort',
     items: MOB_SORT_OPTIONS,
     isSelected: it => mobLibSort === it.id,
@@ -4009,13 +4031,12 @@ document.getElementById('mfpSort').addEventListener('click', (e) => {
   });
 });
 
-document.getElementById('mfpSource').addEventListener('click', (e) => {
-  openMobFilterPicker({
-    anchor: e.currentTarget,
+document.getElementById('mfpSource').addEventListener('click', function() {
+  openLibFilterDropdown(this, {
     title: '📖 Source',
     items: MOB_SOURCE_OPTIONS,
     isSelected: it => mobLibFilter === it.id,
-    onSelect: it => { mobLibFilter = it.id; mobLibCat = 'All'; }, // reset category when source changes, same as legacy pills did
+    onSelect: it => { mobLibFilter = it.id; mobLibCat = 'All'; },
   });
 });
 
@@ -4043,8 +4064,8 @@ function getMobLibBooks() {
   let src = getMobLibSourceBooks();
   // Category filter
   if (mobLibCat !== 'All') src = src.filter(b => (b.category || 'Uncategorised') === mobLibCat);
-  // Tags filter (book must match every selected tag — AND logic)
-  if (mobActiveTags.size) src = src.filter(b => [...mobActiveTags].every(t => (b.tags || []).includes(t)));
+  // Tags filter (any-of match against the active tag selection)
+  if (mobActiveTags.size) src = src.filter(b => (b.tags || []).some(t => mobActiveTags.has(t)));
   // Search
   if (mobLibSearch) src = src.filter(b => matchesQ(b, mobLibSearch));
   // Sort
@@ -4732,8 +4753,6 @@ function recommendedSection(books) {
   document.getElementById('btnHomeNewList')?.addEventListener('click', () => {
     showCreateListModal(null);
   });
-
-  renderHomeLedgerTeaser();
 }
 
 window.toggleHomeShelf = function(id) {
@@ -5281,7 +5300,9 @@ document.addEventListener('visibilitychange', () => {
 
 async function readCurrentBook(){
   if(!currentId)return;
-  closeMobBookSheet(); // the reader is about to open full-screen — the bottom sheet shouldn't linger behind it
+  // On mobile the book-detail bottom sheet must be fully dismissed before the
+  // reader opens, otherwise the sheet renders on top of the reading view.
+  if(window.innerWidth <= 768) closeMobBookSheet();
   const book=await findBookById(currentId);
   if(!book){showToast("Couldn't open that book — try again in a moment");return;}
   recordBookOpened(book);
@@ -5305,7 +5326,6 @@ async function readCurrentBook(){
     }
     readerZip=await JSZip.loadAsync(bytes);readerSpine=[];readerChapter=0;
     readerBookId = book.id;
-    _ledgerSessionPages = 0; // new reading sitting — Marathon achievement counts from here
     _readerIsInitialChapterLoad = true;
     const _openTpl = getDisplayBookmarkTemplate(book.id);
     if(_openTpl?.id && !bookmarkAnimEnabled) {
@@ -5376,7 +5396,6 @@ function progressKey(bookId){ return `elib_progress_${bookId}`; }
 
 async function saveReadingProgress(bookId, chapterIdx, pageIdx, totalChapters){
   if(!bookId) return;
-  ledgerRecordPage(bookId, chapterIdx, pageIdx);
   const progress = (chapterIdx + (pageIdx / Math.max(readerPageCount,1))) / Math.max(totalChapters,1);
 
   // Keep localStorage as offline fallback
@@ -5451,510 +5470,6 @@ function getReadingProgress(bookId){
   const p = loadReadingProgress(bookId);
   return p ? p.progress : 0;
 }
-
-// ══════════════════════════════════════════════════════════════════════════
-// LEDGER — gamification core (streaks / daily goal / points / achievements)
-// ══════════════════════════════════════════════════════════════════════════
-
-function ledgerDateStr(d = new Date()) {
-  // Local calendar date (not UTC) so a streak's "day" matches the reader's
-  // own clock rather than snapping over at a UTC boundary mid-afternoon.
-  const y = d.getFullYear(), m = String(d.getMonth()+1).padStart(2,'0'), day = String(d.getDate()).padStart(2,'0');
-  return `${y}-${m}-${day}`;
-}
-function _ledgerAddDays(dateStr, delta) {
-  const [y,m,d] = dateStr.split('-').map(Number);
-  const dt = new Date(y, m-1, d);
-  dt.setDate(dt.getDate() + delta);
-  return ledgerDateStr(dt);
-}
-function _ledgerDaysBetween(fromStr, toStr) {
-  const [y1,m1,d1] = fromStr.split('-').map(Number);
-  const [y2,m2,d2] = toStr.split('-').map(Number);
-  return Math.round((new Date(y2,m2-1,d2) - new Date(y1,m1-1,d1)) / 86400000);
-}
-function ledgerRank(points) {
-  let rank = LEDGER_RANKS[0];
-  for (const r of LEDGER_RANKS) if (points >= r.min) rank = r;
-  const idx = LEDGER_RANKS.indexOf(rank);
-  return { title: rank.title, floor: rank.min, next: LEDGER_RANKS[idx+1] || null };
-}
-
-// ── Load state on app start / sign-in ───────────────────────────────────
-async function loadLedgerState() {
-  if (!currentUser) return;
-  try {
-    const snap = await getDoc(doc(db, 'users', currentUser.uid));
-    const data = snap.exists() ? snap.data() : {};
-    ledgerState.totalPoints           = data.totalPoints || 0;
-    ledgerState.streakCount           = data.streakCount || 0;
-    ledgerState.longestStreak         = data.longestStreak || 0;
-    ledgerState.dailyGoal             = data.dailyGoal || 20;
-    ledgerState.freezesAvailable      = data.freezesAvailable != null ? data.freezesAvailable : 1;
-    ledgerState.lastGoalMetDate       = data.lastGoalMetDate || null;
-    ledgerState.lastFreezeGrantStreak = data.lastFreezeGrantStreak || 0;
-    ledgerState.achievements          = data.ledgerAchievements || {};
-
-    const todayStr = ledgerDateStr();
-    let dayData = {};
-    try {
-      const daySnap = await getDoc(doc(db, 'users', currentUser.uid, 'ledgerDays', todayStr));
-      dayData = daySnap.exists() ? daySnap.data() : {};
-    } catch(e) { console.warn('ledger today load:', e); }
-    ledgerToday = {
-      dateStr: todayStr,
-      pagesRead: dayData.pagesRead || 0,
-      pointsEarned: dayData.pointsEarned || 0,
-      goalMet: !!dayData.goalMet,
-    };
-    _ledgerFlushedPages = ledgerToday.pagesRead;
-    _ledgerFlushedPoints = ledgerToday.pointsEarned;
-
-    _ledgerReconcileStreakOnLoad(todayStr);
-
-    ledgerState.loaded = true;
-    updateReaderLedgerPill();
-    renderHomeLedgerTeaser();
-  } catch(e) {
-    console.warn('loadLedgerState:', e);
-  }
-}
-
-// Reconciles the streak against the calendar gap since it was last extended
-// — bridges a single missed day with a banked freeze, otherwise resets.
-function _ledgerReconcileStreakOnLoad(todayStr) {
-  if (!ledgerState.lastGoalMetDate || ledgerState.lastGoalMetDate === todayStr) return;
-  const gap = _ledgerDaysBetween(ledgerState.lastGoalMetDate, todayStr);
-  if (gap <= 1) return; // yesterday — streak is "at risk" but still intact
-  if (gap === 2 && ledgerState.freezesAvailable > 0) {
-    ledgerState.freezesAvailable -= 1;
-    ledgerState.lastGoalMetDate = _ledgerAddDays(todayStr, -1); // bridge the missed day
-    _ledgerPersistUserFields({ freezesAvailable: ledgerState.freezesAvailable, lastGoalMetDate: ledgerState.lastGoalMetDate });
-    showToast('🧊 Streak freeze used — your streak is safe!');
-    return;
-  }
-  if (ledgerState.streakCount > 0) {
-    ledgerState.streakCount = 0;
-    _ledgerPersistUserFields({ streakCount: 0 });
-  }
-}
-
-function _ledgerPersistUserFields(fields) {
-  if (!currentUser) return;
-  setDoc(doc(db, 'users', currentUser.uid), fields, { merge: true })
-    .catch(e => console.warn('ledger persist:', e));
-}
-
-// ── Earning points ───────────────────────────────────────────────────────
-// Hooked from saveReadingProgress() on every real page turn (manual or
-// TTS-driven — both call goToPage under the hood). Only pages past the
-// highest point reached in this book this session earn anything, so paging
-// back and forth never inflates the count, and a big forward jump (e.g. via
-// the table of contents) is capped rather than paying out a windfall.
-function ledgerRecordPage(bookId, chapterIdx, pageIdx) {
-  if (!currentUser || !ledgerState.loaded || !bookId) return;
-  const key = chapterIdx * 100000 + pageIdx;
-  const prevHigh = _ledgerHighWater[bookId] ?? -1;
-  if (key <= prevHigh) return; // re-reading covered ground, or paging backward
-  const delta = Math.min(key - prevHigh, 5);
-  _ledgerHighWater[bookId] = key;
-
-  _ledgerRolloverDayIfNeeded();
-
-  ledgerToday.pagesRead   += delta;
-  ledgerToday.pointsEarned += delta;
-  ledgerState.totalPoints += delta;
-  _ledgerSessionPages     += delta;
-
-  _ledgerCheckTimeOfDayAchievements();
-  if (_ledgerSessionPages >= 100) _ledgerUnlockAchievement('marathon');
-  if (ledgerToday.pagesRead >= 1) _ledgerUnlockAchievement('first-page');
-
-  if (!ledgerToday.goalMet && ledgerToday.pagesRead >= ledgerState.dailyGoal) {
-    ledgerToday.goalMet = true;
-    ledgerToday.pointsEarned += 20;
-    ledgerState.totalPoints  += 20;
-    _ledgerHandleGoalMet();
-  }
-
-  updateReaderLedgerPill();
-  _ledgerScheduleFlush();
-}
-
-function _ledgerRolloverDayIfNeeded() {
-  const todayStr = ledgerDateStr();
-  if (ledgerToday.dateStr === todayStr) return;
-  // A new local day started mid-session (e.g. reading past midnight) —
-  // flush whatever was pending under the old date, then start fresh.
-  _ledgerFlushNow();
-  ledgerToday = { dateStr: todayStr, pagesRead: 0, pointsEarned: 0, goalMet: false };
-  _ledgerFlushedPages = 0;
-  _ledgerFlushedPoints = 0;
-}
-
-function _ledgerHandleGoalMet() {
-  const todayStr = ledgerDateStr();
-  if (ledgerState.lastGoalMetDate !== todayStr) {
-    ledgerState.streakCount += 1;
-    ledgerState.longestStreak = Math.max(ledgerState.longestStreak, ledgerState.streakCount);
-    ledgerState.lastGoalMetDate = todayStr;
-
-    // One freeze per clean week of streak, capped at 2 banked at a time.
-    if (ledgerState.streakCount - ledgerState.lastFreezeGrantStreak >= 7 && ledgerState.freezesAvailable < 2) {
-      ledgerState.freezesAvailable += 1;
-      ledgerState.lastFreezeGrantStreak = ledgerState.streakCount;
-      showToast('🧊 Earned a streak freeze for a solid week!');
-    }
-
-    if (ledgerState.streakCount === 7)   _ledgerUnlockAchievement('streak-7');
-    if (ledgerState.streakCount === 30)  _ledgerUnlockAchievement('streak-30');
-    if (ledgerState.streakCount === 100) _ledgerUnlockAchievement('streak-100');
-
-    _ledgerPersistUserFields({
-      streakCount: ledgerState.streakCount,
-      longestStreak: ledgerState.longestStreak,
-      lastGoalMetDate: ledgerState.lastGoalMetDate,
-      freezesAvailable: ledgerState.freezesAvailable,
-      lastFreezeGrantStreak: ledgerState.lastFreezeGrantStreak,
-    });
-    showToast(`🔥 Goal met — Day ${ledgerState.streakCount} streak!`);
-  }
-  renderHomeLedgerTeaser();
-  if (document.getElementById('mobPanelLedger')?.classList.contains('active')) renderLedgerTab();
-}
-
-function _ledgerCheckTimeOfDayAchievements() {
-  const h = new Date().getHours();
-  if (h >= 0 && h < 4) _ledgerUnlockAchievement('night-owl');
-  if (h >= 4 && h < 6) _ledgerUnlockAchievement('early-bird');
-}
-
-function _ledgerUnlockAchievement(id, bookId = readerBookId) {
-  if (ledgerState.achievements[id]) return;
-  ledgerState.achievements[id] = new Date().toISOString();
-  const def = LEDGER_ACHIEVEMENTS.find(a => a.id === id);
-  if (def) showToast(`${def.icon} Achievement unlocked: ${def.label}`);
-  if (currentUser) {
-    setDoc(doc(db, 'users', currentUser.uid),
-      { [`ledgerAchievements.${id}`]: serverTimestamp() },
-      { merge: true }
-    ).catch(e => console.warn('ledger achievement persist:', e));
-  }
-  _ledgerAwardBookmarkForAchievement(id, bookId);
-}
-
-// Admin can link a bookmark template to an achievement (see the "Ledger
-// reward" field in the bookmark editor). The moment a reader unlocks that
-// achievement, they get that bookmark on whichever book triggered it.
-async function _ledgerAwardBookmarkForAchievement(achievementId, bookId) {
-  if (!currentUser || !bookId) return;
-  const tpl = _bookmarkTemplates.find(t => t.assignedAchievementId === achievementId);
-  if (!tpl) return;
-  if (_myBookmarks.some(b => b.type === 'award' && b.bookId === bookId && b.achievementId === achievementId)) return;
-  try {
-    const data = {
-      userId: currentUser.uid, bookId, type: 'award',
-      bookmarkId: tpl.id, achievementId,
-      createdAt: serverTimestamp(),
-    };
-    const ref = await addDoc(collection(db, 'user_bookmarks'), data);
-    _myBookmarks.push({ id: ref.id, ...data });
-    renderAll();
-    renderMobHome();
-  } catch(e) { console.warn('ledger award bookmark:', e); }
-}
-
-// Called from closeReader() / markBookFinished() right after a book is
-// actually added to the Finished list, so it fires exactly once per book.
-function ledgerRecordBookFinished(bookId) {
-  if (!currentUser || !ledgerState.loaded) return;
-  _ledgerRolloverDayIfNeeded();
-  ledgerState.totalPoints  += 100;
-  ledgerToday.pointsEarned += 100;
-  _ledgerFlushedPoints     += 100; // flushed immediately below — keep the debounced flush from re-sending it
-
-  _ledgerPersistUserFields({ totalPoints: increment(100) });
-  setDoc(doc(db, 'users', currentUser.uid, 'ledgerDays', ledgerToday.dateStr), {
-    dateStr: ledgerToday.dateStr, pointsEarned: increment(100), updatedAt: serverTimestamp(),
-  }, { merge: true }).catch(e => console.warn('ledger finish flush:', e));
-
-  _ledgerUnlockAchievement('first-finish', bookId);
-  _ledgerCheckExplorerAchievement(bookId);
-  updateReaderLedgerPill();
-  renderHomeLedgerTeaser();
-  if (document.getElementById('mobPanelLedger')?.classList.contains('active')) renderLedgerTab();
-}
-
-function _ledgerCheckExplorerAchievement(bookId) {
-  const finList = _userLists.find(l => l.id === 'finished');
-  const ids = finList?.bookIds || [];
-  const cats = new Set();
-  const all = dedupe([...library, ...communityLib]);
-  ids.forEach(id => {
-    const book = all.find(b => b.id === id);
-    if (book) cats.add(book.category || 'Uncategorised');
-  });
-  if (cats.size >= 3) _ledgerUnlockAchievement('explorer', bookId);
-}
-
-// ── Firestore flush (debounced — a few seconds after the last page turn,
-//    plus always on tab-close/reader-close) ─────────────────────────────
-function _ledgerScheduleFlush() {
-  if (_ledgerFlushTimer) return;
-  _ledgerFlushTimer = setTimeout(() => { _ledgerFlushTimer = null; _ledgerFlushNow(); }, 3000);
-}
-function _ledgerFlushNow() {
-  if (!currentUser || !ledgerToday.dateStr) return;
-  const pageDelta = ledgerToday.pagesRead - _ledgerFlushedPages;
-  const pointDelta = ledgerToday.pointsEarned - _ledgerFlushedPoints;
-  if (pageDelta <= 0 && pointDelta <= 0) return;
-  _ledgerFlushedPages = ledgerToday.pagesRead;
-  _ledgerFlushedPoints = ledgerToday.pointsEarned;
-
-  setDoc(doc(db, 'users', currentUser.uid, 'ledgerDays', ledgerToday.dateStr), {
-    dateStr: ledgerToday.dateStr,
-    pagesRead: increment(pageDelta),
-    pointsEarned: increment(pointDelta),
-    goalMet: ledgerToday.goalMet,
-    updatedAt: serverTimestamp(),
-  }, { merge: true }).catch(e => console.warn('ledger day flush:', e));
-
-  if (pointDelta > 0) {
-    setDoc(doc(db, 'users', currentUser.uid), { totalPoints: increment(pointDelta) }, { merge: true })
-      .catch(e => console.warn('ledger points flush:', e));
-  }
-}
-window.addEventListener('beforeunload', () => { _ledgerFlushNow(); });
-
-// ── Rendering ────────────────────────────────────────────────────────────
-function updateReaderLedgerPill() {
-  const pill = document.getElementById('readerLedgerPill');
-  if (!pill) return;
-  pill.textContent = `🔥${ledgerState.streakCount} · +${ledgerToday.pointsEarned}`;
-}
-
-function renderHomeLedgerTeaser() {
-  const el = document.getElementById('mobHomeLedgerTeaser');
-  if (!el) return;
-  if (!ledgerState.loaded) { el.innerHTML = ''; return; }
-  _ledgerRolloverDayIfNeeded();
-  const pct = Math.min(100, Math.round((ledgerToday.pagesRead / Math.max(ledgerState.dailyGoal,1)) * 100));
-  el.innerHTML = `
-    <div class="home-ledger-teaser" id="homeLedgerTeaserBtn">
-      <div class="home-ledger-teaser-flame">${ledgerState.streakCount ? '🔥' : '🕯️'}</div>
-      <div class="home-ledger-teaser-text">
-        <div class="home-ledger-teaser-title">${ledgerState.streakCount ? `${ledgerState.streakCount}-day streak` : 'Start a streak today'}</div>
-        <div class="home-ledger-teaser-sub">${ledgerToday.pagesRead}/${ledgerState.dailyGoal} pages today · ${ledgerState.totalPoints.toLocaleString()} pts</div>
-      </div>
-      ${_ledgerGoalRingSvg(pct, 40)}
-    </div>`;
-  document.getElementById('homeLedgerTeaserBtn')?.addEventListener('click', () => mob_switchTab('ledger'));
-}
-
-function _ledgerGoalRingSvg(pct, size = 64) {
-  const r = size/2 - 6, c = 2*Math.PI*r, off = c * (1 - pct/100), cx = size/2;
-  return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" style="flex-shrink:0;transform:rotate(-90deg)">
-    <circle cx="${cx}" cy="${cx}" r="${r}" fill="none" stroke="var(--panel)" stroke-width="6"/>
-    <circle cx="${cx}" cy="${cx}" r="${r}" fill="none" stroke="var(--teal)" stroke-width="6"
-      stroke-linecap="round" stroke-dasharray="${c}" stroke-dashoffset="${off}"/>
-  </svg>`;
-}
-
-function _ledgerRankFloor(title) {
-  const r = LEDGER_RANKS.find(r => r.title === title);
-  return r ? r.min : 0;
-}
-
-async function renderLedgerTab() {
-  const el = document.getElementById('ledgerContent');
-  if (!el) return;
-  if (!ledgerState.loaded) await loadLedgerState();
-  _ledgerRolloverDayIfNeeded();
-
-  const rank = ledgerRank(ledgerState.totalPoints);
-  const floor = _ledgerRankFloor(rank.title);
-  const nextGap = rank.next ? rank.next.min - ledgerState.totalPoints : 0;
-  const rankPct = rank.next ? Math.min(100, Math.round(((ledgerState.totalPoints - floor) / (rank.next.min - floor)) * 100)) : 100;
-  const goalPct = Math.min(100, Math.round((ledgerToday.pagesRead / Math.max(ledgerState.dailyGoal,1)) * 100));
-
-  el.innerHTML = `
-    <div class="ledger-card">
-      <div class="ledger-card-label">Streak</div>
-      <div class="ledger-row">
-        <div class="ledger-streak-flame ${ledgerState.streakCount ? '' : 'cold'}">🔥</div>
-        <div>
-          <div class="ledger-streak-count">${ledgerState.streakCount}</div>
-          <div class="ledger-streak-sub">${ledgerState.streakCount === 1 ? 'day' : 'days'} · longest ${ledgerState.longestStreak}</div>
-        </div>
-      </div>
-      <div class="ledger-freeze-row">
-        ${ledgerState.freezesAvailable > 0
-          ? Array.from({length: ledgerState.freezesAvailable}).map(() => `<span class="ledger-freeze-chip">🧊 Freeze ready</span>`).join('')
-          : `<span class="ledger-freeze-chip" style="opacity:.55">No freezes banked</span>`}
-      </div>
-    </div>
-
-    <div class="ledger-card">
-      <div class="ledger-card-label">Today's Goal</div>
-      <div class="ledger-row">
-        ${_ledgerGoalRingSvg(goalPct, 64)}
-        <div>
-          <div class="ledger-goal-num">${ledgerToday.pagesRead} / ${ledgerState.dailyGoal} pages</div>
-          <div class="ledger-goal-sub">${ledgerToday.goalMet ? 'Goal met — nice work! 🎉' : `${Math.max(0, ledgerState.dailyGoal - ledgerToday.pagesRead)} pages to go`}</div>
-        </div>
-      </div>
-      <button class="ledger-goal-edit" id="btnLedgerEditGoal">Change daily goal</button>
-    </div>
-
-    <div class="ledger-card">
-      <div class="ledger-card-label">Points &amp; Rank</div>
-      <div class="ledger-points-num">${ledgerState.totalPoints.toLocaleString()} pts</div>
-      <div class="ledger-rank-title">${esc(rank.title)}</div>
-      <div class="ledger-rank-bar"><div class="ledger-rank-bar-fill" style="width:${rankPct}%"></div></div>
-      <div class="ledger-rank-next">${rank.next ? `${nextGap.toLocaleString()} pts to ${esc(rank.next.title)}` : 'Highest rank reached'}</div>
-    </div>
-
-    <div class="ledger-card">
-      <div class="ledger-card-label">Reading Streak — Last 12 Weeks</div>
-      <div class="ledger-cal-grid" id="ledgerCalGrid">
-        <div style="grid-column:1/-1;color:var(--muted);font-size:.78rem;">Loading…</div>
-      </div>
-      <div class="ledger-cal-legend">
-        <span class="ledger-cal-legend-sw" style="background:var(--panel)"></span> Missed
-        <span class="ledger-cal-legend-sw" style="background:var(--rust);margin-left:.6rem"></span> Goal met
-      </div>
-    </div>
-
-    <div class="ledger-card">
-      <div class="ledger-card-label">Achievements</div>
-      <div class="ledger-badge-grid">
-        ${LEDGER_ACHIEVEMENTS.map(a => `
-          <div class="ledger-badge ${ledgerState.achievements[a.id] ? '' : 'locked'}" title="${esc(a.desc)}">
-            <span class="ledger-badge-icon">${a.icon}</span>
-            <span class="ledger-badge-label">${esc(a.label)}</span>
-          </div>`).join('')}
-      </div>
-    </div>`;
-
-  document.getElementById('btnLedgerEditGoal')?.addEventListener('click', showLedgerGoalPicker);
-  _ledgerRenderCalendar();
-}
-
-async function _ledgerRenderCalendar() {
-  const grid = document.getElementById('ledgerCalGrid');
-  if (!grid || !currentUser) return;
-  const days = 84; // 12 weeks
-  const todayStr = ledgerDateStr();
-  const startStr = _ledgerAddDays(todayStr, -(days - 1));
-  const metSet = new Set();
-  try {
-    const q = query(collection(db, 'users', currentUser.uid, 'ledgerDays'), where('dateStr', '>=', startStr));
-    const snap = await getDocs(q);
-    snap.forEach(d => { if (d.data().goalMet) metSet.add(d.data().dateStr); });
-  } catch(e) { console.warn('ledger calendar load:', e); }
-  if (ledgerToday.goalMet) metSet.add(ledgerToday.dateStr);
-
-  let html = '';
-  for (let i = days - 1; i >= 0; i--) {
-    const dStr = _ledgerAddDays(todayStr, -i);
-    const met = metSet.has(dStr);
-    const isToday = dStr === todayStr;
-    html += `<div class="ledger-cal-cell ${met ? 'met' : ''} ${isToday ? 'today' : ''}" title="${dStr}${met ? ' — goal met' : ''}"></div>`;
-  }
-  grid.innerHTML = html;
-}
-
-// ── Popovers: daily-goal editor + the reader HUD's tap-to-expand summary ──
-// Both are their own bespoke bottom sheet (not the .mob-picker-scrim used
-// for editing a book's own category/tags) so they read as "the game layer"
-// rather than another instance of the everyday editing picker.
-function showLedgerGoalPicker() {
-  document.getElementById('ledgerPopover')?.remove();
-  const presets = [{ label: 'Casual', value: 10 }, { label: 'Steady', value: 20 }, { label: 'Ambitious', value: 40 }];
-  const pop = document.createElement('div');
-  pop.id = 'ledgerPopover';
-  pop.className = 'ledger-popover-scrim';
-  pop.innerHTML = `
-    <div class="ledger-popover-card">
-      <button class="ledger-popover-close" id="ledgerPopoverClose">✕</button>
-      <div class="ledger-popover-title">Daily Reading Goal</div>
-      <div class="ledger-goal-chip-row">
-        ${presets.map(p => `<button class="ledger-goal-chip ${ledgerState.dailyGoal === p.value ? 'active' : ''}" data-goal="${p.value}">${p.label} · ${p.value}</button>`).join('')}
-      </div>
-      <input type="number" class="ledger-goal-custom-input" id="ledgerGoalCustom" placeholder="Custom page count" min="1"
-        value="${[10,20,40].includes(ledgerState.dailyGoal) ? '' : ledgerState.dailyGoal}"/>
-    </div>`;
-  document.body.appendChild(pop);
-  pop.addEventListener('click', e => { if (e.target === pop) pop.remove(); });
-  pop.querySelector('#ledgerPopoverClose').addEventListener('click', () => pop.remove());
-  pop.querySelectorAll('[data-goal]').forEach(btn => {
-    btn.addEventListener('click', () => { _ledgerSetDailyGoal(+btn.dataset.goal); pop.remove(); });
-  });
-  const input = pop.querySelector('#ledgerGoalCustom');
-  input.addEventListener('change', () => {
-    const v = Math.max(1, Math.round(+input.value || 0));
-    if (v > 0) { _ledgerSetDailyGoal(v); pop.remove(); }
-  });
-}
-
-function _ledgerSetDailyGoal(v) {
-  ledgerState.dailyGoal = v;
-  // Only handle the *newly met* transition (goal lowered below today's page
-  // count) through the normal goal-met flow, so the +20 bonus/streak/
-  // achievement checks stay consistent with the reading-driven path. A goal
-  // raised back above today's count must NOT claw back a day already
-  // credited, so goalMet is never flipped back to false here.
-  if (!ledgerToday.goalMet && ledgerToday.pagesRead >= v) {
-    ledgerToday.goalMet = true;
-    ledgerToday.pointsEarned += 20;
-    ledgerState.totalPoints  += 20;
-    _ledgerHandleGoalMet();
-    _ledgerScheduleFlush();
-  }
-  _ledgerPersistUserFields({ dailyGoal: v });
-  showToast(`Daily goal set to ${v} pages`);
-  updateReaderLedgerPill();
-  if (document.getElementById('mobPanelLedger')?.classList.contains('active')) renderLedgerTab();
-  renderHomeLedgerTeaser();
-}
-
-function showLedgerReaderPopover() {
-  document.getElementById('ledgerPopover')?.remove();
-  const goalPct = Math.min(100, Math.round((ledgerToday.pagesRead / Math.max(ledgerState.dailyGoal,1)) * 100));
-  const pop = document.createElement('div');
-  pop.id = 'ledgerPopover';
-  pop.className = 'ledger-popover-scrim';
-  pop.innerHTML = `
-    <div class="ledger-popover-card">
-      <button class="ledger-popover-close" id="ledgerPopoverClose">✕</button>
-      <div class="ledger-popover-title">🔥 ${ledgerState.streakCount}-Day Streak</div>
-      <div class="ledger-row">
-        ${_ledgerGoalRingSvg(goalPct, 64)}
-        <div>
-          <div class="ledger-goal-num">${ledgerToday.pagesRead} / ${ledgerState.dailyGoal} pages today</div>
-          <div class="ledger-goal-sub">+${ledgerToday.pointsEarned} points today · ${ledgerState.totalPoints.toLocaleString()} total</div>
-        </div>
-      </div>
-      <div style="display:flex;gap:1.2rem;margin-top:.8rem;">
-        <button class="ledger-goal-edit" id="ledgerPopoverGoalBtn">Change goal</button>
-        <button class="ledger-goal-edit" id="ledgerPopoverOpenBtn">Open Ledger →</button>
-      </div>
-    </div>`;
-  document.body.appendChild(pop);
-  pop.addEventListener('click', e => { if (e.target === pop) pop.remove(); });
-  pop.querySelector('#ledgerPopoverClose').addEventListener('click', () => pop.remove());
-  pop.querySelector('#ledgerPopoverGoalBtn').addEventListener('click', () => { pop.remove(); showLedgerGoalPicker(); });
-  pop.querySelector('#ledgerPopoverOpenBtn').addEventListener('click', () => {
-    pop.remove();
-    closeReader();
-    mob_switchTab('ledger');
-  });
-}
-
-document.getElementById('readerLedgerPill')?.addEventListener('click', (e) => {
-  e.stopPropagation();
-  showLedgerReaderPopover();
-});
 
 // ── IFRAME-COLUMN PAGINATION ENGINE ─────────────────────────────────────────
 // Uses CSS columns inside a sandboxed iframe. The browser's own layout engine
@@ -6903,7 +6418,7 @@ function _showHighlightPopup(doc, range) {
       if(!offsets) return;
       const id = await saveHighlight(offsets.startOffset, offsets.endOffset, color, text);
       if(id) applyHighlightsToChapter(doc);
-      renderReaderBookmarkList();
+      renderReaderCombinedList(); // keep combined list fresh if panel is open
     });
   });
 }
@@ -6935,14 +6450,14 @@ function openHighlightMenu(markEl, clientX, clientY) {
       await updateHighlightColor(id, color);
       markEl.style.background = HIGHLIGHT_COLORS[color];
       _removeHighlightPopup();
-      renderReaderBookmarkList();
+      renderReaderCombinedList();
     });
   });
   popup.querySelector('[data-hldelete]').addEventListener('click', async () => {
     await deleteHighlight(id);
     markEl.replaceWith(...markEl.childNodes);
     _removeHighlightPopup();
-    renderReaderBookmarkList();
+    renderReaderCombinedList();
   });
 }
 
@@ -7942,113 +7457,131 @@ async function removeReaderBookmarkAt(bookId, chapterIdx, pageIdx) {
   } catch(e) { console.warn('removeReaderBookmarkAt:', e); }
 }
 
-function renderReaderBookmarkList() {
+// ── Combined bookmarks + highlights list ──────────────────────────────────────
+// Replaces the old two-tab system. Both types are sorted together by position
+// (chapter → page/offset) so readers can scan a single chronological list.
+function renderReaderCombinedList() {
   const container = document.getElementById('readerBookmarkListItems');
   if(!container || !readerBookId) return;
 
-  const bookmarks = getReaderBookmarksForBook(readerBookId)
-    .map((bm, i) => ({ kind: 'bookmark', ...bm, _i: i }));
-  const highlights = [..._currentBookHighlights]
-    .map((h, i) => ({ kind: 'highlight', ...h, _i: i, startOffset: h.startOffset ?? 0 }));
+  const bookmarks = getReaderBookmarksForBook(readerBookId);
+  const highlights = [...(_currentBookHighlights || [])]
+    .sort((a, b) => (a.chapterIdx - b.chapterIdx) || (a.startOffset - b.startOffset));
 
-  const items = [...bookmarks, ...highlights]
-    .sort((a, b) => (a.chapterIdx - b.chapterIdx) || ((a.pageIdx ?? 0) - (b.pageIdx ?? 0)) || ((a.startOffset ?? 0) - (b.startOffset ?? 0)));
+  // Build a unified array tagged with type
+  const bmEntries = bookmarks.map((bm, i) => ({
+    type: 'bookmark', chapterIdx: bm.chapterIdx,
+    sortKey: bm.chapterIdx * 1e7 + (bm.pageIdx || 0) * 1000,
+    bm, bmIdx: i,
+  }));
+  const hlEntries = highlights.map((h, i) => ({
+    type: 'highlight', chapterIdx: h.chapterIdx,
+    sortKey: h.chapterIdx * 1e7 + (h.startOffset || 0),
+    h, hlIdx: i,
+  }));
+  const all = [...bmEntries, ...hlEntries].sort((a, b) => a.sortKey - b.sortKey);
 
-  if(!items.length) {
-    container.innerHTML = `<div style="padding:1.2rem;font-size:.82rem;
-      color:var(--muted);line-height:1.6;text-align:center;">
-      No bookmarks or highlights yet — tap the ribbon in the top corner of any
-      page to place a bookmark, or tap ✎ to select text and highlight it.
+  if(!all.length) {
+    container.innerHTML = `<div style="padding:1.4rem 1rem;font-size:.82rem;
+      color:var(--muted);line-height:1.7;text-align:center;">
+      No bookmarks or highlights yet.<br>
+      <span style="font-size:.75rem;">Tap 🔖 to bookmark a page · tap ✎ to highlight text</span>
     </div>`;
     return;
   }
 
-  container.innerHTML = items.map(it => {
-    if(it.kind === 'bookmark') {
-      const isCurrent = it.chapterIdx === readerChapter && it.pageIdx === readerPage;
-      const placedAt = it.createdAt?.toDate?.();
-      const dateStr = placedAt ? placedAt.toLocaleDateString() : '';
+  container.innerHTML = all.map((entry, i) => {
+    if(entry.type === 'bookmark') {
+      const bm = entry.bm;
+      const isCurrent = bm.chapterIdx === readerChapter && bm.pageIdx === readerPage;
+      const dateStr = bm.createdAt?.toDate?.()?.toLocaleDateString() || '';
       return `<div class="chapter-item ${isCurrent ? 'active' : ''}"
-        data-kind="bookmark" data-idx="${it._i}" style="display:flex;align-items:center;
-        justify-content:space-between;gap:.5rem;">
-        <div style="min-width:0;flex:1;display:flex;align-items:center;gap:.5rem;">
-          <span style="flex-shrink:0;opacity:.7;">🔖</span>
-          <div style="min-width:0;flex:1;">
-            <div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
-              ${esc(it.chapterLabel || ('Chapter ' + (it.chapterIdx+1)))}
-            </div>
-            <div style="font-size:.65rem;opacity:.55;margin-top:2px;">
-              Page ${it.pageIdx + 1}${dateStr ? ' · ' + dateStr : ''}
-            </div>
+        data-entry="${i}" data-bmidx="${entry.bmIdx}"
+        style="display:flex;align-items:center;gap:.5rem;">
+        <span style="flex-shrink:0;font-size:.95rem;opacity:.75;">🔖</span>
+        <div style="min-width:0;flex:1;">
+          <div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:.82rem;">
+            ${esc(bm.chapterLabel || ('Chapter ' + (bm.chapterIdx+1)))}
+          </div>
+          <div style="font-size:.63rem;opacity:.5;margin-top:1px;">
+            Page ${(bm.pageIdx||0) + 1}${dateStr ? ' · ' + dateStr : ''}
           </div>
         </div>
-        <button data-remove="bookmark:${it._i}" title="Remove bookmark"
+        <button data-bmremove="${entry.bmIdx}" title="Remove bookmark"
           style="background:none;border:none;cursor:pointer;font-size:.85rem;
-                 color:inherit;opacity:.45;padding:.2rem .3rem;flex-shrink:0;">✕</button>
+                 color:inherit;opacity:.38;padding:.2rem .3rem;flex-shrink:0;">✕</button>
+      </div>`;
+    } else {
+      const h = entry.h;
+      const dot = HIGHLIGHT_COLORS[h.color] || HIGHLIGHT_COLORS.yellow;
+      const solidColor = dot.replace(/,[\d.]+\)$/, ',1)');
+      const excerpt = esc((h.text || '').trim()).slice(0, 120);
+      const dateStr = h.createdAt?.toDate?.()?.toLocaleDateString() || '';
+      return `<div class="chapter-item"
+        data-entry="${i}" data-hlid="${esc(h.id)}"
+        style="display:flex;align-items:flex-start;gap:.55rem;">
+        <span style="flex-shrink:0;width:9px;height:9px;border-radius:50%;
+                     margin-top:.35rem;background:${solidColor};display:inline-block;"></span>
+        <div style="min-width:0;flex:1;">
+          <div style="font-size:.82rem;line-height:1.4;overflow:hidden;
+                      display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;">
+            ${excerpt || '<em style="opacity:.5">(no preview)</em>'}
+          </div>
+          <div style="font-size:.63rem;opacity:.5;margin-top:1px;">
+            ${esc(h.chapterLabel || ('Chapter ' + (h.chapterIdx+1)))}${dateStr ? ' · ' + dateStr : ''}
+          </div>
+        </div>
+        <button data-hlremove="${entry.hlIdx}" title="Remove highlight"
+          style="background:none;border:none;cursor:pointer;font-size:.85rem;
+                 color:inherit;opacity:.38;padding:.2rem .3rem;flex-shrink:0;">✕</button>
       </div>`;
     }
-    const createdAt = it.createdAt?.toDate?.();
-    const dateStr = createdAt ? createdAt.toLocaleDateString() : '';
-    const dot = HIGHLIGHT_COLORS[it.color] || HIGHLIGHT_COLORS.yellow;
-    const excerpt = esc((it.text || '').trim()).slice(0, 140);
-    return `<div class="highlight-item" data-kind="highlight" data-idx="${it._i}" style="display:flex;align-items:flex-start;gap:.6rem;">
-      <span style="flex-shrink:0;width:10px;height:10px;border-radius:50%;margin-top:.3rem;background:${dot.replace(',.45)', ',1)')};"></span>
-      <div style="min-width:0;flex:1;">
-        <div style="line-height:1.4;">${excerpt || '<em style="opacity:.6">(no preview)</em>'}</div>
-        <div style="font-size:.65rem;opacity:.55;margin-top:3px;">
-          ${esc(it.chapterLabel || ('Chapter ' + (it.chapterIdx+1)))}${dateStr ? ' · ' + dateStr : ''}
-        </div>
-      </div>
-      <button data-remove="highlight:${it._i}" title="Remove highlight"
-        style="background:none;border:none;cursor:pointer;font-size:.85rem;
-               color:inherit;opacity:.45;padding:.2rem .3rem;flex-shrink:0;">✕</button>
-    </div>`;
   }).join('');
 
-  // Tap a row → jump to that bookmark/highlight's location
-  container.querySelectorAll('[data-kind]').forEach(el => {
+  const closePanel = () => document.getElementById('readerBookmarkListPanel').classList.remove('open');
+
+  // Tap row → navigate
+  container.querySelectorAll('[data-entry]').forEach(el => {
     el.addEventListener('click', e => {
-      if(e.target.closest('[data-remove]')) return; // handled separately
-      const idx = parseInt(el.dataset.idx);
-      document.getElementById('readerBookmarkListPanel').classList.remove('open');
-      if(el.dataset.kind === 'bookmark') {
-        const bm = bookmarks[idx];
-        readerGoToChapter(bm.chapterIdx, bm.pageIdx);
-      } else {
-        const h = highlights[idx];
-        readerGoToChapter(h.chapterIdx, 0); // offsets aren't page-indexed yet
-      }
+      if(e.target.closest('[data-bmremove],[data-hlremove]')) return;
+      const entry = all[parseInt(el.dataset.entry)];
+      closePanel();
+      if(entry.type === 'bookmark') readerGoToChapter(entry.bm.chapterIdx, entry.bm.pageIdx);
+      else                          readerGoToChapter(entry.h.chapterIdx, 0);
     });
   });
 
-  // Tap ✕ → remove that specific bookmark or highlight
-  container.querySelectorAll('[data-remove]').forEach(btn => {
+  // Remove bookmark
+  container.querySelectorAll('[data-bmremove]').forEach(btn => {
     btn.addEventListener('click', async e => {
       e.stopPropagation();
-      const [kind, idxStr] = btn.dataset.remove.split(':');
-      const idx = parseInt(idxStr);
-      if(kind === 'bookmark') {
-        const bm = bookmarks[idx];
-        await removeReaderBookmarkAt(readerBookId, bm.chapterIdx, bm.pageIdx);
-        renderReaderBookmarkList();
-        renderReaderBookmarkTab();
-        renderAll();
-      } else {
-        const h = highlights[idx];
-        await deleteHighlight(h.id);
-        renderReaderBookmarkList();
-        if(h.chapterIdx === readerChapter) {
-          const doc = _readerIframe?.contentDocument;
-          if(doc) {
-            doc.querySelectorAll(`mark[data-highlightid="${h.id}"]`).forEach(mark => {
-              mark.replaceWith(...mark.childNodes);
-            });
-          }
-        }
+      const bm = bookmarks[parseInt(btn.dataset.bmremove)];
+      await removeReaderBookmarkAt(readerBookId, bm.chapterIdx, bm.pageIdx);
+      renderReaderCombinedList();
+      renderReaderBookmarkTab();
+      renderAll();
+    });
+  });
+
+  // Remove highlight
+  container.querySelectorAll('[data-hlremove]').forEach(btn => {
+    btn.addEventListener('click', async e => {
+      e.stopPropagation();
+      const h = highlights[parseInt(btn.dataset.hlremove)];
+      await deleteHighlight(h.id);
+      // Remove visible mark from the current chapter without a full re-render
+      if(h.chapterIdx === readerChapter) {
+        const doc = _readerIframe?.contentDocument;
+        if(doc) doc.querySelectorAll(`mark[data-highlightid="${h.id}"]`)
+          .forEach(mark => mark.replaceWith(...mark.childNodes));
       }
+      renderReaderCombinedList();
     });
   });
 }
+
+// Keep old name as alias so any remaining internal call sites still work
+const renderReaderBookmarkList = renderReaderCombinedList;
 
 document.getElementById('btnToggleBookmarkList').addEventListener('click', () => {
   document.getElementById('ttsPanel').classList.remove('open');
@@ -8057,7 +7590,7 @@ document.getElementById('btnToggleBookmarkList').addEventListener('click', () =>
   const willOpen = !panel.classList.contains('open');
   panel.classList.toggle('open');
   positionReaderToolbar();
-  if(willOpen) renderReaderBookmarkList();
+  if(willOpen) renderReaderCombinedList();
 });
 
   function updateBookmarkNavIcon() {
@@ -8434,8 +7967,6 @@ function closeReader(){
 
 async function markBookFinished(bookId){
   if(!bookId || !currentUser) return;
-
-  ledgerRecordBookFinished(bookId);
 
   const crList = _userLists.find(l => l.id === 'currently-reading');
   if(crList){
@@ -9698,21 +9229,14 @@ function getDisplayBookmarkTemplate(bookId) {
   const book = [...library, ...communityLib, ..._bookmarkBookCache]
     .find(b => b.id === bookId);
 
-  // ── PRIORITY 1: User-specific achievement award for this exact book ─────
-  const myAward = _myBookmarks.find(b => b.type === 'award' && b.bookId === bookId);
-  if(myAward){
-    const awardTpl = _bookmarkTemplates.find(t => t.id === myAward.bookmarkId);
-    if(awardTpl) return awardTpl;
-  }
-
-  // ── PRIORITY 2: Global bookmark assigned to this exact book — always show
+  // ── PRIORITY 1: Global bookmark assigned to this exact book — always show
   const bookSpecific = _bookmarkTemplates.find(t =>
     t.scope === 'global' &&
     (t.assignedBookIds || []).includes(bookId)
   );
   if(bookSpecific) return bookSpecific;
 
-  // ── PRIORITY 3: Global bookmark assigned to this book's category — always
+  // ── PRIORITY 2: Global bookmark assigned to this book's category — always
   if(book?.category){
     const catSpecific = _bookmarkTemplates.find(t =>
       t.scope === 'global' &&
@@ -9726,7 +9250,7 @@ function getDisplayBookmarkTemplate(bookId) {
   const isCurrentlyReading = crList && (crList.bookIds || []).includes(bookId);
   if(!isCurrentlyReading) return null;
 
-  // ── PRIORITY 4: Seasonal global bookmark ──────────────────────────────
+  // ── PRIORITY 3: Seasonal global bookmark ──────────────────────────────
   const seasonal = _bookmarkTemplates.find(t => {
     if(t.scope !== 'global' || t.condition?.type !== 'seasonal') return false;
     const from = t.condition.startsAt?.toDate?.();
@@ -9735,7 +9259,7 @@ function getDisplayBookmarkTemplate(bookId) {
   });
   if(seasonal) return seasonal;
 
-  // ── PRIORITY 5: Default reading bookmark ──────────────────────────────
+  // ── PRIORITY 4: Default reading bookmark ──────────────────────────────
   return {
     shape: 'classic', icon: '📖', label: '',
     colors: { body: '#0f1a2e', accent: '#c8952a', text: '#faf7f2' }
@@ -10106,7 +9630,7 @@ async function checkAdminStatus() {
     const snap = await getDoc(doc(db, 'users', currentUser.uid));
     isAdmin = snap.exists() && snap.data().isAdmin === true;
     if(isAdmin){
-      document.getElementById('mobAdminSettingsCard').style.display = '';
+      document.getElementById('mobNavAdmin').style.display = '';
     }
   } catch(e) {
     console.warn('Admin check failed:', e);
@@ -10118,7 +9642,7 @@ async function checkAdminStatus() {
   overlay.className = 'modal-overlay open';
   overlay.innerHTML = `
     <div class="modal" style="max-width:500px;max-height:80vh;display:flex;flex-direction:column;overflow:hidden;">
-      <h3 style="margin-bottom:.8rem">${section === 'categories' ? '🏷 Manage Categories' : '🏷 Manage Tags'}</h3>
+      <h3 style="margin-bottom:.8rem">${section === 'categories' ? '🏷 Manage Categories' : '🔖 Manage Tags'}</h3>
       <div style="flex:1;overflow-y:auto;" id="adminSheetBody"></div>
       <div class="modal-actions" style="margin-top:.8rem">
         <button class="btn-cancel" onclick="this.closest('.modal-overlay').remove()">Close</button>
@@ -11166,20 +10690,27 @@ function showTagsModal() {
         }
       </div>`;
 
-    // Toggle a tag on/off — updates in place, no re-render needed, so the
-    // colour/checkmark change is the only thing the user sees (nothing
-    // visually "moves" or disappears from view).
+    // Toggle a tag on/off — optimistic UI update, rolled back on failure.
     overlay.querySelectorAll('[data-tag]').forEach(item => {
       item.addEventListener('click', async () => {
         const tag = item.dataset.tag;
-        const isSelected = item.classList.contains('selected');
-        const tags = isSelected
-          ? (book.tags || []).filter(t => t !== tag)
-          : [...new Set([...(book.tags || []), tag])];
+        const wasSelected = item.classList.contains('selected');
+        const prevTags = book.tags ? [...book.tags] : [];
+        const tags = wasSelected
+          ? prevTags.filter(t => t !== tag)
+          : [...new Set([...prevTags, tag])];
+        // Optimistic update
         book.tags = tags;
-        item.classList.toggle('selected');
-        await updateDoc(doc(db, 'books', currentId), { tags, updatedAt: serverTimestamp() });
-        renderAll();
+        item.classList.toggle('selected', !wasSelected);
+        try {
+          await updateDoc(doc(db, 'books', currentId), { tags, updatedAt: serverTimestamp() });
+          renderAll();
+        } catch(err) {
+          // Roll back optimistic update
+          book.tags = prevTags;
+          item.classList.toggle('selected', wasSelected);
+          showToast('Could not save tag: ' + err.message);
+        }
       });
     });
 
@@ -11189,17 +10720,23 @@ function showTagsModal() {
       const tag = customInput.value.trim();
       if(!tag) return;
       customInput.value = '';
-      const tags = [...new Set([...(book.tags || []), tag])];
+      const prevTags = book.tags ? [...book.tags] : [];
+      const tags = [...new Set([...prevTags, tag])];
       book.tags = tags;
-      await updateDoc(doc(db, 'books', currentId), { tags, updatedAt: serverTimestamp() });
-      // Add to global tag list if new
-      if(!_globalTags.includes(tag)) {
-        _globalTags.push(tag);
-        _globalTags.sort();
-        await updateDoc(doc(db, 'config', 'tags'), { list: _globalTags });
+      try {
+        await updateDoc(doc(db, 'books', currentId), { tags, updatedAt: serverTimestamp() });
+        // Add to global tag list if new
+        if(!_globalTags.includes(tag)) {
+          _globalTags.push(tag);
+          _globalTags.sort();
+          await updateDoc(doc(db, 'config', 'tags'), { list: _globalTags }).catch(()=>{});
+        }
+        render();
+        renderAll();
+      } catch(err) {
+        book.tags = prevTags;
+        showToast('Could not save tag: ' + err.message);
       }
-      render();
-      renderAll();
     };
     overlay.querySelector('#tagsCustomAdd').addEventListener('click', addCustom);
     customInput.addEventListener('keydown', e => { if(e.key === 'Enter') addCustom(); });
@@ -11467,10 +11004,6 @@ async function adminLoadTags() {
                   ${t.assignedCategories?.length && t.assignedBookIds?.length ? ' · ' : ''}
                   ${t.assignedBookIds?.length ? `${t.assignedBookIds.length} book${t.assignedBookIds.length!==1?'s':''}` : ''}
                 </div>` : ''}
-              ${t.assignedAchievementId ? `
-                <div style="font-size:.65rem;color:var(--gold2);margin-top:1px">
-                  🏅 Awarded for: ${esc(LEDGER_ACHIEVEMENTS.find(a=>a.id===t.assignedAchievementId)?.label || t.assignedAchievementId)}
-                </div>` : ''}
             </div>
             <div style="display:flex;gap:.3rem;flex-shrink:0">
               <button class="admin-copy-btn" data-bm-edit="${t.id}">✎</button>
@@ -11586,7 +11119,7 @@ function buildAdminSections() {
 
         <div class="admin-section">
       <div class="admin-section-header" data-admin-section="tags">
-        <span class="admin-section-title">🏷 Tags</span>
+        <span class="admin-section-title">🔖 Tags</span>
         <span class="admin-section-chevron">▾</span>
       </div>
       <div class="admin-section-body" id="adminTagBody">
@@ -11596,7 +11129,7 @@ function buildAdminSections() {
 
     <div class="admin-section">
       <div class="admin-section-header" data-admin-section="bookmarks">
-        <span class="admin-section-title">🔖 Bookmarks</span>
+        <span class="admin-section-title">🎖 Bookmarks</span>
         <span class="admin-section-chevron">▾</span>
       </div>
       <div class="admin-section-body" id="adminBookmarkBody">
@@ -11638,12 +11171,11 @@ function buildAdminSections() {
     ?.addEventListener('click', adminLoadUsers);
 }
 
-document.getElementById('btnMobOpenAdmin')?.addEventListener('click', () => {
+document.getElementById('mobNavAdmin')?.addEventListener('click', () => {
+  document.querySelectorAll('.mob-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('mobNavAdmin').classList.add('active');
   mob_showPanel('mobPanelAdmin');
   buildAdminSections();
-});
-document.getElementById('btnAdminBack')?.addEventListener('click', () => {
-  mob_showPanel('mobPanelSettings');
 });
 
 function showBookmarkEditor(templateId) {
@@ -11765,18 +11297,6 @@ function showBookmarkEditor(templateId) {
         <div id="bmEdBookDropdown" style="display:none;border:1px solid var(--border);
           border-radius:3px;background:var(--warm-white);max-height:140px;overflow-y:auto;
           margin-top:2px;"></div>
-      </div>
-
-      <div style="font-size:.62rem;letter-spacing:.15em;text-transform:uppercase;
-                  color:var(--muted);font-weight:700;margin:.8rem 0 .4rem">
-        Ledger reward</div>
-      <div class="form-row"><label>Award automatically for achievement
-        <span style="font-size:.65rem;font-weight:400;color:var(--muted)">
-          (given to a reader's currently-open book the moment they unlock it)</span></label>
-        <select id="bmEdAchievement">
-          <option value="">— Not tied to an achievement —</option>
-          ${LEDGER_ACHIEVEMENTS.map(a => `<option value="${a.id}" ${existing?.assignedAchievementId===a.id?'selected':''}>${a.icon} ${esc(a.label)}</option>`).join('')}
-        </select>
       </div>
 
       <div class="modal-actions" style="margin-top:1.2rem">
@@ -11945,7 +11465,6 @@ function showBookmarkEditor(templateId) {
       updatedAt: serverTimestamp(),
       assignedCategories: [...selectedCats],
       assignedBookIds:    [...selectedBookIds],
-      assignedAchievementId: overlay.querySelector('#bmEdAchievement').value || null,
     };
 
     overlay.remove();
