@@ -1391,6 +1391,39 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
   82%  {opacity:1;   transform:translate(-50%,-50%) scale(1);}
   100% {opacity:0;   transform:translate(-50%,-65%) scale(.96);}
 }
+
+/* Achievement-unlock celebration — bigger cousin of the goal burst above,
+   with a confetti burst behind it. Bursts are queued (see
+   _ledgerAchievementQueue in JS) so two unlocks in the same beat don't
+   visually collide; only one plays on screen at a time. */
+.ledger-achievement-scrim{position:fixed;inset:0;z-index:600;pointer-events:none;
+  display:flex;align-items:center;justify-content:center;overflow:hidden;}
+.ledger-achievement-burst{position:relative;background:var(--navy2);color:#fff;
+  padding:1.6rem 2rem 1.7rem;border-radius:20px;border:1px solid var(--gold);
+  text-align:center;max-width:300px;box-shadow:0 12px 46px rgba(0,0,0,.4);
+  opacity:0;animation:ledgerAchievementBurst 2.8s cubic-bezier(.22,1,.36,1) forwards;}
+.ledger-achievement-burst::before{content:'';position:absolute;inset:5px;
+  border:1px solid rgba(232,184,75,.4);border-radius:15px;pointer-events:none;}
+.ledger-achievement-burst-kicker{font-family:'Lato',sans-serif;font-size:.62rem;
+  font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--gold2);}
+.ledger-achievement-burst-icon{font-size:2.8rem;margin:.5rem 0 .3rem;line-height:1;}
+.ledger-achievement-burst-label{font-family:'Playfair Display',serif;font-size:1.25rem;color:#fff;}
+.ledger-achievement-burst-desc{font-family:'Lato',sans-serif;font-size:.74rem;
+  color:var(--light-blue);margin-top:.3rem;line-height:1.4;}
+@keyframes ledgerAchievementBurst{
+  0%   {opacity:0; transform:scale(.55);}
+  15%  {opacity:1; transform:scale(1.06);}
+  25%  {opacity:1; transform:scale(1);}
+  88%  {opacity:1; transform:scale(1);}
+  100% {opacity:0; transform:scale(.96);}
+}
+.ledger-confetti{position:absolute;top:50%;left:50%;width:8px;height:14px;
+  margin:-7px 0 0 -4px;background:var(--c,var(--gold));border-radius:1px;
+  opacity:0;animation:ledgerConfettiFall var(--dur,1.4s) var(--delay,0s) ease-out forwards;}
+@keyframes ledgerConfettiFall{
+  0%   {opacity:1; transform:translate(0,0) rotate(0deg);}
+  100% {opacity:0; transform:translate(var(--dx,0px),var(--dy,200px)) rotate(var(--rot,480deg));}
+}
 .ledger-rank-bar{height:6px;border-radius:3px;background:var(--panel);margin-top:.6rem;overflow:hidden;}
 .ledger-rank-bar-fill{height:100%;background:linear-gradient(90deg,var(--gold),var(--gold2));border-radius:3px;transition:width .4s ease;}
 .ledger-rank-next{font-size:.68rem;color:var(--muted);margin-top:.35rem;}
@@ -5704,7 +5737,7 @@ function _ledgerUnlockAchievement(id, bookId = readerBookId, opts = {}) {
   // Backfilled unlocks (opts.silent) represent things the reader already did
   // before this badge existed — no toast, since celebrating it "right now"
   // would be misleading.
-  if (def && !opts.silent) showToast(`${def.icon} Achievement unlocked: ${def.label}`);
+  if (def && !opts.silent) _ledgerPlayAchievementBurst(def);
   _ledgerPendingAchievements.add(id);
   _ledgerFlushAchievementsNow(); // persist right away — don't wait on the debounced page/point flush, which can be lost on a quick refresh
   _ledgerAwardBookmarkForAchievement(id, bookId);
@@ -5884,6 +5917,54 @@ function _ledgerPlayGoalMetAnimation() {
   el.innerHTML = `🎉 Daily goal reached!<div class="ledger-goal-burst-sub">+20 bonus points</div>`;
   document.body.appendChild(el);
   setTimeout(() => el.remove(), 2200);
+}
+
+// Achievement-unlock celebration — big-tile card + confetti, shown over
+// whatever screen the reader is on. Queued rather than fired immediately:
+// if two achievements unlock in the same page-turn (e.g. 'first-page' and
+// the daily goal landing at once), they'd otherwise stack on top of each
+// other. Bursts play one at a time, in unlock order.
+let _ledgerAchievementQueue = [];
+let _ledgerAchievementBurstPlaying = false;
+const LEDGER_CONFETTI_COLORS = ['var(--gold)','var(--gold2)','var(--rust)','var(--teal)','var(--light-blue)'];
+
+function _ledgerPlayAchievementBurst(def) {
+  if (!def) return;
+  _ledgerAchievementQueue.push(def);
+  if (!_ledgerAchievementBurstPlaying) _ledgerAdvanceAchievementQueue();
+}
+
+function _ledgerAdvanceAchievementQueue() {
+  const def = _ledgerAchievementQueue.shift();
+  if (!def) { _ledgerAchievementBurstPlaying = false; return; }
+  _ledgerAchievementBurstPlaying = true;
+  document.getElementById('ledgerAchievementBurst')?.remove();
+
+  let confettiHtml = '';
+  for (let i = 0; i < 28; i++) {
+    const dx    = Math.round((Math.random() - .5) * 260);
+    const dy    = Math.round(140 + Math.random() * 140);
+    const rot   = Math.round(360 + Math.random() * 540) * (Math.random() < .5 ? -1 : 1);
+    const dur   = (1.1 + Math.random() * .8).toFixed(2);
+    const delay = (Math.random() * .2).toFixed(2);
+    const color = LEDGER_CONFETTI_COLORS[i % LEDGER_CONFETTI_COLORS.length];
+    confettiHtml += `<span class="ledger-confetti" style="--dx:${dx}px;--dy:${dy}px;--rot:${rot}deg;--dur:${dur}s;--delay:${delay}s;--c:${color};"></span>`;
+  }
+
+  const scrim = document.createElement('div');
+  scrim.id = 'ledgerAchievementBurst';
+  scrim.className = 'ledger-achievement-scrim';
+  scrim.innerHTML = `${confettiHtml}<div class="ledger-achievement-burst">
+      <div class="ledger-achievement-burst-kicker">Achievement Unlocked</div>
+      <div class="ledger-achievement-burst-icon">${def.icon}</div>
+      <div class="ledger-achievement-burst-label">${def.label}</div>
+      <div class="ledger-achievement-burst-desc">${def.desc}</div>
+    </div>`;
+  document.body.appendChild(scrim);
+  setTimeout(() => {
+    scrim.remove();
+    _ledgerAdvanceAchievementQueue();
+  }, 2800);
 }
 
 function renderHomeLedgerTeaser() {
