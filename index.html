@@ -5674,8 +5674,27 @@ function _ledgerUnlockAchievement(id, bookId = readerBookId) {
   const def = LEDGER_ACHIEVEMENTS.find(a => a.id === id);
   if (def) showToast(`${def.icon} Achievement unlocked: ${def.label}`);
   _ledgerPendingAchievements.add(id);
-  _ledgerScheduleFlush();
+  _ledgerFlushAchievementsNow(); // persist right away — don't wait on the debounced page/point flush, which can be lost on a quick refresh
   _ledgerAwardBookmarkForAchievement(id, bookId);
+}
+
+// Achievements are rare, high-value events (unlike the very frequent page/point
+// writes), so they get their own immediate flush rather than riding along with
+// the 3s debounce in _ledgerFlushNow(). That debounce is fine to lose on unload
+// for page counts, but losing an achievement unlock is what caused badges to
+// appear "unassigned" after a refresh.
+function _ledgerFlushAchievementsNow() {
+  if (!currentUser || !_ledgerPendingAchievements.size) return;
+  const achievementsToFlush = Array.from(_ledgerPendingAchievements);
+  achievementsToFlush.forEach(id => _ledgerPendingAchievements.delete(id));
+  const userFields = {};
+  achievementsToFlush.forEach(id => { userFields[`ledgerAchievements.${id}`] = serverTimestamp(); });
+  setDoc(doc(db, 'users', currentUser.uid), userFields, { merge: true })
+    .catch(e => {
+      console.warn('ledger achievement flush:', e);
+      // Put the ids back so the next unlock, or beforeunload, retries them.
+      achievementsToFlush.forEach(id => _ledgerPendingAchievements.add(id));
+    });
 }
 
 // Admin can link a bookmark template to an achievement (see the "Ledger
@@ -5742,11 +5761,9 @@ function _ledgerFlushNow() {
   if (!currentUser || !ledgerToday.dateStr) return;
   const pageDelta = ledgerToday.pagesRead - _ledgerFlushedPages;
   const pointDelta = ledgerToday.pointsEarned - _ledgerFlushedPoints;
-  const achievementsToFlush = Array.from(_ledgerPendingAchievements);
-  if (pageDelta <= 0 && pointDelta <= 0 && !achievementsToFlush.length) return;
+  if (pageDelta <= 0 && pointDelta <= 0) return;
   _ledgerFlushedPages = ledgerToday.pagesRead;
   _ledgerFlushedPoints = ledgerToday.pointsEarned;
-  if (achievementsToFlush.length) achievementsToFlush.forEach(id => _ledgerPendingAchievements.delete(id));
 
   if (pageDelta > 0 || pointDelta > 0) {
     setDoc(doc(db, 'users', currentUser.uid, 'ledgerDays', ledgerToday.dateStr), {
@@ -5758,20 +5775,12 @@ function _ledgerFlushNow() {
     }, { merge: true }).catch(e => console.warn('ledger day flush:', e));
   }
 
-  if (pointDelta > 0 || achievementsToFlush.length) {
-    const userFields = {};
-    if (pointDelta > 0) userFields.totalPoints = increment(pointDelta);
-    achievementsToFlush.forEach(id => { userFields[`ledgerAchievements.${id}`] = serverTimestamp(); });
-    setDoc(doc(db, 'users', currentUser.uid), userFields, { merge: true })
-      .catch(e => {
-        console.warn('ledger points/achievement flush:', e);
-        // Put the achievement ids back so the next flush (or beforeunload) retries them
-        // rather than losing the unlock silently.
-        achievementsToFlush.forEach(id => _ledgerPendingAchievements.add(id));
-      });
+  if (pointDelta > 0) {
+    setDoc(doc(db, 'users', currentUser.uid), { totalPoints: increment(pointDelta) }, { merge: true })
+      .catch(e => console.warn('ledger points flush:', e));
   }
 }
-window.addEventListener('beforeunload', () => { _ledgerFlushNow(); });
+window.addEventListener('beforeunload', () => { _ledgerFlushAchievementsNow(); _ledgerFlushNow(); });
 
 // ── Rendering ────────────────────────────────────────────────────────────
 function updateReaderLedgerPill() {
