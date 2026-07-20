@@ -2367,7 +2367,7 @@ const LEDGER_RANKS = [
   { min: 5000, title: 'Literary Sage',  icon: '🎓' },
 ];
 
-const LEDGER_ACHIEVEMENTS = [
+const LEDGER_ACHIEVEMENTS_TIER1 = [
   { id: 'first-page',   icon: '📖', label: 'First Page',     desc: 'Read your first page' },
   { id: 'first-finish', icon: '🏁', label: 'First Finish',   desc: 'Finish your first book' },
   { id: 'streak-7',     icon: '🔥', label: '7-Day Streak',   desc: 'Hit your goal 7 days running' },
@@ -2378,6 +2378,28 @@ const LEDGER_ACHIEVEMENTS = [
   { id: 'marathon',     icon: '🏃', label: 'Marathon',       desc: 'Read 100+ pages in one sitting' },
   { id: 'explorer',     icon: '🧭', label: 'Genre Explorer', desc: 'Finish books in 3+ categories' },
 ];
+// Revealed once 6 of the Tier 1 badges above are earned (see _ledgerTier2Visible).
+// The first three are deliberately "firsts" a reader has usually already done
+// by the time they hit 6 achievements (rated, highlighted, or shared a book) —
+// leading with them means the reveal shows real progress instead of three more
+// empty locks. _ledgerBackfillTier2() catches these up retroactively so they
+// don't sit locked waiting for a *new* first that may never come.
+const LEDGER_ACHIEVEMENTS_TIER2 = [
+  { id: 'critic',    icon: '⭐',  label: 'Critic',                 desc: 'Rate a book' },
+  { id: 'annotator', icon: '🖍️', label: 'Annotator',              desc: 'Save a highlight' },
+  { id: 'sharer',    icon: '🌍',  label: 'Sharer',                 desc: 'Publish a book to the community library' },
+  { id: 'bookworm',  icon: '🐛',  label: 'Bookworm',               desc: 'Finish 10 books' },
+  { id: 'patron',    icon: '💰',  label: 'Patron',                 desc: 'Reach 1,000 lifetime points' },
+  { id: 'both-ends', icon: '🌗',  label: 'Both Ends of the Clock', desc: 'Unlock Night Owl and Early Bird' },
+];
+const LEDGER_ACHIEVEMENTS = [...LEDGER_ACHIEVEMENTS_TIER1, ...LEDGER_ACHIEVEMENTS_TIER2];
+function _ledgerTier1UnlockedCount() {
+  return LEDGER_ACHIEVEMENTS_TIER1.filter(a => ledgerState.achievements[a.id]).length;
+}
+function _ledgerTier2Visible() {
+  return _ledgerTier1UnlockedCount() >= 6;
+}
+let _ledgerTier2BackfillDone = false; // guards the one-off retroactive check, see _ledgerBackfillTier2()
 let myCheckedOutIds=new Set();
 let koboDevices = [];
 let _userLists = [];
@@ -2698,6 +2720,7 @@ async function submitRating(bookId, rating) {
     if (book) { book.ratingSum = newSum; book.ratingCount = newCount; }
     renderStars('deskStars', 'deskRatingCount', bookId, true);
     renderStars('mobStars', 'mobRatingCount', bookId, true);
+    if (currentUser && ledgerState.loaded) _ledgerUnlockAchievement('critic', bookId);
     showToast('Rating saved ✓');
   } catch (e) {
     showToast('Rating failed');
@@ -2828,6 +2851,7 @@ async function confirmShare() {
     if (!communityLib.find(b => b.id === currentId)) {
       communityLib.push(book);
     }
+    if (currentUser && ledgerState.loaded) _ledgerUnlockAchievement('sharer', currentId);
     hideLoading();
     renderAll();
     showBookById(currentId);
@@ -4313,6 +4337,7 @@ async function handleMobBulkAction(action){
         book.visibility='public';
         if(!communityLib.find(b=>b.id===id)) communityLib.push(book);
       }
+      if (currentUser && ledgerState.loaded) _ledgerUnlockAchievement('sharer', ids[0]);
       hideLoading(); exitMobSelectMode(); renderAll(); showToast('Published ✓');
     }catch(e){ hideLoading(); showToast('Failed: '+e.message); }
     return;
@@ -5607,6 +5632,7 @@ function ledgerRecordPage(bookId, chapterIdx, pageIdx) {
   _ledgerCheckTimeOfDayAchievements();
   if (_ledgerSessionPages >= 100) _ledgerUnlockAchievement('marathon');
   if (ledgerToday.pagesRead >= 1) _ledgerUnlockAchievement('first-page');
+  if (ledgerState.totalPoints >= 1000) _ledgerUnlockAchievement('patron');
 
   if (!ledgerToday.goalMet && ledgerToday.pagesRead >= ledgerState.dailyGoal) {
     ledgerToday.goalMet = true;
@@ -5666,13 +5692,19 @@ function _ledgerCheckTimeOfDayAchievements() {
   const h = new Date().getHours();
   if (h >= 0 && h < 4) _ledgerUnlockAchievement('night-owl');
   if (h >= 4 && h < 6) _ledgerUnlockAchievement('early-bird');
+  if (ledgerState.achievements['night-owl'] && ledgerState.achievements['early-bird']) {
+    _ledgerUnlockAchievement('both-ends');
+  }
 }
 
-function _ledgerUnlockAchievement(id, bookId = readerBookId) {
+function _ledgerUnlockAchievement(id, bookId = readerBookId, opts = {}) {
   if (ledgerState.achievements[id]) return;
   ledgerState.achievements[id] = new Date().toISOString();
   const def = LEDGER_ACHIEVEMENTS.find(a => a.id === id);
-  if (def) showToast(`${def.icon} Achievement unlocked: ${def.label}`);
+  // Backfilled unlocks (opts.silent) represent things the reader already did
+  // before this badge existed — no toast, since celebrating it "right now"
+  // would be misleading.
+  if (def && !opts.silent) showToast(`${def.icon} Achievement unlocked: ${def.label}`);
   _ledgerPendingAchievements.add(id);
   _ledgerFlushAchievementsNow(); // persist right away — don't wait on the debounced page/point flush, which can be lost on a quick refresh
   _ledgerAwardBookmarkForAchievement(id, bookId);
@@ -5738,6 +5770,8 @@ function ledgerRecordBookFinished(bookId) {
 
   _ledgerUnlockAchievement('first-finish', bookId);
   _ledgerCheckExplorerAchievement(bookId);
+  _ledgerCheckBookwormAchievement(bookId);
+  if (ledgerState.totalPoints >= 1000) _ledgerUnlockAchievement('patron', bookId);
   updateReaderLedgerPill();
   renderHomeLedgerTeaser();
   if (document.getElementById('mobPanelLedger')?.classList.contains('active')) renderLedgerTab();
@@ -5753,6 +5787,50 @@ function _ledgerCheckExplorerAchievement(bookId) {
     if (book) cats.add(book.category || 'Uncategorised');
   });
   if (cats.size >= 3) _ledgerUnlockAchievement('explorer', bookId);
+}
+
+function _ledgerCheckBookwormAchievement(bookId, opts = {}) {
+  if (ledgerState.achievements['bookworm']) return;
+  const finList = _userLists.find(l => l.id === 'finished');
+  if ((finList?.bookIds || []).length >= 10) _ledgerUnlockAchievement('bookworm', bookId, opts);
+}
+
+// One-off catch-up check, run the moment Tier 2 first becomes visible. Looks
+// only at state that's already loaded elsewhere in the app (userRatings,
+// library, _userLists), plus one cheap existence query for highlights since
+// nothing else caches those globally. Everything unlocks silently — these
+// represent things the reader already did before the badge existed, not
+// something to throw confetti at right now. Returns true if anything changed,
+// so the caller knows whether to re-render.
+async function _ledgerBackfillTier2() {
+  if (!currentUser || !ledgerState.loaded) return false;
+  const before = Object.keys(ledgerState.achievements).length;
+
+  if (!ledgerState.achievements['critic'] && Object.keys(userRatings).length > 0) {
+    _ledgerUnlockAchievement('critic', readerBookId, { silent: true });
+  }
+  if (!ledgerState.achievements['sharer'] &&
+      library.some(b => b.ownerId === currentUser.uid && b.visibility === 'public')) {
+    _ledgerUnlockAchievement('sharer', readerBookId, { silent: true });
+  }
+  if (!ledgerState.achievements['annotator']) {
+    try {
+      const snap = await getDocs(query(
+        collection(db, 'highlights'), where('userId', '==', currentUser.uid), limit(1)
+      ));
+      if (!snap.empty) _ledgerUnlockAchievement('annotator', readerBookId, { silent: true });
+    } catch(e) { console.warn('ledger backfill annotator check:', e); }
+  }
+  _ledgerCheckBookwormAchievement(readerBookId, { silent: true });
+  if (!ledgerState.achievements['patron'] && ledgerState.totalPoints >= 1000) {
+    _ledgerUnlockAchievement('patron', readerBookId, { silent: true });
+  }
+  if (!ledgerState.achievements['both-ends'] &&
+      ledgerState.achievements['night-owl'] && ledgerState.achievements['early-bird']) {
+    _ledgerUnlockAchievement('both-ends', readerBookId, { silent: true });
+  }
+
+  return Object.keys(ledgerState.achievements).length !== before;
 }
 
 // ── Firestore flush (debounced — a few seconds after the last page turn,
@@ -5852,6 +5930,16 @@ async function renderLedgerTab() {
   const rankPct = rank.next ? Math.min(100, Math.round(((ledgerState.totalPoints - floor) / (rank.next.min - floor)) * 100)) : 100;
   const goalPct = Math.min(100, Math.round((ledgerToday.pagesRead / Math.max(ledgerState.dailyGoal,1)) * 100));
 
+  const tier2Visible = _ledgerTier2Visible();
+  if (tier2Visible && !_ledgerTier2BackfillDone) {
+    _ledgerTier2BackfillDone = true;
+    _ledgerBackfillTier2().then(changed => { if (changed) renderLedgerTab(); });
+  }
+  const visibleAchievements = tier2Visible ? LEDGER_ACHIEVEMENTS : LEDGER_ACHIEVEMENTS_TIER1;
+  const tier2Teaser = !tier2Visible
+    ? `<div class="ledger-card-note" style="margin-top:.7rem;margin-bottom:0;">🔒 Earn ${6 - _ledgerTier1UnlockedCount()} more above to reveal 6 new achievements.</div>`
+    : '';
+
   el.innerHTML = `
     <div class="ledger-status-hero">
       <div class="ledger-status-icon">${rank.icon}</div>
@@ -5913,7 +6001,7 @@ async function renderLedgerTab() {
       <div class="ledger-card-label">Achievements</div>
       <div class="ledger-card-note">Tap a badge to see how to earn it — some also award you a bookmark for the book you're reading.</div>
       <div class="ledger-badge-grid">
-        ${LEDGER_ACHIEVEMENTS.map(a => {
+        ${visibleAchievements.map(a => {
           const rewardTpl = _bookmarkTemplates.find(t => t.assignedAchievementId === a.id);
           return `
           <button type="button" class="ledger-badge ${ledgerState.achievements[a.id] ? '' : 'locked'}" data-achievement-id="${a.id}">
@@ -5923,6 +6011,7 @@ async function renderLedgerTab() {
           </button>`;
         }).join('')}
       </div>
+      ${tier2Teaser}
     </div>`;
 
   document.getElementById('btnLedgerEditGoal')?.addEventListener('click', showLedgerGoalPicker);
@@ -6945,6 +7034,7 @@ async function saveHighlight(startOffset, endOffset, color, text) {
   try {
     const ref = await addDoc(collection(db, 'highlights'), data);
     _currentBookHighlights.push({ id: ref.id, ...data });
+    if (currentUser && ledgerState.loaded) _ledgerUnlockAchievement('annotator', readerBookId);
     return ref.id;
   } catch(e) {
     console.warn('saveHighlight:', e);
@@ -9602,6 +9692,7 @@ document.getElementById('bulkBtnPublish').addEventListener('click', async () => 
       book.visibility = 'public';
       if (!communityLib.find(b => b.id === id)) communityLib.push(book);
     }
+    if (currentUser && ledgerState.loaded) _ledgerUnlockAchievement('sharer', ids[0]);
     hideLoading();
     toggleSelectMode();
     renderAll();
