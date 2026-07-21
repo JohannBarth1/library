@@ -6403,7 +6403,7 @@ function _getReaderDimensions() {
   // fractional line becomes dead space at the bottom of the column — and
   // combined with widows/orphans, can push an entire paragraph to the next
   // page early, leaving a big empty gap. Rounding down removes that slack.
-  const lineH = readerFontSize * 1.85;
+  const lineH = readerFontSize * 1.6;
   if(lineH > 0) h = Math.max(lineH, Math.floor(h / lineH) * lineH);
 
   return { w, h };
@@ -7687,7 +7687,7 @@ async function renderChapterPaged(bodyHtml) {
   color: var(--r-fg);
   font-family: 'Lato', Georgia, serif;
   font-size: ${readerFontSize}px;
-  line-height: 1.85;
+  line-height: 1.6;
   /* overflow removed from here */
 }
 html {
