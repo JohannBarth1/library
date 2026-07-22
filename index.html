@@ -10179,7 +10179,7 @@ async function openChapterTextEditor(idx){
   showLoading('Loading chapter…');
   try{
     if(ch._raw===undefined){
-      const raw=await chapterMgrZip.file(ch.href)?.async('string');
+      const raw=await chapterMgrZip.file(chapterMgrOpfBase+ch.href)?.async('string');
       if(raw===undefined)throw new Error('Chapter file not found in EPUB');
       ch._raw=raw;
       const{before,body,after}=_splitXhtmlShell(raw);
