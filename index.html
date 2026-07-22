@@ -984,6 +984,16 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .chapter-mgr-restore:hover{background:var(--teal-light);}
 .chapter-mgr-info{font-size:.72rem;color:var(--muted);padding:.5rem .75rem;border-top:1px solid var(--border);background:var(--panel);border-radius:0 0 10px 10px;}
 .chapter-mgr-save-note{font-size:.75rem;color:var(--muted);line-height:1.5;margin-bottom:.8rem;}
+.chapter-mgr-cover-row{display:flex;align-items:center;gap:.9rem;padding:.7rem;margin-bottom:.8rem;background:var(--panel);border:1px solid var(--border);border-radius:10px;}
+.chapter-mgr-cover-thumb{width:52px;height:74px;object-fit:cover;border-radius:4px;background:var(--border);flex-shrink:0;box-shadow:0 2px 6px rgba(15,26,46,.2);}
+.chapter-mgr-cover-replace-btn{display:inline-block;font-size:.75rem;font-weight:700;color:var(--teal);border:1px solid var(--teal);border-radius:20px;padding:.35rem .9rem;cursor:pointer;transition:all .15s;}
+.chapter-mgr-cover-replace-btn:hover{background:var(--teal-light);}
+.chapter-mgr-cover-status{font-size:.7rem;color:var(--muted);margin-top:.4rem;min-height:1em;}
+.chapter-mgr-edit-text{background:none;border:none;cursor:pointer;font-size:.85rem;color:var(--muted);padding:.25rem .35rem;border-radius:20px;flex-shrink:0;line-height:1;transition:all .15s;}
+.chapter-mgr-edit-text:hover{color:var(--teal);background:var(--teal-light);}
+.chapter-mgr-row.text-edited .chapter-mgr-input{color:var(--teal);font-weight:700;}
+.chapter-text-editarea{width:100%;min-height:50vh;padding:.8rem;font-family:'SFMono-Regular',Consolas,Menlo,monospace;font-size:.8rem;line-height:1.55;color:var(--navy2);background:var(--cream);border:1px solid var(--border);border-radius:8px;outline:none;resize:vertical;box-sizing:border-box;}
+.chapter-text-editarea:focus{border-color:var(--teal);}
 
 /* ── MULTI-SELECT ── */
 .select-mode-toggle{padding:.38rem .8rem;font-family:'Lato',sans-serif;font-size:.7rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;border-radius:2px;cursor:pointer;border:1px solid var(--border);background:var(--warm-white);color:var(--navy2);transition:all .15s;}
@@ -2192,12 +2202,33 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 <div class="modal-overlay" id="chapterMgrModal">
   <div class="modal" style="max-width:560px">
     <h3>📑 Chapter Manager</h3>
-    <p class="chapter-mgr-save-note">Drag to reorder · Click to rename · ✕ to mark for deletion.</p>
+    <div class="chapter-mgr-cover-row">
+      <img id="chapterMgrCoverPreview" class="chapter-mgr-cover-thumb" alt="Cover"/>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:.65rem;letter-spacing:.15em;text-transform:uppercase;color:var(--gold);font-weight:700;margin-bottom:.3rem;">Cover</div>
+        <label class="chapter-mgr-cover-replace-btn" for="chapterMgrCoverInput">Replace Cover…</label>
+        <input type="file" id="chapterMgrCoverInput" accept="image/*" style="display:none"/>
+        <div id="chapterMgrCoverStatus" class="chapter-mgr-cover-status"></div>
+      </div>
+    </div>
+    <p class="chapter-mgr-save-note">Drag to reorder · Click to rename · ✎ to edit text · ✕ to mark for deletion.</p>
     <div class="chapter-mgr-list" id="chapterMgrList"></div>
     <p class="chapter-mgr-info" id="chapterMgrInfo"></p>
     <div class="modal-actions" style="margin-top:1rem">
       <button class="btn-cancel" id="btnCancelChapterMgr">Cancel</button>
       <button class="btn-save" id="btnSaveChapterMgr">💾 Save &amp; Re-upload EPUB</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="chapterTextEditModal">
+  <div class="modal upload-modal-wide">
+    <h3>✎ <span id="chapterTextEditTitle">Edit Chapter Text</span></h3>
+    <p class="chapter-mgr-save-note">Editing raw chapter HTML. Changes apply when you save the Chapter Manager.</p>
+    <textarea id="chapterTextEditArea" class="chapter-text-editarea" spellcheck="false"></textarea>
+    <div class="modal-actions">
+      <button class="btn-cancel" id="btnCancelChapterTextEdit">Cancel</button>
+      <button class="btn-save" id="btnSaveChapterTextEdit">Apply</button>
     </div>
   </div>
 </div>
@@ -9466,17 +9497,157 @@ async function parseEpubMeta(file){
 // shows is exactly what gets declared — even if the source file's own
 // declaration was missing, broken, or CSS-background-only. Returns the
 // opfXml unchanged if no cover could be found at all.
-async function ensureKoboCoverDeclared(zip, opfPath, opfXml){
+// Max long-edge dimension and file size we'll tolerate before re-encoding a
+// cover — generous enough for any Kobo screen (even the largest panels top
+// out well under 1600px on the long edge) while keeping file size sane.
+const KOBO_COVER_MAX_DIM   = 1600;
+const KOBO_COVER_MAX_BYTES = 900*1024;
+
+// Decodes an image blob (raster or SVG) and, if it's SVG or exceeds
+// maxDim/maxBytes, re-encodes it as a flattened JPEG capped to maxDim on
+// the long edge. Returns {blob,width,height,changed} — changed:false (with
+// the original blob) if no work was needed, since Image() decoding still
+// gives us reliable real pixel dimensions either way. Shared by the in-zip
+// Kobo cover normalization and the cover-replace upload flow, so uploaded
+// covers get the same automatic resizing.
+async function _resizeImageIfNeeded(blob, {isSvg=false, maxDim=KOBO_COVER_MAX_DIM, maxBytes=KOBO_COVER_MAX_BYTES}={}){
+  const objUrl = URL.createObjectURL(blob);
+  let img;
+  try{
+    img = await new Promise((resolve,reject)=>{
+      const im=new Image();
+      im.onload=()=>resolve(im);
+      im.onerror=()=>reject(new Error('image decode failed'));
+      im.src=objUrl;
+    });
+  }finally{
+    URL.revokeObjectURL(objUrl);
+  }
+  const srcW = img.naturalWidth  || img.width  || 0;
+  const srcH = img.naturalHeight || img.height || 0;
+  if(!srcW || !srcH) throw new Error('Could not read image dimensions');
+
+  const needsWork = isSvg || Math.max(srcW,srcH) > maxDim || blob.size > maxBytes;
+  if(!needsWork) return { blob, width:srcW, height:srcH, changed:false };
+
+  const scale = Math.min(1, maxDim / Math.max(srcW, srcH));
+  const outW = Math.max(1, Math.round(srcW*scale));
+  const outH = Math.max(1, Math.round(srcH*scale));
+
+  const canvas = document.createElement('canvas');
+  canvas.width = outW; canvas.height = outH;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#fff'; ctx.fillRect(0,0,outW,outH); // flatten transparency (SVGs/PNGs → opaque JPEG)
+  ctx.drawImage(img, 0, 0, outW, outH);
+
+  const outBlob = await new Promise(res=>canvas.toBlob(res,'image/jpeg',0.85));
+  if(!outBlob) throw new Error('Could not re-encode image');
+  return { blob:outBlob, width:outW, height:outH, changed:true };
+}
+
+// Rasterizes/downsizes a cover image stored in `zip` at `opfDir+coverHref`
+// if it's SVG or exceeds the size limits above. Leaves the original file
+// untouched and writes the result to a new sibling file. Returns null if
+// no normalization was needed (or the image couldn't be decoded).
+async function _normalizeCoverImageInZip(zip, opfDir, coverHref){
+  const fullPath = zip.file(opfDir+coverHref) ? opfDir+coverHref : coverHref;
+  const file = zip.file(fullPath);
+  if(!file) return null;
+
+  const isSvg = /\.svg$/i.test(coverHref);
+  const blob  = await file.async('blob');
+
+  let result;
+  try{
+    result = await _resizeImageIfNeeded(blob, {isSvg});
+  }catch(e){
+    console.warn('Cover normalization: could not decode cover image, leaving as-is', e);
+    return null;
+  }
+  if(!result.changed) return null;
+
+  const outBlob = result.blob;
+  const outW = result.width, outH = result.height;
+  const dir = coverHref.includes('/') ? coverHref.replace(/[^/]+$/,'') : '';
+  const newHref = dir + 'cover-kobo.jpg';
+  zip.file(opfDir+newHref, outBlob);
+  return { newHref, width:outW, height:outH, bytes:outBlob.size };
+}
+
+// Resolves the OPF-declared (or best-guess) cover image href for an EPUB.
+// Shared by ensureKoboCoverDeclared and the chapter-manager cover-replace
+// UI, so both agree on "which file is the cover".
+function _resolveCoverHref(zip, opfPath, opfXml){
   const opfDir=opfPath.includes('/')?opfPath.replace(/\/[^/]+$/,'/'):'';
   const manifestMap={};const mRe=/<item\s+([^>]+)\/?>/gi;let m;
   while((m=mRe.exec(opfXml))!==null){const a=m[1];const id=a.match(/\bid="([^"]+)"/)?.[1];const href=a.match(/\bhref="([^"]+)"/)?.[1];const mt=a.match(/\bmedia-type="([^"]+)"/)?.[1];if(id&&href)manifestMap[id]={href,mediaType:mt};}
 
   let coverHref=null;
   const coverId=opfXml.match(/name="cover"\s+content="([^"]+)"/i)?.[1]||opfXml.match(/content="([^"]+)"\s+name="cover"/i)?.[1];
-  if(coverId&&manifestMap[coverId])coverHref=manifestMap[coverId].href;
+  // Only accept the meta-declared cover ID if it actually points to an
+  // image manifest item — some EPUB2 books point it at the cover's XHTML
+  // wrapper page instead, which isn't a usable cover image.
+  if(coverId&&manifestMap[coverId]?.mediaType?.startsWith('image/'))coverHref=manifestMap[coverId].href;
   if(!coverHref){for(const id in manifestMap){const it=manifestMap[id];if(!it.mediaType?.startsWith('image/'))continue;if(id.toLowerCase().includes('cover')||it.href.toLowerCase().includes('cover')){coverHref=it.href;break;}}}
   if(!coverHref){for(const p of ['cover.jpg','cover.jpeg','cover.png','images/cover.jpg','OEBPS/cover.jpg','OEBPS/cover.jpeg','OEBPS/cover.png','OEBPS/images/cover.jpg','OEBPS/images/cover.jpeg','OPS/images/cover.jpg','OPS/cover.jpg']){if(zip.file(opfDir+p)||zip.file(p)){coverHref=p;break;}}}
+  return { coverHref, opfDir, manifestMap };
+}
+
+// Replaces the book's cover with `newBlob` (already resized/re-encoded as
+// JPEG). Writes the new file alongside the old one (never deletes the
+// original — it may still be referenced by an in-book "cover page"), then
+// points the OPF's cover manifest item + <meta name="cover"> at it.
+async function _applyCoverReplacement(zip, opfPath, opfXml, newBlob){
+  const { coverHref, opfDir, manifestMap } = _resolveCoverHref(zip, opfPath, opfXml);
+  const dir = (coverHref && coverHref.includes('/')) ? coverHref.replace(/[^/]+$/,'') : '';
+  const newHref = dir + 'cover-replaced.jpg';
+  zip.file(opfDir+newHref, newBlob);
+
+  let itemId = coverHref ? Object.keys(manifestMap).find(id=>manifestMap[id].href===coverHref) : null;
+  let newOpf = opfXml;
+  if(itemId){
+    const itemRe=new RegExp(`<item\\s+([^>]*\\bid="${itemId}"[^>]*)\\/?>`,'i');
+    newOpf = newOpf.replace(itemRe, (match, attrs) => {
+      let a = /\bhref="[^"]*"/i.test(attrs) ? attrs.replace(/\bhref="[^"]*"/i, `href="${newHref}"`) : attrs + ` href="${newHref}"`;
+      a = /\bmedia-type="[^"]*"/i.test(a) ? a.replace(/\bmedia-type="[^"]*"/i, `media-type="image/jpeg"`) : a + ` media-type="image/jpeg"`;
+      if(!/\bproperties="[^"]*cover-image[^"]*"/i.test(a)){
+        a = /\bproperties="/i.test(a) ? a.replace(/\bproperties="([^"]*)"/i,(m2,p)=>`properties="${(p+' cover-image').trim()}"`) : a + ` properties="cover-image"`;
+      }
+      return `<item ${a}/>`;
+    });
+  } else {
+    itemId='replacedcoverimg';
+    newOpf=newOpf.replace(/<manifest[^>]*>/i,match=>`${match}\n    <item id="${itemId}" href="${newHref}" media-type="image/jpeg" properties="cover-image"/>`);
+  }
+  if(/name="cover"\s+content="[^"]*"/i.test(newOpf)){
+    newOpf=newOpf.replace(/(<meta\s+)name="cover"\s+content="[^"]*"([^>]*\/?>)/i,`$1name="cover" content="${itemId}"$2`);
+  } else if(/content="[^"]*"\s+name="cover"/i.test(newOpf)){
+    newOpf=newOpf.replace(/(<meta\s+)content="[^"]*"\s+name="cover"([^>]*\/?>)/i,`$1content="${itemId}" name="cover"$2`);
+  } else {
+    newOpf=newOpf.replace(/<\/metadata>/i,`  <meta name="cover" content="${itemId}"/>\n  </metadata>`);
+  }
+  return newOpf;
+}
+
+async function ensureKoboCoverDeclared(zip, opfPath, opfXml){
+  const { coverHref: resolvedHref, opfDir, manifestMap } = _resolveCoverHref(zip, opfPath, opfXml);
+  let coverHref = resolvedHref;
   if(!coverHref)return opfXml;
+
+  // PATCH: defensively re-encode the cover if it's SVG or oversized.
+  // Kobo's Nickel OS is unreliable at generating a thumbnail from an SVG
+  // cover, and can silently fail to index very large covers at all. We
+  // rasterize/downsize into a fresh JPEG here so every book ships with a
+  // Kobo-safe cover, while leaving the original cover file untouched (it
+  // may still be displayed as an in-book "cover page" by the reader, so we
+  // never delete it — we just point the OPF's cover declaration at the
+  // new normalized file instead).
+  try{
+    const normalized = await _normalizeCoverImageInZip(zip, opfDir, coverHref);
+    if(normalized) coverHref = normalized.newHref;
+  }catch(e){
+    console.warn('Cover normalization skipped:', e);
+  }
 
   let itemId=Object.keys(manifestMap).find(id=>manifestMap[id].href===coverHref);
   let newOpf=opfXml;
@@ -9966,6 +10137,8 @@ document.getElementById('bulkBtnCancel').addEventListener('click',toggleSelectMo
 
 // ── CHAPTER MANAGER ──────────────────────────────────────────────────────────
 let chapterMgrSpine=[],chapterMgrZip=null,chapterMgrOpfBase='',chapterMgrOpfPath='',chapterMgrBookId=null;
+let chapterMgrCoverBlob=null,chapterMgrCoverPreviewUrl=null; // staged replacement cover (already resized), if any
+let _chapterTextEditIdx=null;
 document.getElementById('btnCancelChapterMgr').addEventListener('click',()=>{document.getElementById('chapterMgrModal').classList.remove('open');chapterMgrZip=null;chapterMgrSpine=[];});
 async function openChapterManager(){
   if(!currentId)return;
@@ -9998,9 +10171,10 @@ async function openChapterManager(){
 function renderChapterMgrList(){
   const list=document.getElementById('chapterMgrList');
   const active=chapterMgrSpine.filter(c=>!c.deleted);
-  list.innerHTML=chapterMgrSpine.map((ch,i)=>`<div class="chapter-mgr-row ${ch.deleted?'deleted':''}" data-idx="${i}" draggable="${!ch.deleted}"><span class="chapter-mgr-drag" title="Drag to reorder">⠿</span><span class="chapter-mgr-num">${ch.deleted?'–':active.indexOf(ch)+1}</span><input class="chapter-mgr-input" type="text" value="${esc(ch.label)}" data-idx="${i}" ${ch.deleted?'disabled':''} title="Click to rename"/>${ch.deleted?`<button class="chapter-mgr-restore" data-restore="${i}">Restore</button>`:`<button class="chapter-mgr-del" data-delete="${i}" title="Mark for deletion">✕</button>`}</div>`).join('');
+  list.innerHTML=chapterMgrSpine.map((ch,i)=>`<div class="chapter-mgr-row ${ch.deleted?'deleted':''} ${ch.editedBody!==undefined?'text-edited':''}" data-idx="${i}" draggable="${!ch.deleted}"><span class="chapter-mgr-drag" title="Drag to reorder">⠿</span><span class="chapter-mgr-num">${ch.deleted?'–':active.indexOf(ch)+1}</span><input class="chapter-mgr-input" type="text" value="${esc(ch.label)}" data-idx="${i}" ${ch.deleted?'disabled':''} title="Click to rename"/>${ch.deleted?`<button class="chapter-mgr-restore" data-restore="${i}">Restore</button>`:`<button class="chapter-mgr-edit-text" data-edit="${i}" title="Edit chapter text">✎</button><button class="chapter-mgr-del" data-delete="${i}" title="Mark for deletion">✕</button>`}</div>`).join('');
   document.getElementById('chapterMgrInfo').textContent=`${active.length} chapter${active.length!==1?'s':''} · ${chapterMgrSpine.filter(c=>c.deleted).length} marked for deletion`;
   list.querySelectorAll('.chapter-mgr-input').forEach(inp=>{inp.addEventListener('change',e=>{chapterMgrSpine[parseInt(e.target.dataset.idx)].label=e.target.value;});inp.addEventListener('input',e=>{chapterMgrSpine[parseInt(e.target.dataset.idx)].label=e.target.value;});});
+  list.querySelectorAll('[data-edit]').forEach(btn=>{btn.addEventListener('click',e=>{openChapterTextEditor(parseInt(e.target.dataset.edit));});});
   list.querySelectorAll('[data-delete]').forEach(btn=>{btn.addEventListener('click',e=>{const idx=parseInt(e.target.dataset.delete);if(chapterMgrSpine.filter(c=>!c.deleted).length<=1){showToast("Can't delete the last chapter");return;}chapterMgrSpine[idx].deleted=true;renderChapterMgrList();});});
   list.querySelectorAll('[data-restore]').forEach(btn=>{btn.addEventListener('click',e=>{const idx=parseInt(e.target.dataset.restore);chapterMgrSpine[idx].deleted=false;renderChapterMgrList();});});
   let dragSrc=null;
