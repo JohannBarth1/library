@@ -994,6 +994,23 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .chapter-mgr-row.text-edited .chapter-mgr-input{color:var(--teal);font-weight:700;}
 .chapter-text-editarea{width:100%;min-height:50vh;padding:.8rem;font-family:'SFMono-Regular',Consolas,Menlo,monospace;font-size:.8rem;line-height:1.55;color:var(--navy2);background:var(--cream);border:1px solid var(--border);border-radius:8px;outline:none;resize:vertical;box-sizing:border-box;}
 .chapter-text-editarea:focus{border-color:var(--teal);}
+.chapter-text-edit-wide{max-width:760px!important;}
+.chapter-text-toolbar{display:flex;flex-wrap:wrap;gap:.3rem;padding:.5rem;background:var(--panel);border:1px solid var(--border);border-bottom:none;border-radius:8px 8px 0 0;align-items:center;}
+.chapter-text-toolbar button{background:var(--warm-white);color:var(--navy2);border:1px solid var(--border);border-radius:5px;padding:.35rem .55rem;font-family:'Lato',sans-serif;font-size:.78rem;font-weight:700;cursor:pointer;line-height:1;min-width:1.9rem;transition:all .15s;}
+.chapter-text-toolbar button:hover{background:var(--light-blue);}
+.chapter-text-toolbar button.active{background:var(--teal);color:var(--gold);border-color:var(--teal);}
+.chapter-text-toolbar select{background:var(--warm-white);color:var(--navy2);border:1px solid var(--border);border-radius:5px;padding:.35rem .4rem;font-family:'Lato',sans-serif;font-size:.75rem;cursor:pointer;}
+.chapter-text-toolbar .toolbar-sep{width:1px;align-self:stretch;background:var(--border);margin:.1rem .2rem;}
+.chapter-text-toolbar .toolbar-spacer{flex:1;}
+.chapter-text-toolbar .btn-toggle-source{font-size:.68rem;letter-spacing:.03em;text-transform:uppercase;min-width:auto;}
+.chapter-text-visual{width:100%;min-height:50vh;max-height:60vh;overflow:auto;padding:1rem 1.1rem;font-family:Georgia,'Times New Roman',serif;font-size:.95rem;line-height:1.65;color:var(--navy2);background:var(--cream);border:1px solid var(--border);border-radius:0 0 8px 8px;outline:none;box-sizing:border-box;}
+.chapter-text-visual:focus{border-color:var(--teal);}
+.chapter-text-visual p{margin:0 0 .9em;}
+.chapter-text-visual h1,.chapter-text-visual h2,.chapter-text-visual h3{margin:.6em 0 .5em;font-family:'Lato',sans-serif;color:var(--navy2);}
+.chapter-text-visual blockquote{margin:.8em 0;padding:.2em 1em;border-left:3px solid var(--teal);color:var(--muted);}
+.chapter-text-visual a{color:var(--teal-dark);}
+.chapter-text-editarea.source-hidden,.chapter-text-visual.source-hidden{display:none;}
+.chapter-text-toolbar.source-hidden{display:none;}
 
 /* ── MULTI-SELECT ── */
 .select-mode-toggle{padding:.38rem .8rem;font-family:'Lato',sans-serif;font-size:.7rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;border-radius:2px;cursor:pointer;border:1px solid var(--border);background:var(--warm-white);color:var(--navy2);transition:all .15s;}
@@ -2222,10 +2239,33 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 </div>
 
 <div class="modal-overlay" id="chapterTextEditModal">
-  <div class="modal upload-modal-wide">
+  <div class="modal upload-modal-wide chapter-text-edit-wide">
     <h3>✎ <span id="chapterTextEditTitle">Edit Chapter Text</span></h3>
-    <p class="chapter-mgr-save-note">Editing raw chapter HTML. Changes apply when you save the Chapter Manager.</p>
-    <textarea id="chapterTextEditArea" class="chapter-text-editarea" spellcheck="false"></textarea>
+    <p class="chapter-mgr-save-note">Changes apply when you save the Chapter Manager.</p>
+    <div class="chapter-text-toolbar">
+      <select id="chapterTextBlockSelect" title="Paragraph style">
+        <option value="p">Paragraph</option>
+        <option value="h1">Heading 1</option>
+        <option value="h2">Heading 2</option>
+        <option value="h3">Heading 3</option>
+        <option value="blockquote">Quote</option>
+      </select>
+      <div class="toolbar-sep"></div>
+      <button type="button" data-cmd="bold" title="Bold"><b>B</b></button>
+      <button type="button" data-cmd="italic" title="Italic"><i>I</i></button>
+      <button type="button" data-cmd="underline" title="Underline"><u>U</u></button>
+      <div class="toolbar-sep"></div>
+      <button type="button" data-cmd="insertUnorderedList" title="Bullet list">• ≡</button>
+      <button type="button" data-cmd="insertOrderedList" title="Numbered list">1. ≡</button>
+      <div class="toolbar-sep"></div>
+      <button type="button" id="btnChapterTextLink" title="Insert/edit link">🔗</button>
+      <button type="button" data-cmd="unlink" title="Remove link">🔗✕</button>
+      <button type="button" data-cmd="removeFormat" title="Clear formatting">Tx</button>
+      <div class="toolbar-spacer"></div>
+      <button type="button" class="btn-toggle-source" id="btnChapterTextToggleSource">HTML Source</button>
+    </div>
+    <div id="chapterTextEditArea_visual" class="chapter-text-visual" contenteditable="true" spellcheck="false"></div>
+    <textarea id="chapterTextEditArea" class="chapter-text-editarea source-hidden" spellcheck="false"></textarea>
     <div class="modal-actions">
       <button class="btn-cancel" id="btnCancelChapterTextEdit">Cancel</button>
       <button class="btn-save" id="btnSaveChapterTextEdit">Apply</button>
@@ -10187,22 +10227,69 @@ async function openChapterTextEditor(idx){
     }
     hideLoading();
     document.getElementById('chapterTextEditTitle').textContent=ch.label||'Chapter';
-    document.getElementById('chapterTextEditArea').value=ch.editedBody!==undefined?ch.editedBody:ch._originalBody;
+    const startBody=ch.editedBody!==undefined?ch.editedBody:ch._originalBody;
+    document.getElementById('chapterTextEditArea_visual').innerHTML=startBody;
+    document.getElementById('chapterTextEditArea').value=startBody;
+    _setChapterTextSourceMode(false);
     document.getElementById('chapterTextEditModal').classList.add('open');
   }catch(e){
     hideLoading();showToast('Could not load chapter: '+e.message);console.error(e);
   }
 }
+// Whether the raw-HTML textarea (vs. the WYSIWYG surface) is the one
+// currently being edited. Toggling re-syncs whichever view is becoming
+// hidden into the one becoming visible, so edits made in either mode are
+// never lost.
+let _chapterTextSourceMode=false;
+function _setChapterTextSourceMode(toSource){
+  const visual=document.getElementById('chapterTextEditArea_visual');
+  const source=document.getElementById('chapterTextEditArea');
+  const toggleBtn=document.getElementById('btnChapterTextToggleSource');
+  if(toSource&&!_chapterTextSourceMode){
+    source.value=visual.innerHTML;
+  }else if(!toSource&&_chapterTextSourceMode){
+    visual.innerHTML=source.value;
+  }
+  _chapterTextSourceMode=toSource;
+  visual.classList.toggle('source-hidden',toSource);
+  source.classList.toggle('source-hidden',!toSource);
+  document.querySelector('.chapter-text-toolbar').classList.toggle('source-hidden',toSource);
+  toggleBtn.textContent=toSource?'Visual Editor':'HTML Source';
+}
+document.getElementById('btnChapterTextToggleSource').addEventListener('click',()=>{
+  _setChapterTextSourceMode(!_chapterTextSourceMode);
+});
+document.querySelectorAll('.chapter-text-toolbar button[data-cmd]').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    document.getElementById('chapterTextEditArea_visual').focus();
+    document.execCommand(btn.dataset.cmd,false,null);
+  });
+});
+document.getElementById('chapterTextBlockSelect').addEventListener('change',(e)=>{
+  const visual=document.getElementById('chapterTextEditArea_visual');
+  visual.focus();
+  document.execCommand('formatBlock',false,'<'+e.target.value+'>');
+  e.target.value='p';
+});
+document.getElementById('btnChapterTextLink').addEventListener('click',()=>{
+  const visual=document.getElementById('chapterTextEditArea_visual');
+  visual.focus();
+  const url=prompt('Link URL:','https://');
+  if(url)document.execCommand('createLink',false,url);
+});
 document.getElementById('btnCancelChapterTextEdit').addEventListener('click',()=>{
   document.getElementById('chapterTextEditModal').classList.remove('open');_chapterTextEditIdx=null;
 });
 document.getElementById('btnSaveChapterTextEdit').addEventListener('click',()=>{
   if(_chapterTextEditIdx===null)return;
   const ch=chapterMgrSpine[_chapterTextEditIdx];
-  const raw=document.getElementById('chapterTextEditArea').value;
+  // Read from whichever view was actually being edited — the other one may
+  // be stale since we only sync on toggle, not on every keystroke.
+  const raw=_chapterTextSourceMode?document.getElementById('chapterTextEditArea').value:document.getElementById('chapterTextEditArea_visual').innerHTML;
   // Same sanitizer the reader applies to every chapter it displays, so a
-  // hand-edit can't reintroduce a <script>, an on* handler, or a
-  // javascript: URL that the reader would otherwise have stripped anyway.
+  // hand-edit (or a paste into the WYSIWYG surface) can't reintroduce a
+  // <script>, an on* handler, or a javascript: URL that the reader would
+  // otherwise have stripped anyway.
   ch.editedBody=sanitizeChapterHtml(raw);
   document.getElementById('chapterTextEditModal').classList.remove('open');
   _chapterTextEditIdx=null;
