@@ -518,8 +518,8 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
   align-items: center;
   justify-content: space-between;
   gap: .6rem;
-  padding: 6px 1.4rem 0;
-  height: 36px;
+  padding: 8px 1.4rem 0;
+  height: 40px;
   flex-shrink: 0;
   position: relative;
   cursor: pointer;
@@ -712,16 +712,18 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .btn-cancel:hover{background:var(--light-blue);}
 
 /* upload modal */
-.upload-list{max-height:240px;overflow-y:auto;margin:.8rem 0;}
+.upload-list{max-height:280px;overflow-y:auto;margin:.8rem 0;}
 .upload-modal-wide{max-width:520px!important;}
-.upload-progress{background:var(--panel);border:1px solid var(--border);border-radius:4px;padding:.7rem 1rem;margin:.5rem 0;font-size:.82rem;display:flex;align-items:center;gap:.7rem;}
+.upload-progress{background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:.7rem 1rem;margin:.5rem 0;font-size:.82rem;display:flex;align-items:center;gap:.7rem;}
 .upload-progress .up-icon{font-size:1.1rem;}
 .upload-progress .up-name{flex:1;font-weight:700;color:var(--navy2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .upload-progress .up-status{font-size:.75rem;color:var(--muted);flex-shrink:0;}
 .upload-progress.done{border-color:var(--teal);background:var(--teal-light);}
 .upload-progress.error{border-color:#e0b0b0;background:#fbeaea;}
-.progress-bar-wrap{height:3px;background:var(--border);border-radius:2px;margin-top:.3rem;}
-.progress-bar{height:3px;background:var(--teal);border-radius:2px;transition:width .3s;}
+.upload-progress .up-publish-toggle{display:flex;align-items:center;gap:.4rem;font-size:.72rem;color:var(--muted);margin-top:.4rem;cursor:pointer;font-weight:400;user-select:none;}
+.upload-progress .up-publish-toggle input{accent-color:var(--teal);width:14px;height:14px;flex-shrink:0;cursor:pointer;}
+.progress-bar-wrap{height:4px;background:var(--border);border-radius:3px;margin-top:.35rem;}
+.progress-bar{height:4px;background:var(--teal);border-radius:3px;transition:width .3s;}
 
 /* ── TOAST ── */
 .toast{position:fixed;bottom:1.5rem;left:auto;right:2rem;background:var(--navy);color:#d8e8f0;padding:.7rem 1.3rem;border-radius:3px;font-size:.85rem;font-weight:700;letter-spacing:.05em;opacity:0;transition:opacity .3s,transform .3s;transform:translateY(6px);pointer-events:none;z-index:610;white-space:nowrap;}
@@ -2810,7 +2812,7 @@ document.getElementById('btnCloseUpload').addEventListener('click',closeUploadMo
 async function processUploadFiles(files){for(const f of files)await uploadOneEpub(f);await loadLibrary();}
 async function uploadOneEpub(file){
   const rowId='up_'+Date.now()+Math.random().toString(36).slice(2);
-  document.getElementById('uploadList').insertAdjacentHTML('beforeend',`<div class="upload-progress" id="${rowId}"><span class="up-icon">📗</span><div style="flex:1"><div class="up-name">${esc(file.name)}</div><div class="progress-bar-wrap"><div class="progress-bar" id="${rowId}_bar" style="width:10%"></div></div></div><span class="up-status" id="${rowId}_st">Reading…</span></div>`);
+  document.getElementById('uploadList').insertAdjacentHTML('beforeend',`<div class="upload-progress" id="${rowId}"><span class="up-icon">📗</span><div style="flex:1;min-width:0"><div class="up-name">${esc(file.name)}</div><div class="progress-bar-wrap"><div class="progress-bar" id="${rowId}_bar" style="width:10%"></div></div><label class="up-publish-toggle"><input type="checkbox" id="${rowId}_pub" checked/> Publish to Public Library immediately</label></div><span class="up-status" id="${rowId}_st">Reading…</span></div>`);
   try{
     setUpP(rowId,20,'Parsing…');
     const meta=await parseEpubMeta(file);
@@ -2844,7 +2846,8 @@ setUpP(rowId,70,'Saving…');
         coverUrl=await getDownloadURL(coverSnap.ref);
       }catch(e){console.warn('Cover upload failed, skipping:',e);}
     }
-    await addDoc(collection(db,'books'),{
+    const publishNow = document.getElementById(rowId+'_pub')?.checked ?? true;
+    const newBookRef = await addDoc(collection(db,'books'),{
       ownerId:currentUser.uid,
       ownerName:currentUser.displayName||currentUser.email,
       filename:file.name,
@@ -2856,11 +2859,12 @@ setUpP(rowId,70,'Saving…');
       coverUrl:coverUrl||null,
       epubUrl,
       storagePath:snap.ref.fullPath,
-      visibility:'private',
+      visibility: publishNow ? 'public' : 'private',
       createdAt:serverTimestamp(),
       updatedAt:serverTimestamp(),
       fileSizeBytes:file.size
     });
+    if (publishNow && currentUser && ledgerState.loaded) _ledgerUnlockAchievement('sharer', newBookRef.id);
   }catch(e){console.error(e);setUpP(rowId,100,'✗ Failed');document.getElementById(rowId)?.classList.add('error');showToast('Upload failed: '+e.message);}
 }
 function setUpP(rowId,pct,status){const bar=document.getElementById(rowId+'_bar'),st=document.getElementById(rowId+'_st');if(bar)bar.style.width=pct+'%';if(st)st.textContent=status;}
