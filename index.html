@@ -10139,13 +10139,84 @@ document.getElementById('bulkBtnCancel').addEventListener('click',toggleSelectMo
 let chapterMgrSpine=[],chapterMgrZip=null,chapterMgrOpfBase='',chapterMgrOpfPath='',chapterMgrBookId=null;
 let chapterMgrCoverBlob=null,chapterMgrCoverPreviewUrl=null; // staged replacement cover (already resized), if any
 let _chapterTextEditIdx=null;
-document.getElementById('btnCancelChapterMgr').addEventListener('click',()=>{document.getElementById('chapterMgrModal').classList.remove('open');chapterMgrZip=null;chapterMgrSpine=[];});
+document.getElementById('btnCancelChapterMgr').addEventListener('click',()=>{document.getElementById('chapterMgrModal').classList.remove('open');chapterMgrZip=null;chapterMgrSpine=[];_resetStagedCover();});
+function _resetStagedCover(){
+  if(chapterMgrCoverPreviewUrl)URL.revokeObjectURL(chapterMgrCoverPreviewUrl);
+  chapterMgrCoverBlob=null;chapterMgrCoverPreviewUrl=null;
+  const st=document.getElementById('chapterMgrCoverStatus');if(st)st.textContent='';
+}
+document.getElementById('chapterMgrCoverInput').addEventListener('change',async e=>{
+  const file=e.target.files[0];e.target.value='';if(!file)return;
+  const statusEl=document.getElementById('chapterMgrCoverStatus');
+  statusEl.textContent='Processing…';
+  try{
+    const{blob}=await _resizeImageIfNeeded(file,{isSvg:/svg/i.test(file.type)});
+    if(chapterMgrCoverPreviewUrl)URL.revokeObjectURL(chapterMgrCoverPreviewUrl);
+    chapterMgrCoverBlob=blob;
+    chapterMgrCoverPreviewUrl=URL.createObjectURL(blob);
+    document.getElementById('chapterMgrCoverPreview').src=chapterMgrCoverPreviewUrl;
+    statusEl.textContent='New cover staged — Save & Re-upload to apply.';
+  }catch(err){
+    statusEl.textContent='Could not read image: '+err.message;
+    console.error(err);
+  }
+});
+// ── Chapter text editor ──────────────────────────────────────────────────
+// Splits a full standalone XHTML chapter document into the shell that must
+// be preserved (DOCTYPE, namespaces, <head>, the <body ...> open tag itself,
+// and everything after </body>) and the inner body markup the editor
+// actually works on. Mirrors the same <body> regex the reader already uses
+// (readerGoToChapter) so both code paths agree on what "the body" means.
+function _splitXhtmlShell(raw){
+  const m=raw.match(/^([\s\S]*?<body[^>]*>)([\s\S]*)(<\/body>[\s\S]*)$/i);
+  if(!m)return{before:'',body:raw,after:''};
+  return{before:m[1],body:m[2],after:m[3]};
+}
+async function openChapterTextEditor(idx){
+  const ch=chapterMgrSpine[idx];
+  if(!ch||ch.deleted)return;
+  _chapterTextEditIdx=idx;
+  showLoading('Loading chapter…');
+  try{
+    if(ch._raw===undefined){
+      const raw=await chapterMgrZip.file(ch.href)?.async('string');
+      if(raw===undefined)throw new Error('Chapter file not found in EPUB');
+      ch._raw=raw;
+      const{before,body,after}=_splitXhtmlShell(raw);
+      ch._shellBefore=before;ch._shellAfter=after;ch._originalBody=body;
+    }
+    hideLoading();
+    document.getElementById('chapterTextEditTitle').textContent=ch.label||'Chapter';
+    document.getElementById('chapterTextEditArea').value=ch.editedBody!==undefined?ch.editedBody:ch._originalBody;
+    document.getElementById('chapterTextEditModal').classList.add('open');
+  }catch(e){
+    hideLoading();showToast('Could not load chapter: '+e.message);console.error(e);
+  }
+}
+document.getElementById('btnCancelChapterTextEdit').addEventListener('click',()=>{
+  document.getElementById('chapterTextEditModal').classList.remove('open');_chapterTextEditIdx=null;
+});
+document.getElementById('btnSaveChapterTextEdit').addEventListener('click',()=>{
+  if(_chapterTextEditIdx===null)return;
+  const ch=chapterMgrSpine[_chapterTextEditIdx];
+  const raw=document.getElementById('chapterTextEditArea').value;
+  // Same sanitizer the reader applies to every chapter it displays, so a
+  // hand-edit can't reintroduce a <script>, an on* handler, or a
+  // javascript: URL that the reader would otherwise have stripped anyway.
+  ch.editedBody=sanitizeChapterHtml(raw);
+  document.getElementById('chapterTextEditModal').classList.remove('open');
+  _chapterTextEditIdx=null;
+  renderChapterMgrList();
+  showToast('Chapter text updated — Save & Re-upload to apply ✓');
+});
 async function openChapterManager(){
   if(!currentId)return;
   const book=[...library,...communityLib].find(b=>b.id===currentId);if(!book)return;
   let sp=book.storagePath;
   if(!sp&&book.epubUrl){const m=book.epubUrl.match(/\/o\/(.+?)\?/);if(m)sp=decodeURIComponent(m[1]);}
   if(!sp){showToast('No EPUB file found');return;}
+  _resetStagedCover();
+  document.getElementById('chapterMgrCoverPreview').src=getCoverSrc(book)||'';
   showLoading('Loading EPUB…');
   try{
     const bytes=await getBytes(storageRef(storage,sp));
@@ -10192,7 +10263,8 @@ async function saveChapterManager(){
   const active=chapterMgrSpine.filter(c=>!c.deleted);const toDelete=chapterMgrSpine.filter(c=>c.deleted);
   if(!active.length){showToast("Can't delete all chapters");return;}
   const renamedCount=active.filter(c=>c.label!==c.originalLabel).length;
-  const summary=[toDelete.length?`${toDelete.length} chapter${toDelete.length!==1?'s':''} deleted`:'',renamedCount?`${renamedCount} renamed`:''].filter(Boolean).join(', ');
+  const editedCount=active.filter(c=>c.editedBody!==undefined).length;
+  const summary=[toDelete.length?`${toDelete.length} chapter${toDelete.length!==1?'s':''} deleted`:'',renamedCount?`${renamedCount} renamed`:'',editedCount?`${editedCount} chapter${editedCount!==1?'s':''} text edited`:'',chapterMgrCoverBlob?'cover replaced':''].filter(Boolean).join(', ');
   if(!confirm(`Save changes to EPUB?\n${summary||'No changes detected'}\n\nThis will re-upload the file.`))return;
   document.getElementById('chapterMgrModal').classList.remove('open');
   showLoading('Rebuilding EPUB…');
@@ -10212,13 +10284,45 @@ async function saveChapterManager(){
     const navTagMatch2=newOpf.match(/<item\s+[^>]*properties="[^"]*\bnav\b[^"]*"[^>]*\/?>/i);
     const navHref2=navTagMatch2?.[0].match(/\bhref="([^"]+)"/)?.[1];
     if(navHref2){const navPath=chapterMgrOpfBase+navHref2;const navXml=await chapterMgrZip.file(navPath)?.async('string');if(navXml){let newNav=navXml;for(const href of deletedHrefs){const hrefEsc=href.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');const liRe=new RegExp(`<li[^>]*>\\s*<a[^>]+href="${hrefEsc}(?:#[^"]*)?"[^>]*>[\\s\\S]*?</a>\\s*</li>`,'i');newNav=newNav.replace(liRe,'');}for(const ch of active){const hrefEsc=ch.href.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');const linkRe=new RegExp(`(<a[^>]+href="${hrefEsc}(?:#[^"]*)?"[^>]*>)([\\s\\S]*?)(</a>)`,'i');newNav=newNav.replace(linkRe,(m,open,inner,close)=>open+esc(ch.label)+close);}chapterMgrZip.file(navPath,newNav);}}
+    // Re-wrap each hand-edited chapter's body into its original document
+    // shell (DOCTYPE/namespaces/<head>/closing tags) rather than replacing
+    // the whole file — the chapter is a standalone XHTML document, and
+    // writing back only the sanitized inner body keeps it valid outside
+    // this reader.
+    for(const ch of active){
+      if(ch.editedBody===undefined)continue;
+      const fullDoc=(ch._shellBefore||'')+ch.editedBody+(ch._shellAfter||'');
+      chapterMgrZip.file(chapterMgrOpfBase+ch.href,fullDoc);
+    }
+    if(chapterMgrCoverBlob){
+      newOpf=await _applyCoverReplacement(chapterMgrZip,chapterMgrOpfPath,newOpf,chapterMgrCoverBlob);
+    }
     newOpf=await ensureKoboCoverDeclared(chapterMgrZip,chapterMgrOpfPath,newOpf);
     chapterMgrZip.file(chapterMgrOpfPath,newOpf);
     showLoading('Compressing…');
     const newBlob=await chapterMgrZip.generateAsync({type:'blob',mimeType:'application/epub+zip',compression:'DEFLATE',compressionOptions:{level:6}});
     const book=library.find(b=>b.id===chapterMgrBookId);const path=book?.storagePath;if(!path)throw new Error('No storage path found');
     showLoading('Uploading…');await uploadBytes(storageRef(storage,path),newBlob);
-    await updateDoc(doc(db,'books',chapterMgrBookId),{updatedAt:serverTimestamp()});
+    // The cover swap needs to stay in sync in two places: the image bytes
+    // inside the EPUB (handled above via _applyCoverReplacement) and the
+    // separately-hosted thumbnail in Storage that the library grid reads
+    // from (book.coverUrl) — otherwise the two would show different covers.
+    let newCoverUrl=null;
+    if(chapterMgrCoverBlob){
+      showLoading('Updating cover…');
+      const coverRef=storageRef(storage,`covers/${currentUser.uid}/${Date.now()}_cover.jpg`);
+      const coverSnap=await uploadBytes(coverRef,chapterMgrCoverBlob);
+      newCoverUrl=await getDownloadURL(coverSnap.ref);
+    }
+    const updateFields={updatedAt:serverTimestamp()};
+    if(newCoverUrl)updateFields.coverUrl=newCoverUrl;
+    await updateDoc(doc(db,'books',chapterMgrBookId),updateFields);
+    if(newCoverUrl){
+      if(book)book.coverUrl=newCoverUrl;
+      delete _cachedCoverObjectUrls[chapterMgrBookId];
+      evictCachedCover(chapterMgrBookId).catch(()=>{});
+      renderAll();
+    }
     // The reader reads from the offline EPUB cache first when present (see
     // readCurrentBook), so a stale cached copy would otherwise keep showing
     // the old chapter names/order even though Storage now has the new file.
@@ -10230,7 +10334,7 @@ async function saveChapterManager(){
     } else {
       evictCachedEpub(chapterMgrBookId).catch(()=>{});
     }
-    hideLoading();chapterMgrZip=null;chapterMgrSpine=[];showToast(`EPUB saved — ${summary||'no changes'} ✓`);
+    hideLoading();chapterMgrZip=null;chapterMgrSpine=[];_resetStagedCover();showToast(`EPUB saved — ${summary||'no changes'} ✓`);
   }catch(e){hideLoading();showToast('Save failed: '+e.message);console.error(e);}
 }
 
