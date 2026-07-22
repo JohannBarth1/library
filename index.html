@@ -712,6 +712,9 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .btn-cancel:hover{background:var(--light-blue);}
 
 /* upload modal */
+.upload-select-all{padding:.5rem .2rem;border-bottom:1px solid var(--border);margin-bottom:.3rem;}
+.upload-select-all label{display:flex;align-items:center;gap:.5rem;font-size:.75rem;font-weight:700;color:var(--navy2);cursor:pointer;user-select:none;}
+.upload-select-all input{accent-color:var(--teal);width:15px;height:15px;flex-shrink:0;cursor:pointer;}
 .upload-list{max-height:280px;overflow-y:auto;margin:.8rem 0;}
 .upload-modal-wide{max-width:520px!important;}
 .upload-progress{background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:.7rem 1rem;margin:.5rem 0;font-size:.82rem;display:flex;align-items:center;gap:.7rem;}
@@ -2066,6 +2069,9 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
       <p><strong>Click to browse</strong> or drag &amp; drop EPUB files here</p>
       <p style="font-size:.78rem;margin-top:.3rem">Supports multiple files at once</p>
     </div>
+    <div class="upload-select-all" id="uploadSelectAll" style="display:none">
+      <label><input type="checkbox" id="uploadSelectAllChk" checked/> Publish all to Public Library immediately</label>
+    </div>
     <div class="upload-list" id="uploadList"></div>
     <div class="modal-actions"><button class="btn-cancel" id="btnCloseUpload">Close</button></div>
   </div>
@@ -2619,7 +2625,15 @@ let _libraryReadyPromise = new Promise(res => { _libraryReadyResolve = res; });
 
 async function loadLibrary() {
   if (!currentUser) return;
-  showLoading('Loading library…');
+  // PATCH: no showLoading() here — this used to throw a blocking full-screen
+  // spinner over whatever was already on screen every time loadLibrary()
+  // ran, which was barely noticeable on first app open (nothing to look at
+  // yet) but was jarring on a resume/refresh, where it blanked out an
+  // already-usable library the user was mid-interaction with. Now this
+  // matches the same non-blocking, fetch-then-swap pattern used for the
+  // rest of the "Wave" loads on first open: whatever's already rendered
+  // (skeleton or the previous library) just stays interactive until the
+  // fresh data lands and renderAll() swaps it in.
   try {
     const myQ = query(
       collection(db, 'books'),
@@ -2639,7 +2653,6 @@ async function loadLibrary() {
     // Load and render my books immediately
     const mySnap = await getDocs(myQ);
     library = mySnap.docs.map(d => ({ id: d.id, ...d.data() }));
-    hideLoading();
     renderAll();
 
     // Load public and shared in background without blocking UI
@@ -2663,7 +2676,6 @@ async function loadLibrary() {
     });
 
   } catch (e) {
-    hideLoading();
     showToast('Error loading library');
     console.error(e);
     _libraryReady = true;
@@ -2801,7 +2813,7 @@ document.addEventListener('mouseout',e=>{const star=e.target.closest('.star[data
 document.addEventListener('click',e=>{const star=e.target.closest('.star[data-editable]');if(!star)return;submitRating(star.dataset.bookid,parseInt(star.dataset.n));});
 
 // ── UPLOAD ────────────────────────────────────────────────────────────────────
-function showUploadModal(){if(!currentUser){showToast('Please sign in first');return;}document.getElementById('uploadList').innerHTML='';document.getElementById('uploadModal').classList.add('open');}
+function showUploadModal(){if(!currentUser){showToast('Please sign in first');return;}document.getElementById('uploadList').innerHTML='';document.getElementById('uploadSelectAll').style.display='none';document.getElementById('uploadModal').classList.add('open');}
 function closeUploadModal(){document.getElementById('uploadModal').classList.remove('open');}
 document.getElementById('dropZone').addEventListener('click',()=>document.getElementById('epubFileInput').click());
 document.getElementById('dropZone').addEventListener('dragover',e=>{e.preventDefault();e.currentTarget.classList.add('drag-over');});
@@ -2809,10 +2821,33 @@ document.getElementById('dropZone').addEventListener('dragleave',e=>e.currentTar
 document.getElementById('dropZone').addEventListener('drop',e=>{e.preventDefault();e.currentTarget.classList.remove('drag-over');const files=[...e.dataTransfer.files].filter(f=>f.name.toLowerCase().endsWith('.epub'));if(!files.length){showToast('Please drop EPUB files only');return;}processUploadFiles(files);});
 document.getElementById('epubFileInput').addEventListener('change',e=>{const files=[...e.target.files];e.target.value='';processUploadFiles(files);});
 document.getElementById('btnCloseUpload').addEventListener('click',closeUploadModal);
-async function processUploadFiles(files){for(const f of files)await uploadOneEpub(f);await loadLibrary();}
-async function uploadOneEpub(file){
+async function processUploadFiles(files){
+  const selectAllWrap = document.getElementById('uploadSelectAll');
+  const selectAllChk  = document.getElementById('uploadSelectAllChk');
+  selectAllWrap.style.display = files.length > 1 ? 'block' : 'none';
+  selectAllChk.checked = true;
+
+  // PATCH: render every file's row up front, before any upload starts,
+  // so "select all" has rows to act on immediately instead of only the
+  // one row that happens to be uploading at any given moment (uploads
+  // still run one at a time below).
+  const rows = files.map(f => ({ file: f, rowId: renderUploadRow(f) }));
+
+  selectAllChk.onchange = () => {
+    document.querySelectorAll('#uploadList .up-publish-toggle input').forEach(cb => {
+      cb.checked = selectAllChk.checked;
+    });
+  };
+
+  for(const { file, rowId } of rows) await uploadOneEpub(file, rowId);
+  await loadLibrary();
+}
+function renderUploadRow(file){
   const rowId='up_'+Date.now()+Math.random().toString(36).slice(2);
-  document.getElementById('uploadList').insertAdjacentHTML('beforeend',`<div class="upload-progress" id="${rowId}"><span class="up-icon">📗</span><div style="flex:1;min-width:0"><div class="up-name">${esc(file.name)}</div><div class="progress-bar-wrap"><div class="progress-bar" id="${rowId}_bar" style="width:10%"></div></div><label class="up-publish-toggle"><input type="checkbox" id="${rowId}_pub" checked/> Publish to Public Library immediately</label></div><span class="up-status" id="${rowId}_st">Reading…</span></div>`);
+  document.getElementById('uploadList').insertAdjacentHTML('beforeend',`<div class="upload-progress" id="${rowId}"><span class="up-icon">📗</span><div style="flex:1;min-width:0"><div class="up-name">${esc(file.name)}</div><div class="progress-bar-wrap"><div class="progress-bar" id="${rowId}_bar" style="width:10%"></div></div><label class="up-publish-toggle"><input type="checkbox" id="${rowId}_pub" checked/> Publish to Public Library immediately</label></div><span class="up-status" id="${rowId}_st">Waiting…</span></div>`);
+  return rowId;
+}
+async function uploadOneEpub(file, rowId){
   try{
     setUpP(rowId,20,'Parsing…');
     const meta=await parseEpubMeta(file);
