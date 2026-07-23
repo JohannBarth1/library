@@ -2261,6 +2261,8 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
       <button type="button" id="btnChapterTextLink" title="Insert/edit link">🔗</button>
       <button type="button" data-cmd="unlink" title="Remove link">🔗✕</button>
       <button type="button" data-cmd="removeFormat" title="Clear formatting">Tx</button>
+      <div class="toolbar-sep"></div>
+      <button type="button" id="btnChapterTextSplit" title="Split into a new chapter starting at the cursor">✂ Split</button>
       <div class="toolbar-spacer"></div>
       <button type="button" class="btn-toggle-source" id="btnChapterTextToggleSource">HTML Source</button>
     </div>
@@ -9620,14 +9622,22 @@ async function _normalizeCoverImageInZip(zip, opfDir, coverHref){
 function _resolveCoverHref(zip, opfPath, opfXml){
   const opfDir=opfPath.includes('/')?opfPath.replace(/\/[^/]+$/,'/'):'';
   const manifestMap={};const mRe=/<item\s+([^>]+)\/?>/gi;let m;
-  while((m=mRe.exec(opfXml))!==null){const a=m[1];const id=a.match(/\bid="([^"]+)"/)?.[1];const href=a.match(/\bhref="([^"]+)"/)?.[1];const mt=a.match(/\bmedia-type="([^"]+)"/)?.[1];if(id&&href)manifestMap[id]={href,mediaType:mt};}
+  while((m=mRe.exec(opfXml))!==null){const a=m[1];const id=a.match(/\bid="([^"]+)"/)?.[1];const href=a.match(/\bhref="([^"]+)"/)?.[1];const mt=a.match(/\bmedia-type="([^"]+)"/)?.[1];const props=a.match(/\bproperties="([^"]+)"/)?.[1];if(id&&href)manifestMap[id]={href,mediaType:mt,properties:props};}
 
   let coverHref=null;
+  // EPUB3's own cover signal — properties="cover-image" — is the most
+  // authoritative source, and unlike the heuristics below it doesn't
+  // depend on the id/href happening to contain the word "cover" (plenty
+  // of books declare only this, with an id like "img01"). Check it first.
+  for(const id in manifestMap){
+    const it=manifestMap[id];
+    if(it.properties&&/\bcover-image\b/i.test(it.properties)&&it.mediaType?.startsWith('image/')){coverHref=it.href;break;}
+  }
   const coverId=opfXml.match(/name="cover"\s+content="([^"]+)"/i)?.[1]||opfXml.match(/content="([^"]+)"\s+name="cover"/i)?.[1];
   // Only accept the meta-declared cover ID if it actually points to an
   // image manifest item — some EPUB2 books point it at the cover's XHTML
   // wrapper page instead, which isn't a usable cover image.
-  if(coverId&&manifestMap[coverId]?.mediaType?.startsWith('image/'))coverHref=manifestMap[coverId].href;
+  if(!coverHref&&coverId&&manifestMap[coverId]?.mediaType?.startsWith('image/'))coverHref=manifestMap[coverId].href;
   if(!coverHref){for(const id in manifestMap){const it=manifestMap[id];if(!it.mediaType?.startsWith('image/'))continue;if(id.toLowerCase().includes('cover')||it.href.toLowerCase().includes('cover')){coverHref=it.href;break;}}}
   if(!coverHref){for(const p of ['cover.jpg','cover.jpeg','cover.png','images/cover.jpg','OEBPS/cover.jpg','OEBPS/cover.jpeg','OEBPS/cover.png','OEBPS/images/cover.jpg','OEBPS/images/cover.jpeg','OPS/images/cover.jpg','OPS/cover.jpg']){if(zip.file(opfDir+p)||zip.file(p)){coverHref=p;break;}}}
   return { coverHref, opfDir, manifestMap };
@@ -10218,7 +10228,7 @@ async function openChapterTextEditor(idx){
   _chapterTextEditIdx=idx;
   showLoading('Loading chapter…');
   try{
-    if(ch._raw===undefined){
+    if(ch._raw===undefined&&!ch.isNew){
       const raw=await chapterMgrZip.file(chapterMgrOpfBase+ch.href)?.async('string');
       if(raw===undefined)throw new Error('Chapter file not found in EPUB');
       ch._raw=raw;
@@ -10276,6 +10286,66 @@ document.getElementById('btnChapterTextLink').addEventListener('click',()=>{
   visual.focus();
   const url=prompt('Link URL:','https://');
   if(url)document.execCommand('createLink',false,url);
+});
+document.getElementById('btnChapterTextSplit').addEventListener('click',()=>{
+  if(_chapterTextEditIdx===null)return;
+  if(_chapterTextSourceMode){showToast('Switch to the visual editor to split a chapter');return;}
+  const visual=document.getElementById('chapterTextEditArea_visual');
+  const sel=window.getSelection();
+  if(!sel||!sel.rangeCount||!visual.contains(sel.anchorNode)){
+    showToast('Click inside the chapter text to place the split point');return;
+  }
+  if(!visual.lastChild){showToast('Nothing here to split');return;}
+  const caret=sel.getRangeAt(0).cloneRange();
+  caret.collapse(true); // if there's a selection, split from its start
+  // Range.extractContents() clones whatever ancestor tags (e.g. an open
+  // <p> or <li>) are needed to keep both halves valid, balanced HTML —
+  // the same mechanism the browser uses internally for cut. A plain
+  // string split on innerHTML at a character offset can't make that
+  // guarantee and risks leaving an unclosed tag on one side.
+  const afterRange=document.createRange();
+  afterRange.setStart(caret.startContainer,caret.startOffset);
+  afterRange.setEndAfter(visual.lastChild);
+  const afterDiv=document.createElement('div');
+  afterDiv.appendChild(afterRange.extractContents());
+  const afterHtml=afterDiv.innerHTML.trim();
+  const beforeHtml=visual.innerHTML.trim();
+  if(!beforeHtml||!afterHtml){
+    // Put the extracted content back where it came from rather than
+    // silently truncating the chapter.
+    while(afterDiv.firstChild)visual.appendChild(afterDiv.firstChild);
+    showToast("Can't split at the very start or end of a chapter");
+    return;
+  }
+  const ch=chapterMgrSpine[_chapterTextEditIdx];
+  ch.editedBody=sanitizeChapterHtml(beforeHtml);
+  const stamp=Date.now();
+  const extMatch=ch.href.match(/(\.[^./]+)$/);
+  const ext=extMatch?extMatch[1]:'.xhtml';
+  const dirPrefix=ch.href.includes('/')?ch.href.slice(0,ch.href.lastIndexOf('/')+1):'';
+  const baseName=ch.href.replace(/\.[^./]+$/,'').split('/').pop();
+  const newChapter={
+    id:'split-'+stamp,
+    href:dirPrefix+baseName+'-split-'+stamp+ext,
+    label:ch.label+' (cont.)',
+    originalLabel:ch.label+' (cont.)',
+    deleted:false,
+    editedBody:sanitizeChapterHtml(afterHtml),
+    // New chapters aren't in the zip yet, so there's no raw XHTML to fetch
+    // when this row is opened for editing — reuse the parent's wrapper
+    // (the <html>/<head> markup around the <body>) so the file written
+    // out on save is a complete, valid XHTML document.
+    _shellBefore:ch._shellBefore,
+    _shellAfter:ch._shellAfter,
+    _originalBody:afterHtml,
+    isNew:true,
+    splitFromHref:ch.href
+  };
+  chapterMgrSpine.splice(_chapterTextEditIdx+1,0,newChapter);
+  document.getElementById('chapterTextEditModal').classList.remove('open');
+  _chapterTextEditIdx=null;
+  renderChapterMgrList();
+  showToast('Chapter split in two — Save & Re-upload to apply ✓');
 });
 document.getElementById('btnCancelChapterTextEdit').addEventListener('click',()=>{
   document.getElementById('chapterTextEditModal').classList.remove('open');_chapterTextEditIdx=null;
@@ -10351,7 +10421,8 @@ async function saveChapterManager(){
   if(!active.length){showToast("Can't delete all chapters");return;}
   const renamedCount=active.filter(c=>c.label!==c.originalLabel).length;
   const editedCount=active.filter(c=>c.editedBody!==undefined).length;
-  const summary=[toDelete.length?`${toDelete.length} chapter${toDelete.length!==1?'s':''} deleted`:'',renamedCount?`${renamedCount} renamed`:'',editedCount?`${editedCount} chapter${editedCount!==1?'s':''} text edited`:'',chapterMgrCoverBlob?'cover replaced':''].filter(Boolean).join(', ');
+  const splitCount=active.filter(c=>c.isNew).length;
+  const summary=[toDelete.length?`${toDelete.length} chapter${toDelete.length!==1?'s':''} deleted`:'',splitCount?`${splitCount} new chapter${splitCount!==1?'s':''} from splitting`:'',renamedCount?`${renamedCount} renamed`:'',editedCount?`${editedCount} chapter${editedCount!==1?'s':''} text edited`:'',chapterMgrCoverBlob?'cover replaced':''].filter(Boolean).join(', ');
   if(!confirm(`Save changes to EPUB?\n${summary||'No changes detected'}\n\nThis will re-upload the file.`))return;
   document.getElementById('chapterMgrModal').classList.remove('open');
   showLoading('Rebuilding EPUB…');
@@ -10362,15 +10433,20 @@ async function saveChapterManager(){
     let newOpf=opfXml;
     newOpf=newOpf.replace(/<item\s+[^>]+\/>/gi,match=>{const href=match.match(/\bhref="([^"]+)"/)?.[1];return href&&deletedHrefs.has(href)?'':match;});
     newOpf=newOpf.replace(/<item\s+[^>]+><\/item>/gi,match=>{const href=match.match(/\bhref="([^"]+)"/)?.[1];return href&&deletedHrefs.has(href)?'':match;});
+    // Chapters created by splitting have no manifest <item> yet — every
+    // other chapter's item was already there when the EPUB was opened, so
+    // this is the one place we ever need to add rather than edit or remove.
+    const manifestAdditions=active.filter(c=>c.isNew).map(c=>`<item id="${c.id}" href="${c.href}" media-type="application/xhtml+xml"/>`).join('\n    ');
+    if(manifestAdditions)newOpf=newOpf.replace(/<\/manifest>/i,manifestAdditions+'\n  </manifest>');
     const newSpineItems=active.map(ch=>`<itemref idref="${ch.id}"/>`).join('\n    ');
     newOpf=newOpf.replace(/<spine[^>]*>[\s\S]*?<\/spine>/i,match=>match.replace(/<itemref[\s\S]*?(?=<\/spine>)/,newSpineItems+'\n  '));
     const ncxId=(()=>{const m=newOpf.match(/media-type="application\/x-dtbncx\+xml"[^>]+id="([^"]+)"/i)||newOpf.match(/id="([^"]+)"[^>]+media-type="application\/x-dtbncx\+xml"/i);return m?.[1];})();
-    const ncxHrefMatch=ncxId&&newOpf.match(new RegExp(`id="${ncxId}"[^>]+href="([^"]+)"`, 'i'));
-    const ncxHref=ncxHrefMatch?.[1];
+    const ncxItemTag=ncxId&&newOpf.match(new RegExp(`<item\\s+[^>]*\\bid="${ncxId}"[^>]*/?>`,'i'))?.[0];
+    const ncxHref=ncxItemTag?.match(/\bhref="([^"]+)"/)?.[1];
     if(ncxHref){const ncxPath=chapterMgrOpfBase+ncxHref;const ncxXml=await chapterMgrZip.file(ncxPath)?.async('string');if(ncxXml){let playOrder=1;const newNavPoints=active.map(ch=>`<navPoint id="navPoint-${ch.id}" playOrder="${playOrder++}"><navLabel><text>${esc(ch.label)}</text></navLabel><content src="${ch.href}"/></navPoint>`).join('\n    ');const newNcx=ncxXml.replace(/<navMap[^>]*>[\s\S]*?<\/navMap>/i,`<navMap>\n    ${newNavPoints}\n  </navMap>`);chapterMgrZip.file(ncxPath,newNcx);}}
     const navTagMatch2=newOpf.match(/<item\s+[^>]*properties="[^"]*\bnav\b[^"]*"[^>]*\/?>/i);
     const navHref2=navTagMatch2?.[0].match(/\bhref="([^"]+)"/)?.[1];
-    if(navHref2){const navPath=chapterMgrOpfBase+navHref2;const navXml=await chapterMgrZip.file(navPath)?.async('string');if(navXml){let newNav=navXml;for(const href of deletedHrefs){const hrefEsc=href.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');const liRe=new RegExp(`<li[^>]*>\\s*<a[^>]+href="${hrefEsc}(?:#[^"]*)?"[^>]*>[\\s\\S]*?</a>\\s*</li>`,'i');newNav=newNav.replace(liRe,'');}for(const ch of active){const hrefEsc=ch.href.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');const linkRe=new RegExp(`(<a[^>]+href="${hrefEsc}(?:#[^"]*)?"[^>]*>)([\\s\\S]*?)(</a>)`,'i');newNav=newNav.replace(linkRe,(m,open,inner,close)=>open+esc(ch.label)+close);}chapterMgrZip.file(navPath,newNav);}}
+    if(navHref2){const navPath=chapterMgrOpfBase+navHref2;const navXml=await chapterMgrZip.file(navPath)?.async('string');if(navXml){let newNav=navXml;for(const href of deletedHrefs){const hrefEsc=href.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');const liRe=new RegExp(`<li[^>]*>\\s*<a[^>]+href="${hrefEsc}(?:#[^"]*)?"[^>]*>[\\s\\S]*?</a>\\s*</li>`,'i');newNav=newNav.replace(liRe,'');}for(const ch of active){const hrefEsc=ch.href.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');const linkRe=new RegExp(`(<a[^>]+href="${hrefEsc}(?:#[^"]*)?"[^>]*>)([\\s\\S]*?)(</a>)`,'i');newNav=newNav.replace(linkRe,(m,open,inner,close)=>open+esc(ch.label)+close);}for(const ch of active.filter(c=>c.isNew)){const newLi=`<li><a href="${ch.href}">${esc(ch.label)}</a></li>`;const parentHrefEsc=(ch.splitFromHref||'').replace(/[.*+?^${}()|[\]\\]/g,'\\$&');const parentLiRe=parentHrefEsc&&new RegExp(`(<li[^>]*>\\s*<a[^>]+href="${parentHrefEsc}(?:#[^"]*)?"[^>]*>[\\s\\S]*?</a>\\s*</li>)`,'i');if(parentLiRe&&parentLiRe.test(newNav)){newNav=newNav.replace(parentLiRe,(m)=>m+'\n    '+newLi);}else{newNav=newNav.replace(/<\/ol>/i,`  ${newLi}\n  </ol>`);}}chapterMgrZip.file(navPath,newNav);}}
     // Re-wrap each hand-edited chapter's body into its original document
     // shell (DOCTYPE/namespaces/<head>/closing tags) rather than replacing
     // the whole file — the chapter is a standalone XHTML document, and
@@ -10596,7 +10672,7 @@ async function sendBooksToKoboDevice(bookIds, deviceId) {
   const toSend = bookIds.map(id => allBooks.find(b => b.id === id)).filter(Boolean);
   if (!toSend.length) { showToast('No books to send'); return; }
 
-  showLoading(`Queuing ${toSend.length} book${toSend.length !== 1 ? 's' : ''}...`);
+  showLoading(`Preparing ${toSend.length} book${toSend.length !== 1 ? 's' : ''}...`);
   let queued = 0;
 
   try {
@@ -10608,6 +10684,37 @@ async function sendBooksToKoboDevice(bookIds, deviceId) {
         const encoded = encodeURIComponent(book.storagePath);
         downloadUrl = `https://firebasestorage.googleapis.com/v0/b/${bucket}/o/${encoded}?alt=media&token=${book.storageDownloadToken}`;
       }
+
+      // Re-check the Kobo cover declaration right before sending, not just
+      // at upload time — this is what actually reaches books uploaded
+      // before this normalization existed, or where the original
+      // detection missed the cover (see _resolveCoverHref). Only attempted
+      // for books the current user owns — community-library books they
+      // don't own would fail Storage's write permission anyway.
+      if (book.storagePath && book.ownerId === currentUser.uid) {
+        try {
+          const bytes = await getBytes(storageRef(storage, book.storagePath));
+          const zip = await JSZip.loadAsync(bytes);
+          const container = await zip.file('META-INF/container.xml')?.async('string');
+          const opfPath = container?.match(/full-path="([^"]+\.opf)"/i)?.[1];
+          const opfXml = opfPath ? await zip.file(opfPath)?.async('string') : null;
+          if (opfPath && opfXml) {
+            const patchedOpf = await ensureKoboCoverDeclared(zip, opfPath, opfXml);
+            if (patchedOpf !== opfXml) {
+              zip.file(opfPath, patchedOpf);
+              const patchedBlob = await zip.generateAsync({type:'blob', mimeType:'application/epub+zip', compression:'DEFLATE', compressionOptions:{level:6}});
+              const snap = await uploadBytes(storageRef(storage, book.storagePath), patchedBlob);
+              // Overwriting can rotate the file's download token, so a
+              // cached book.epubUrl might now be stale — get a fresh one
+              // for this send rather than trusting it.
+              downloadUrl = await getDownloadURL(snap.ref);
+            }
+          }
+        } catch(e) {
+          console.warn('Kobo cover re-check skipped for', book.title, e);
+        }
+      }
+
       if (!downloadUrl) {
         console.warn('eLibrary: no download URL for book:', book.title);
         continue;
