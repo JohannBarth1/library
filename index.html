@@ -10729,6 +10729,13 @@ async function sendBooksToKoboDevice(bookIds, deviceId) {
         author: book.author || '',
         filename: book.filename || (book.title || 'book') + '.epub',
         downloadUrl,
+        // Fallback cover source for the device script — Nickel gets its
+        // cover from the EPUB's own OPF declaration (see
+        // ensureKoboCoverDeclared above), which is the normal/supported
+        // path. This is just the library's already-hosted thumbnail,
+        // included in case a future version of the device script wants a
+        // second source to fall back on.
+        coverUrl: book.coverUrl || null,
         status: 'pending',
         createdAt: serverTimestamp(),
       });
