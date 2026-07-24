@@ -2939,6 +2939,10 @@ async function uploadOneEpub(file, rowId){
         }
       }
     }catch(e){console.warn('Cover normalization skipped:',e);}
+    setUpP(rowId,35,'Converting to KEPUB…');
+    try{
+      uploadBlob=await toKepub(uploadBlob);
+    }catch(e){console.warn('KEPUB conversion skipped, storing plain EPUB:',e);}
     setUpP(rowId,40,'Uploading…');
     const sRef=storageRef(storage,`books/${currentUser.uid}/${Date.now()}_${file.name}`);
     const snap=await uploadBytes(sRef,uploadBlob);
@@ -9679,6 +9683,62 @@ async function _applyCoverReplacement(zip, opfPath, opfXml, newBlob){
   return newOpf;
 }
 
+// ── KEPUB CONVERSION (kepubify, WASM) ─────────────────────────────────────────
+// Converts a plain EPUB Blob to Kobo's KEPUB format so Nickel gets accurate
+// span-based pagination (fixes page-turn/page-count drift) instead of the
+// estimated pagination it falls back to for plain EPUBs.
+//
+// Vendor these two files from https://github.com/pgaskin/kepubify (gh-pages
+// branch, MIT licensed) into a `kepubify/` folder next to this index.html:
+//   kepubify/wasm_exec.js   — Go's WASM JS glue (from the gh-pages branch)
+//   kepubify/kepubify.wasm  — the compiled converter
+//
+// IMPORTANT: the exact global function the WASM module exposes (below,
+// KEPUBIFY_FN) hasn't been confirmed against the live script — after
+// vendoring the files, open this page, run the conversion once, and in
+// devtools console check `Object.keys(window).filter(k=>/kepub/i.test(k))`
+// to see the real name if this one doesn't match. It's isolated to this one
+// constant so fixing it is a one-line change.
+const KEPUBIFY_FN = 'kepubifyConvert';
+
+let _kepubifyLoadPromise = null;
+function _loadKepubify(){
+  if(_kepubifyLoadPromise) return _kepubifyLoadPromise;
+  _kepubifyLoadPromise = (async () => {
+    await new Promise((resolve, reject) => {
+      const s = document.createElement('script');
+      s.src = 'kepubify/wasm_exec.js';
+      s.onload = resolve;
+      s.onerror = () => reject(new Error('Failed to load kepubify/wasm_exec.js'));
+      document.head.appendChild(s);
+    });
+    const go = new Go();
+    const result = await WebAssembly.instantiateStreaming(
+      fetch('kepubify/kepubify.wasm'), go.importObject
+    ).catch(async () => {
+      // Fallback for servers that don't send application/wasm
+      const bytes = await (await fetch('kepubify/kepubify.wasm')).arrayBuffer();
+      return WebAssembly.instantiate(bytes, go.importObject);
+    });
+    go.run(result.instance); // intentionally not awaited — resolves when the Go program exits
+    if(typeof window[KEPUBIFY_FN] !== 'function'){
+      throw new Error(`kepubify loaded, but window.${KEPUBIFY_FN} isn't a function — check the real export name (see comment above)`);
+    }
+    return true;
+  })();
+  return _kepubifyLoadPromise;
+}
+
+// Converts an EPUB Blob to a KEPUB Blob. Throws on failure — callers should
+// catch and fall back to shipping the plain EPUB rather than blocking the
+// whole upload/send flow on a conversion bug.
+async function toKepub(blob){
+  await _loadKepubify();
+  const inputBytes = new Uint8Array(await blob.arrayBuffer());
+  const outputBytes = await window[KEPUBIFY_FN](inputBytes);
+  return new Blob([outputBytes], {type:'application/epub+zip'});
+}
+
 async function ensureKoboCoverDeclared(zip, opfPath, opfXml){
   const { coverHref: resolvedHref, opfDir, manifestMap } = _resolveCoverHref(zip, opfPath, opfXml);
   let coverHref = resolvedHref;
@@ -10679,6 +10739,7 @@ async function sendBooksToKoboDevice(bookIds, deviceId) {
     for (const book of toSend) {
       // Prefer epubUrl. Fall back to building from storagePath + storageDownloadToken.
       let downloadUrl = book.epubUrl || null;
+      let sentAsKepub = false;
       if (!downloadUrl && book.storagePath && book.storageDownloadToken) {
         const bucket = 'elibrary-c0074.firebasestorage.app';
         const encoded = encodeURIComponent(book.storagePath);
@@ -10713,6 +10774,21 @@ async function sendBooksToKoboDevice(bookIds, deviceId) {
         } catch(e) {
           console.warn('Kobo cover re-check skipped for', book.title, e);
         }
+
+        // Convert to KEPUB right before delivery. Stored library copies stay
+        // plain EPUB (for portability/other readers); the Kobo device only
+        // ever receives the KEPUB version, freshly converted from whatever
+        // is currently in Storage.
+        try {
+          const bytes = await getBytes(storageRef(storage, book.storagePath));
+          const kepubBlob = await toKepub(new Blob([bytes], {type:'application/epub+zip'}));
+          const kepubRef = storageRef(storage, book.storagePath.replace(/\.epub$/i, '.kepub.epub'));
+          const kepubSnap = await uploadBytes(kepubRef, kepubBlob);
+          downloadUrl = await getDownloadURL(kepubSnap.ref);
+          sentAsKepub = true;
+        } catch(e) {
+          console.warn('KEPUB conversion skipped for', book.title, '— sending plain EPUB:', e);
+        }
       }
 
       if (!downloadUrl) {
@@ -10727,7 +10803,9 @@ async function sendBooksToKoboDevice(bookIds, deviceId) {
         bookId: book.id,
         title: book.title || 'Unknown Title',
         author: book.author || '',
-        filename: book.filename || (book.title || 'book') + '.epub',
+        filename: sentAsKepub
+          ? (book.filename || (book.title || 'book') + '.epub').replace(/\.epub$/i, '.kepub.epub')
+          : (book.filename || (book.title || 'book') + '.epub'),
         downloadUrl,
         // Fallback cover source for the device script — Nickel gets its
         // cover from the EPUB's own OPF declaration (see
