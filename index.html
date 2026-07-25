@@ -9634,9 +9634,27 @@ async function _forceStoredMimetype(zip){
 // rather than aborting the whole conversion the way strict XML parsing
 // would. Throws only if a chapter has no <body> at all to work with;
 // callers should catch and fall back to shipping the plain EPUB.
+// Without an explicit size cap, an oversized image (a full-resolution
+// scan, common in the kinds of books that show up in Kobo libraries)
+// renders at native pixel size inside Kobo's paginated CSS-columns
+// layout — meaning it can span dozens of virtual "pages" before the
+// reader scrolls past it to any actual text, which looks exactly like
+// "this chapter is nothing but an image." Real kepubify output always
+// ships a stylesheet forcing images to fit the viewport for this exact
+// reason; this is the equivalent.
+const KEPUB_IMG_FIX_CSS='<style id="kepub-img-fix">img,svg{max-width:100%!important;max-height:100vh!important;width:auto!important;height:auto!important;object-fit:contain!important;}</style>';
+function _injectKepubImgFixCss(before){
+  if(/<style id="kepub-img-fix"/.test(before))return before; // already injected
+  if(/<\/head>/i.test(before))return before.replace(/<\/head>/i,KEPUB_IMG_FIX_CSS+'</head>');
+  // No </head> to anchor on (malformed chapter) — inject right before
+  // <body> instead, so the fix still applies.
+  return before.replace(/(<body[^>]*>)$/i,KEPUB_IMG_FIX_CSS+'$1');
+}
+
 function _kepubifyXhtml(raw){
-  const {before, body, after} = _splitXhtmlShell(raw);
+  let {before, body, after} = _splitXhtmlShell(raw);
   if(/id=["']book-inner["']/.test(body))return raw; // already converted — don't double-wrap
+  before=_injectKepubImgFixCss(before);
 
   const doc=new DOMParser().parseFromString('<html><body>'+body+'</body></html>','text/html');
   const root=doc.body;
