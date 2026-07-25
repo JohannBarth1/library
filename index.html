@@ -2935,14 +2935,11 @@ async function uploadOneEpub(file, rowId){
         const patchedOpf=await ensureKoboCoverDeclared(zip2,opfPath2,opfXml2);
         if(patchedOpf!==opfXml2){
           zip2.file(opfPath2,patchedOpf);
+          await _forceStoredMimetype(zip2);
           uploadBlob=await zip2.generateAsync({type:'blob',mimeType:'application/epub+zip',compression:'DEFLATE',compressionOptions:{level:6}});
         }
       }
     }catch(e){console.warn('Cover normalization skipped:',e);}
-    setUpP(rowId,35,'Converting to KEPUB…');
-    try{
-      uploadBlob=await toKepub(uploadBlob);
-    }catch(e){console.warn('KEPUB conversion skipped, storing plain EPUB:',e);}
     setUpP(rowId,40,'Uploading…');
     const sRef=storageRef(storage,`books/${currentUser.uid}/${Date.now()}_${file.name}`);
     const snap=await uploadBytes(sRef,uploadBlob);
@@ -9595,6 +9592,126 @@ async function _resizeImageIfNeeded(blob, {isSvg=false, maxDim=KOBO_COVER_MAX_DI
 // if it's SVG or exceeds the size limits above. Leaves the original file
 // untouched and writes the result to a new sibling file. Returns null if
 // no normalization was needed (or the image couldn't be decoded).
+// JSZip's generateAsync applies its global `compression` option to every
+// entry that doesn't have its own explicit per-file override — including
+// entries that were untouched, loaded straight from the original zip. The
+// EPUB/OCF spec requires the "mimetype" file to be stored *uncompressed*
+// as the archive's first entry; without this, every re-zip (cover patch,
+// chapter edit, etc.) was silently deflating it, which can break stricter
+// EPUB-format sniffing on some readers. Call this right before every
+// generateAsync() on an EPUB zip.
+async function _forceStoredMimetype(zip){
+  const mt=zip.file('mimetype');
+  if(!mt)return;
+  const bytes=await mt.async('uint8array');
+  zip.file('mimetype',bytes,{compression:'STORE'});
+}
+
+// ── Native KEPUB conversion (no WASM/external files) ────────────────────────
+// Kobo's Nickel software renders sideloaded plain .epub files through a
+// stricter, less capable pipeline than real KEPUBs — this is the documented
+// cause of the "ugly white margin" cover-thumbnail bug, and of footnote
+// references staying as plain inline jump-links instead of becoming
+// tap-to-view popups. Both are fixed by shipping as .kepub.epub instead.
+//
+// This re-implements kepubify's core structural transformation directly in
+// JS/DOM rather than vendoring the Go WASM build (which turned out to never
+// actually be deployed — see conversation history). It is NOT the full
+// kepubify feature set (no smart punctuation, custom CSS injection, etc.),
+// just the structural change Nickel's kepub-handling code looks for:
+//   - body content wrapped in <div id="book-columns"><div id="book-inner">
+//   - each direct text run wrapped in <span class="koboSpan" id="kobo.N.1">
+//     (kepubify itself further splits at the sentence level for finer
+//     on-device pagination stats; we wrap whole text runs instead, to keep
+//     the DOM-walking logic simple and robust against malformed markup)
+// Verified against real documented kepub output structure (community
+// reverse-engineering of Kobo Writing Life's own conversion pipeline).
+//
+// Uses lenient 'text/html' parsing rather than strict XML, deliberately —
+// this matches kepubify's own stated "polyglot HTML/XHTML output for
+// maximum compatibility" design, and tolerates the malformed markup that's
+// common in real-world scraped EPUBs (unclosed tags, stray "&", etc.)
+// rather than aborting the whole conversion the way strict XML parsing
+// would. Throws only if a chapter has no <body> at all to work with;
+// callers should catch and fall back to shipping the plain EPUB.
+function _kepubifyXhtml(raw){
+  const {before, body, after} = _splitXhtmlShell(raw);
+  if(/id=["']book-inner["']/.test(body))return raw; // already converted — don't double-wrap
+
+  const doc=new DOMParser().parseFromString('<html><body>'+body+'</body></html>','text/html');
+  const root=doc.body;
+  if(!root)throw new Error('_kepubifyXhtml: no body content to convert');
+
+  let counter=1;
+  const SKIP_TAGS=new Set(['script','style','svg','math','head','iframe','video','audio','canvas']);
+
+  function wrapTextNode(el,node){
+    const span=doc.createElement('span');
+    span.setAttribute('class','koboSpan');
+    span.setAttribute('id','kobo.'+(counter++)+'.1');
+    el.replaceChild(span,node);
+    span.appendChild(node);
+  }
+  function walk(el){
+    if(el.nodeType!==1)return;
+    const tag=el.tagName.toLowerCase();
+    if(SKIP_TAGS.has(tag))return;
+    if(tag==='span'&&el.classList&&el.classList.contains('koboSpan'))return;
+    Array.from(el.childNodes).forEach(node=>{
+      if(node.nodeType===3&&node.textContent.trim())wrapTextNode(el,node);
+      else if(node.nodeType===1)walk(node);
+    });
+  }
+  walk(root);
+
+  const bookColumns=doc.createElement('div');bookColumns.id='book-columns';
+  const bookInner=doc.createElement('div');bookInner.id='book-inner';
+  while(root.firstChild)bookInner.appendChild(root.firstChild);
+  bookColumns.appendChild(bookInner);
+  root.appendChild(bookColumns);
+
+  return before+root.innerHTML+after;
+}
+
+// Converts an EPUB Blob to a KEPUB Blob. Throws on any failure (no OPF, no
+// spine content, a chapter that can't be parsed at all) — callers must
+// catch and fall back to the plain EPUB rather than blocking delivery.
+async function toKepub(blob){
+  const zip=await JSZip.loadAsync(blob);
+  const container=await zip.file('META-INF/container.xml')?.async('string');
+  const opfPath=container?.match(/full-path="([^"]+\.opf)"/i)?.[1];
+  if(!opfPath)throw new Error('toKepub: could not find OPF');
+  const opfXml=await zip.file(opfPath)?.async('string');
+  if(!opfXml)throw new Error('toKepub: could not read OPF');
+  const opfDir=opfPath.includes('/')?opfPath.replace(/\/[^/]+$/,'/'):'';
+
+  const manifestMap={};
+  const mRe=/<item\s+([^>]+)\/?>/gi;let m;
+  while((m=mRe.exec(opfXml))!==null){
+    const a=m[1];
+    const id=a.match(/\bid="([^"]+)"/)?.[1];
+    const href=a.match(/\bhref="([^"]+)"/)?.[1];
+    const mt=a.match(/\bmedia-type="([^"]+)"/)?.[1];
+    if(id&&href)manifestMap[id]={href,mediaType:mt};
+  }
+  const spineIds=[...opfXml.matchAll(/<itemref\s+[^>]*idref="([^"]+)"[^>]*\/?>/gi)].map(mm=>mm[1]);
+  const htmlHrefs=spineIds
+    .map(id=>manifestMap[id])
+    .filter(it=>it&&/application\/xhtml\+xml|text\/html/i.test(it.mediaType||''))
+    .map(it=>it.href);
+  if(!htmlHrefs.length)throw new Error('toKepub: no spine HTML content found');
+
+  for(const href of htmlHrefs){
+    const fullPath=opfDir+href;
+    const raw=await zip.file(fullPath)?.async('string');
+    if(raw===undefined)continue; // spine references a file missing from the zip — skip rather than fail the whole conversion
+    zip.file(fullPath,_kepubifyXhtml(raw));
+  }
+
+  await _forceStoredMimetype(zip);
+  return zip.generateAsync({type:'blob',mimeType:'application/epub+zip',compression:'DEFLATE',compressionOptions:{level:6}});
+}
+
 async function _normalizeCoverImageInZip(zip, opfDir, coverHref){
   const fullPath = zip.file(opfDir+coverHref) ? opfDir+coverHref : coverHref;
   const file = zip.file(fullPath);
@@ -9681,62 +9798,6 @@ async function _applyCoverReplacement(zip, opfPath, opfXml, newBlob){
     newOpf=newOpf.replace(/<\/metadata>/i,`  <meta name="cover" content="${itemId}"/>\n  </metadata>`);
   }
   return newOpf;
-}
-
-// ── KEPUB CONVERSION (kepubify, WASM) ─────────────────────────────────────────
-// Converts a plain EPUB Blob to Kobo's KEPUB format so Nickel gets accurate
-// span-based pagination (fixes page-turn/page-count drift) instead of the
-// estimated pagination it falls back to for plain EPUBs.
-//
-// Vendor these two files from https://github.com/pgaskin/kepubify (gh-pages
-// branch, MIT licensed) into a `kepubify/` folder next to this index.html:
-//   kepubify/wasm_exec.js   — Go's WASM JS glue (from the gh-pages branch)
-//   kepubify/kepubify.wasm  — the compiled converter
-//
-// IMPORTANT: the exact global function the WASM module exposes (below,
-// KEPUBIFY_FN) hasn't been confirmed against the live script — after
-// vendoring the files, open this page, run the conversion once, and in
-// devtools console check `Object.keys(window).filter(k=>/kepub/i.test(k))`
-// to see the real name if this one doesn't match. It's isolated to this one
-// constant so fixing it is a one-line change.
-const KEPUBIFY_FN = 'kepubifyConvert';
-
-let _kepubifyLoadPromise = null;
-function _loadKepubify(){
-  if(_kepubifyLoadPromise) return _kepubifyLoadPromise;
-  _kepubifyLoadPromise = (async () => {
-    await new Promise((resolve, reject) => {
-      const s = document.createElement('script');
-      s.src = 'kepubify/wasm_exec.js';
-      s.onload = resolve;
-      s.onerror = () => reject(new Error('Failed to load kepubify/wasm_exec.js'));
-      document.head.appendChild(s);
-    });
-    const go = new Go();
-    const result = await WebAssembly.instantiateStreaming(
-      fetch('kepubify/kepubify.wasm'), go.importObject
-    ).catch(async () => {
-      // Fallback for servers that don't send application/wasm
-      const bytes = await (await fetch('kepubify/kepubify.wasm')).arrayBuffer();
-      return WebAssembly.instantiate(bytes, go.importObject);
-    });
-    go.run(result.instance); // intentionally not awaited — resolves when the Go program exits
-    if(typeof window[KEPUBIFY_FN] !== 'function'){
-      throw new Error(`kepubify loaded, but window.${KEPUBIFY_FN} isn't a function — check the real export name (see comment above)`);
-    }
-    return true;
-  })();
-  return _kepubifyLoadPromise;
-}
-
-// Converts an EPUB Blob to a KEPUB Blob. Throws on failure — callers should
-// catch and fall back to shipping the plain EPUB rather than blocking the
-// whole upload/send flow on a conversion bug.
-async function toKepub(blob){
-  await _loadKepubify();
-  const inputBytes = new Uint8Array(await blob.arrayBuffer());
-  const outputBytes = await window[KEPUBIFY_FN](inputBytes);
-  return new Blob([outputBytes], {type:'application/epub+zip'});
 }
 
 async function ensureKoboCoverDeclared(zip, opfPath, opfXml){
@@ -10522,6 +10583,7 @@ async function saveChapterManager(){
     }
     newOpf=await ensureKoboCoverDeclared(chapterMgrZip,chapterMgrOpfPath,newOpf);
     chapterMgrZip.file(chapterMgrOpfPath,newOpf);
+    await _forceStoredMimetype(chapterMgrZip);
     showLoading('Compressing…');
     const newBlob=await chapterMgrZip.generateAsync({type:'blob',mimeType:'application/epub+zip',compression:'DEFLATE',compressionOptions:{level:6}});
     const book=library.find(b=>b.id===chapterMgrBookId);const path=book?.storagePath;if(!path)throw new Error('No storage path found');
@@ -10763,6 +10825,7 @@ async function sendBooksToKoboDevice(bookIds, deviceId) {
             const patchedOpf = await ensureKoboCoverDeclared(zip, opfPath, opfXml);
             if (patchedOpf !== opfXml) {
               zip.file(opfPath, patchedOpf);
+              await _forceStoredMimetype(zip);
               const patchedBlob = await zip.generateAsync({type:'blob', mimeType:'application/epub+zip', compression:'DEFLATE', compressionOptions:{level:6}});
               const snap = await uploadBytes(storageRef(storage, book.storagePath), patchedBlob);
               // Overwriting can rotate the file's download token, so a
@@ -10775,10 +10838,13 @@ async function sendBooksToKoboDevice(bookIds, deviceId) {
           console.warn('Kobo cover re-check skipped for', book.title, e);
         }
 
-        // Convert to KEPUB right before delivery. Stored library copies stay
-        // plain EPUB (for portability/other readers); the Kobo device only
-        // ever receives the KEPUB version, freshly converted from whatever
-        // is currently in Storage.
+        // Convert to KEPUB right before delivery, using the native
+        // koboSpan-wrapping implementation (see toKepub above) — no WASM,
+        // no external files. Stored library copies stay plain EPUB (for
+        // portability with other readers, and because the app's own
+        // reader/TTS/highlighting engine assumes plain XHTML structure);
+        // the Kobo device only ever receives a KEPUB version, freshly
+        // converted from whatever is currently in Storage.
         try {
           const bytes = await getBytes(storageRef(storage, book.storagePath));
           const kepubBlob = await toKepub(new Blob([bytes], {type:'application/epub+zip'}));
