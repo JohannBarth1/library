@@ -9763,6 +9763,17 @@ function _withTimeout(promise, ms, label){
   ]);
 }
 
+// Updates the loading overlay's message only if `promise` hasn't settled
+// within `delayMs` — for the common case (most books send in well under a
+// second) this never fires and nothing changes. For a genuinely slow book
+// (large chapter count, image-heavy, etc.) it escalates to a more specific
+// "this is taking a while, here's why" message instead of leaving a bare
+// spinner up with no explanation.
+function _withDelayedMessage(promise, delayMs, delayedMsg){
+  const timer=setTimeout(()=>showLoading(delayedMsg), delayMs);
+  return promise.finally(()=>clearTimeout(timer));
+}
+
 async function _normalizeCoverImageInZip(zip, opfDir, coverHref){
   const fullPath = zip.file(opfDir+coverHref) ? opfDir+coverHref : coverHref;
   const file = zip.file(fullPath);
@@ -10849,7 +10860,13 @@ async function sendBooksToKoboDevice(bookIds, deviceId) {
   let queued = 0;
 
   try {
-    for (const book of toSend) {
+    for (let i = 0; i < toSend.length; i++) {
+      const book = toSend[i];
+      const progressLabel = toSend.length > 1
+        ? `Sending ${i + 1} of ${toSend.length}: "${book.title || 'book'}"`
+        : `Sending "${book.title || 'book'}"`;
+      showLoading(progressLabel);
+
       // Prefer epubUrl. Fall back to building from storagePath + storageDownloadToken.
       let downloadUrl = book.epubUrl || null;
       let sentAsKepub = false;
@@ -10873,7 +10890,11 @@ async function sendBooksToKoboDevice(bookIds, deviceId) {
           const opfPath = container?.match(/full-path="([^"]+\.opf)"/i)?.[1];
           const opfXml = opfPath ? await zip.file(opfPath)?.async('string') : null;
           if (opfPath && opfXml) {
-            const patchedOpf = await _withTimeout(ensureKoboCoverDeclared(zip, opfPath, opfXml), 15000, 'Cover check');
+            const patchedOpf = await _withDelayedMessage(
+              _withTimeout(ensureKoboCoverDeclared(zip, opfPath, opfXml), 15000, 'Cover check'),
+              2500,
+              `Checking "${book.title || 'book'}"'s cover — this can take a moment…`
+            );
             if (patchedOpf !== opfXml) {
               zip.file(opfPath, patchedOpf);
               await _forceStoredMimetype(zip);
@@ -10888,6 +10909,7 @@ async function sendBooksToKoboDevice(bookIds, deviceId) {
         } catch(e) {
           console.warn('Kobo cover re-check skipped for', book.title, e);
         }
+        showLoading(progressLabel); // reset in case the delayed message above fired
 
         // Convert to KEPUB right before delivery, using the native
         // koboSpan-wrapping implementation (see toKepub above) — no WASM,
@@ -10904,7 +10926,11 @@ async function sendBooksToKoboDevice(bookIds, deviceId) {
         // back to plain EPUB for that book, same as any other failure.
         try {
           const bytes = await getBytes(storageRef(storage, book.storagePath));
-          const kepubBlob = await _withTimeout(toKepub(new Blob([bytes], {type:'application/epub+zip'})), 30000, 'KEPUB conversion');
+          const kepubBlob = await _withDelayedMessage(
+            _withTimeout(toKepub(new Blob([bytes], {type:'application/epub+zip'})), 30000, 'KEPUB conversion'),
+            2500,
+            `Converting "${book.title || 'book'}" to KEPUB — larger books can take up to a minute…`
+          );
           const kepubRef = storageRef(storage, book.storagePath.replace(/\.epub$/i, '.kepub.epub'));
           const kepubSnap = await uploadBytes(kepubRef, kepubBlob);
           downloadUrl = await getDownloadURL(kepubSnap.ref);
@@ -10912,6 +10938,7 @@ async function sendBooksToKoboDevice(bookIds, deviceId) {
         } catch(e) {
           console.warn('KEPUB conversion skipped for', book.title, '— sending plain EPUB:', e);
         }
+        showLoading(progressLabel); // reset in case the delayed message above fired
       }
 
       if (!downloadUrl) {
