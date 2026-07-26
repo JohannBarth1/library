@@ -685,15 +685,23 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 /* ── LOADING ── */
 .loading-overlay{display:none;position:fixed;inset:0;background:rgba(15,26,40,.9);z-index:200;align-items:center;justify-content:center;flex-direction:column;gap:1.3rem;}
 .loading-overlay.open{display:flex;}
-.loading-book{position:relative;width:56px;height:75px;perspective:400px;}
+.loading-book{position:relative;width:56px;height:75px;perspective:400px;animation:loadingBookPulse 2.6s ease-in-out infinite;}
 .loading-book-pages{position:absolute;left:5px;right:0;top:2px;bottom:2px;background:var(--warm-white);border:1px solid var(--border);border-radius:1px 4px 4px 1px;box-shadow:2px 2px 8px rgba(0,0,0,.25);}
 .loading-book-pages::before{content:'';position:absolute;top:6px;bottom:6px;left:5px;right:4px;background:repeating-linear-gradient(to bottom,var(--border) 0,var(--border) 1px,transparent 1px,transparent 6px);opacity:.6;}
-.loading-book-spine-line{position:absolute;left:5px;top:0;bottom:0;width:2px;background:var(--gold2,var(--gold));opacity:.7;z-index:2;}
-.loading-book-cover{position:absolute;inset:0;background:linear-gradient(135deg,var(--teal),var(--teal-dark));background-size:cover;background-position:center;border-radius:1px 4px 4px 1px;box-shadow:0 4px 14px rgba(0,0,0,.35);transform-origin:left center;backface-visibility:hidden;animation:loadingBookOpen 2.6s ease-in-out infinite;}
+.loading-book-cover-flipper{position:absolute;inset:0;transform-style:preserve-3d;transform-origin:left center;animation:loadingBookOpen 2.6s ease-in-out infinite;}
+.loading-book-cover-front,.loading-book-cover-back{position:absolute;inset:0;backface-visibility:hidden;border-radius:1px 4px 4px 1px;box-shadow:inset 3px 0 0 rgba(0,0,0,.22),0 4px 14px rgba(0,0,0,.35);}
+.loading-book-cover-front{background:linear-gradient(135deg,var(--teal),var(--teal-dark));background-size:cover;background-position:center;}
+.loading-book-cover-back{background:var(--warm-white);border:1px solid var(--border);transform:rotateY(180deg);}
+.loading-book-cover-back::before{content:'';position:absolute;top:6px;bottom:6px;left:5px;right:4px;background:repeating-linear-gradient(to bottom,var(--border) 0,var(--border) 1px,transparent 1px,transparent 6px);opacity:.6;}
 @keyframes loadingBookOpen{
   0%,14%{transform:rotateY(0deg);}
-  48%,64%{transform:rotateY(-155deg);}
+  46%,64%{transform:rotateY(180deg);}
   100%{transform:rotateY(0deg);}
+}
+@keyframes loadingBookPulse{
+  0%,14%{transform:scale(1);}
+  46%,64%{transform:scale(1.06);}
+  100%{transform:scale(1);}
 }
 .loading-msg{color:var(--warm-white);font-family:'Lato',sans-serif;font-size:.95rem;font-weight:600;letter-spacing:.02em;line-height:1.5;text-align:center;max-width:22em;padding:0 1.5rem;}
 
@@ -2397,8 +2405,10 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 <div class="loading-overlay" id="loadingOverlay">
   <div class="loading-book">
     <div class="loading-book-pages"></div>
-    <div class="loading-book-spine-line"></div>
-    <div class="loading-book-cover" id="loadingBookCover"></div>
+    <div class="loading-book-cover-flipper">
+      <div class="loading-book-cover-front" id="loadingBookCover"></div>
+      <div class="loading-book-cover-back"></div>
+    </div>
   </div>
   <div class="loading-msg" id="loadingMsg">Loading…</div>
 </div>
