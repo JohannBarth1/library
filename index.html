@@ -9637,24 +9637,28 @@ async function _forceStoredMimetype(zip){
 // Without an explicit size cap, an oversized image (a full-resolution
 // scan, common in the kinds of books that show up in Kobo libraries)
 // renders at native pixel size inside Kobo's paginated CSS-columns
-// layout — meaning it can span dozens of virtual "pages" before the
-// reader scrolls past it to any actual text, which looks exactly like
-// "this chapter is nothing but an image." Real kepubify output always
-// ships a stylesheet forcing images to fit the viewport for this exact
-// reason; this is the equivalent.
-const KEPUB_IMG_FIX_CSS='<style id="kepub-img-fix">img,svg{max-width:100%!important;max-height:100vh!important;width:auto!important;height:auto!important;object-fit:contain!important;}</style>';
-function _injectKepubImgFixCss(before){
-  if(/<style id="kepub-img-fix"/.test(before))return before; // already injected
-  if(/<\/head>/i.test(before))return before.replace(/<\/head>/i,KEPUB_IMG_FIX_CSS+'</head>');
-  // No </head> to anchor on (malformed chapter) — inject right before
-  // <body> instead, so the fix still applies.
-  return before.replace(/(<body[^>]*>)$/i,KEPUB_IMG_FIX_CSS+'$1');
-}
-
+// layout — this was the original concern, but it turned out not to be
+// the whole story.
+//
+// Chapters containing an image are left completely untouched (no
+// koboSpan wrapping, no book-columns/book-inner wrapper) rather than
+// converted. Two separate rounds of on-device testing showed
+// image-containing chapters rendering as a full-screen image with no
+// visible text — the image's native size didn't match what was actually
+// rendering, pointing at some interaction with Nickel's own
+// image/page-layout handling that isn't reproducible in this sandbox (no
+// physical device to test against). A custom CSS override was tried
+// first and removed again — Nickel already inserts its own max-width/
+// max-height CSS for images by default, per Kobo's own documentation to
+// content creators, so the override was likely redundant and is the
+// most non-standard thing in this output compared to real kepubify's.
+// Text-only chapters still get the full conversion; this is the safe
+// fallback for the ones that don't, at the cost of those chapters not
+// getting kepub's footnote-popup/pagination benefits.
 function _kepubifyXhtml(raw){
   let {before, body, after} = _splitXhtmlShell(raw);
   if(/id=["']book-inner["']/.test(body))return raw; // already converted — don't double-wrap
-  before=_injectKepubImgFixCss(before);
+  if(/<img[\s>]|<image[\s>:]/i.test(body))return raw; // contains an image — see note above, leave untouched
 
   const doc=new DOMParser().parseFromString('<html><body>'+body+'</body></html>','text/html');
   const root=doc.body;
