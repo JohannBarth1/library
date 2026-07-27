@@ -5562,12 +5562,15 @@ async function readCurrentBook(){
     readerBookId = book.id;
     _ledgerSessionPages = 0; // new reading sitting — Marathon achievement counts from here
     _readerIsInitialChapterLoad = true;
+    // Reset every time a book is opened: FX default-on only for a real
+    // custom bookmark (one with a template id — award/book/category/seasonal),
+    // never for the plain default reading bookmark. Previously this only
+    // ever turned FX on and never back off, so it stayed on for every
+    // later book once any book with a custom bookmark had been opened.
     const _openTpl = getDisplayBookmarkTemplate(book.id);
-    if(_openTpl?.id && !bookmarkAnimEnabled) {
-      bookmarkAnimEnabled = true;
-      localStorage.setItem('elib_bookmark_anim', 'on');
-      refreshBmAnimBtn();
-    }
+    bookmarkAnimEnabled = !!_openTpl?.id;
+    localStorage.setItem('elib_bookmark_anim', bookmarkAnimEnabled ? 'on' : 'off');
+    refreshBmAnimBtn();
     const container=await readerZip.file('META-INF/container.xml')?.async('string');
     const opfPath=container?.match(/full-path="([^"]+\.opf)"/i)?.[1];
     if(!opfPath)throw new Error('No OPF found');
