@@ -686,6 +686,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .loading-overlay{display:none;position:fixed;inset:0;background:rgba(15,26,40,.9);z-index:200;align-items:center;justify-content:center;flex-direction:column;gap:1.3rem;}
 .loading-overlay.open{display:flex;}
 .loading-book{position:relative;width:56px;height:75px;perspective:220px;animation:loadingBookPulse 2.6s ease-in-out infinite;}
+.loading-book-spine{position:absolute;left:0;top:1px;bottom:1px;width:7px;background:linear-gradient(to right,var(--teal-dark),var(--teal));border-radius:2px 0 0 2px;box-shadow:1px 0 3px rgba(0,0,0,.2);}
 .loading-book-pages{position:absolute;left:5px;right:0;top:2px;bottom:2px;background:var(--warm-white);border:1px solid var(--border);border-radius:1px 4px 4px 1px;box-shadow:2px 2px 8px rgba(0,0,0,.25);}
 .loading-book-pages::before{content:'';position:absolute;top:6px;bottom:6px;left:5px;right:4px;background:repeating-linear-gradient(to bottom,var(--border) 0,var(--border) 1px,transparent 1px,transparent 6px);opacity:.6;}
 .loading-book-cover-flipper{position:absolute;inset:0;transform-style:preserve-3d;transform-origin:left center;animation:loadingBookOpen 2.6s ease-in-out infinite;}
@@ -2404,6 +2405,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 
 <div class="loading-overlay" id="loadingOverlay">
   <div class="loading-book">
+    <div class="loading-book-spine"></div>
     <div class="loading-book-pages"></div>
     <div class="loading-book-cover-flipper">
       <div class="loading-book-cover-front" id="loadingBookCover"></div>
@@ -3005,7 +3007,7 @@ async function downloadCurrentBook(){
   if(!currentId)return;
   const book=[...library,...communityLib].find(b=>b.id===currentId);
   if(!book?.storagePath){showToast('No file available');return;}
-  showLoading('Preparing download…');
+  showLoading('Preparing download…', book.coverUrl);
   try{
     const bytes=await getBytes(storageRef(storage,book.storagePath));
     const blob=new Blob([bytes],{type:'application/epub+zip'});
@@ -3030,7 +3032,7 @@ async function confirmShare() {
   if (!currentId) return;
   const book = library.find(b => b.id === currentId);
   if (!book) return;
-  showLoading('Publishing…');
+  showLoading('Publishing…', book.coverUrl);
   try {
     await updateDoc(doc(db, 'books', currentId), {
       visibility: 'public',
@@ -3759,7 +3761,7 @@ async function unpublishCurrentBook() {
   if (!currentId) return;
   const book = library.find(b => b.id === currentId);
   if (!book || !confirm(`Remove "${book.title}" from the Public Library?`)) return;
-  showLoading('Unpublishing…');
+  showLoading('Unpublishing…', book.coverUrl);
   try {
     await updateDoc(doc(db, 'books', currentId), {
       visibility: 'private',
@@ -3781,7 +3783,7 @@ async function unpublishCurrentBook() {
   if(!currentId)return;
   const book=library.find(b=>b.id===currentId)||communityLib.find(b=>b.id===currentId);
   if(!book||!confirm(`Delete "${book.title}" permanently?`))return;
-  showLoading('Deleting…');
+  showLoading('Deleting…', book.coverUrl);
   try{
     await deleteDoc(doc(db,'books',currentId));
     library=library.filter(b=>b.id!==currentId);
@@ -3893,7 +3895,7 @@ document.getElementById('btnConfirmPrivateShare').addEventListener('click',async
   if(!uid){showToast('Please select a user');return;}
   if(!currentId)return;
   const book=library.find(b=>b.id===currentId);if(!book)return;
-  showLoading('Granting access…');
+  showLoading('Granting access…', book.coverUrl);
   try{
     const allowed=[...(book.allowedUsers||[])];
     if(!allowed.includes(uid))allowed.push(uid);
@@ -3983,7 +3985,7 @@ document.getElementById('btnSaveEditMeta').addEventListener('click',async()=>{
     updatedAt:serverTimestamp()
   };
   document.getElementById('editMetaModal').classList.remove('open');
-  showLoading('Saving…');
+  showLoading('Saving…', book.coverUrl);
   try{
     await updateDoc(doc(db,'books',currentId),updates);
     Object.assign(book,updates);
@@ -5542,7 +5544,7 @@ async function readCurrentBook(){
   let storagePath=book.storagePath;
   if(!storagePath&&book.epubUrl){const match=book.epubUrl.match(/\/o\/(.+?)\?/);if(match)storagePath=decodeURIComponent(match[1]);}
   if(!storagePath){showToast('EPUB not available');return;}
-  showLoading('Opening book…'); // show immediately — covers the network fetch too, not just pagination
+  showLoading('Opening book…', book.coverUrl); // show immediately — covers the network fetch too, not just pagination
   try{
     let bytes = await getCachedEpubBytes(book.id);
     const fromCache = !!bytes;
@@ -9000,7 +9002,8 @@ async function markBookFinished(bookId){
 
 async function doMarkFinishedFromDetail(){
   if(!currentId) return;
-  showLoading('Marking as finished…');
+  const book=[...library,...communityLib].find(b=>b.id===currentId);
+  showLoading('Marking as finished…', book?.coverUrl);
   try {
     await markBookFinished(currentId);
     hideLoading();
@@ -9971,7 +9974,7 @@ function showLoading(msg, coverUrl){
   _loadingOverlayOpen=true;
   document.getElementById('loadingMsg').textContent=msg||'Loading…';
   const coverEl=document.getElementById('loadingBookCover');
-  if(coverEl)coverEl.style.backgroundImage=coverUrl?`url("${coverUrl}")`:'';
+  if(coverEl)coverEl.style.backgroundImage=`url("${coverUrl||'icon-192.png'}")`;
   document.getElementById('loadingOverlay').classList.add('open');
 }
 function hideLoading(){
@@ -10437,7 +10440,8 @@ async function openChapterTextEditor(idx){
   const ch=chapterMgrSpine[idx];
   if(!ch||ch.deleted)return;
   _chapterTextEditIdx=idx;
-  showLoading('Loading chapter…');
+  const _mgrBook=library.find(b=>b.id===chapterMgrBookId);
+  showLoading('Loading chapter…', _mgrBook?.coverUrl);
   try{
     if(ch._raw===undefined&&!ch.isNew){
       const raw=await chapterMgrZip.file(chapterMgrOpfBase+ch.href)?.async('string');
@@ -10585,7 +10589,7 @@ async function openChapterManager(){
   if(!sp){showToast('No EPUB file found');return;}
   _resetStagedCover();
   document.getElementById('chapterMgrCoverPreview').src=getCoverSrc(book)||'';
-  showLoading('Loading EPUB…');
+  showLoading('Loading EPUB…', book.coverUrl);
   try{
     const bytes=await getBytes(storageRef(storage,sp));
     chapterMgrZip=await JSZip.loadAsync(bytes);chapterMgrBookId=currentId;
@@ -10628,6 +10632,7 @@ function renderChapterMgrList(){
 document.getElementById('btnSaveChapterMgr').addEventListener('click',saveChapterManager);
 async function saveChapterManager(){
   if(!chapterMgrZip||!chapterMgrOpfPath||!chapterMgrBookId)return;
+  const book=library.find(b=>b.id===chapterMgrBookId);
   const active=chapterMgrSpine.filter(c=>!c.deleted);const toDelete=chapterMgrSpine.filter(c=>c.deleted);
   if(!active.length){showToast("Can't delete all chapters");return;}
   const renamedCount=active.filter(c=>c.label!==c.originalLabel).length;
@@ -10636,7 +10641,7 @@ async function saveChapterManager(){
   const summary=[toDelete.length?`${toDelete.length} chapter${toDelete.length!==1?'s':''} deleted`:'',splitCount?`${splitCount} new chapter${splitCount!==1?'s':''} from splitting`:'',renamedCount?`${renamedCount} renamed`:'',editedCount?`${editedCount} chapter${editedCount!==1?'s':''} text edited`:'',chapterMgrCoverBlob?'cover replaced':''].filter(Boolean).join(', ');
   if(!confirm(`Save changes to EPUB?\n${summary||'No changes detected'}\n\nThis will re-upload the file.`))return;
   document.getElementById('chapterMgrModal').classList.remove('open');
-  showLoading('Rebuilding EPUB…');
+  showLoading('Rebuilding EPUB…', book?.coverUrl);
   try{
     const opfXml=await chapterMgrZip.file(chapterMgrOpfPath).async('string');
     for(const ch of toDelete)chapterMgrZip.remove(chapterMgrOpfBase+ch.href);
@@ -10674,17 +10679,17 @@ async function saveChapterManager(){
     newOpf=await ensureKoboCoverDeclared(chapterMgrZip,chapterMgrOpfPath,newOpf);
     chapterMgrZip.file(chapterMgrOpfPath,newOpf);
     await _forceStoredMimetype(chapterMgrZip);
-    showLoading('Compressing…');
+    showLoading('Compressing…', book?.coverUrl);
     const newBlob=await chapterMgrZip.generateAsync({type:'blob',mimeType:'application/epub+zip',compression:'DEFLATE',compressionOptions:{level:6}});
-    const book=library.find(b=>b.id===chapterMgrBookId);const path=book?.storagePath;if(!path)throw new Error('No storage path found');
-    showLoading('Uploading…');await uploadBytes(storageRef(storage,path),newBlob);
+    const path=book?.storagePath;if(!path)throw new Error('No storage path found');
+    showLoading('Uploading…', book?.coverUrl);await uploadBytes(storageRef(storage,path),newBlob);
     // The cover swap needs to stay in sync in two places: the image bytes
     // inside the EPUB (handled above via _applyCoverReplacement) and the
     // separately-hosted thumbnail in Storage that the library grid reads
     // from (book.coverUrl) — otherwise the two would show different covers.
     let newCoverUrl=null;
     if(chapterMgrCoverBlob){
-      showLoading('Updating cover…');
+      showLoading('Updating cover…', book?.coverUrl);
       const coverRef=storageRef(storage,`covers/${currentUser.uid}/${Date.now()}_cover.jpg`);
       const coverSnap=await uploadBytes(coverRef,chapterMgrCoverBlob);
       newCoverUrl=await getDownloadURL(coverSnap.ref);
@@ -11840,7 +11845,7 @@ function showQuickCategoryModal() {
     item.addEventListener('click', async () => {
       const newCat = item.dataset.cat;
       scrim.remove();
-      showLoading('Saving…');
+      showLoading('Saving…', book.coverUrl);
       try {
         await updateDoc(doc(db, 'books', currentId), { category: newCat, updatedAt: serverTimestamp() });
         book.category = newCat;
