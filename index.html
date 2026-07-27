@@ -685,13 +685,13 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 /* ── LOADING ── */
 .loading-overlay{display:none;position:fixed;inset:0;background:rgba(15,26,40,.9);z-index:200;align-items:center;justify-content:center;flex-direction:column;gap:1.3rem;}
 .loading-overlay.open{display:flex;}
-.loading-book{position:relative;width:56px;height:75px;perspective:220px;animation:loadingBookPulse 2.6s ease-in-out infinite;}
-.loading-book-page{position:absolute;inset:0;background:var(--warm-white);border:1px solid var(--border);border-radius:1px 4px 4px 1px;box-shadow:2px 2px 8px rgba(0,0,0,.25);}
+.loading-book{position:relative;width:56px;height:75px;perspective:500px;animation:loadingBookPulse 2.6s ease-in-out infinite;}
+.loading-book-page{position:absolute;inset:0;background:var(--warm-white);border:1px solid var(--border);border-radius:1px;box-shadow:2px 2px 8px rgba(0,0,0,.25);}
 .loading-book-page::before{content:'';position:absolute;top:6px;bottom:6px;left:5px;right:4px;background:repeating-linear-gradient(to bottom,var(--border) 0,var(--border) 1px,transparent 1px,transparent 6px);opacity:.6;}
 .loading-book-cover-flipper{position:absolute;inset:0;transform-style:preserve-3d;transform-origin:left center;animation:loadingBookOpen 2.6s ease-in-out infinite;}
-.loading-book-cover-front,.loading-book-cover-back{position:absolute;inset:0;backface-visibility:hidden;border-radius:1px 4px 4px 1px;}
-.loading-book-cover-front{box-shadow:inset 3px 0 0 rgba(0,0,0,.22),0 4px 14px rgba(0,0,0,.35);background:linear-gradient(135deg,var(--teal),var(--teal-dark));background-size:cover;background-position:center;}
-.loading-book-cover-back{background:var(--warm-white);border:1px solid var(--border);transform:rotateY(180deg);}
+.loading-book-cover-front,.loading-book-cover-back{position:absolute;inset:0;backface-visibility:hidden;}
+.loading-book-cover-front{border-radius:1px 4px 4px 1px;box-shadow:inset 3px 0 0 rgba(0,0,0,.22),0 4px 14px rgba(0,0,0,.35);background:linear-gradient(135deg,var(--teal),var(--teal-dark));background-size:cover;background-position:center;}
+.loading-book-cover-back{border-radius:1px;background:var(--warm-white);border:1px solid var(--border);transform:rotateY(180deg);}
 .loading-book-cover-back::before{content:'';position:absolute;top:6px;bottom:6px;left:5px;right:4px;background:repeating-linear-gradient(to bottom,var(--border) 0,var(--border) 1px,transparent 1px,transparent 6px);opacity:.6;}
 @keyframes loadingBookOpen{
   0%,14%{transform:rotateY(0deg);}
@@ -4923,6 +4923,7 @@ function recommendedSection(books) {
   const favBooks    = resolve(_userLists.find(l => l.id === 'favourites')?.bookIds || []);
   const viewedBooks = resolve([...(_userLists.find(l => l.id === 'viewed')?.bookIds || [])].reverse().slice(0, 20));
   const recBooks    = dedupe([...library, ...communityLib]).filter(b => b.recommended);
+  const sharedBooks = communityLib.filter(b => b.ownerId !== currentUser?.uid && b.allowedUsers?.includes(currentUser?.uid));
   const recentBooks = library.slice(0, 12);
   const customLists = _userLists.filter(l => !l.system);
 
@@ -4933,6 +4934,7 @@ function recommendedSection(books) {
       ${recommendedSection(recBooks)}
       ${shelfSection('home_fav', 'Favourites', '❤️', '#e11d48', favBooks, {defaultOpen:false, showAddTile:true, listId:'favourites', alwaysShow:true})}
       ${shelfSection('home_wtr', 'Want to read', '🔖', '#7c3aed', wtrBooks, {defaultOpen:false, showAddTile:true, listId:'want-to-read', alwaysShow:true})}
+      ${shelfSection('home_shared', 'Shared with Me', '🔒', '#5a48b0', sharedBooks, {defaultOpen:false})}
       ${customLists.map(l =>
         shelfSection('home_list_'+l.id, l.name, l.icon||'📚', 'var(--teal)',
           resolve(l.bookIds||[]), {defaultOpen:false, editable:true, listId:l.id, showAddTile:true})
