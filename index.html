@@ -7730,74 +7730,116 @@ function _handleSentenceTap(doc, clientX, clientY) {
   if (range) _showHighlightPopup(doc, range);
 }
 
+function _wordRangeAtPoint(doc, x, y) {
+  const off = _pointToOffset(doc, x, y);
+  if (off == null) return null;
+  const nodes = _chapterTextNodes(doc);
+  let full = '';
+  for (const n of nodes) full += n.textContent;
+  if (off < 0 || off > full.length) return null;
+
+  const isWordChar = ch => ch != null && /[\p{L}\p{N}'']/u.test(ch);
+  // If the tap landed between words (whitespace/punctuation), there's no
+  // word to select.
+  if (!isWordChar(full[off]) && !isWordChar(full[off - 1])) return null;
+
+  let start = off, end = off;
+  // Prefer expanding onto the character to the right of the caret; fall
+  // back to the one just behind it (caret landed right after the word).
+  if (!isWordChar(full[start]) && isWordChar(full[start - 1])) start -= 1, end -= 1;
+  while (start > 0 && isWordChar(full[start - 1])) start--;
+  while (end < full.length && isWordChar(full[end])) end++;
+  if (start === end) return null;
+
+  return { start, end, range: _offsetsToRange(doc, start, end) };
+}
+
+function _fireReaderLongPress(doc, clientX, clientY) {
+  if (!doc || readerSelectMode) return;
+  const list = document.getElementById('readerChapterList');
+  const bmPanel = document.getElementById('readerBookmarkListPanel');
+  const searchPanel = document.getElementById('readerSearchPanel');
+  const settingsBar = document.getElementById('readerSettingsBar');
+  if (list?.classList.contains('open') || bmPanel?.classList.contains('open') || searchPanel?.classList.contains('open') || settingsBar?.classList.contains('open')) return;
+
+  const iframeRect = _readerIframe?.getBoundingClientRect();
+  if (!iframeRect) return;
+  const x = clientX - iframeRect.left, y = clientY - iframeRect.top;
+
+  const word = _wordRangeAtPoint(doc, x, y);
+  if (!word || !word.range) return;
+
+  // Select just the tapped word — native-style "long-press to select" —
+  // rather than switching into the sticky sentence-tap highlight mode
+  // (that's still reached only via the ✎ toolbar button).
+  const sel = doc.getSelection ? doc.getSelection() : doc.defaultView?.getSelection();
+  if (!sel) return;
+  sel.removeAllRanges();
+  sel.addRange(word.range);
+  if (navigator.vibrate) navigator.vibrate(15);
+  _showHighlightPopup(doc, word.range);
+}
+
 function _attachReaderTapHandlers(doc) {
   const content = document.getElementById('readerContent');
   document.getElementById('readerTouchOverlay')?.remove();
 
-  // The overlay is kept only as an inert layout placeholder — it never
-  // intercepts touch/mouse input, on desktop OR mobile. Native text
-  // selection (word double-tap, drag handles, and the OS "Look Up"/"Copy"
-  // long-press menu) needs the real touch/mouse target to be the text
-  // itself inside the iframe, not a covering div, so nothing is ever
-  // allowed to sit on top of the text layer.
   const overlay = document.createElement('div');
   overlay.id = 'readerTouchOverlay';
-  overlay.style.cssText = 'position:absolute;inset:0;z-index:5;background:transparent;pointer-events:none;';
+  overlay.style.cssText = 'position:absolute;inset:0;z-index:5;background:transparent;-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;';
   content.appendChild(overlay);
 
-  _attachHighlightSelectionUI(doc);
-
+  // ── DESKTOP (mouse): overlay is permanently transparent.
+  // doc's own click/selection events handle everything natively.
   const isTouchDevice = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
-  if (!isTouchDevice) return; // desktop: doc's own click/selection events handle everything
+  if (!isTouchDevice) {
+    overlay.style.pointerEvents = 'none';
+    _attachHighlightSelectionUI(doc);
+    return;
+  }
 
-  // ── MOBILE: listen directly on the iframe document so native selection
-  // and long-press "Look Up" work exactly like normal mobile Safari/Chrome
-  // text. We still want tap-to-turn-page, tap-to-toggle-toolbar, and
-  // tap-on-link/highlight — so a lightweight tap/swipe classifier runs
-  // alongside, but it never blocks a stationary long-press: that's left
-  // entirely to the browser's native selection gesture. Highlighting is
-  // only entered explicitly via the ✎ toolbar button (readerSelectMode).
+  // ── MOBILE: overlay catches taps/swipes for page navigation, UNLESS
+  // readerSelectMode is on (toggled via the ✎ toolbar button). A long
+  // (stationary) press selects the tapped word — like native "Look Up" —
+  // without switching into the sticky sentence-select mode.
+  overlay.style.touchAction = 'none';
   if (readerSelectMode) {
     _showSelectBadge();
     _startSelectPoll(doc); // re-target the poll at this chapter's fresh doc
     _sentenceRangesDoc = null; // force a fresh sentence map for this chapter's doc
   }
 
-  // Disable double-tap/pinch-to-zoom (the overlay used to swallow this via
-  // preventDefault) without touching user-select, so native word selection
-  // and the "Look Up" long-press are unaffected.
-  try { doc.documentElement.style.touchAction = 'manipulation'; } catch(e) {}
+  let tx0 = 0, ty0 = 0;
+  let lpTimer = null;
+  let lpFired = false;
 
-  let tx0 = 0, ty0 = 0, t0 = 0;
-  let isSwipe = false;
-
-  doc.addEventListener('touchstart', e => {
+  overlay.addEventListener('touchstart', e => {
+    e.preventDefault();
     tx0 = e.touches[0].clientX;
     ty0 = e.touches[0].clientY;
-    t0 = Date.now();
-    isSwipe = false;
-  }, { passive: true });
-
-  doc.addEventListener('touchmove', e => {
-    const dx = e.touches[0].clientX - tx0;
-    const dy = e.touches[0].clientY - ty0;
-    if (!isSwipe && (Math.abs(dx) > 10 || Math.abs(dy) > 10)) isSwipe = true;
-    // Once a touch is clearly moving, treat it as a page-turn swipe rather
-    // than letting it drag out a native text selection.
-    if (isSwipe) e.preventDefault();
+    lpFired = false;
+    clearTimeout(lpTimer);
+    lpTimer = setTimeout(() => {
+      lpFired = true;
+      _fireReaderLongPress(doc, tx0, ty0);
+    }, 450);
   }, { passive: false });
 
-  doc.addEventListener('touchend', e => {
-    const dx = e.changedTouches[0].clientX - tx0;
-    const dy = e.changedTouches[0].clientY - ty0;
-    const heldMs = Date.now() - t0;
+  overlay.addEventListener('touchmove', e => {
+    e.preventDefault();
+    const dx = e.touches[0].clientX - tx0;
+    const dy = e.touches[0].clientY - ty0;
+    if (Math.abs(dx) > 10 || Math.abs(dy) > 10) clearTimeout(lpTimer);
+  }, { passive: false });
 
-    // A stationary touch held past the long-press threshold is the
-    // browser's native word-selection / "Look Up" gesture in progress —
-    // leave it alone rather than treating it as a tap.
-    if (!isSwipe && heldMs >= 450) return;
+  overlay.addEventListener('touchend', e => {
+    clearTimeout(lpTimer);
+    if (lpFired) { lpFired = false; return; } // long-press already handled this touch
 
     if (readerSelectMode) {
+      const dx = e.changedTouches[0].clientX - tx0;
+      const dy = e.changedTouches[0].clientY - ty0;
+
       // Swipe still turns pages, so you can reach sentences elsewhere.
       if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 40) {
         if (dx < 0) goToPage(readerPage + 1);
@@ -7806,7 +7848,7 @@ function _attachReaderTapHandlers(doc) {
       }
       if (Math.abs(dx) < 10 && Math.abs(dy) < 10) {
         const x = e.changedTouches[0].clientX;
-        const w = _readerIframe?.clientWidth || content.offsetWidth;
+        const w = overlay.offsetWidth || content.offsetWidth;
         // Narrower edge zones than navigation mode (15% vs 30%) — in
         // select mode most of the screen should be tap-to-select, with
         // just a strip at each edge reserved for turning pages.
@@ -7824,7 +7866,7 @@ function _attachReaderTapHandlers(doc) {
     const ttsPanel = document.getElementById('ttsPanel');
     const readerOv = document.getElementById('readerOverlay');
     const toolbarVisible = !readerOv.classList.contains('toolbar-hidden');
-
+    
     if (list.classList.contains('open') || bmPanel.classList.contains('open') || searchPanel.classList.contains('open') || settingsBar.classList.contains('open') || ttsPanel.classList.contains('open') || toolbarVisible) {
       list.classList.remove('open');
       bmPanel.classList.remove('open');
@@ -7835,6 +7877,9 @@ function _attachReaderTapHandlers(doc) {
       return;
     }
 
+    const dx = e.changedTouches[0].clientX - tx0;
+    const dy = e.changedTouches[0].clientY - ty0;
+
     // Swipe always navigates, regardless of toolbar state
     if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 40) {
       if (dx < 0) goToPage(readerPage + 1);
@@ -7843,21 +7888,23 @@ function _attachReaderTapHandlers(doc) {
     }
 
     if (Math.abs(dx) < 10 && Math.abs(dy) < 10) {
-      // Detect links / highlight marks under the tap — coordinates from a
-      // touch on `doc` are already relative to the iframe, no offset needed.
-      try {
-        const el = doc.elementFromPoint(e.changedTouches[0].clientX, e.changedTouches[0].clientY);
-        if (el) {
-          const link = el.closest?.('[data-navchapter]');
-          if (link) { readerGoToChapter(parseInt(link.dataset.navchapter)); return; }
-          const mark = el.closest?.('mark[data-highlightid]');
-          if (mark) {
-            const r = _readerIframe.getBoundingClientRect();
-            openHighlightMenu(mark, e.changedTouches[0].clientX + r.left, e.changedTouches[0].clientY + r.top);
-            return;
+      const readerOv = document.getElementById('readerOverlay');
+
+      // Detect links / highlight marks via elementFromPoint into the iframe
+      const iframeRect = _readerIframe?.getBoundingClientRect();
+      if (iframeRect && doc) {
+        const relX = e.changedTouches[0].clientX - iframeRect.left;
+        const relY = e.changedTouches[0].clientY - iframeRect.top;
+        try {
+          const el = doc.elementFromPoint(relX, relY);
+          if (el) {
+            const link = el.closest?.('[data-navchapter]');
+            if (link) { readerGoToChapter(parseInt(link.dataset.navchapter)); return; }
+            const mark = el.closest?.('mark[data-highlightid]');
+            if (mark) { openHighlightMenu(mark, e.changedTouches[0].clientX, e.changedTouches[0].clientY); return; }
           }
-        }
-      } catch(err) {}
+        } catch(err) {}
+      }
 
       // Edges ALWAYS turn the page, regardless of toolbar visibility — a
       // tap on the very first screen of a freshly opened book (toolbar
@@ -7865,7 +7912,7 @@ function _attachReaderTapHandlers(doc) {
       // by "first tap just hides the toolbar" as it did before. Middle
       // third is the only zone that toggles the toolbar.
       const x = e.changedTouches[0].clientX;
-      const w = _readerIframe?.clientWidth || content.offsetWidth;
+      const w = overlay.offsetWidth || content.offsetWidth;
       if (x < w * 0.3) { goToPage(readerPage - 1); return; }
       if (x > w * 0.7) { goToPage(readerPage + 1); return; }
       readerOv.classList.toggle('toolbar-hidden');
@@ -7873,6 +7920,8 @@ function _attachReaderTapHandlers(doc) {
       return;
     }
   }, { passive: true });
+
+  _attachHighlightSelectionUI(doc);
 }
 
 async function renderChapterPaged(bodyHtml) {
