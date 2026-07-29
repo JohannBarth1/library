@@ -645,7 +645,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .chapter-item:hover{background:rgba(42,124,138,0.15);}
 .chapter-item.active{background:rgba(42,124,138,0.2);color:var(--teal);font-weight:700;}
 .reader-search-box{display:flex;align-items:center;gap:.4rem;padding:.7rem 1.2rem;border-bottom:1px solid rgba(128,128,128,0.2);}
-.reader-search-box input{flex:1;min-width:0;border:1px solid rgba(128,128,128,0.3);border-radius:6px;padding:.5rem .6rem;font-family:'Lato',sans-serif;font-size:.85rem;background:transparent;color:inherit;outline:none;}
+.reader-search-box input{flex:1;min-width:0;border:1px solid rgba(128,128,128,0.3);border-radius:6px;padding:.5rem .6rem;font-family:'Lato',sans-serif;font-size:16px;background:transparent;color:inherit;outline:none;}
 .reader-search-box input:focus{border-color:var(--teal);}
 .reader-search-box button{flex-shrink:0;background:none;border:none;cursor:pointer;font-size:.85rem;color:inherit;opacity:.55;padding:.3rem;}
 .reader-search-status{padding:.5rem 1.2rem;font-size:.7rem;letter-spacing:.03em;color:var(--muted);}
@@ -6343,7 +6343,7 @@ async function renderLedgerTab() {
 
     <div class="ledger-card">
       <div class="ledger-card-label">Achievements</div>
-      <div class="ledger-card-note">Tap a badge to see how to earn it — some also award you a bookmark for the book you're reading.</div>
+      <div class="ledger-card-note">Tap a locked badge to see how to earn it. Tap a badge you've won to replay its animation — or tap its 🔖 to see the bookmark it earned you.</div>
       <div class="ledger-badge-grid">
         ${visibleAchievements.map(a => {
           const rewardTpl = _bookmarkTemplates.find(t => t.assignedAchievementId === a.id);
@@ -6360,7 +6360,19 @@ async function renderLedgerTab() {
 
   document.getElementById('btnLedgerEditGoal')?.addEventListener('click', showLedgerGoalPicker);
   el.querySelectorAll('.ledger-badge[data-achievement-id]').forEach(b => {
-    b.addEventListener('click', () => showLedgerAchievementPopover(b.dataset.achievementId));
+    b.addEventListener('click', e => {
+      const achievementId = b.dataset.achievementId;
+      if (e.target.closest('.ledger-badge-reward')) {
+        showLedgerBookmarkRewardModal(achievementId);
+        return;
+      }
+      if (ledgerState.achievements[achievementId]) {
+        const a = LEDGER_ACHIEVEMENTS.find(x => x.id === achievementId);
+        if (a) _ledgerPlayAchievementBurst(a);
+      } else {
+        showLedgerAchievementPopover(achievementId);
+      }
+    });
   });
   _ledgerRenderCalendar();
 }
@@ -6369,7 +6381,6 @@ function showLedgerAchievementPopover(achievementId) {
   document.getElementById('ledgerPopover')?.remove();
   const a = LEDGER_ACHIEVEMENTS.find(x => x.id === achievementId);
   if (!a) return;
-  const unlocked = !!ledgerState.achievements[a.id];
   const rewardTpl = _bookmarkTemplates.find(t => t.assignedAchievementId === a.id);
   const pop = document.createElement('div');
   pop.id = 'ledgerPopover';
@@ -6379,10 +6390,7 @@ function showLedgerAchievementPopover(achievementId) {
       <button class="ledger-popover-close" id="ledgerPopoverClose">✕</button>
       <div class="ledger-popover-title">${a.icon} ${esc(a.label)}</div>
       <div style="font-size:.85rem;color:var(--navy2);line-height:1.5;margin-bottom:.5rem">${esc(a.desc)}</div>
-      <div style="font-size:.76rem;font-weight:700;color:${unlocked ? 'var(--teal)' : 'var(--muted)'}">
-        ${unlocked ? '✓ Unlocked' : 'Not yet unlocked'}
-      </div>
-      ${unlocked ? `<button type="button" id="ledgerReplayBurst" style="margin-top:.8rem;background:var(--teal);color:#fff;border:none;border-radius:8px;padding:.5rem 1.1rem;font-size:.78rem;font-weight:700;cursor:pointer;font-family:'Lato',sans-serif;">🎉 Replay animation</button>` : ''}
+      <div style="font-size:.76rem;font-weight:700;color:var(--muted)">Not yet unlocked</div>
       ${rewardTpl ? `
         <div style="display:flex;align-items:center;gap:.8rem;margin-top:1rem;padding-top:1rem;border-top:1px solid var(--border)">
           ${renderBookmarkSVG(rewardTpl, 32, 50, 'ledgerpop')}
@@ -6390,7 +6398,7 @@ function showLedgerAchievementPopover(achievementId) {
             <div style="font-size:.62rem;letter-spacing:.14em;text-transform:uppercase;font-weight:700;color:var(--muted)">Reward</div>
             <div style="font-size:.88rem;font-weight:700;color:var(--navy2)">${esc(rewardTpl.name || 'Bookmark')}</div>
             <div style="font-size:.72rem;color:var(--muted);margin-top:.1rem">
-              ${unlocked ? 'This bookmark has been added to the book you earned it on.' : "Unlock this achievement to get this bookmark on the book you're reading."}
+              Unlock this achievement to get this bookmark on the book you're reading.
             </div>
           </div>
         </div>` : ''}
@@ -6398,10 +6406,38 @@ function showLedgerAchievementPopover(achievementId) {
   document.body.appendChild(pop);
   pop.addEventListener('click', e => { if (e.target === pop) pop.remove(); });
   pop.querySelector('#ledgerPopoverClose').addEventListener('click', () => pop.remove());
-  pop.querySelector('#ledgerReplayBurst')?.addEventListener('click', () => {
-    pop.remove();
-    _ledgerPlayAchievementBurst(a);
-  });
+}
+
+// Dedicated modal for the 🔖 reward icon on a badge — separate from the
+// achievement popover above so tapping the bookmark itself (won or not)
+// always shows the bookmark, instead of being folded into the "how to
+// earn it" / replay-animation flow.
+function showLedgerBookmarkRewardModal(achievementId) {
+  document.getElementById('ledgerPopover')?.remove();
+  const a = LEDGER_ACHIEVEMENTS.find(x => x.id === achievementId);
+  const rewardTpl = _bookmarkTemplates.find(t => t.assignedAchievementId === achievementId);
+  if (!rewardTpl) return;
+  const unlocked = !!ledgerState.achievements[achievementId];
+  const pop = document.createElement('div');
+  pop.id = 'ledgerPopover';
+  pop.className = 'ledger-popover-scrim';
+  pop.innerHTML = `
+    <div class="ledger-popover-card" style="text-align:center;">
+      <button class="ledger-popover-close" id="ledgerPopoverClose">✕</button>
+      <div style="display:flex;justify-content:center;margin-bottom:.6rem;">
+        ${renderBookmarkSVG(rewardTpl, 48, 76, 'ledgerbmreward')}
+      </div>
+      <div style="font-size:.95rem;font-weight:700;color:var(--navy2);">${esc(rewardTpl.name || 'Bookmark')}</div>
+      <div style="font-size:.62rem;letter-spacing:.14em;text-transform:uppercase;font-weight:700;color:var(--muted);margin-top:.2rem;">
+        Reward for ${a ? esc(a.label) : 'this achievement'}
+      </div>
+      <div style="font-size:.8rem;color:var(--muted);line-height:1.5;margin-top:.6rem;">
+        ${unlocked ? 'This bookmark has been added to the book you earned it on.' : "Unlock this achievement to get this bookmark on the book you're reading."}
+      </div>
+    </div>`;
+  document.body.appendChild(pop);
+  pop.addEventListener('click', e => { if (e.target === pop) pop.remove(); });
+  pop.querySelector('#ledgerPopoverClose').addEventListener('click', () => pop.remove());
 }
 
 async function _ledgerRenderCalendar() {
