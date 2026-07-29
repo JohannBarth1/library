@@ -644,6 +644,14 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .reader-overlay.theme-night .chapter-item{color:#c8c8d8;}
 .chapter-item:hover{background:rgba(42,124,138,0.15);}
 .chapter-item.active{background:rgba(42,124,138,0.2);color:var(--teal);font-weight:700;}
+.reader-search-box{display:flex;align-items:center;gap:.4rem;padding:.7rem 1.2rem;border-bottom:1px solid rgba(128,128,128,0.2);}
+.reader-search-box input{flex:1;min-width:0;border:1px solid rgba(128,128,128,0.3);border-radius:6px;padding:.5rem .6rem;font-family:'Lato',sans-serif;font-size:.85rem;background:transparent;color:inherit;outline:none;}
+.reader-search-box input:focus{border-color:var(--teal);}
+.reader-search-box button{flex-shrink:0;background:none;border:none;cursor:pointer;font-size:.85rem;color:inherit;opacity:.55;padding:.3rem;}
+.reader-search-status{padding:.5rem 1.2rem;font-size:.7rem;letter-spacing:.03em;color:var(--muted);}
+.search-hit-chapter{font-size:.65rem;letter-spacing:.03em;text-transform:uppercase;color:var(--muted);margin-bottom:.25rem;}
+.search-hit-snippet{font-size:.83rem;line-height:1.45;}
+.search-hit-snippet mark{background:rgba(200,149,42,.4);color:inherit;border-radius:2px;}
 /* PATCH: highlight-list rows deliberately do NOT use .chapter-item — that
    class is also matched by a page-wide querySelectorAll('.chapter-item')
    in updatePaginationUI()/readerGoToChapter() that toggles .active by DOM
@@ -700,7 +708,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 }
 @keyframes loadingBookPulse{
   0%,14%{transform:translateX(0) scale(1);}
-  46%,64%{transform:translateX(5px) scale(1.06);}
+  46%,64%{transform:translateX(28px) scale(1.06);}
   100%{transform:translateX(0) scale(1);}
 }
 .loading-msg{color:var(--warm-white);font-family:'Lato',sans-serif;font-size:.95rem;font-weight:600;letter-spacing:.02em;line-height:1.5;text-align:center;max-width:22em;padding:0 1.5rem;}
@@ -2345,6 +2353,15 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
     <h3>Bookmarks &amp; Highlights</h3>
     <div id="readerBookmarkListItems"></div>
   </div>
+  <div class="reader-chapter-list" id="readerSearchPanel">
+    <h3>Search this book</h3>
+    <div class="reader-search-box">
+      <input type="text" id="readerSearchInput" placeholder="Search word or phrase…" autocomplete="off">
+      <button id="btnReaderSearchClear" title="Clear" style="display:none">✕</button>
+    </div>
+    <div class="reader-search-status" id="readerSearchStatus"></div>
+    <div id="readerSearchResults"></div>
+  </div>
   <div class="reader-content" id="readerContent">
 
   </div>
@@ -2364,6 +2381,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
     <div class="reader-nav">
   <button class="reader-btn" id="btnToggleChapters" title="Contents">☰</button>
   <button class="reader-btn" id="btnToggleBookmarkList" title="Bookmarks">🔖</button>
+  <button class="reader-btn" id="btnToggleSearch" title="Search in book">🔍</button>
   <button class="reader-btn" id="btnToggleSelectMode" title="Select & Highlight">✎</button>
   </div>
     <div class="reader-nav">
@@ -5125,6 +5143,7 @@ document.getElementById('btnReaderTTS').addEventListener('click', (e) => {
   const wasOpen = panel.classList.contains('open');
   document.getElementById('readerChapterList').classList.remove('open');
   document.getElementById('readerBookmarkListPanel').classList.remove('open');
+  document.getElementById('readerSearchPanel').classList.remove('open');
   document.getElementById('readerSettingsBar').classList.remove('open');
   panel.classList.toggle('open', !wasOpen);
   positionReaderToolbar();
@@ -5204,9 +5223,33 @@ document.getElementById('btnToggleReaderSettings').addEventListener('click', e =
 });
 document.getElementById('btnToggleChapters').addEventListener('click',()=>{
   document.getElementById('readerBookmarkListPanel').classList.remove('open');
+  document.getElementById('readerSearchPanel').classList.remove('open');
   document.getElementById('ttsPanel').classList.remove('open');
   document.getElementById('readerChapterList').classList.toggle('open');
   positionReaderToolbar();
+});
+document.getElementById('btnToggleSearch').addEventListener('click',()=>{
+  document.getElementById('readerChapterList').classList.remove('open');
+  document.getElementById('readerBookmarkListPanel').classList.remove('open');
+  document.getElementById('ttsPanel').classList.remove('open');
+  const panel = document.getElementById('readerSearchPanel');
+  panel.classList.toggle('open');
+  positionReaderToolbar();
+  if(panel.classList.contains('open')) {
+    setTimeout(() => document.getElementById('readerSearchInput')?.focus(), 50);
+  }
+});
+document.getElementById('readerSearchInput').addEventListener('input', e => {
+  document.getElementById('btnReaderSearchClear').style.display = e.target.value ? '' : 'none';
+  _debouncedReaderSearch(e.target.value);
+});
+document.getElementById('btnReaderSearchClear').addEventListener('click', () => {
+  const input = document.getElementById('readerSearchInput');
+  input.value = '';
+  input.focus();
+  document.getElementById('btnReaderSearchClear').style.display = 'none';
+  document.getElementById('readerSearchResults').innerHTML = '';
+  document.getElementById('readerSearchStatus').textContent = '';
 });
 document.getElementById('btnToggleSelectMode').addEventListener('click', e => {
   e.stopPropagation();
@@ -5228,6 +5271,13 @@ document.getElementById('readerOverlay').addEventListener('click', e => {
      !e.target.closest('#readerBookmarkListPanel') &&
      !e.target.closest('#btnToggleBookmarkList')){
     bmPanel.classList.remove('open');
+  }
+
+  const searchPanel = document.getElementById('readerSearchPanel');
+  if(searchPanel.classList.contains('open') &&
+     !e.target.closest('#readerSearchPanel') &&
+     !e.target.closest('#btnToggleSearch')){
+    searchPanel.classList.remove('open');
   }
 
   if(settingsBar.classList.contains('open') &&
@@ -6488,6 +6538,7 @@ function positionReaderToolbar() {
   const handle   = document.getElementById('readerToolbarHandle');
   const chapterList = document.getElementById('readerChapterList');
   const bookmarkList = document.getElementById('readerBookmarkListPanel');
+  const searchPanel = document.getElementById('readerSearchPanel');
   if(!toolbar) return;
   const baseOffset = infoBar?.offsetHeight || 0;
   toolbar.style.bottom = baseOffset + 'px';
@@ -6505,6 +6556,7 @@ function positionReaderToolbar() {
   const panelBottom = (baseOffset + toolbar.offsetHeight) + 'px';
   if(chapterList) chapterList.style.bottom = panelBottom;
   if(bookmarkList) bookmarkList.style.bottom = panelBottom;
+  if(searchPanel) searchPanel.style.bottom = panelBottom;
 }
 
 function _getReaderDimensions() {
@@ -7632,8 +7684,9 @@ function _fireReaderLongPress(doc, clientX, clientY) {
   if (!doc || readerSelectMode) return;
   const list = document.getElementById('readerChapterList');
   const bmPanel = document.getElementById('readerBookmarkListPanel');
+  const searchPanel = document.getElementById('readerSearchPanel');
   const settingsBar = document.getElementById('readerSettingsBar');
-  if (list?.classList.contains('open') || bmPanel?.classList.contains('open') || settingsBar?.classList.contains('open')) return;
+  if (list?.classList.contains('open') || bmPanel?.classList.contains('open') || searchPanel?.classList.contains('open') || settingsBar?.classList.contains('open')) return;
 
   setReaderSelectMode(true);
   _handleSentenceTap(doc, clientX, clientY);
@@ -7723,14 +7776,16 @@ function _attachReaderTapHandlers(doc) {
 
     const list = document.getElementById('readerChapterList');
     const bmPanel = document.getElementById('readerBookmarkListPanel');
+    const searchPanel = document.getElementById('readerSearchPanel');
     const settingsBar = document.getElementById('readerSettingsBar');
     const ttsPanel = document.getElementById('ttsPanel');
     const readerOv = document.getElementById('readerOverlay');
     const toolbarVisible = !readerOv.classList.contains('toolbar-hidden');
     
-    if (list.classList.contains('open') || bmPanel.classList.contains('open') || settingsBar.classList.contains('open') || ttsPanel.classList.contains('open') || toolbarVisible) {
+    if (list.classList.contains('open') || bmPanel.classList.contains('open') || searchPanel.classList.contains('open') || settingsBar.classList.contains('open') || ttsPanel.classList.contains('open') || toolbarVisible) {
       list.classList.remove('open');
       bmPanel.classList.remove('open');
+      searchPanel.classList.remove('open');
       settingsBar.classList.remove('open');
       ttsPanel.classList.remove('open');
       if (toolbarVisible) { readerOv.classList.add('toolbar-hidden'); _updateToolbarHandleIcon(); }
@@ -8582,6 +8637,7 @@ document.getElementById('btnToggleBookmarkList').addEventListener('click', () =>
   document.getElementById('ttsPanel').classList.remove('open');
   const panel = document.getElementById('readerBookmarkListPanel');
   document.getElementById('readerChapterList').classList.remove('open'); // mutually exclusive
+  document.getElementById('readerSearchPanel').classList.remove('open'); // mutually exclusive
   const willOpen = !panel.classList.contains('open');
   panel.classList.toggle('open');
   positionReaderToolbar();
@@ -8944,6 +9000,12 @@ function closeReader(){
   document.getElementById('readerOverlay').classList.remove('open');
   document.getElementById('readerChapterList').classList.remove('open');
   document.getElementById('readerBookmarkListPanel').classList.remove('open');
+  document.getElementById('readerSearchPanel').classList.remove('open');
+  document.getElementById('readerSearchInput').value = '';
+  document.getElementById('readerSearchResults').innerHTML = '';
+  document.getElementById('readerSearchStatus').textContent = '';
+  document.getElementById('btnReaderSearchClear').style.display = 'none';
+  _readerSearchIndexCache = null;
   document.getElementById('readerSettingsBar').classList.remove('open');
 
   if(_readerIframe) { _readerIframe.remove(); _readerIframe = null; }
@@ -9216,6 +9278,185 @@ function ttsPageOfRange(range) {
 function ttsPageAtCharOffset(block, offset) {
   const range = ttsRangeAtCharOffset(block.el, offset);
   return range ? ttsPageOfRange(range) : null;
+}
+
+// ── IN-BOOK SEARCH ──────────────────────────────────────────────────────────
+// Searches every chapter's text for a word/phrase and lets the person jump
+// straight to a match's page. The index is built lazily (first search per
+// book) and cached until the book changes or the reader closes.
+
+let _readerSearchIndexCache = null; // { bookId, chapters: [{idx,label,text}] }
+let _readerSearchDebounceTimer = null;
+const READER_SEARCH_SNIPPET_RADIUS = 40;
+const READER_SEARCH_MAX_RESULTS = 200;
+
+function _debouncedReaderSearch(query) {
+  clearTimeout(_readerSearchDebounceTimer);
+  _readerSearchDebounceTimer = setTimeout(() => performReaderSearch(query), 250);
+}
+
+// Same whitespace-collapsing normalization ttsRangeAtCharOffset expects —
+// keeping the two in lockstep is what lets an offset found here be handed
+// straight to ttsRangeAtCharOffset later and land on the right character.
+function _normalizedTextOf(rootEl) {
+  const doc = rootEl.ownerDocument;
+  const walker = doc.createTreeWalker(rootEl, NodeFilter.SHOW_TEXT);
+  let out = '';
+  let lastWasSpace = true; // collapses leading whitespace away, like .trim()
+  let node;
+  while(node = walker.nextNode()) {
+    const raw = node.nodeValue;
+    for(let i = 0; i < raw.length; i++) {
+      const isSpace = /\s/.test(raw[i]);
+      if(isSpace) {
+        if(lastWasSpace) continue;
+        out += ' ';
+        lastWasSpace = true;
+      } else {
+        out += raw[i];
+        lastWasSpace = false;
+      }
+    }
+  }
+  return out;
+}
+
+// Builds { idx, label, text } per spine chapter straight from the zip —
+// same body-extraction + sanitizeChapterHtml pass readerGoToChapter uses,
+// so the text lines up with what's actually rendered, but skipping
+// inlineImagesInHtml since search doesn't need image bytes.
+async function _buildReaderSearchIndex() {
+  const chapters = [];
+  for(let i = 0; i < readerSpine.length; i++) {
+    const ch = readerSpine[i];
+    try {
+      const html = await readerZip.file(readerOpfBase + ch.href)?.async('string');
+      if(!html) continue;
+      const bodyMatch = html.match(/<body[^>]*>([\s\S]*)<\/body>/i);
+      const bodyHtml = sanitizeChapterHtml(bodyMatch ? bodyMatch[1] : html);
+      const container = document.createElement('div');
+      container.innerHTML = bodyHtml;
+      chapters.push({ idx: i, label: ch.label || `Chapter ${i + 1}`, text: _normalizedTextOf(container) });
+    } catch(e) { console.warn('search index chapter', i, e); }
+  }
+  return chapters;
+}
+
+async function _ensureReaderSearchIndex() {
+  if(_readerSearchIndexCache?.bookId === readerBookId) return _readerSearchIndexCache.chapters;
+  const statusEl = document.getElementById('readerSearchStatus');
+  if(statusEl) statusEl.textContent = 'Indexing book…';
+  const chapters = await _buildReaderSearchIndex();
+  _readerSearchIndexCache = { bookId: readerBookId, chapters };
+  return chapters;
+}
+
+async function performReaderSearch(query) {
+  const q = query.trim();
+  const resultsEl = document.getElementById('readerSearchResults');
+  const statusEl = document.getElementById('readerSearchStatus');
+  if(!resultsEl || !statusEl) return;
+
+  if(q.length < 2) {
+    resultsEl.innerHTML = '';
+    statusEl.textContent = '';
+    return;
+  }
+  if(!readerBookId || !readerSpine.length) return;
+
+  statusEl.textContent = 'Searching…';
+  resultsEl.innerHTML = '';
+  const chapters = await _ensureReaderSearchIndex();
+  // The query may have changed (or the reader closed) while indexing ran —
+  // drop this now-stale pass rather than show results for an old query.
+  if(document.getElementById('readerSearchInput')?.value.trim() !== q) return;
+
+  const qLower = q.toLowerCase();
+  const results = [];
+  outer:
+  for(const chapter of chapters) {
+    const lower = chapter.text.toLowerCase();
+    let from = 0;
+    while(true) {
+      const at = lower.indexOf(qLower, from);
+      if(at === -1) break;
+      const start = Math.max(0, at - READER_SEARCH_SNIPPET_RADIUS);
+      const end = Math.min(chapter.text.length, at + q.length + READER_SEARCH_SNIPPET_RADIUS);
+      const snippet = (start > 0 ? '…' : '') +
+        chapter.text.slice(start, at) +
+        '@@MARK_START@@' + chapter.text.slice(at, at + q.length) + '@@MARK_END@@' +
+        chapter.text.slice(at + q.length, end) +
+        (end < chapter.text.length ? '…' : '');
+      results.push({ chapterIdx: chapter.idx, chapterLabel: chapter.label, offset: at, len: q.length, snippet });
+      from = at + q.length;
+      if(results.length >= READER_SEARCH_MAX_RESULTS) break outer;
+    }
+  }
+
+  if(!results.length) {
+    statusEl.textContent = `No matches for "${q}"`;
+    return;
+  }
+  statusEl.textContent = `${results.length}${results.length >= READER_SEARCH_MAX_RESULTS ? '+' : ''} match${results.length === 1 ? '' : 'es'}`;
+  resultsEl.innerHTML = results.map((r, i) => `
+    <div class="chapter-item search-hit" data-result="${i}">
+      <div class="search-hit-chapter">${esc(r.chapterLabel)}</div>
+      <div class="search-hit-snippet">${esc(r.snippet).replace('@@MARK_START@@', '<mark>').replace('@@MARK_END@@', '</mark>')}</div>
+    </div>
+  `).join('');
+  resultsEl._results = results;
+}
+
+document.getElementById('readerSearchResults').addEventListener('click', async e => {
+  const hit = e.target.closest('.search-hit[data-result]');
+  if(!hit) return;
+  const results = document.getElementById('readerSearchResults')._results || [];
+  const r = results[parseInt(hit.dataset.result)];
+  if(!r) return;
+  document.getElementById('readerSearchPanel').classList.remove('open');
+  await _navigateToReaderSearchResult(r);
+});
+
+// Jumps the reader to a search hit: switches chapter if needed, then wraps
+// the match in a brief flash-highlight and derives the page directly from
+// that wrapper element (offsetParent-walk via ttsPageOfEl) so the page
+// number always matches exactly what's on screen.
+async function _navigateToReaderSearchResult(r) {
+  if(readerChapter !== r.chapterIdx) {
+    await readerGoToChapter(r.chapterIdx, 0);
+  }
+  const doc = _readerIframe?.contentDocument || _readerIframe?.contentWindow?.document;
+  const root = doc?.querySelector('.chapter-wrap');
+  if(!doc || !root) return;
+
+  let page = null;
+  try {
+    const startPos = ttsRangeAtCharOffset(root, r.offset);
+    const endPos = ttsRangeAtCharOffset(root, r.offset + r.len);
+    const range = doc.createRange();
+    range.setStart(startPos.startContainer, startPos.startOffset);
+    range.setEnd(endPos.startContainer, endPos.startOffset);
+    const mark = doc.createElement('mark');
+    mark.className = 'search-hit-flash';
+    mark.style.cssText = 'background:rgba(200,149,42,.55);border-radius:2px;';
+    range.surroundContents(mark);
+    page = ttsPageOfEl(mark);
+    setTimeout(() => {
+      const parent = mark.parentNode;
+      if(!parent) return;
+      while(mark.firstChild) parent.insertBefore(mark.firstChild, mark);
+      parent.removeChild(mark);
+      parent.normalize();
+    }, 2200);
+  } catch(e) {
+    // Match straddles two elements (e.g. a paragraph break) — surroundContents
+    // can't wrap it. Still land on the right page, just without the flash.
+    try {
+      const startPos = ttsRangeAtCharOffset(root, r.offset);
+      page = ttsPageOfRange(startPos);
+    } catch(e2) { /* give up silently — nothing to navigate to */ }
+  }
+  if(page != null) goToPage(page, { animate: false });
 }
 
 // Binary-searches for the char offset where the text crosses from page
