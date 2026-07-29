@@ -1783,12 +1783,13 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
           <span class="mfp-caret">▾</span>
         </button>
         <div class="mfp-divider" aria-hidden="true"></div>
-        <button class="mfp mfp-sort" id="mfpSort" aria-label="Sort">
-          <span id="mfpSortLabel">Recent</span>
-          <span class="mfp-caret">▾</span>
-        </button>
         <button class="mfp mfp-source" id="mfpSource" aria-label="Filter by source">
           <span id="mfpSourceLabel">All</span>
+          <span class="mfp-caret">▾</span>
+        </button>
+        <div class="mfp-divider" aria-hidden="true"></div>
+        <button class="mfp mfp-sort" id="mfpSort" aria-label="Sort">
+          <span id="mfpSortLabel">Recent</span>
           <span class="mfp-caret">▾</span>
         </button>
       </div>
@@ -3479,17 +3480,53 @@ function renderDetailActionRows(peekContainer, moreContainer, book, isMine){
     </div>
   </div>`;
 
-  // ── General small actions (always visible, everyone) ────────────────────
+  // ── Two logically-grouped dropdowns instead of one loose row + one
+  // accordion: "Actions" (things anyone with access to the book can do)
+  // and "Manage" (owner/admin-only book management). Each renders as a
+  // labelled toggle that expands into its buttons, tucked away by default
+  // so the sheet doesn't show a wall of pills at once.
+  const dropdown = (id, label, groups) => {
+    const nonEmpty = groups.filter(g => g.length);
+    if (!nonEmpty.length) return '';
+    return `
+    <button id="${id}Toggle" style="
+      width:100%;text-align:left;background:none;border:none;
+      font-size:.66rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
+      color:var(--muted);cursor:pointer;padding:.75rem 0 .5rem;display:flex;
+      align-items:center;justify-content:space-between;
+      border-top:1px solid var(--border);margin-top:.4rem;">
+      <span>${label}</span>
+      <span id="${id}Chevron" style="transition:transform .2s;display:inline-block">▾</span>
+    </button>
+    <div id="${id}Body" style="display:none;padding-top:.3rem;">
+      ${nonEmpty.map((g, i) => `
+        <div style="display:flex;flex-wrap:wrap;gap:.35rem;margin-bottom:.7rem;
+                    ${i > 0 ? 'border-top:1px solid var(--border);padding-top:.6rem;' : ''}">
+          ${g.join('')}
+        </div>`).join('')}
+    </div>`;
+  };
+  const wireDropdown = (container, id) => {
+    const toggleBtn = container.querySelector('#'+id+'Toggle');
+    if(!toggleBtn) return;
+    toggleBtn.addEventListener('click', () => {
+      const body = container.querySelector('#'+id+'Body');
+      const chevron = container.querySelector('#'+id+'Chevron');
+      const isOpen = body.style.display !== 'none';
+      body.style.display = isOpen ? 'none' : 'block';
+      chevron.style.transform = isOpen ? '' : 'rotate(180deg)';
+    });
+  };
+
+  // ── "Actions" — available to anyone viewing the book ────────────────────
   const generalBtns = [
     smBtn(book.recommended?'☆':'⭐', book.recommended?'Unrecommend':'Recommend', 'recommend'),
     smBtn('📎','Copy Link','link'),
     smBtn('⬇','Download','download'),
   ];
-  html += `<div style="display:flex;flex-wrap:wrap;gap:.35rem;margin-bottom:.3rem;">
-    ${generalBtns.join('')}
-  </div>`;
+  html += dropdown('detailActions', 'Actions', [generalBtns]);
 
-  // ── Collapsed: Share / Edit / Delete+History ─────────────────────────────
+  // ── "Manage" — Share / Edit / Delete+History, owner/admin only ──────────
   const shareBtns = [];
   const editBtns = [];
   const bottomBtns = [];
@@ -3505,49 +3542,13 @@ function renderDetailActionRows(peekContainer, moreContainer, book, isMine){
   if(isAdmin) bottomBtns.push(smBtn('📋','History','history'));
   if(isMine)  bottomBtns.push(smBtn('✕','Delete','delete',{danger:true}));
 
-  const moreId = 'detailMoreOptions';
-  if(shareBtns.length || editBtns.length || bottomBtns.length){
-    html += `
-    <button id="${moreId}Toggle" style="
-      width:100%;text-align:left;background:none;border:none;
-      font-size:.66rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
-      color:var(--muted);cursor:pointer;padding:.75rem 0 .5rem;display:flex;
-      align-items:center;justify-content:space-between;
-      border-top:1px solid var(--border);margin-top:.4rem;">
-      <span>More options</span>
-      <span id="${moreId}Chevron" style="transition:transform .2s;display:inline-block">▾</span>
-    </button>
-    <div id="${moreId}Body" style="display:none;padding-top:.3rem;">
-      ${shareBtns.length ? `
-        <div style="display:flex;flex-wrap:wrap;gap:.35rem;margin-bottom:.7rem;">
-          ${shareBtns.join('')}
-        </div>` : ''}
-      ${editBtns.length ? `
-        <div style="display:flex;flex-wrap:wrap;gap:.35rem;margin-bottom:.7rem;
-                    ${shareBtns.length ? 'border-top:1px solid var(--border);padding-top:.6rem;' : ''}">
-          ${editBtns.join('')}
-        </div>` : ''}
-      ${bottomBtns.length ? `
-        <div style="display:flex;flex-wrap:wrap;gap:.35rem;
-                    border-top:1px solid var(--border);padding-top:.6rem;">
-          ${bottomBtns.join('')}
-        </div>` : ''}
-    </div>`;
-  }
+  html += dropdown('detailManage', 'Manage', [shareBtns, editBtns, bottomBtns]);
 
   moreContainer.innerHTML = html;
   moreContainer.querySelectorAll('[data-action]').forEach(b => b.addEventListener('click', handleAction));
 
-  const toggleBtn = moreContainer.querySelector('#'+moreId+'Toggle');
-  if(toggleBtn){
-    toggleBtn.addEventListener('click', () => {
-      const body = moreContainer.querySelector('#'+moreId+'Body');
-      const chevron = moreContainer.querySelector('#'+moreId+'Chevron');
-      const isOpen = body.style.display !== 'none';
-      body.style.display = isOpen ? 'none' : 'block';
-      chevron.style.transform = isOpen ? '' : 'rotate(180deg)';
-    });
-  }
+  wireDropdown(moreContainer, 'detailActions');
+  wireDropdown(moreContainer, 'detailManage');
 }
 
 // Quick favourite / want-to-read toggle straight from the Lists row —
@@ -3917,7 +3918,7 @@ document.getElementById('btnConfirmPrivateShare').addEventListener('click',async
     if(!allowed.includes(uid))allowed.push(uid);
     await updateDoc(doc(db,'books',currentId),{allowedUsers:allowed,updatedAt:serverTimestamp()});
     book.allowedUsers=allowed;hideLoading();
-    const recipientName = sel.selectedOptions[0]?.textContent;
+    const recipientName = document.getElementById('privateShareUserSelect').selectedOptions[0]?.textContent;
     notifyBookShared(uid, book, recipientName);
     const link=getDirectLink(currentId);
     document.getElementById('privateShareLink').textContent=link;
@@ -3964,14 +3965,20 @@ document.getElementById('btnCopyDirectLink').addEventListener('click', async ()=
 
 function checkUrlHash(){
   const m=window.location.hash.match(/[#&]book=([a-zA-Z0-9]+)/);
-  if(m)setTimeout(()=>{
-    if(window.innerWidth > 768){
-      showBookById(m[1]);
-    } else {
-      mobPrevPanel = 'mobPanelHome';
-      mob_showBook(m[1]);
-    }
-  },400);
+  if(m){
+    // Strip the #book= hash right away so the address bar (and anything the
+    // user bookmarks from this point on) points at the main app URL, not
+    // back to this specific book. The book still opens below as normal.
+    history.replaceState(null,'',window.location.pathname+window.location.search);
+    setTimeout(()=>{
+      if(window.innerWidth > 768){
+        showBookById(m[1]);
+      } else {
+        mobPrevPanel = 'mobPanelHome';
+        mob_showBook(m[1]);
+      }
+    },400);
+  }
 }
 
 // ── EDIT METADATA ─────────────────────────────────────────────────────────────
@@ -7723,81 +7730,74 @@ function _handleSentenceTap(doc, clientX, clientY) {
   if (range) _showHighlightPopup(doc, range);
 }
 
-function _fireReaderLongPress(doc, clientX, clientY) {
-  if (!doc || readerSelectMode) return;
-  const list = document.getElementById('readerChapterList');
-  const bmPanel = document.getElementById('readerBookmarkListPanel');
-  const searchPanel = document.getElementById('readerSearchPanel');
-  const settingsBar = document.getElementById('readerSettingsBar');
-  if (list?.classList.contains('open') || bmPanel?.classList.contains('open') || searchPanel?.classList.contains('open') || settingsBar?.classList.contains('open')) return;
-
-  setReaderSelectMode(true);
-  _handleSentenceTap(doc, clientX, clientY);
-}
-
 function _attachReaderTapHandlers(doc) {
   const content = document.getElementById('readerContent');
   document.getElementById('readerTouchOverlay')?.remove();
 
+  // The overlay is kept only as an inert layout placeholder — it never
+  // intercepts touch/mouse input, on desktop OR mobile. Native text
+  // selection (word double-tap, drag handles, and the OS "Look Up"/"Copy"
+  // long-press menu) needs the real touch/mouse target to be the text
+  // itself inside the iframe, not a covering div, so nothing is ever
+  // allowed to sit on top of the text layer.
   const overlay = document.createElement('div');
   overlay.id = 'readerTouchOverlay';
-  overlay.style.cssText = 'position:absolute;inset:0;z-index:5;background:transparent;-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;';
+  overlay.style.cssText = 'position:absolute;inset:0;z-index:5;background:transparent;pointer-events:none;';
   content.appendChild(overlay);
 
-  // ── DESKTOP (mouse): overlay is permanently transparent.
-  // doc's own click/selection events handle everything natively.
-  const isTouchDevice = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
-  if (!isTouchDevice) {
-    overlay.style.pointerEvents = 'none';
-    _attachHighlightSelectionUI(doc);
-    return;
-  }
+  _attachHighlightSelectionUI(doc);
 
-  // ── MOBILE: overlay catches taps/swipes for page navigation, UNLESS
-  // readerSelectMode is on (toggled via the ✎ toolbar button), in which
-  // case the overlay steps aside entirely and every touch goes straight
-  // to the iframe doc — giving native text selection, drag handles, and
-  // "Look Up" long-press, exactly like normal mobile Safari/Chrome text.
-  overlay.style.touchAction = 'none';
+  const isTouchDevice = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
+  if (!isTouchDevice) return; // desktop: doc's own click/selection events handle everything
+
+  // ── MOBILE: listen directly on the iframe document so native selection
+  // and long-press "Look Up" work exactly like normal mobile Safari/Chrome
+  // text. We still want tap-to-turn-page, tap-to-toggle-toolbar, and
+  // tap-on-link/highlight — so a lightweight tap/swipe classifier runs
+  // alongside, but it never blocks a stationary long-press: that's left
+  // entirely to the browser's native selection gesture. Highlighting is
+  // only entered explicitly via the ✎ toolbar button (readerSelectMode).
   if (readerSelectMode) {
     _showSelectBadge();
     _startSelectPoll(doc); // re-target the poll at this chapter's fresh doc
     _sentenceRangesDoc = null; // force a fresh sentence map for this chapter's doc
   }
 
-  let tx0 = 0, ty0 = 0;
-  let lpTimer = null;
-  let lpFired = false;
+  // Disable double-tap/pinch-to-zoom (the overlay used to swallow this via
+  // preventDefault) without touching user-select, so native word selection
+  // and the "Look Up" long-press are unaffected.
+  try { doc.documentElement.style.touchAction = 'manipulation'; } catch(e) {}
 
-  // ── Overlay listeners (navigation mode only — inert while select mode is on,
-  // since pointer-events:none means the overlay receives nothing at all) ────
-  overlay.addEventListener('touchstart', e => {
-    e.preventDefault();
+  let tx0 = 0, ty0 = 0, t0 = 0;
+  let isSwipe = false;
+
+  doc.addEventListener('touchstart', e => {
     tx0 = e.touches[0].clientX;
     ty0 = e.touches[0].clientY;
-    lpFired = false;
-    clearTimeout(lpTimer);
-    lpTimer = setTimeout(() => {
-      lpFired = true;
-      _fireReaderLongPress(doc, tx0, ty0);
-    }, 450);
-  }, { passive: false });
+    t0 = Date.now();
+    isSwipe = false;
+  }, { passive: true });
 
-  overlay.addEventListener('touchmove', e => {
-    e.preventDefault();
+  doc.addEventListener('touchmove', e => {
     const dx = e.touches[0].clientX - tx0;
     const dy = e.touches[0].clientY - ty0;
-    if (Math.abs(dx) > 10 || Math.abs(dy) > 10) clearTimeout(lpTimer);
+    if (!isSwipe && (Math.abs(dx) > 10 || Math.abs(dy) > 10)) isSwipe = true;
+    // Once a touch is clearly moving, treat it as a page-turn swipe rather
+    // than letting it drag out a native text selection.
+    if (isSwipe) e.preventDefault();
   }, { passive: false });
 
-  overlay.addEventListener('touchend', e => {
-    clearTimeout(lpTimer);
-    if (lpFired) { lpFired = false; return; } // long-press already handled this touch
+  doc.addEventListener('touchend', e => {
+    const dx = e.changedTouches[0].clientX - tx0;
+    const dy = e.changedTouches[0].clientY - ty0;
+    const heldMs = Date.now() - t0;
+
+    // A stationary touch held past the long-press threshold is the
+    // browser's native word-selection / "Look Up" gesture in progress —
+    // leave it alone rather than treating it as a tap.
+    if (!isSwipe && heldMs >= 450) return;
 
     if (readerSelectMode) {
-      const dx = e.changedTouches[0].clientX - tx0;
-      const dy = e.changedTouches[0].clientY - ty0;
-
       // Swipe still turns pages, so you can reach sentences elsewhere.
       if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 40) {
         if (dx < 0) goToPage(readerPage + 1);
@@ -7806,7 +7806,7 @@ function _attachReaderTapHandlers(doc) {
       }
       if (Math.abs(dx) < 10 && Math.abs(dy) < 10) {
         const x = e.changedTouches[0].clientX;
-        const w = overlay.offsetWidth || content.offsetWidth;
+        const w = _readerIframe?.clientWidth || content.offsetWidth;
         // Narrower edge zones than navigation mode (15% vs 30%) — in
         // select mode most of the screen should be tap-to-select, with
         // just a strip at each edge reserved for turning pages.
@@ -7824,7 +7824,7 @@ function _attachReaderTapHandlers(doc) {
     const ttsPanel = document.getElementById('ttsPanel');
     const readerOv = document.getElementById('readerOverlay');
     const toolbarVisible = !readerOv.classList.contains('toolbar-hidden');
-    
+
     if (list.classList.contains('open') || bmPanel.classList.contains('open') || searchPanel.classList.contains('open') || settingsBar.classList.contains('open') || ttsPanel.classList.contains('open') || toolbarVisible) {
       list.classList.remove('open');
       bmPanel.classList.remove('open');
@@ -7835,9 +7835,6 @@ function _attachReaderTapHandlers(doc) {
       return;
     }
 
-    const dx = e.changedTouches[0].clientX - tx0;
-    const dy = e.changedTouches[0].clientY - ty0;
-
     // Swipe always navigates, regardless of toolbar state
     if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 40) {
       if (dx < 0) goToPage(readerPage + 1);
@@ -7846,23 +7843,21 @@ function _attachReaderTapHandlers(doc) {
     }
 
     if (Math.abs(dx) < 10 && Math.abs(dy) < 10) {
-      const readerOv = document.getElementById('readerOverlay');
-
-      // Detect links / highlight marks via elementFromPoint into the iframe
-      const iframeRect = _readerIframe?.getBoundingClientRect();
-      if (iframeRect && doc) {
-        const relX = e.changedTouches[0].clientX - iframeRect.left;
-        const relY = e.changedTouches[0].clientY - iframeRect.top;
-        try {
-          const el = doc.elementFromPoint(relX, relY);
-          if (el) {
-            const link = el.closest?.('[data-navchapter]');
-            if (link) { readerGoToChapter(parseInt(link.dataset.navchapter)); return; }
-            const mark = el.closest?.('mark[data-highlightid]');
-            if (mark) { openHighlightMenu(mark, e.changedTouches[0].clientX, e.changedTouches[0].clientY); return; }
+      // Detect links / highlight marks under the tap — coordinates from a
+      // touch on `doc` are already relative to the iframe, no offset needed.
+      try {
+        const el = doc.elementFromPoint(e.changedTouches[0].clientX, e.changedTouches[0].clientY);
+        if (el) {
+          const link = el.closest?.('[data-navchapter]');
+          if (link) { readerGoToChapter(parseInt(link.dataset.navchapter)); return; }
+          const mark = el.closest?.('mark[data-highlightid]');
+          if (mark) {
+            const r = _readerIframe.getBoundingClientRect();
+            openHighlightMenu(mark, e.changedTouches[0].clientX + r.left, e.changedTouches[0].clientY + r.top);
+            return;
           }
-        } catch(err) {}
-      }
+        }
+      } catch(err) {}
 
       // Edges ALWAYS turn the page, regardless of toolbar visibility — a
       // tap on the very first screen of a freshly opened book (toolbar
@@ -7870,7 +7865,7 @@ function _attachReaderTapHandlers(doc) {
       // by "first tap just hides the toolbar" as it did before. Middle
       // third is the only zone that toggles the toolbar.
       const x = e.changedTouches[0].clientX;
-      const w = overlay.offsetWidth || content.offsetWidth;
+      const w = _readerIframe?.clientWidth || content.offsetWidth;
       if (x < w * 0.3) { goToPage(readerPage - 1); return; }
       if (x > w * 0.7) { goToPage(readerPage + 1); return; }
       readerOv.classList.toggle('toolbar-hidden');
@@ -7878,8 +7873,6 @@ function _attachReaderTapHandlers(doc) {
       return;
     }
   }, { passive: true });
-
-  _attachHighlightSelectionUI(doc);
 }
 
 async function renderChapterPaged(bodyHtml) {
