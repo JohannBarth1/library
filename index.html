@@ -5944,6 +5944,13 @@ function _ledgerCheckTimeOfDayAchievements() {
 
 function _ledgerUnlockAchievement(id, bookId = readerBookId, opts = {}) {
   if (ledgerState.achievements[id]) return;
+  // Tier 2 achievements must stay locked until the grid actually reveals
+  // them (6 Tier 1 badges earned) — otherwise a reader could win (get
+  // celebrated for, and awarded a bookmark for) an achievement that isn't
+  // showing anywhere yet. _ledgerBackfillTier2() is what catches these up
+  // — silently, once Tier 2 opens — so this just declines to unlock them
+  // early rather than duplicating that logic here.
+  if (LEDGER_ACHIEVEMENTS_TIER2.some(a => a.id === id) && !_ledgerTier2Visible()) return;
   ledgerState.achievements[id] = new Date().toISOString();
   const def = LEDGER_ACHIEVEMENTS.find(a => a.id === id);
   // Backfilled unlocks (opts.silent) represent things the reader already did
