@@ -7833,16 +7833,17 @@ async function _fetchWordDefinition(word) {
   const url = `https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(cleanWord.toLowerCase())}`;
 
   let res;
-  // The free dictionary API is occasionally slow or drops a request — retry
-  // once before telling the user we couldn't reach it, rather than failing
-  // on the first hiccup.
-  for (let attempt = 0; attempt < 2; attempt++) {
+  // The free dictionary API is occasionally slow or drops a request, but
+  // usually comes through if given a few more tries — retry several times
+  // with a growing pause before finally telling the user we couldn't reach it.
+  const delays = [500, 800, 1200, 1800];
+  for (let attempt = 0; attempt <= delays.length; attempt++) {
     try {
       res = await _fetchWithTimeout(url, 6000);
       break;
     } catch (e) {
-      if (attempt === 1) return `<div>Couldn't reach the dictionary.</div><div style="margin-top:.35rem;">${googleFallback}</div>`;
-      await new Promise(r => setTimeout(r, 500));
+      if (attempt === delays.length) return `<div>Couldn't reach the dictionary.</div><div style="margin-top:.35rem;">${googleFallback}</div>`;
+      await new Promise(r => setTimeout(r, delays[attempt]));
     }
   }
 
@@ -7988,15 +7989,6 @@ function _attachReaderTapHandlers(doc) {
       }
       if (Math.abs(dx) < 10 && Math.abs(dy) < 10) {
         const x = e.changedTouches[0].clientX;
-        const w = overlay.offsetWidth || content.offsetWidth;
-        // Highlight mode still reserves narrow edge strips (15%/85%) for
-        // turning pages. Look Up mode doesn't — a word can sit anywhere,
-        // including right at the edge, and a tap there needs to look it up
-        // rather than accidentally flip the page.
-        if (readerSelectMode) {
-          if (x < w * 0.15) { goToPage(readerPage - 1); return; }
-          if (x > w * 0.85) { goToPage(readerPage + 1); return; }
-        }
 
         const readerOv = document.getElementById('readerOverlay');
         if (readerOv && !readerOv.classList.contains('toolbar-hidden')) {
@@ -8006,6 +7998,10 @@ function _attachReaderTapHandlers(doc) {
           _updateToolbarHandleIcon();
           return;
         }
+        // Neither mode reserves edge strips for tap-to-turn anymore — a
+        // sentence or word can sit anywhere, including right at the edge,
+        // so a tap there needs to act on it rather than flip the page.
+        // Swipe (handled above) is still how you turn pages in both modes.
         if (readerSelectMode) _handleSentenceTap(doc, x, e.changedTouches[0].clientY);
         else _handleWordLookupTap(doc, x, e.changedTouches[0].clientY);
       }
