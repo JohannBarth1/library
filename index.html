@@ -428,6 +428,16 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
   border-top: 2px solid var(--gold);
   box-shadow: 0 -2px 12px rgba(0,0,0,.14);
   transition: opacity .18s ease, transform .18s ease;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.reader-toolbar::-webkit-scrollbar { display: none; }
+@media (max-width: 420px) {
+  .reader-toolbar { padding: 0 .6rem; gap: .35rem; }
+  .reader-nav { gap: .2rem; }
+  .reader-btn { min-width: 32px; height: 32px; padding: 0 .45rem; font-size: .72rem; }
 }
 /* PATCH: toolbar is now an overlay that floats over the text instead of
    reserving layout space, so hiding/showing it never resizes reader-content
@@ -2345,6 +2355,10 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
     <span class="rs-label">Bookmark FX</span>
     <button class="rs-btn" id="btnToggleBookmarkAnim">On</button>
   </div>
+  <div class="rs-group">
+    <span class="rs-label">Voice</span>
+    <button class="rs-btn" id="btnReaderTTS">🔊 Read Aloud</button>
+  </div>
 </div>
   <div class="reader-chapter-list" id="readerChapterList">
     <h3>Contents</h3>
@@ -2388,7 +2402,6 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
   </div>
     <div class="reader-nav">
   <button class="reader-btn" id="btnToggleReaderSettings" title="Settings">Aa</button>
-  <button class="reader-btn" id="btnReaderTTS" title="Read aloud">🔊</button>
   </div>
     <div class="reader-nav">
   <button class="reader-btn" id="btnReaderPrev">‹</button>
@@ -7804,10 +7817,36 @@ function _showWordLookupPopup(word, range) {
   });
 }
 
-async function _fetchWordDefinition(word) {
-  const googleFallback = `<a href="https://www.google.com/search?q=define+${encodeURIComponent(word)}" target="_blank" rel="noopener" style="color:var(--teal,#2a7c8a);">Search for “${esc(word)}” instead ↗</a>`;
+async function _fetchWithTimeout(url, ms) {
+  const controller = new AbortController();
+  const t = setTimeout(() => controller.abort(), ms);
   try {
-    const res = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(word.toLowerCase())}`);
+    return await fetch(url, { signal: controller.signal });
+  } finally {
+    clearTimeout(t);
+  }
+}
+
+async function _fetchWordDefinition(word) {
+  const cleanWord = word.replace(/[\u2018\u2019]/g, "'"); // normalize curly quotes (e.g. don’t → don't)
+  const googleFallback = `<a href="https://www.google.com/search?q=define+${encodeURIComponent(cleanWord)}" target="_blank" rel="noopener" style="color:var(--teal,#2a7c8a);">Search for “${esc(cleanWord)}” instead ↗</a>`;
+  const url = `https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(cleanWord.toLowerCase())}`;
+
+  let res;
+  // The free dictionary API is occasionally slow or drops a request — retry
+  // once before telling the user we couldn't reach it, rather than failing
+  // on the first hiccup.
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      res = await _fetchWithTimeout(url, 6000);
+      break;
+    } catch (e) {
+      if (attempt === 1) return `<div>Couldn't reach the dictionary.</div><div style="margin-top:.35rem;">${googleFallback}</div>`;
+      await new Promise(r => setTimeout(r, 500));
+    }
+  }
+
+  try {
     if (!res.ok) return `<div>No definition found.</div><div style="margin-top:.35rem;">${googleFallback}</div>`;
     const data = await res.json();
     const entry = data?.[0];
@@ -7950,11 +7989,14 @@ function _attachReaderTapHandlers(doc) {
       if (Math.abs(dx) < 10 && Math.abs(dy) < 10) {
         const x = e.changedTouches[0].clientX;
         const w = overlay.offsetWidth || content.offsetWidth;
-        // Narrower edge zones than navigation mode (15% vs 30%) — while
-        // either mode is active, most of the screen should be tap-to-act,
-        // with just a strip at each edge reserved for turning pages.
-        if (x < w * 0.15) { goToPage(readerPage - 1); return; }
-        if (x > w * 0.85) { goToPage(readerPage + 1); return; }
+        // Highlight mode still reserves narrow edge strips (15%/85%) for
+        // turning pages. Look Up mode doesn't — a word can sit anywhere,
+        // including right at the edge, and a tap there needs to look it up
+        // rather than accidentally flip the page.
+        if (readerSelectMode) {
+          if (x < w * 0.15) { goToPage(readerPage - 1); return; }
+          if (x > w * 0.85) { goToPage(readerPage + 1); return; }
+        }
 
         const readerOv = document.getElementById('readerOverlay');
         if (readerOv && !readerOv.classList.contains('toolbar-hidden')) {
