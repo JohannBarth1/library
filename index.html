@@ -202,9 +202,6 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .hbtn-upload:hover{background:var(--teal-dark);}
 .hbtn-ghost{background:transparent;color:#d8e8f0;border:1px solid #334;font-size:.8rem;padding:.42rem .6rem;}
 .hbtn-ghost:hover{background:#1a2840;}
-.hbtn-home{background:transparent;color:#d8e8f0;border:1px solid #334;font-size:.95rem;padding:.42rem .75rem;}
-.hbtn-home:hover{background:#1a2840;}
-.hbtn-home.active{background:var(--teal);color:var(--gold);}
 .header-user{display:flex;align-items:center;gap:.5rem;cursor:pointer;padding:.3rem .5rem;border-radius:3px;transition:background .15s;position:relative;}
 .header-user:hover{background:rgba(255,255,255,0.08);}
 .user-avatar{width:30px;height:30px;border-radius:50%;object-fit:cover;border:2px solid var(--gold);}
@@ -248,10 +245,13 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .sb-cr-empty{font-size:.75rem;color:var(--muted);font-style:italic;padding:.25rem 0 .4rem;}
 
 /* ── My Lists nav ── */
-.sb-list-item{display:flex;align-items:center;gap:.55rem;padding:.42rem .85rem .42rem 1rem;cursor:pointer;border-radius:0 20px 20px 0;margin-right:.5rem;transition:background .15s;user-select:none;-webkit-tap-highlight-color:transparent;}
+/* Per-list accent color (--list-color/--list-soft, set inline per row by
+   renderDeskSidebar) — matches the color each list's shelf uses on mobile's
+   Home tab, so a list reads as the same thing in both places. */
+.sb-list-item{display:flex;align-items:center;gap:.55rem;padding:.42rem .85rem .42rem 1rem;cursor:pointer;border-radius:0 20px 20px 0;margin-right:.5rem;border-left:3px solid var(--list-color,transparent);transition:background .15s;user-select:none;-webkit-tap-highlight-color:transparent;}
 .sb-list-item:hover{background:rgba(0,0,0,.04);}
-.sb-list-item.active{background:rgba(var(--teal-rgb,20,120,110),.1);color:var(--teal);}
-.sb-list-item.active .sb-list-name{color:var(--teal);font-weight:700;}
+.sb-list-item.active{background:var(--list-soft,rgba(42,124,138,.1));color:var(--list-color,var(--teal));}
+.sb-list-item.active .sb-list-name{color:var(--list-color,var(--teal));font-weight:700;}
 .sb-list-icon{font-size:.95rem;flex-shrink:0;line-height:1;}
 .sb-list-name{font-size:.8rem;color:var(--navy2);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .sb-list-count{font-size:.68rem;color:var(--muted);flex-shrink:0;}
@@ -271,6 +271,12 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
   cursor:pointer;padding:.25rem .35rem;display:none;border-radius:50%;}
 .search-clear-btn:hover{color:var(--navy2);background:rgba(0,0,0,.05);}
 
+/* Desktop's Library filter pill row — same .mfp/.mfp-cat/etc pills as
+   mobile's .mob-filter-bar (colors, active states, dropdown all shared),
+   just wrapping instead of horizontal-scrolling since the sidebar is a
+   fixed column rather than a full-width strip. */
+.desk-filter-bar{display:flex;flex-wrap:wrap;gap:.4rem;padding:.5rem 1rem .7rem;}
+
 /* ── Grid title list-filter chip ── */
 .grid-list-chip{display:inline-flex;align-items:center;gap:.35rem;font-size:.72rem;
   background:rgba(var(--teal-rgb,20,120,110),.1);color:var(--teal);
@@ -286,17 +292,9 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
   display:flex;align-items:center;justify-content:center;
   border:1px solid var(--border);border-radius:3px;background:var(--warm-white);
   cursor:pointer;font-size:1rem;color:var(--navy2);padding:0;}
-.shelf-tabs{display:flex;border-bottom:1px solid var(--border);flex-shrink:0;}
-.shelf-tab{flex:1;padding:.55rem .3rem;font-family:'Lato',sans-serif;font-size:.68rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);background:none;border:none;border-bottom:2px solid transparent;cursor:pointer;transition:color .15s;}
-.shelf-tab.active{color:var(--teal);border-bottom-color:var(--teal);}
-.shelf-tab:hover:not(.active){color:var(--navy2);}
-.filter-cats{flex:1;overflow-y:auto;padding:.5rem 0;}
-.filter-cat-item{display:flex;align-items:center;justify-content:space-between;padding:.42rem 1rem;font-size:.82rem;cursor:pointer;border-left:3px solid transparent;transition:background .12s,border-color .12s;}
-.filter-cat-item:hover{background:var(--light-blue);}
-.filter-cat-item.active{border-left-color:var(--teal);background:rgba(42,124,138,0.1);font-weight:700;color:var(--teal);}
-.filter-cat-count{font-size:.65rem;background:var(--teal-light);color:var(--teal);padding:1px 6px;border-radius:8px;font-weight:700;}
-.filter-cat-item.active .filter-cat-count{background:var(--teal);color:#fff;}
-.sort-btn-group{display:flex;gap:.3rem;flex-wrap:wrap;padding:.5rem 1rem;border-top:1px solid var(--border);}
+/* Sort pill styling for mobile's hidden-legacy #mobLibSortBtns (kept so its
+   still-wired JS listeners don't crash — see the HTML comment there). Not
+   used by any currently-visible element, desktop included. */
 .sort-btn{padding:.3rem .65rem;font-size:.68rem;font-family:'Lato',sans-serif;font-weight:700;border-radius:20px;cursor:pointer;border:1px solid rgba(200,149,42,.35);background:transparent;color:var(--gold);transition:all .15s;}
 .sort-btn.active{background:var(--gold);color:var(--navy);border-color:var(--gold);}
 .sort-btn:hover:not(.active){background:rgba(200,149,42,.12);}
@@ -328,12 +326,6 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
   .filter-search{font-size:.88rem;padding:.5rem .8rem;}
 }
 @media(min-width:1280px){
-  .shelf-tabs{padding:.1rem;}
-  .shelf-tab{padding:.6rem .8rem;font-size:.75rem;}
-  .filter-cats{padding:.6rem 0;}
-  .filter-cat-item{padding:.5rem 1.1rem;font-size:.85rem;}
-  .sort-btn-group{padding:.6rem 1.1rem;gap:.4rem;}
-  .sort-btn{padding:.35rem .75rem;font-size:.72rem;}
   .filter-footer{padding:.8rem 1.1rem;gap:.5rem;}
   .filter-footer button{padding:.52rem .4rem;font-size:.72rem;}
 }
@@ -466,12 +458,6 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
   .reader-nav { gap: .2rem; }
   .reader-btn { min-width: 32px; height: 32px; padding: 0 .45rem; font-size: .72rem; }
 }
-@media(min-width:1280px){
-  /* Same single-row layout as mobile (3 groups, space-between) — just
-     inset from the panel edges and given a floating-card treatment so it
-     reads as a bar docked in a sidebar rather than a fullscreen chrome. */
-  .reader-toolbar{left:14px;right:14px;padding:.4rem .6rem;border:1px solid rgba(128,128,128,.18);border-top:1px solid rgba(128,128,128,.18);border-radius:14px;box-shadow:0 8px 26px rgba(0,0,0,.16);}
-}
 /* PATCH: toolbar is now an overlay that floats over the text instead of
    reserving layout space, so hiding/showing it never resizes reader-content
    and never triggers a repagination / loss of place. */
@@ -479,6 +465,19 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
   opacity: 0;
   pointer-events: none;
   transform: translateY(6px);
+}
+@media(min-width:1280px){
+  /* Static, not floating: takes its own dedicated row instead of overlaying
+     reader-content, so the button bar never sits on top of the text. Same
+     single-row layout as mobile (3 groups, space-between) — just docked in
+     normal flow rather than absolutely positioned. Safe to do here (unlike
+     the settings/chapters/etc. popovers) because this bar never toggles
+     size after the reader opens, so it can't trigger a mid-read resize.
+     Placed AFTER the unconditional rules above so it actually wins the
+     cascade (equal specificity ties break on source order). */
+  .reader-toolbar{position:static;left:auto;right:auto;bottom:auto;padding:.5rem .6rem;border-top:1px solid var(--border);border-radius:0;box-shadow:none;flex-shrink:0;}
+  /* No hide-toolbar affordance on desktop — it's a static bar, always there. */
+  .reader-overlay.toolbar-hidden .reader-toolbar{opacity:1;pointer-events:auto;transform:none;}
 }
 /* PATCH: persistent min/max handle, sits just above the toolbar's slot at
    all times (higher z-index than the toolbar) so it's never itself hidden
@@ -533,15 +532,31 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
   transition: opacity .18s ease, transform .18s ease;
 }
 .reader-back-btn:hover{ background: rgba(120,120,120,.55); }
-@media(min-width:1280px){
-  /* Same floating circular button as mobile, just given top priority so it
-     always stays reachable even when a settings/chapters/etc. card is open. */
-  .reader-back-btn{z-index:190;}
-}
+.reader-back-label{display:none;}
 .reader-overlay.toolbar-hidden .reader-back-btn{
   opacity: 0;
   pointer-events: none;
   transform: translateY(-6px);
+}
+@media(min-width:1280px){
+  /* Static "Close Book" header instead of a floating circle: its own
+     always-visible row (order:-1 puts it first in the flex column,
+     ahead of reader-content, regardless of DOM position) rather than an
+     overlay, so it never sits on top of the text and is unambiguous.
+     Placed AFTER the unconditional rules above so it actually wins the
+     cascade (equal specificity ties break on source order). */
+  .reader-back-btn{
+    position:static;order:-1;top:auto;left:auto;z-index:auto;
+    width:100%;height:auto;border-radius:0;
+    background:transparent;color:var(--navy2);
+    border:none;border-bottom:1px solid var(--border);
+    padding:.7rem;font-size:.85rem;font-weight:700;
+    flex-shrink:0;opacity:1;transform:none;
+  }
+  .reader-back-btn:hover{background:var(--panel);}
+  .reader-back-label{display:inline;margin-left:.35rem;}
+  /* No hide-toolbar affordance on desktop — always visible, like the button bar. */
+  .reader-overlay.toolbar-hidden .reader-back-btn{opacity:1;pointer-events:auto;transform:none;}
 }
   .reader-overlay{
   display:none;
@@ -1483,7 +1498,6 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
   .book-drawer{display:none;}
   .mob-nav{display:block;}
   .mob-panels{display:flex;}
-  .hbtn-home{display:none;}
   .hbtn-upload{display:none;}
   .btnToggleSettingsDesk{display:none;}
   .toast{bottom:calc(var(--mob-nav-h) + var(--sab) + .8rem);left:50%;right:auto;transform:translateX(-50%) translateY(6px);}
@@ -1704,7 +1718,6 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
     </div>
   </div>
   <div class="header-right">
-    <button class="hbtn hbtn-home btnToggleSettingsDesk" id="btnDeskHome" title="Show all books">📚 All Books</button>
     <button class="hbtn hbtn-upload" id="btnHeaderUpload">📤 Upload</button>
     <button class="hbtn hbtn-ghost btnToggleSettingsDesk" id="btnToggleSettings">⚙</button>
     <div id="notifScrim" class="notif-scrim"></div>
@@ -1794,18 +1807,29 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
             <button type="button" class="search-clear-btn" id="deskSearchClear" aria-label="Clear search">✕</button>
           </div>
         </div>
-        <div class="shelf-tabs">
-          <button class="shelf-tab active" id="tabMineDesk">My Library</button>
-          <button class="shelf-tab" id="tabCommDesk">Public Library</button>
+        <!-- Same 4-pill filter system as mobile (mfpCat/mfpTags/mfpSource/mfpSort) —
+             same colors, same anchored-dropdown behavior, just its own ids/state
+             so it filters the desktop grid instead of the mobile one. -->
+        <div class="desk-filter-bar" id="deskFilterBar">
+          <button class="mfp mfp-cat" id="deskPillCat" aria-label="Filter by category">
+            <span id="deskPillCatLabel">Category</span>
+            <span class="mfp-caret">▾</span>
+          </button>
+          <button class="mfp mfp-tags" id="deskPillTags" aria-label="Filter by tags">
+            <span id="deskPillTagsLabel">Tags</span>
+            <span class="mfp-caret">▾</span>
+          </button>
+          <div class="mfp-divider" aria-hidden="true"></div>
+          <button class="mfp mfp-source" id="deskPillSource" aria-label="Filter by source">
+            <span id="deskPillSourceLabel">All</span>
+            <span class="mfp-caret">▾</span>
+          </button>
+          <div class="mfp-divider" aria-hidden="true"></div>
+          <button class="mfp mfp-sort" id="deskPillSort" aria-label="Sort">
+            <span id="deskPillSortLabel">Recent</span>
+            <span class="mfp-caret">▾</span>
+          </button>
         </div>
-        <div class="filter-cats" id="deskFilterCats"></div>
-        <div class="sort-btn-group" id="deskSortBtns">
-          <button class="sort-btn active" data-sort="recent">Recent</button>
-          <button class="sort-btn" data-sort="title">Title</button>
-          <button class="sort-btn" data-sort="author">Author</button>
-          <button class="sort-btn" data-sort="rating">Rating</button>
-        </div>
-        <select id="deskSortSelect" style="display:none"></select>
 
       </div><!-- end .sidebar-scroll -->
 
@@ -2492,7 +2516,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
        /hides in sync with the toolbar (see .reader-overlay.toolbar-hidden
        .reader-back-btn), so exiting the book is spatially separate from
        collapsing the toolbar. -->
-  <button class="reader-back-btn" id="btnCloseReader" title="Exit book">‹</button>
+  <button class="reader-back-btn" id="btnCloseReader" title="Exit book">‹<span class="reader-back-label">Close Book</span></button>
   <!-- Always-visible min/max handle — the toolbar only toggles on tap for
        touch devices, so desktop (mouse) needs its own persistent control. -->
   <button class="reader-toolbar-handle" id="readerToolbarHandle" title="Show/hide toolbar">⌄</button>
@@ -2605,7 +2629,10 @@ let currentUser=null,library=[],allUsers=[],userRatings={},currentId=null,commun
 // tied to auth, and this needs to finish before the first real Home render so
 // cached tiles show correctly even when opening the app offline.
 let _coverCachePrimed = primeCoverCache();
-let shelfMode='mine',activeCat='All',activeCatPublic='All',searchQ='';
+// Desktop Library filter state — mirrors mobile's mfp pill state exactly
+// (mobLibFilter/mobLibCat/mobActiveTags/mobLibSort below), just its own copy
+// so each surface renders and filters independently.
+let deskLibFilter='all',deskLibCat='All',deskLibSort='recent',searchQ='';
 let deskActiveTags = new Set();   // tag-filter picker selections, desktop Library
 let mobActiveTags = new Set();    // tag-filter picker selections, mobile Library
 let selectMode=false,selectedIds=new Set(),deskView='library';
@@ -3233,24 +3260,23 @@ async function confirmShare() {
 }
 
 // ── DATA HELPERS ─────────────────────────────────────────────────────────────
-function activeBooks(){return shelfMode==='mine'?library:communityLib;}
+function activeBooks(){return getLibSourceBooks(deskLibFilter);}
 function filteredBooks(){
   let books=activeBooks();
   // List filter: when a list is active, restrict to its book IDs
   if(_deskListFilter){
     const list=_userLists.find(l=>l.id===_deskListFilter);
     const ids=new Set(list?.bookIds||[]);
-    // List may contain books from either shelf — search both
+    // A list can contain books from any source — search everything
     books=dedupe([...library,...communityLib]).filter(b=>ids.has(b.id));
   }
-  const cat=shelfMode==='community'?activeCatPublic:activeCat;
-  if(cat!=='All')books=books.filter(b=>(b.category||'Uncategorised')===cat);
+  if(deskLibCat!=='All')books=books.filter(b=>(b.category||'Uncategorised')===deskLibCat);
   if(searchQ)books=books.filter(b=>b.title?.toLowerCase().includes(searchQ)||b.author?.toLowerCase().includes(searchQ)||b.category?.toLowerCase().includes(searchQ));
   if(deskActiveTags.size)books=books.filter(b=>(b.tags||[]).some(t=>deskActiveTags.has(t)));
-  return sortBooks(books);
+  return sortBooks(books,deskLibSort);
 }
 function sortBooks(books,sort){
-  if(!sort)sort=document.getElementById('deskSortSelect')?.value||'recent';
+  if(!sort)sort='recent';
   const copy=[...books];
   if(sort==='title')copy.sort((a,b)=>(a.title||'').localeCompare(b.title||''));
   if(sort==='author')copy.sort((a,b)=>(a.author||'').localeCompare(b.author||''));
@@ -3269,7 +3295,7 @@ function renderSkeleton(gridId,count=12){
   grid.innerHTML=Array.from({length:count},()=>`<div class="skeleton-card"><div class="skeleton-cover"></div><div class="skeleton-body"><div class="skeleton-line"></div><div class="skeleton-line short"></div></div></div>`).join('');
 }
 function renderAll(){
-  renderFilterCats();
+  updateDeskFilterPillLabels();
   document.getElementById('deskBookGrid').classList.toggle('select-mode',selectMode);
   renderGrid('deskBookGrid');renderMobLibrary();renderMobHome();
   const books=filteredBooks();
@@ -3284,28 +3310,23 @@ function renderAll(){
     const systemLabels = {'favourites':'Favourites','want-to-read':'Want to Read',
       'currently-reading':'Currently Reading','finished':'Finished'};
     const name = list ? (systemLabels[list.id] || list.name) : 'List';
-    titleEl.textContent = shelfMode==='mine'?'My Library':'Public Library';
+    titleEl.textContent = 'Library';
     if(chipLabel) chipLabel.textContent = name;
     if(chip) chip.style.display='';
   } else {
-    titleEl.textContent = shelfMode==='mine'?'My Library':'Public Library';
+    titleEl.textContent = 'Library';
     if(chip) chip.style.display='none';
   }
 
   renderDeskSidebar();
-}
-function renderFilterCats(){
-  const cats=getCats(),total=activeBooks().length;
-  const el=document.getElementById('deskFilterCats');
-  const currentCat = shelfMode==='community' ? activeCatPublic : activeCat;
-  el.innerHTML=`<div class="filter-cat-item ${currentCat==='All'?'active':''}" data-cat="All"><span>All</span><span class="filter-cat-count">${total}</span></div>`+cats.map(([cat,cnt])=>`<div class="filter-cat-item ${currentCat===cat?'active':''}" data-cat="${encodeURIComponent(cat)}"><span>${catIcon(cat)} ${esc(cat)}</span><span class="filter-cat-count">${cnt}</span></div>`).join('');
 }
 function renderGrid(gridId){
   const grid=document.getElementById(gridId);if(!grid)return;
   const books=filteredBooks();
   if(!books.length){
     const isEmpty=activeBooks().length===0;
-    grid.innerHTML=`<div style="grid-column:1/-1;padding:3rem 1rem;text-align:center;color:var(--muted)"><div style="font-size:2.5rem;opacity:.25;margin-bottom:.8rem">📚</div><div style="font-family:'Playfair Display',serif;font-size:1.1rem;color:var(--navy2);margin-bottom:.4rem">${isEmpty?'Your library is empty':'No books match'}</div><div style="font-size:.85rem">${isEmpty?'Upload an EPUB to get started':'Try a different search or filter'}</div>${isEmpty&&shelfMode==='mine'?`<div style="margin-top:1rem"><button class="hbtn hbtn-upload" onclick="document.getElementById('uploadModal').classList.add('open')">📤 Upload EPUB</button></div>`:''}</div>`;
+    const canUpload=deskLibFilter==='all'||deskLibFilter==='private';
+    grid.innerHTML=`<div style="grid-column:1/-1;padding:3rem 1rem;text-align:center;color:var(--muted)"><div style="font-size:2.5rem;opacity:.25;margin-bottom:.8rem">📚</div><div style="font-family:'Playfair Display',serif;font-size:1.1rem;color:var(--navy2);margin-bottom:.4rem">${isEmpty?'Your library is empty':'No books match'}</div><div style="font-size:.85rem">${isEmpty?'Upload an EPUB to get started':'Try a different search or filter'}</div>${isEmpty&&canUpload?`<div style="margin-top:1rem"><button class="hbtn hbtn-upload" onclick="document.getElementById('uploadModal').classList.add('open')">📤 Upload EPUB</button></div>`:''}</div>`;
     return;
   }
   grid.innerHTML=books.map(b=>{
@@ -3325,15 +3346,6 @@ function renderGrid(gridId){
   }).join('');
 }
 
-document.getElementById('deskFilterCats').addEventListener('click',e=>{
-  const item=e.target.closest('.filter-cat-item[data-cat]');
-  if(!item)return;
-  hideDeskHome();
-  if(shelfMode==='community') activeCatPublic=decodeURIComponent(item.dataset.cat);
-    else activeCat=decodeURIComponent(item.dataset.cat);
-  renderAll();
-});
-
 document.getElementById('deskBookGrid').addEventListener('click',e=>{
   const card=e.target.closest('.book-card[data-bookid]');if(!card)return;
   if(selectMode){const id=card.dataset.bookid;if(selectedIds.has(id)){selectedIds.delete(id);card.classList.remove('selected');}else{selectedIds.add(id);card.classList.add('selected');}updateBulkBar();return;}
@@ -3351,31 +3363,85 @@ document.getElementById('deskSearchClear').addEventListener('click',()=>{
   input.focus();
   renderAll();
 });
-document.getElementById('deskSortSelect').addEventListener('change',()=>renderAll());
-document.getElementById('deskSortBtns').addEventListener('click', e => {
-  const btn = e.target.closest('.sort-btn[data-sort]');
-  if(!btn) return;
-  document.querySelectorAll('#deskSortBtns .sort-btn').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-  document.getElementById('deskSortSelect').value = btn.dataset.sort;
-  renderAll();
+// ── DESKTOP LIBRARY FILTER PILLS ───────────────────────────────────────────────
+// Same 4-pill system as mobile (Category/Tags/Source/Sort — see mfpCat etc.),
+// reusing the exact same colors, dropdown component (openMobFilterPicker /
+// .mfp-dd) and option lists, just reading/writing desk state and re-rendering
+// the desktop grid instead of the mobile one.
+function updateDeskFilterPillLabels() {
+  const catLabel = document.getElementById('deskPillCatLabel');
+  if (catLabel) catLabel.textContent = deskLibCat === 'All' ? 'Category' : deskLibCat;
+  document.getElementById('deskPillCat')?.classList.toggle('mfp-active', deskLibCat !== 'All');
+
+  const tagsLabel = document.getElementById('deskPillTagsLabel');
+  if (tagsLabel) tagsLabel.textContent = deskActiveTags.size ? `Tags (${deskActiveTags.size})` : 'Tags';
+  document.getElementById('deskPillTags')?.classList.toggle('mfp-active', deskActiveTags.size > 0);
+
+  const sortLabel = document.getElementById('deskPillSortLabel');
+  if (sortLabel) sortLabel.textContent = (MOB_SORT_OPTIONS.find(o => o.id === deskLibSort) || MOB_SORT_OPTIONS[0]).label;
+
+  const sourceLabel = document.getElementById('deskPillSourceLabel');
+  if (sourceLabel) sourceLabel.textContent = (MOB_SOURCE_OPTIONS.find(o => o.id === deskLibFilter) || MOB_SOURCE_OPTIONS[0]).label;
+  document.getElementById('deskPillSource')?.classList.toggle('mfp-active', deskLibFilter !== 'all');
+}
+
+document.getElementById('deskPillCat').addEventListener('click', (e) => {
+  const srcForCats = activeBooks();
+  const cats = {};
+  srcForCats.forEach(b => { const c = b.category || 'Uncategorised'; cats[c] = (cats[c] || 0) + 1; });
+  const items = [
+    { id: 'All', label: 'All', count: srcForCats.length },
+    ...Object.entries(cats).sort(([a], [b]) => a.localeCompare(b))
+      .map(([c, cnt]) => ({ id: c, label: c, icon: catIcon(c), count: cnt })),
+  ];
+  openMobFilterPicker({
+    anchor: e.currentTarget,
+    title: '📚 Category',
+    items,
+    grid: true,
+    isSelected: it => deskLibCat === it.id,
+    onSelect: it => { deskLibCat = it.id; },
+    onAfterSelect: renderAll,
+  });
 });
 
-document.getElementById('tabMineDesk').addEventListener('click',()=>switchShelf('mine'));
-document.getElementById('tabCommDesk').addEventListener('click',()=>switchShelf('community'));
-function switchShelf(mode){
-  hideDeskHome();
-  shelfMode=mode;
-  activeCat='All';
-  searchQ='';
-  document.getElementById('deskSearch').value='';
-  document.getElementById('deskSearch').closest('.search-input-wrap').classList.remove('has-value');
-  document.getElementById('mobSearchLibrary').value=''; mobLibSearch='';
-  document.getElementById('mobSearchLibrary').closest('.search-input-wrap').classList.remove('has-value');
-  document.getElementById('tabMineDesk').classList.toggle('active',mode==='mine');
-  document.getElementById('tabCommDesk').classList.toggle('active',mode==='community');
-  renderAll();
-}
+document.getElementById('deskPillTags').addEventListener('click', (e) => {
+  const allTags = getAllMobTags();
+  if (!allTags.length) { showToast('No tags yet'); return; }
+  const items = allTags.map(t => ({ id: t, label: t, icon: tagIcon(t) }));
+  openMobFilterPicker({
+    anchor: e.currentTarget,
+    title: '🏷 Tags',
+    items,
+    grid: true,
+    multi: true,
+    isSelected: it => deskActiveTags.has(it.id),
+    onSelect: it => { deskActiveTags.has(it.id) ? deskActiveTags.delete(it.id) : deskActiveTags.add(it.id); },
+    onAfterSelect: renderAll,
+  });
+});
+
+document.getElementById('deskPillSort').addEventListener('click', (e) => {
+  openMobFilterPicker({
+    anchor: e.currentTarget,
+    title: '↕ Sort',
+    items: MOB_SORT_OPTIONS,
+    isSelected: it => deskLibSort === it.id,
+    onSelect: it => { deskLibSort = it.id; },
+    onAfterSelect: renderAll,
+  });
+});
+
+document.getElementById('deskPillSource').addEventListener('click', (e) => {
+  openMobFilterPicker({
+    anchor: e.currentTarget,
+    title: '📖 Source',
+    items: MOB_SOURCE_OPTIONS,
+    isSelected: it => deskLibFilter === it.id,
+    onSelect: it => { deskLibFilter = it.id; deskLibCat = 'All'; }, // reset category when source changes, same as mobile
+    onAfterSelect: renderAll,
+  });
+});
 
 // ── DESKTOP HOME (panel retired — content lives in sidebar) ───────────────────
 // These stubs prevent crashes from any remaining call-sites.
@@ -3396,19 +3462,6 @@ function clearDeskListFilter() {
   renderAll();
   renderDeskSidebar();
 }
-
-// "All Books" header button toggles home panel
-// "All Books" resets to a clean, unfiltered view of the full library — the
-// desk-home panel it used to open was already retired by an earlier pass
-// (see showDeskHome/hideDeskHome stubs above); its content now lives
-// permanently in the sidebar, so this button's job is just "clear
-// everything and show me my whole library".
-document.getElementById('btnDeskHome').addEventListener('click', () => {
-  closeDrawer();
-  document.getElementById('readerOverlay').classList.remove('open');
-  clearDeskListFilter();
-  switchShelf('mine');
-});
 
 // Clear chip in grid header
 document.getElementById('deskListChip').addEventListener('click', clearDeskListFilter);
@@ -3462,14 +3515,21 @@ function renderDeskSidebar() {
   const nav = document.getElementById('sbListsNav');
   if(!nav) return;
 
-  // System lists shown in the sidebar (order matters)
-  const systemOrder = ['favourites', 'want-to-read', 'currently-reading', 'finished'];
+  // System lists shown in the sidebar (order matters). Colors match mobile's
+  // Home-tab shelves exactly (favourites/want-to-read/finished/custom —
+  // see shelfSection() calls in renderMobHome()) so a list reads the same
+  // way whether you're filtering it here or browsing it there. Desktop has
+  // no "Current Reads"-strip equivalent for Recently Viewed the way mobile's
+  // home tab does, so it's added here as its own filterable row instead.
+  const systemOrder = ['favourites', 'want-to-read', 'currently-reading', 'finished', 'viewed'];
   const systemMeta = {
-    'favourites':        { icon: '❤️',  label: 'Favourites' },
-    'want-to-read':      { icon: '🔖', label: 'Want to Read' },
-    'currently-reading': { icon: '📖', label: 'Currently Reading' },
-    'finished':          { icon: '✓',  label: 'Finished' },
+    'favourites':        { icon: '❤️',  label: 'Favourites',        color: '#e11d48', soft: 'rgba(225,29,72,.1)' },
+    'want-to-read':      { icon: '🔖', label: 'Want to Read',       color: '#7c3aed', soft: 'rgba(124,58,237,.1)' },
+    'currently-reading': { icon: '📖', label: 'Currently Reading',  color: '#c8952a', soft: 'rgba(200,149,42,.1)' },
+    'finished':          { icon: '✓',  label: 'Finished',          color: '#276749', soft: 'rgba(39,103,73,.1)' },
+    'viewed':            { icon: '👁', label: 'Recently Viewed',    color: '#7a8a9a', soft: 'rgba(122,138,154,.1)' },
   };
+  const customMeta = { color: '#2a7c8a', soft: 'rgba(42,124,138,.1)' }; // teal, matches mobile's custom-list shelves
 
   const allLists = [
     ...systemOrder
@@ -3482,9 +3542,11 @@ function renderDeskSidebar() {
     const meta = systemMeta[list.id];
     const icon  = meta ? meta.icon  : (list.icon || '📋');
     const label = meta ? meta.label : list.name;
+    const { color, soft } = meta || customMeta;
     const count = (list.bookIds || []).length;
     const isActive = _deskListFilter === list.id;
-    return `<div class="sb-list-item ${isActive ? 'active' : ''}" data-listid="${list.id}">
+    return `<div class="sb-list-item ${isActive ? 'active' : ''}" data-listid="${list.id}"
+      style="--list-color:${color};--list-soft:${soft}">
       <span class="sb-list-icon">${icon}</span>
       <span class="sb-list-name">${esc(label)}</span>
       <span class="sb-list-count">${count}</span>
@@ -4368,7 +4430,7 @@ function updateMobFilterPillLabels() {
 // `items` is [{id,label,icon?,count?}]. `multi` keeps the dropdown open and
 // lets several items be toggled (used for Tags, AND-combined); otherwise
 // picking an item closes it immediately (Category/Sort/Source).
-function openMobFilterPicker({ anchor, title, items, isSelected, onSelect, multi = false, grid = false }) {
+function openMobFilterPicker({ anchor, title, items, isSelected, onSelect, multi = false, grid = false, onAfterSelect }) {
   document.querySelectorAll('.mfp-dd-scrim').forEach(el => el.remove()); // close any other dropdown first
 
   const scrim = document.createElement('div');
@@ -4404,8 +4466,7 @@ function openMobFilterPicker({ anchor, title, items, isSelected, onSelect, multi
     el.addEventListener('click', () => {
       const item = items[+el.dataset.idx];
       onSelect(item);
-      updateMobFilterPillLabels();
-      renderMobLibrary();
+      if (onAfterSelect) onAfterSelect(); else { updateMobFilterPillLabels(); renderMobLibrary(); }
       if (multi) el.classList.toggle('selected', isSelected(item));
       else { scrim.remove(); dd.remove(); }
     });
@@ -4466,17 +4527,18 @@ document.getElementById('mfpSource').addEventListener('click', (e) => {
   });
 });
 
-// Books visible under the current Source filter (all/private/public/shared),
-// before category/tag/search/sort are applied — shared by getMobLibBooks()
-// and the Category filter picker, which needs the same base set for counts.
-function getMobLibSourceBooks() {
-  if (mobLibFilter === 'private') {
+// Books visible under a Source filter (all/private/public/shared), before
+// category/tag/search/sort are applied. Shared by mobile and desktop —
+// both filter the exact same underlying relationship to a book (mine only,
+// published, or shared with me), just via separate pill state per surface.
+function getLibSourceBooks(filter) {
+  if (filter === 'private') {
     return library.filter(b => b.visibility !== 'public' && !(b.allowedUsers?.length));
   }
-  if (mobLibFilter === 'public') {
+  if (filter === 'public') {
     return communityLib.filter(b => b.visibility === 'public');
   }
-  if (mobLibFilter === 'shared') {
+  if (filter === 'shared') {
     return communityLib.filter(b =>
       b.ownerId !== currentUser?.uid &&
       b.allowedUsers?.includes(currentUser?.uid)
@@ -4485,6 +4547,7 @@ function getMobLibSourceBooks() {
   // 'all': everything the user can see — their own + public + shared with them
   return dedupe([...library, ...communityLib]);
 }
+function getMobLibSourceBooks() { return getLibSourceBooks(mobLibFilter); }
 
 function getMobLibBooks() {
   let src = getMobLibSourceBooks();
@@ -6782,6 +6845,18 @@ function positionReaderToolbar() {
   if(chapterList) chapterList.style.bottom = panelBottom;
   if(bookmarkList) bookmarkList.style.bottom = panelBottom;
   if(searchPanel) searchPanel.style.bottom = panelBottom;
+
+  // On desktop the back button is a static "Close Book" header (real height,
+  // pushes content down) rather than a floating circle over the text, so
+  // these panels' top:14px (set in CSS) needs to start below it instead of
+  // at the very top of the overlay, or it'd render underneath that header.
+  if(window.innerWidth >= 1280){
+    const backBtn = document.getElementById('btnCloseReader');
+    const panelTop = ((backBtn?.offsetHeight || 0) + 14) + 'px';
+    if(chapterList) chapterList.style.top = panelTop;
+    if(bookmarkList) bookmarkList.style.top = panelTop;
+    if(searchPanel) searchPanel.style.top = panelTop;
+  }
 }
 
 function _getReaderDimensions() {
@@ -10583,7 +10658,7 @@ document.getElementById('deskManageTagsBtn')?.addEventListener('click', () => {
 document.addEventListener('click',e=>{const s=document.getElementById('deskSettings');if(s.style.display!=='none'&&!s.contains(e.target)&&e.target.id!=='btnToggleSettings')s.style.display='none';});
 document.getElementById('defaultCatInput').value=localStorage.getItem('elib_default_cat')||'';
 document.getElementById('defaultCatInput').addEventListener('keydown',e=>{if(e.key==='Enter'){localStorage.setItem('elib_default_cat',e.target.value);showToast('Default category saved');}});
-document.getElementById('btnClearCache').addEventListener('click',()=>{if(!confirm('Clear local cache?'))return;library=[];communityLib=[];currentId=null;activeCat='All';renderAll();closeDrawer();showToast('Cache cleared');});
+document.getElementById('btnClearCache').addEventListener('click',()=>{if(!confirm('Clear local cache?'))return;library=[];communityLib=[];currentId=null;deskLibCat='All';renderAll();closeDrawer();showToast('Cache cleared');});
 document.getElementById('deskInstallBtn').addEventListener('click',triggerInstall);
 document.getElementById('mobInstallBtn').addEventListener('click',triggerInstall);
 function triggerInstall(){if(deferredInstall){deferredInstall.prompt();deferredInstall.userChoice.then(()=>deferredInstall=null);}}
