@@ -2384,6 +2384,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
   <button class="reader-btn" id="btnToggleBookmarkList" title="Bookmarks">🔖</button>
   <button class="reader-btn" id="btnToggleSearch" title="Search in book">🔍</button>
   <button class="reader-btn" id="btnToggleSelectMode" title="Select & Highlight">✎</button>
+  <button class="reader-btn" id="btnToggleLookupMode" title="Look Up Word">🔤</button>
   </div>
     <div class="reader-nav">
   <button class="reader-btn" id="btnToggleReaderSettings" title="Settings">Aa</button>
@@ -2590,7 +2591,8 @@ let readerZip=null,readerSpine=[],readerChapter=0,readerOpfBase='',readerBookId 
 let lastOpenedBookId = null;
 let readerPage = 0;
 let readerPageCount = 1;
-let readerSelectMode = false; // when true, touch overlay steps aside so the iframe gets native taps/drags (select + Look Up)
+let readerSelectMode = false; // when true, tapping a sentence selects it for highlighting
+let readerLookupMode = false; // when true, tapping a word looks up its definition
 let readerFontSize=parseInt(localStorage.getItem('elib_reader_font')||'17');
 let readerTheme=localStorage.getItem('elib_reader_theme')||'day';
 let readerTransition = localStorage.getItem('elib_reader_transition') || 'bounce';
@@ -5262,6 +5264,10 @@ document.getElementById('btnToggleSelectMode').addEventListener('click', e => {
   e.stopPropagation();
   setReaderSelectMode(!readerSelectMode);
 });
+document.getElementById('btnToggleLookupMode').addEventListener('click', e => {
+  e.stopPropagation();
+  setReaderLookupMode(!readerLookupMode);
+});
 document.getElementById('readerOverlay').addEventListener('click', e => {
   const list = document.getElementById('readerChapterList');
   const bmPanel = document.getElementById('readerBookmarkListPanel');
@@ -7621,7 +7627,7 @@ function _stopSelectPoll() {
 function setReaderSelectMode(on) {
   readerSelectMode = on;
   document.getElementById('btnToggleSelectMode')?.classList.toggle('active', on);
-  _syncReaderMiddleZoneMode();
+  if (on && readerLookupMode) setReaderLookupMode(false);
 
   const isTouchDevice = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
 
@@ -7640,6 +7646,40 @@ function setReaderSelectMode(on) {
     _removeHighlightPopup();
     _sentenceSelAnchor = null;
     _sentenceRangesDoc = null;
+  }
+}
+
+// ── Look Up mode toggle — tap a word (rather than long-pressing it, which
+// turned out too unreliable across mobile browsers once real navigation
+// gestures also need to share the same touch surface) to see its
+// definition. Mutually exclusive with highlight mode, same as a radio pair.
+function _showLookupBadge() {
+  document.getElementById('readerLookupBadge')?.remove();
+  const content = document.getElementById('readerContent');
+  const b = document.createElement('button');
+  b.id = 'readerLookupBadge';
+  b.innerHTML = '<span style="font-size:.85em;line-height:1">✕</span><span>Tap a word to look it up</span>';
+  b.style.cssText = `position:absolute;top:8px;left:50%;transform:translateX(-50%);
+    display:flex;align-items:center;gap:.35em;
+    background:rgba(42,124,138,.94);color:#fff;font-size:.68rem;font-weight:700;
+    letter-spacing:.05em;padding:6px 16px;border-radius:20px;border:none;z-index:10;
+    cursor:pointer;white-space:nowrap;-webkit-tap-highlight-color:transparent;`;
+  b.addEventListener('click', () => setReaderLookupMode(false));
+  content.appendChild(b);
+}
+function _hideLookupBadge() { document.getElementById('readerLookupBadge')?.remove(); }
+
+function setReaderLookupMode(on) {
+  readerLookupMode = on;
+  document.getElementById('btnToggleLookupMode')?.classList.toggle('active', on);
+  if (on && readerSelectMode) setReaderSelectMode(false);
+
+  if (on) {
+    _showLookupBadge();
+    if (navigator.vibrate) navigator.vibrate(20);
+  } else {
+    _hideLookupBadge();
+    _removeWordLookupPopup();
   }
 }
 
@@ -7692,6 +7732,104 @@ function _pointToOffset(doc, x, y) {
   }
   return null;
 }
+
+function _wordRangeAtPoint(doc, x, y) {
+  const off = _pointToOffset(doc, x, y);
+  if (off == null) return null;
+  const nodes = _chapterTextNodes(doc);
+  let full = '';
+  for (const n of nodes) full += n.textContent;
+  if (off < 0 || off > full.length) return null;
+
+  const isWordChar = ch => ch != null && /[\p{L}\p{N}'']/u.test(ch);
+  if (!isWordChar(full[off]) && !isWordChar(full[off - 1])) return null; // tapped whitespace/punctuation
+
+  let start = off, end = off;
+  if (!isWordChar(full[start]) && isWordChar(full[start - 1])) start -= 1, end -= 1;
+  while (start > 0 && isWordChar(full[start - 1])) start--;
+  while (end < full.length && isWordChar(full[end])) end++;
+  if (start === end) return null;
+
+  return { word: full.slice(start, end), range: _offsetsToRange(doc, start, end) };
+}
+
+let _wordLookupPopup = null;
+function _removeWordLookupPopup() {
+  _wordLookupPopup?.remove();
+  _wordLookupPopup = null;
+}
+
+async function _handleWordLookupTap(doc, clientX, clientY) {
+  const iframeRect = _readerIframe?.getBoundingClientRect();
+  if (!iframeRect) return;
+  const found = _wordRangeAtPoint(doc, clientX - iframeRect.left, clientY - iframeRect.top);
+  if (!found || !found.range) return;
+  if (navigator.vibrate) navigator.vibrate(15);
+  _showWordLookupPopup(found.word, found.range);
+}
+
+function _showWordLookupPopup(word, range) {
+  _removeWordLookupPopup();
+  if (!_readerIframe) return;
+
+  const iframeRect = _readerIframe.getBoundingClientRect();
+  const rect = range.getBoundingClientRect();
+  if (!rect || (!rect.width && !rect.height)) return;
+
+  const popup = document.createElement('div');
+  popup.id = 'readerWordLookupPopup';
+  popup.style.cssText = `
+    position:absolute; z-index:200; width:min(300px, calc(100vw - 24px));
+    left:${Math.max(8, Math.min(iframeRect.left + rect.left + rect.width / 2 - 150, window.innerWidth - 308))}px;
+    top:${Math.max(8, iframeRect.top + rect.bottom + 10)}px;
+    background:var(--warm-white,#fffefb); color:var(--navy,#0f1a2e);
+    border:1px solid var(--border,#c8d8e4); border-radius:10px;
+    padding:.7rem .85rem; box-shadow:0 8px 22px rgba(0,0,0,.22);
+    font-family:'Lato',sans-serif; font-size:.82rem; line-height:1.4;
+  `;
+  popup.innerHTML = `
+    <div style="display:flex;align-items:baseline;justify-content:space-between;gap:.5rem;margin-bottom:.3rem;">
+      <span style="font-family:'Playfair Display',serif;font-weight:700;font-size:1.05rem;color:var(--teal-dark,#1e5f6a);">${esc(word)}</span>
+      <button data-wl-close style="background:none;border:none;color:var(--navy,#0f1a2e);opacity:.55;font-size:1rem;line-height:1;cursor:pointer;padding:0 0 0 .4rem;">✕</button>
+    </div>
+    <div id="readerWordLookupBody" style="color:var(--navy,#0f1a2e);opacity:.75;">Looking up…</div>
+  `;
+  document.body.appendChild(popup);
+  _wordLookupPopup = popup;
+  popup.querySelector('[data-wl-close]').addEventListener('click', _removeWordLookupPopup);
+
+  _fetchWordDefinition(word).then(html => {
+    const body = popup.querySelector('#readerWordLookupBody');
+    if (body) body.innerHTML = html;
+  });
+}
+
+async function _fetchWordDefinition(word) {
+  const googleFallback = `<a href="https://www.google.com/search?q=define+${encodeURIComponent(word)}" target="_blank" rel="noopener" style="color:var(--teal,#2a7c8a);">Search for “${esc(word)}” instead ↗</a>`;
+  try {
+    const res = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(word.toLowerCase())}`);
+    if (!res.ok) return `<div>No definition found.</div><div style="margin-top:.35rem;">${googleFallback}</div>`;
+    const data = await res.json();
+    const entry = data?.[0];
+    if (!entry?.meanings?.length) return `<div>No definition found.</div><div style="margin-top:.35rem;">${googleFallback}</div>`;
+
+    const phonetic = entry.phonetic || entry.phonetics?.find(p => p.text)?.text || '';
+    let html = phonetic ? `<div style="opacity:.6;margin-bottom:.35rem;">${esc(phonetic)}</div>` : '';
+    entry.meanings.slice(0, 3).forEach(m => {
+      const defs = (m.definitions || []).slice(0, 2);
+      html += `<div style="margin-bottom:.4rem;">
+        <span style="font-style:italic;opacity:.65;">${esc(m.partOfSpeech || '')}</span>
+        <ol style="margin:.15rem 0 0 1.1rem;padding:0;">
+          ${defs.map(d => `<li>${esc(d.definition)}</li>`).join('')}
+        </ol>
+      </div>`;
+    });
+    return html;
+  } catch (e) {
+    return `<div>Couldn't reach the dictionary.</div><div style="margin-top:.35rem;">${googleFallback}</div>`;
+  }
+}
+
 
 function _clearSentenceSelectionMarks(doc) {
   doc.querySelectorAll('mark[data-highlightid="__sentencesel"]').forEach(mark => mark.replaceWith(...mark.childNodes));
@@ -7755,104 +7893,123 @@ function _closeReaderPanelsIfOpen() {
   return false;
 }
 
-function _toggleReaderToolbarFromTap() {
-  if (_closeReaderPanelsIfOpen()) return;
-  document.getElementById('readerOverlay')?.classList.toggle('toolbar-hidden');
-  _updateToolbarHandleIcon();
-}
-
 function _attachReaderTapHandlers(doc) {
   const content = document.getElementById('readerContent');
   ['readerTouchOverlay','readerEdgeLeft','readerEdgeRight','readerMiddleZone'].forEach(id => document.getElementById(id)?.remove());
 
-  const isTouchDevice = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
+  const overlay = document.createElement('div');
+  overlay.id = 'readerTouchOverlay';
+  overlay.style.cssText = 'position:absolute;inset:0;z-index:5;background:transparent;-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;';
+  content.appendChild(overlay);
 
-  // ── DESKTOP (mouse): no covering layer at all.
+  // ── DESKTOP (mouse): overlay is permanently transparent.
   // doc's own click/selection events handle everything natively.
+  const isTouchDevice = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
   if (!isTouchDevice) {
+    overlay.style.pointerEvents = 'none';
     _attachHighlightSelectionUI(doc);
     return;
   }
 
-  // ── MOBILE ────────────────────────────────────────────────────────────
-  // Only two thin strips along the page edges catch touches, for turning
-  // pages — they sit over the page margins, not the reading text, so real
-  // long-press word selection and the OS "Look Up"/"Copy" menu work
-  // normally anywhere in the middle of the page. A separate, fully-covering
-  // middle zone exists only for the sticky sentence-select highlight mode
-  // (entered via the ✎ toolbar button) and stays inert (pointer-events:none)
-  // the rest of the time.
-  const edgeLeft = document.createElement('div');
-  edgeLeft.id = 'readerEdgeLeft';
-  edgeLeft.style.cssText = 'position:absolute;top:0;bottom:0;left:0;width:15%;z-index:5;background:transparent;touch-action:none;';
-  const edgeRight = document.createElement('div');
-  edgeRight.id = 'readerEdgeRight';
-  edgeRight.style.cssText = 'position:absolute;top:0;bottom:0;right:0;width:15%;z-index:5;background:transparent;touch-action:none;';
-  const middle = document.createElement('div');
-  middle.id = 'readerMiddleZone';
-  middle.style.cssText = 'position:absolute;top:0;bottom:0;left:15%;right:15%;z-index:5;background:transparent;touch-action:none;pointer-events:none;';
-  content.appendChild(edgeLeft);
-  content.appendChild(edgeRight);
-  content.appendChild(middle);
-
-  _syncReaderMiddleZoneMode();
+  // ── MOBILE: this overlay always catches every tap/swipe on the page —
+  // reliable page-turning and toolbar-toggling took priority after real
+  // native long-press selection proved too unreliable to combine with them
+  // on the same touch surface. Instead, highlight mode (✎) and Look Up mode
+  // (🔤) are explicit toggles: while either is active, a tap in the middle
+  // of the page acts on whatever's under it (a sentence or a word) instead
+  // of toggling the toolbar.
+  overlay.style.touchAction = 'none';
   if (readerSelectMode) {
     _showSelectBadge();
     _startSelectPoll(doc); // re-target the poll at this chapter's fresh doc
     _sentenceRangesDoc = null; // force a fresh sentence map for this chapter's doc
   }
 
-  const wireEdgeStrip = (el, deltaDir) => {
-    let tx0 = 0, ty0 = 0;
-    el.addEventListener('touchstart', e => { e.preventDefault(); tx0 = e.touches[0].clientX; ty0 = e.touches[0].clientY; }, { passive: false });
-    el.addEventListener('touchend', e => {
-      if (_closeReaderPanelsIfOpen()) return;
-      const dx = e.changedTouches[0].clientX - tx0, dy = e.changedTouches[0].clientY - ty0;
-      // A swipe toward the opposite edge still works from here too; a tap
-      // (or a swipe in the strip's own direction) turns the page normally.
+  let tx0 = 0, ty0 = 0;
+
+  overlay.addEventListener('touchstart', e => {
+    e.preventDefault();
+    tx0 = e.touches[0].clientX;
+    ty0 = e.touches[0].clientY;
+  }, { passive: false });
+
+  overlay.addEventListener('touchmove', e => { e.preventDefault(); }, { passive: false });
+
+  overlay.addEventListener('touchend', e => {
+    const dx = e.changedTouches[0].clientX - tx0;
+    const dy = e.changedTouches[0].clientY - ty0;
+    const activeMode = readerSelectMode || readerLookupMode;
+
+    if (activeMode) {
+      // Swipe still turns pages, so you can reach sentences/words elsewhere.
       if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 40) {
-        goToPage(dx < 0 ? readerPage + 1 : readerPage - 1);
-      } else {
-        goToPage(readerPage + deltaDir);
-      }
-    }, { passive: true });
-  };
-  wireEdgeStrip(edgeLeft, -1);
-  wireEdgeStrip(edgeRight, +1);
-
-  // ── Middle zone: only active in sticky select mode (pointer-events is
-  // toggled by _syncReaderMiddleZoneMode whenever that mode changes).
-  let mtx0 = 0, mty0 = 0;
-  middle.addEventListener('touchstart', e => { e.preventDefault(); mtx0 = e.touches[0].clientX; mty0 = e.touches[0].clientY; }, { passive: false });
-  middle.addEventListener('touchmove', e => { e.preventDefault(); }, { passive: false });
-  middle.addEventListener('touchend', e => {
-    if (!readerSelectMode) return;
-    const dx = e.changedTouches[0].clientX - mtx0, dy = e.changedTouches[0].clientY - mty0;
-
-    // Swipe still turns pages, so you can reach sentences elsewhere.
-    if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 40) {
-      goToPage(dx < 0 ? readerPage + 1 : readerPage - 1);
-      return;
-    }
-    if (Math.abs(dx) < 10 && Math.abs(dy) < 10) {
-      const readerOv = document.getElementById('readerOverlay');
-      if (readerOv && !readerOv.classList.contains('toolbar-hidden')) {
-        // First tap in highlight mode just clears the toolbar out of the
-        // way rather than also selecting a sentence under it.
-        readerOv.classList.add('toolbar-hidden');
-        _updateToolbarHandleIcon();
+        if (dx < 0) goToPage(readerPage + 1);
+        else        goToPage(readerPage - 1);
         return;
       }
-      _handleSentenceTap(doc, e.changedTouches[0].clientX, e.changedTouches[0].clientY);
+      if (Math.abs(dx) < 10 && Math.abs(dy) < 10) {
+        const x = e.changedTouches[0].clientX;
+        const w = overlay.offsetWidth || content.offsetWidth;
+        // Narrower edge zones than navigation mode (15% vs 30%) — while
+        // either mode is active, most of the screen should be tap-to-act,
+        // with just a strip at each edge reserved for turning pages.
+        if (x < w * 0.15) { goToPage(readerPage - 1); return; }
+        if (x > w * 0.85) { goToPage(readerPage + 1); return; }
+
+        const readerOv = document.getElementById('readerOverlay');
+        if (readerOv && !readerOv.classList.contains('toolbar-hidden')) {
+          // First tap in either mode just clears the toolbar out of the
+          // way, rather than also acting on whatever's underneath it.
+          readerOv.classList.add('toolbar-hidden');
+          _updateToolbarHandleIcon();
+          return;
+        }
+        if (readerSelectMode) _handleSentenceTap(doc, x, e.changedTouches[0].clientY);
+        else _handleWordLookupTap(doc, x, e.changedTouches[0].clientY);
+      }
+      return;
+    }
+
+    if (_closeReaderPanelsIfOpen()) return;
+
+    // Swipe always navigates, regardless of toolbar state
+    if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 40) {
+      if (dx < 0) goToPage(readerPage + 1);
+      else        goToPage(readerPage - 1);
+      return;
+    }
+
+    if (Math.abs(dx) < 10 && Math.abs(dy) < 10) {
+      const readerOv = document.getElementById('readerOverlay');
+
+      // Detect links / highlight marks via elementFromPoint into the iframe
+      const iframeRect = _readerIframe?.getBoundingClientRect();
+      if (iframeRect && doc) {
+        const relX = e.changedTouches[0].clientX - iframeRect.left;
+        const relY = e.changedTouches[0].clientY - iframeRect.top;
+        try {
+          const el = doc.elementFromPoint(relX, relY);
+          if (el) {
+            const link = el.closest?.('[data-navchapter]');
+            if (link) { readerGoToChapter(parseInt(link.dataset.navchapter)); return; }
+            const mark = el.closest?.('mark[data-highlightid]');
+            if (mark) { openHighlightMenu(mark, e.changedTouches[0].clientX, e.changedTouches[0].clientY); return; }
+          }
+        } catch(err) {}
+      }
+
+      // Edges turn the page; middle third toggles the toolbar.
+      const x = e.changedTouches[0].clientX;
+      const w = overlay.offsetWidth || content.offsetWidth;
+      if (x < w * 0.3) { goToPage(readerPage - 1); return; }
+      if (x > w * 0.7) { goToPage(readerPage + 1); return; }
+      readerOv.classList.toggle('toolbar-hidden');
+      _updateToolbarHandleIcon();
+      return;
     }
   }, { passive: true });
 
   _attachHighlightSelectionUI(doc);
-}
-
-function _syncReaderMiddleZoneMode() {
-  const middle = document.getElementById('readerMiddleZone');
-  if (middle) middle.style.pointerEvents = readerSelectMode ? 'auto' : 'none';
 }
 
 async function renderChapterPaged(bodyHtml) {
@@ -7971,15 +8128,11 @@ body {
         openHighlightMenu(mark, e.clientX + r.left, e.clientY + r.top);
         return;
       }
-      // Plain tap on the open reading area — mobile only, and only reaches
-      // here when NOT in sticky select mode (whose middle-zone overlay
-      // intercepts touches before they ever get to doc). Skip it if the tap
-      // just completed a native text selection (native "Look Up" flow).
+      // Desktop only: clicking a word while Look Up mode is on shows its
+      // definition. On mobile this never fires for a plain tap — the
+      // full-bleed overlay intercepts those before they reach doc.
       const isTouchDevice = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
-      if (!isTouchDevice || readerSelectMode) return;
-      const sel = doc.getSelection ? doc.getSelection() : doc.defaultView?.getSelection();
-      if (sel && !sel.isCollapsed && sel.toString().trim()) return;
-      _toggleReaderToolbarFromTap();
+      if (!isTouchDevice && readerLookupMode) _handleWordLookupTap(doc, e.clientX, e.clientY);
     });
 
     _attachReaderTapHandlers(doc);
@@ -9040,6 +9193,10 @@ function closeReader(){
   readerSelectMode = false;
   _stopSelectPoll();
   document.getElementById('btnToggleSelectMode')?.classList.remove('active');
+  document.getElementById('readerLookupBadge')?.remove();
+  readerLookupMode = false;
+  _removeWordLookupPopup();
+  document.getElementById('btnToggleLookupMode')?.classList.remove('active');
   _readerColW = 0; _readerTotalW = 0;
 
   document.getElementById('readerBookmarkTab')?.remove();
