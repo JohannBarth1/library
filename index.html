@@ -219,18 +219,15 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 
 /* ── LAYOUT ── */
 .app{display:flex;flex:1;overflow:hidden;min-width:0;}
-@media(min-width:1280px){
-  .filter-sidebar{width:340px;}
-  .sb-section{padding:1.2rem 1.2rem .8rem;}
-  .sb-section-label{font-size:.68rem;margin-bottom:.8rem;letter-spacing:.15em;}
-  .filter-sidebar-top{padding:1.2rem 1.2rem 1rem;}
-  .filter-sidebar-top h3{font-size:1.05rem;margin-bottom:.9rem;}
-  .filter-search{font-size:.88rem;padding:.5rem .8rem;}
-}
 
 /* ── DESKTOP FILTER SIDEBAR ── */
 .filter-sidebar{width:var(--filter-w);min-width:var(--filter-w);background:var(--panel);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;flex-shrink:0;}
-/* Split sidebar into fixed-bottom footer + scrollable body */
+/* Current Reads + My Lists are pinned (never scroll out of view); only
+   Browse (search/tabs/categories/sort) scrolls internally, in the
+   flex:1 .sidebar-scroll region below them. */
+.sb-fixed{flex-shrink:0;}
+.sb-divider{height:1px;background:var(--border);margin:0 1rem;flex-shrink:0;}
+.sb-lists-scroll{max-height:200px;overflow-y:auto;}
 .sidebar-scroll{flex:1;overflow-y:auto;overflow-x:hidden;scrollbar-width:thin;scrollbar-color:var(--border) transparent;}
 .sidebar-scroll::-webkit-scrollbar{width:4px;}
 .sidebar-scroll::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
@@ -311,6 +308,26 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .btn-refresh-f{background:transparent;color:var(--navy2);}
 .btn-refresh-f:hover{background:var(--light-blue);}
 @media(min-width:1280px){
+  /* NOTE: must come after every unconditional rule above for the same
+     selectors (.filter-sidebar, .sb-section, etc.) — CSS gives equal-
+     specificity rules a tie-break by source order, so a media-query block
+     placed EARLIER than its own selector's base rule is silently ignored
+     at every viewport width. (This sidebar was stuck at 240px for several
+     revisions because of exactly that ordering bug.) */
+  .filter-sidebar{width:340px;}
+  .sb-section{padding:1.2rem 1.2rem .8rem;}
+  .sb-section-label{font-size:.68rem;margin-bottom:.8rem;letter-spacing:.15em;}
+  .sb-cr-strip{gap:10px;}
+  .sb-cr-cover{width:66px;}
+  .sb-cr-cover img,.sb-cr-cover .ph{width:66px;height:98px;}
+  .sb-list-item{padding:.55rem 1rem .55rem 1.2rem;}
+  .sb-list-name{font-size:.85rem;}
+  .sb-list-icon{font-size:1.05rem;}
+  .filter-sidebar-top{padding:1.2rem 1.2rem 1rem;}
+  .filter-sidebar-top h3{font-size:1.05rem;margin-bottom:.9rem;}
+  .filter-search{font-size:.88rem;padding:.5rem .8rem;}
+}
+@media(min-width:1280px){
   .shelf-tabs{padding:.1rem;}
   .shelf-tab{padding:.6rem .8rem;font-size:.75rem;}
   .filter-cats{padding:.6rem 0;}
@@ -338,33 +355,6 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 
 .hide-scrollbar{scrollbar-width:none;}
 .hide-scrollbar::-webkit-scrollbar{display:none;}
-
-/* ── DESKTOP HOME PANEL ── */
-.desk-home{display:none;flex:1;overflow:hidden;flex-direction:column;padding:0;gap:0;}
-.desk-home.active{display:flex;}
-@media(min-width:1280px){
-  .desk-home{padding:2.4rem 2.8rem;gap:2rem;overflow-y:auto;}
-  .desk-home > div:first-child{padding:0;border:none;background:none;flex-shrink:0;}
-  .desk-home-greeting{font-size:2.2rem;margin-bottom:.3rem;}
-  .desk-home-sub{font-size:.95rem;}
-  .desk-home-section{margin-top:0;}
-  .desk-home-section-label{font-size:.72rem;letter-spacing:.18em;margin-bottom:1.2rem;text-transform:uppercase;}
-  .desk-home-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:1.3rem;}
-}
-/* Greeting row pinned at the top */
-.desk-home > div:first-child{padding:1.6rem 2rem 1rem;flex-shrink:0;border-bottom:1px solid var(--border);background:var(--warm-white);}
-/* Dynamic shelf content fills the rest and scrolls */
-#deskHomeDynamic{flex:1;overflow-y:auto;padding:1.4rem 2rem 2rem;display:flex;flex-direction:column;gap:0;}
-.desk-home-greeting{font-family:'Playfair Display',serif;font-size:1.6rem;color:var(--navy2);}
-.desk-home-sub{font-size:.85rem;color:var(--muted);margin-top:.2rem;}
-.desk-home-section{margin-top:.5rem;}
-.desk-home-section-label{font-size:.65rem;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:.9rem;padding-bottom:.4rem;border-bottom:1px solid var(--border);}
-.desk-home-section-label.gold{color:var(--gold);}
-.desk-home-section-label.teal{color:var(--teal);}
-/* Legacy grid (kept for any remaining references) */
-.desk-home-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:1rem;}
-/* Desktop home shelf rows hide scrollbar */
-#deskHomeDynamic .home-shelf-section div[style*="overflow-x"]::-webkit-scrollbar{display:none;}
 
 /* ── BOOK CARD ── */
 .book-card{cursor:pointer;border-radius:4px;overflow:hidden;transition:transform .15s,box-shadow .15s;position:relative;}
@@ -427,12 +417,6 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .drawer-close{position:absolute;top:.7rem;right:.8rem;background:none;border:none;font-size:1.1rem;cursor:pointer;color:var(--muted);padding:.3rem;line-height:1;transition:color .15s;}
 .drawer-close:hover{color:var(--navy);}
 .drawer-cover{width:110px;height:160px;object-fit:cover;border-radius:3px;border:1px solid var(--border);display:block;margin-bottom:1rem;}
-@media(min-width:1400px){
-  .drawer-hero-cover{flex-direction:row !important;gap:1.4rem !important;align-items:flex-start !important;}
-  .drawer-hero-cover img,.drawer-hero-cover-ph{width:130px;height:190px;}
-  .drawer-hero-meta{padding-top:0 !important;}
-  .drawer-icon-btn{flex:1;min-width:auto;font-size:.75rem;}
-}
 .dbadge{font-size:.65rem;padding:2px 9px;border-radius:10px;font-weight:700;}
 .dbadge-cat{background:var(--teal-light);color:var(--teal);}
 .dbadge-lang{background:#ece8f8;color:#5a48b0;}
@@ -483,11 +467,10 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
   .reader-btn { min-width: 32px; height: 32px; padding: 0 .45rem; font-size: .72rem; }
 }
 @media(min-width:1280px){
-  .reader-toolbar{padding:.6rem .5rem;height:auto;position:static;border-top:1px solid rgba(128,128,128,.2);border-bottom:none;box-shadow:none;flex-direction:column;align-items:center;gap:.8rem;justify-content:flex-start;}
-  .reader-nav{width:100%;display:flex;flex-direction:column;align-items:center;gap:.3rem;}
-  .reader-nav:nth-child(2){border-top:1px solid rgba(128,128,128,.15);border-bottom:1px solid rgba(128,128,128,.15);padding:.5rem 0;}
-  .reader-nav:nth-child(3){margin-top:.4rem;padding-top:.4rem;border-top:1px solid rgba(128,128,128,.15);}
-  .reader-btn{min-width:40px;height:40px;padding:0 .6rem;font-size:.75rem;}
+  /* Same single-row layout as mobile (3 groups, space-between) — just
+     inset from the panel edges and given a floating-card treatment so it
+     reads as a bar docked in a sidebar rather than a fullscreen chrome. */
+  .reader-toolbar{left:14px;right:14px;padding:.4rem .6rem;border:1px solid rgba(128,128,128,.18);border-top:1px solid rgba(128,128,128,.18);border-radius:14px;box-shadow:0 8px 26px rgba(0,0,0,.16);}
 }
 /* PATCH: toolbar is now an overlay that floats over the text instead of
    reserving layout space, so hiding/showing it never resizes reader-content
@@ -551,9 +534,9 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 }
 .reader-back-btn:hover{ background: rgba(120,120,120,.55); }
 @media(min-width:1280px){
-  .reader-back-btn{position:static;top:auto;left:auto;width:100%;height:auto;border-radius:0;background:transparent;color:var(--navy2);border:none;border-bottom:1px solid var(--border);padding:.6rem .8rem;margin:0;font-size:.85rem;font-weight:700;text-align:center;opacity:1;transform:none;}
-  .reader-back-btn:hover{background:var(--panel);}
-  .reader-overlay.toolbar-hidden .reader-back-btn{opacity:1;transform:none;pointer-events:auto;}
+  /* Same floating circular button as mobile, just given top priority so it
+     always stays reachable even when a settings/chapters/etc. card is open. */
+  .reader-back-btn{z-index:190;}
 }
 .reader-overlay.toolbar-hidden .reader-back-btn{
   opacity: 0;
@@ -573,9 +556,8 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
   display:flex;
 }
 @media(min-width:1280px){
-  .reader-overlay{top:var(--header-h);right:0;bottom:0;left:auto;width:480px;max-width:65%;border-left:2px solid var(--border);box-shadow:-6px 0 20px rgba(0,0,0,.15);}
+  .reader-overlay{top:var(--header-h);right:0;bottom:0;left:auto;width:480px;max-width:65%;border-left:2px solid var(--border);box-shadow:-6px 0 20px rgba(0,0,0,.15);background:#fafbfc;}
   .reader-overlay.open{display:flex;flex-direction:column;}
-  .reader-overlay{background:#fafbfc;}
 }
 /* PATCH: base overlay background now follows the theme too, so any sliver
    of it exposed behind the bars (e.g. safe-area inset) matches instead of
@@ -603,8 +585,10 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .reader-overlay.theme-sepia .reader-info-bar { background: #e0d0b8; }
 .reader-overlay.theme-night .reader-info-bar { background: #12122a; }
 @media(min-width:1280px){
-  .reader-info-bar{display:none;}
-  .reader-progress-line{display:none;}
+  .reader-info-bar{padding:.5rem 1rem;height:auto;min-height:38px;gap:.5rem;}
+  .reader-title{font-size:.82rem;}
+  .reader-ledger-pill{font-size:.7rem;}
+  .reader-page-info{font-size:.7rem;}
 }
 
 .reader-btn {
@@ -622,6 +606,9 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
   transition: background .15s, color .15s;
   white-space: nowrap;
   border: 1px solid transparent;
+}
+@media(min-width:1280px){
+  .reader-btn{min-width:38px;height:38px;padding:0 .55rem;font-size:.72rem;}
 }
 .reader-overlay.theme-day   .reader-btn { background: rgba(15,26,46,.06); color: #1a1a1a; }
 .reader-overlay.theme-sepia .reader-btn { background: rgba(59,42,26,.08); color: #3b2a1a; }
@@ -679,10 +666,15 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .reader-overlay.theme-sepia .reader-settings-bar{ background:#e0d0b8; }
 .reader-overlay.theme-night .reader-settings-bar{ background:#12122a; }
 @media(min-width:1280px){
-  .reader-settings-bar{position:static;padding:.8rem .7rem;gap:.6rem;border:none;box-shadow:none;max-height:none;overflow-y:visible;background:transparent;}
-  .rs-group{gap:.3rem;padding:.5rem 0;flex-wrap:wrap;justify-content:center;flex-direction:row;}
-  .rs-label{font-size:.6rem;letter-spacing:.12em;text-transform:uppercase;font-weight:700;width:100%;text-align:center;margin-bottom:.3rem;}
-  .rs-btn{padding:.3rem .6rem;font-size:.72rem;flex:0 0 auto;}
+  /* IMPORTANT: stays position:absolute (inherited) — reader-content's size
+     must never change when this opens/closes, or the book repaginates and
+     the reader loses the reader's place (see positionReaderToolbar()).
+     Only the visual treatment changes here: a floating card, inset from the
+     panel's sides, instead of an edge-to-edge mobile sheet. */
+  .reader-settings-bar{left:14px;right:14px;padding:.9rem 1rem;gap:.7rem;border:1px solid rgba(128,128,128,.18);border-radius:14px;box-shadow:0 8px 30px rgba(0,0,0,.18);max-height:60vh;overflow-y:auto;z-index:150;}
+  .rs-group{gap:.35rem;padding:.3rem 0;flex-wrap:wrap;justify-content:flex-start;}
+  .rs-label{font-size:.62rem;letter-spacing:.12em;text-transform:uppercase;font-weight:700;width:100%;margin-bottom:.1rem;}
+  .rs-btn{padding:.3rem .65rem;font-size:.72rem;flex:0 0 auto;}
 }
 
 /* The reading-progress indicator is a slim line along the top edge of the
@@ -722,10 +714,14 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .reader-overlay.theme-night .reader-chapter-list{background:#1a1a2e;}
 .reader-chapter-list.open{display:block;}
 @media(min-width:1280px){
-  .reader-chapter-list{position:static;width:auto;border-right:none;border-bottom:1px solid rgba(128,128,128,0.2);box-shadow:none;max-height:280px;flex-shrink:0;overflow-x:hidden;background:transparent !important;}
-  .reader-chapter-list h3{padding:.9rem .9rem .6rem;font-size:.72rem;letter-spacing:.12em;text-transform:uppercase;font-weight:700;}
-  .chapter-item{padding:.6rem .9rem;font-size:.85rem;border:none;cursor:pointer;transition:background .15s;}
-  .chapter-item:hover{background:rgba(0,0,0,.04);}
+  /* BUG FIX: base rule is position:fixed;top:0;left:0 — meant for a mobile
+     fullscreen reader where the overlay IS the viewport. On desktop the
+     reader is a right-side panel, so "fixed to the viewport" made this
+     escape to the top-left corner of the whole window instead of staying
+     inside the panel. Switching to absolute anchors it to reader-overlay
+     (the nearest positioned ancestor) instead. Stays out of the toolbar's
+     way via JS-computed bottom (positionReaderToolbar), same as mobile. */
+  .reader-chapter-list{position:absolute;top:14px;left:14px;right:14px;width:auto;border:1px solid rgba(128,128,128,.18);border-radius:14px;box-shadow:0 8px 30px rgba(0,0,0,.18);z-index:150;}
 }
 .reader-chapter-list h3{padding:1rem 1.2rem .6rem;font-size:.65rem;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);font-weight:700;border-bottom:1px solid rgba(128,128,128,0.2);}
 .chapter-item{padding:.65rem 1.2rem;font-size:.83rem;cursor:pointer;border-bottom:1px solid rgba(128,128,128,0.1);transition:background .12s;}
@@ -734,6 +730,13 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .reader-overlay.theme-night .chapter-item{color:#c8c8d8;}
 .chapter-item:hover{background:rgba(42,124,138,0.15);}
 .chapter-item.active{background:rgba(42,124,138,0.2);color:var(--teal);font-weight:700;}
+@media(min-width:1280px){
+  /* Placed after the rules above so it actually wins the cascade (equal
+     specificity — source order decides, and the unconditional versions
+     above would otherwise always win regardless of viewport width). */
+  .reader-chapter-list h3{padding:.9rem 1rem .6rem;font-size:.72rem;letter-spacing:.12em;text-transform:uppercase;font-weight:700;}
+  .chapter-item{padding:.6rem 1rem;font-size:.85rem;border:none;cursor:pointer;transition:background .15s;}
+}
 .reader-search-box{display:flex;align-items:center;gap:.4rem;padding:.7rem 1.2rem;border-bottom:1px solid rgba(128,128,128,0.2);}
 .reader-search-box input{flex:1;min-width:0;border:1px solid rgba(128,128,128,0.3);border-radius:6px;padding:.5rem .6rem;font-family:'Lato',sans-serif;font-size:16px;background:transparent;color:inherit;outline:none;}
 .reader-search-box input:focus{border-color:var(--teal);}
@@ -1255,15 +1258,26 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .drawer-hero-badges{display:flex;flex-wrap:wrap;gap:.3rem;margin-bottom:.6rem;}
 .drawer-hero-stars{margin-bottom:.4rem;}
 .drawer-hero-sharedby{font-size:.72rem;color:var(--teal);font-weight:700;margin-bottom:.4rem;}
+@media(min-width:1400px){
+  /* Must come after the unconditional .drawer-hero* rules above — same
+     selector, equal specificity, source order decides (see the sidebar
+     width fix earlier in this file for the full explanation). */
+  .drawer-hero{gap:1.5rem;padding:1.5rem 1.8rem 1.2rem;}
+  .drawer-hero-cover img,.drawer-hero-cover-ph{width:130px;height:190px;}
+  .drawer-hero-title{font-size:1.3rem;}
+}
 
-/* Icon toolbar */
+/* Icon toolbar — same rounded-pill language as the mobile detail sheet's
+   Favourites/Want-to-Read chips (.mob-list-quickbtn etc.), rather than a
+   separate small icon-stacked-square style unique to desktop. */
 .drawer-icon-bar{display:block;padding:0;border:none;}
-.drawer-icon-btn{display:flex;flex-direction:column;align-items:center;gap:3px;padding:.45rem .6rem;border-radius:6px;border:1px solid var(--border);background:var(--warm-white);cursor:pointer;transition:all .15s;min-width:52px;}
+.drawer-icon-btn{display:inline-flex;flex-direction:row;align-items:center;gap:.4rem;padding:.42rem .8rem .42rem .65rem;border-radius:18px;border:1.5px solid var(--border);background:var(--warm-white);color:var(--navy2);cursor:pointer;transition:background .15s,border-color .15s,color .15s;white-space:nowrap;}
 .drawer-icon-btn:hover{background:var(--teal-light);border-color:var(--teal);}
-.drawer-icon-btn .di-icon{font-size:1.1rem;line-height:1;}
-.drawer-icon-btn .di-label{font-size:.58rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--navy2);white-space:nowrap;}
+.drawer-icon-btn .di-icon{font-size:.95rem;line-height:1;}
+.drawer-icon-btn .di-label{font-size:.72rem;font-weight:700;letter-spacing:.02em;color:inherit;white-space:nowrap;}
 .drawer-icon-btn:hover .di-label{color:var(--teal);}
-.drawer-icon-btn.di-danger:hover{background:#fbeaea;border-color:#e0b0b0;}
+.drawer-icon-btn.di-danger{border-color:#e0b0b0;color:var(--danger);}
+.drawer-icon-btn.di-danger:hover{background:#fbeaea;border-color:var(--danger);}
 .drawer-icon-btn.di-danger:hover .di-label{color:var(--danger);}
 
 /* Drawer description area */
@@ -1745,32 +1759,33 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
   <!-- DESKTOP -->
   <div class="desktop-main">
     <aside class="filter-sidebar">
-      <!-- Scrollable body: Current Reads + My Lists + Browse -->
+      <!-- ── Current Reads — pinned, always visible ──────────── -->
+      <div class="sb-section sb-fixed" id="sbCurrentReadsSection">
+        <div class="sb-section-label">
+          <span>📖 Current Reads</span>
+        </div>
+        <div class="sb-cr-strip" id="sbCurrentReadsStrip">
+          <span class="sb-cr-empty">Start a book to see it here</span>
+        </div>
+      </div>
+
+      <div class="sb-divider"></div>
+
+      <!-- ── My Lists — pinned, always visible ───────────────── -->
+      <div class="sb-section sb-fixed" id="sbMyListsSection" style="padding-bottom:.6rem;">
+        <div class="sb-section-label">
+          <span>📚 My Lists</span>
+        </div>
+        <div id="sbListsNav" class="sb-lists-scroll"><!-- populated by renderDeskSidebar --></div>
+        <button class="sb-new-list-btn" id="sbBtnNewList">＋ New list</button>
+      </div>
+
+      <div class="sb-divider"></div>
+
+      <!-- Scrollable body: Browse (search, tabs, categories, sort) gets its
+           own scroll region so a long category list never pushes Current
+           Reads / My Lists out of view above it. -->
       <div class="sidebar-scroll">
-
-        <!-- ── Current Reads ───────────────────────────────── -->
-        <div class="sb-section" id="sbCurrentReadsSection">
-          <div class="sb-section-label">
-            <span>📖 Current Reads</span>
-          </div>
-          <div class="sb-cr-strip" id="sbCurrentReadsStrip">
-            <span class="sb-cr-empty">Start a book to see it here</span>
-          </div>
-        </div>
-
-        <div style="height:1px;background:var(--border);margin:0 1rem;"></div>
-
-        <!-- ── My Lists ────────────────────────────────────── -->
-        <div class="sb-section" id="sbMyListsSection" style="padding-bottom:.6rem;">
-          <div class="sb-section-label">
-            <span>📚 My Lists</span>
-          </div>
-          <div id="sbListsNav"><!-- populated by renderDeskSidebar --></div>
-          <button class="sb-new-list-btn" id="sbBtnNewList">＋ New list</button>
-        </div>
-
-        <div style="height:1px;background:var(--border);margin:0 1rem;"></div>
-
         <!-- ── Browse ─────────────────────────────────────── -->
         <div class="filter-sidebar-top" style="border-bottom:none;padding-top:.75rem;">
           <h3>Browse</h3>
@@ -1800,34 +1815,6 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
         <button class="btn-refresh-f" id="btnSideRefresh">↻ Refresh</button>
       </div>
     </aside>
-
-    <!-- Desktop Home Panel -->
-    <div class="desk-home" id="deskHomePanel">
-      <div>
-        <div class="desk-home-greeting" id="deskHomeGreeting">Welcome</div>
-        <div class="desk-home-sub">Discover · Read · Return</div>
-      </div>
-      <div class="desk-home-section" id="deskHomeCheckoutSection" style="display:none">
-        <div class="desk-home-section-label teal">📖 Recent Books</div>
-        <div class="desk-home-grid" id="deskHomeCheckoutGrid"></div>
-      </div>
-      <div class="desk-home-section" id="deskHomeRecSection" style="display:none">
-        <div class="desk-home-section-label gold">⭐ Recommended Picks</div>
-        <div class="desk-home-grid" id="deskHomeRecGrid"></div>
-      </div>
-      <div class="desk-home-section" id="deskHomeSharedByMeSection" style="display:none">
-        <div class="desk-home-section-label teal">👍 Shared by Me</div>
-        <div class="desk-home-grid" id="deskHomeSharedByMeGrid"></div>
-      </div>
-      <div class="desk-home-section" id="deskHomeSharedWithMeSection" style="display:none">
-        <div class="desk-home-section-label" style="color:#5a48b0">🤝 Shared with Me</div>
-        <div class="desk-home-grid" id="deskHomeSharedWithMeGrid"></div>
-      </div>     
-      <div class="desk-home-section" id="deskHomeRecentSection">
-        <div class="desk-home-section-label">Recently Added to My Library</div>
-        <div class="desk-home-grid" id="deskHomeRecentGrid"></div>
-      </div>
-    </div>
 
     <main class="main-area" id="deskMain">
       <div class="grid-header">
@@ -3350,7 +3337,7 @@ document.getElementById('deskFilterCats').addEventListener('click',e=>{
 document.getElementById('deskBookGrid').addEventListener('click',e=>{
   const card=e.target.closest('.book-card[data-bookid]');if(!card)return;
   if(selectMode){const id=card.dataset.bookid;if(selectedIds.has(id)){selectedIds.delete(id);card.classList.remove('selected');}else{selectedIds.add(id);card.classList.add('selected');}updateBulkBar();return;}
-  openDrawerClosesReader(card.dataset.bookid);
+  showBookById(card.dataset.bookid);
 });
 document.getElementById('deskSearch').addEventListener('input',e=>{
   searchQ=e.target.value.toLowerCase().trim();
@@ -3411,20 +3398,16 @@ function clearDeskListFilter() {
 }
 
 // "All Books" header button toggles home panel
+// "All Books" resets to a clean, unfiltered view of the full library — the
+// desk-home panel it used to open was already retired by an earlier pass
+// (see showDeskHome/hideDeskHome stubs above); its content now lives
+// permanently in the sidebar, so this button's job is just "clear
+// everything and show me my whole library".
 document.getElementById('btnDeskHome').addEventListener('click', () => {
-  const homePanel = document.getElementById('deskHomePanel');
-  const mainArea = document.querySelector('.desktop-main > main');
-  const isShowingHome = homePanel.classList.contains('active');
-
-  if(isShowingHome) {
-    homePanel.classList.remove('active');
-    mainArea.style.display = 'flex';
-    document.getElementById('btnDeskHome').classList.remove('active');
-  } else {
-    homePanel.classList.add('active');
-    mainArea.style.display = 'none';
-    document.getElementById('btnDeskHome').classList.add('active');
-  }
+  closeDrawer();
+  document.getElementById('readerOverlay').classList.remove('open');
+  clearDeskListFilter();
+  switchShelf('mine');
 });
 
 // Clear chip in grid header
@@ -3582,6 +3565,7 @@ async function showBookById(id){
   buildDrawerIconBar(book, isMine);
 
   document.querySelectorAll('.book-card').forEach(c=>c.classList.toggle('active',c.dataset.bookid===id));
+  document.getElementById('readerOverlay').classList.remove('open'); // reader and details drawer are mutually exclusive on desktop
   document.getElementById('bookDrawer').classList.add('open');
 
   renderBookHighlightsSummary(document.getElementById('drawerHighlights'), id);
@@ -3934,16 +3918,6 @@ function buildDrawerIconBar(book, isMine){
 }
   
 function closeDrawer(){document.getElementById('bookDrawer').classList.remove('open');document.querySelectorAll('.book-card').forEach(c=>c.classList.remove('active'));currentId=null;}
-
-function openDrawerClosesReader(id){
-  document.getElementById('readerOverlay').classList.remove('open');
-  showBookById(id);
-}
-
-function openReaderClosesDrawer(){
-  document.getElementById('bookDrawer').classList.remove('open');
-  document.getElementById('readerOverlay').classList.add('open');
-}
 document.getElementById('drawerClose').addEventListener('click',closeDrawer);
 
 function handleAction(e){
@@ -5862,6 +5836,7 @@ async function readCurrentBook(){
       .forEach(b => b.classList.toggle('active', parseInt(b.dataset.size) === readerFontSize));
     document.getElementById('readerSettingsBar').classList.remove('open');
     document.getElementById('readerOverlay').classList.remove('toolbar-hidden');
+    document.getElementById('bookDrawer').classList.remove('open'); // reader and details drawer are mutually exclusive on desktop
     document.getElementById('readerOverlay').classList.add('open');
     document.getElementById('readerOverlay').classList.add('reader-loading'); // hides reader content until target page is ready
     _acquireWakeLock();
