@@ -3349,11 +3349,11 @@ function renderGrid(gridId){
     grid.innerHTML=`<div style="grid-column:1/-1;padding:3rem 1rem;text-align:center;color:var(--muted)"><div style="font-size:2.5rem;opacity:.25;margin-bottom:.8rem">📚</div><div style="font-family:'Playfair Display',serif;font-size:1.1rem;color:var(--navy2);margin-bottom:.4rem">${isEmpty?'Your library is empty':'No books match'}</div><div style="font-size:.85rem">${isEmpty?'Upload an EPUB to get started':'Try a different search or filter'}</div>${isEmpty&&canUpload?`<div style="margin-top:1rem"><button class="hbtn hbtn-upload" onclick="document.getElementById('uploadModal').classList.add('open')">📤 Upload EPUB</button></div>`:''}</div>`;
     return;
   }
-  grid.innerHTML=books.map(b=>{
+  reconcileGrid(grid, books, b => b.id, b => {
     const isComm=communityLib.some(x=>x.id===b.id);
     const avg=isComm?getAvgRating(b):0;
     const starsHtml=isComm?[1,2,3,4,5].map(n=>`<span class="bcs ${n<=Math.round(avg)?'filled':''}">★</span>`).join(''):'';
-   const coverSrc=getCoverSrc(b);
+    const coverSrc=getCoverSrc(b);
     const coverHtml=coverSrc?`<img class="book-card-cover" src="${coverSrc}" alt="" loading="lazy"/>`:`<div class="book-card-cover-ph"><div class="ph-icon">📖</div><div class="ph-title">${esc(b.title)}</div><div class="ph-author">${esc(b.author)}</div></div>`;
     const isSelected=selectedIds.has(b.id);
     // PATCH 4: hide "Shared" badge when browsing the public/community shelf
@@ -3363,7 +3363,7 @@ function renderGrid(gridId){
     <div class="book-card-author">${esc(b.author)}</div>
     ${isComm&&b.ownerId!==currentUser?.uid&&b.allowedUsers?.includes(currentUser?.uid)?`<div class="book-card-shared-by">Shared by ${esc(b.ownerName||'')}</div>`:''}
     ${isComm?`<div class="book-card-stars">${starsHtml}</div>`:''}</div></div>`;
-  }).join('');
+  });
 }
 
 document.getElementById('deskBookGrid').addEventListener('click',e=>{
@@ -4605,10 +4605,10 @@ function renderMobLibrary() {
     </div>`;
     return;
   }
-  grid.innerHTML = books.map(b => {
+  reconcileGrid(grid, books, b => b.id, b => {
     const isComm = communityLib.some(x => x.id === b.id);
     return bookCardHtml(b, isComm);
-  }).join('');
+  });
 }
 
 document.getElementById('mobGridLibrary').addEventListener('click', e => {
@@ -4697,7 +4697,7 @@ function renderMobLibrarySelectMode(){
   const books = getMobLibBooks();
   const grid = document.getElementById('mobGridLibrary');
   grid.classList.add('select-mode');
-  grid.innerHTML = books.map(b => {
+  reconcileGrid(grid, books, b => b.id, b => {
     const isComm = communityLib.some(x => x.id === b.id);
     const isSelected = mobSelectedIds.has(b.id);
     const coverSrc = getCoverSrc(b);
@@ -4712,7 +4712,7 @@ function renderMobLibrarySelectMode(){
         <div class="book-card-author">${esc(b.author)}</div>
       </div>
     </div>`;
-  }).join('');
+  });
   updateMobBulkBar();
 }
 
@@ -5292,6 +5292,49 @@ window.toggleHomeShelf = function(id) {
   body.style.maxHeight    = isOpen ? '0' : '600px';
   chevron.style.transform = isOpen ? 'rotate(-90deg)' : '';
 };
+
+// ── GRID RECONCILIATION ──────────────────────────────────────────────────────
+// Library grids (desktop + mobile) used to rebuild via grid.innerHTML = ...map,
+// which destroys and recreates every <img> node on every render — even when
+// nothing about that book changed. Covers are cheap to have in the HTTP/Cache
+// Storage cache, but a brand-new <img> element still has to be reflowed and
+// repainted from scratch, which is what read as "flashing" or "reloading"
+// covers, especially since the app renders the library grid 2-3 times in
+// quick succession while it boots (my books, then public/shared, then
+// ratings/checkouts). Keyed by data-bookid: unchanged cards are moved as-is
+// (same <img>, same decoded bitmap, no flash); only cards whose HTML actually
+// changed get rebuilt, and only that one card.
+function reconcileGrid(grid, items, keyFn, htmlFn) {
+  if (!grid) return;
+  if (!grid._cardCache) grid._cardCache = new Map(); // key -> { html, el }
+  const cache = grid._cardCache;
+  const usedKeys = new Set();
+  const frag = document.createDocumentFragment();
+
+  items.forEach(item => {
+    const key = keyFn(item);
+    if (usedKeys.has(key)) return; // defensive: don't let a dupe id blow away the cache
+    usedKeys.add(key);
+    const html = htmlFn(item);
+    const cached = cache.get(key);
+    let el;
+    if (cached && cached.html === html) {
+      el = cached.el; // untouched — reused as-is, no re-decode/flash
+    } else {
+      const tmp = document.createElement('div');
+      tmp.innerHTML = html;
+      el = tmp.firstElementChild;
+      cache.set(key, { html, el });
+    }
+    frag.appendChild(el);
+  });
+
+  for (const key of cache.keys()) {
+    if (!usedKeys.has(key)) cache.delete(key);
+  }
+
+  grid.replaceChildren(frag);
+}
 
 function bookCardHtml(b, isComm, showProgress=false){
   const coverSrc = getCoverSrc(b);
