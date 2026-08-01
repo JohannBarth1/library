@@ -1023,6 +1023,14 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
   margin-top:.4rem;padding:.6rem .6rem 0;font-size:.76rem;font-weight:700;color:var(--teal);cursor:pointer;}
 .mob-list-markfinished-btn{padding:.42rem .75rem;border-radius:18px;border:1.5px solid #276749;background:transparent;color:#276749;font-size:.72rem;font-weight:700;cursor:pointer;white-space:nowrap;display:flex;align-items:center;gap:.35rem;}
 .mob-list-quickbtn,.mob-list-other-btn,.mob-list-markfinished-btn{transition:background .15s,border-color .15s,color .15s,transform .08s;}
+/* Reading-stage segmented control — Want to Read / Reading / Finished are
+   mutually-exclusive stages of one journey, so they live in one segmented
+   pill instead of three independent list-membership toggles. */
+.mob-stage-row{display:flex;gap:.25rem;background:var(--panel);border-radius:18px;padding:.25rem;width:100%;}
+.mob-stage-seg{flex:1;border:none;background:transparent;border-radius:14px;padding:.42rem .4rem;
+  font-family:'Lato',sans-serif;font-size:.68rem;font-weight:700;color:var(--muted);cursor:pointer;
+  white-space:nowrap;transition:background .15s,color .15s,transform .08s;}
+.mob-stage-seg:active{transform:scale(.95);}
 .mob-list-quickbtn:active,.mob-list-other-btn:active,.mob-list-markfinished-btn:active{transform:scale(.95);}
 /* Shared pill-button language for every secondary/tertiary action in the
    detail sheet (general actions, share/edit/history/delete, highlights
@@ -1036,6 +1044,14 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .mob-pill-btn:active{transform:scale(.95);background:var(--panel);}
 .mob-pill-btn.mob-pill-md{border-radius:18px;padding:.45rem .75rem;font-size:.72rem;}
 .mob-pill-btn.mob-pill-sm{border-radius:16px;padding:.4rem .7rem;font-size:.68rem;}
+/* Pill-shaped <select> dropdowns for the book detail sheet's Actions/Share/Edit
+   groups — same visual language as the Timeline year filter, so a grouped
+   action menu reads as a native control rather than a bespoke accordion. */
+.detail-pill-select{-webkit-appearance:none;appearance:none;font-family:'Lato',sans-serif;
+  color:var(--navy2);padding-right:1.6rem;
+  background-image:url('data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 12 8%22%3E%3Cpath fill=%22none%22 stroke=%22%232a7c8a%22 stroke-width=%221.4%22 d=%22M1 1l5 5 5-5%22/%3E%3C/svg%3E');
+  background-repeat:no-repeat;background-position:right .6rem center;background-size:9px 6px;}
+.detail-pill-select.danger-select{color:var(--danger);border-color:#e0b0b0;}
 /* Tags/Categories: a visually distinct card, separate from Lists */
 .mob-taxonomy-card{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:.7rem .8rem;margin-bottom:.8rem;}
 .mob-detail-desc{font-size:.84rem;line-height:1.7;color:#3a4a5a;}
@@ -1136,6 +1152,11 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .chapter-text-editarea{width:100%;min-height:50vh;padding:.8rem;font-family:'SFMono-Regular',Consolas,Menlo,monospace;font-size:.8rem;line-height:1.55;color:var(--navy2);background:var(--cream);border:1px solid var(--border);border-radius:8px;outline:none;resize:vertical;box-sizing:border-box;}
 .chapter-text-editarea:focus{border-color:var(--teal);}
 .chapter-text-edit-wide{max-width:760px!important;}
+.chapter-text-name-label{display:block;font-size:.68rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:.3rem;}
+.chapter-text-name-input{width:100%;border:1px solid var(--border);border-radius:8px;padding:.55rem .8rem;
+  font-family:'Playfair Display',serif;font-size:1rem;color:var(--navy2);background:var(--warm-white);
+  outline:none;transition:border-color .15s;margin-bottom:.8rem;}
+.chapter-text-name-input:focus{border-color:var(--teal);}
 .chapter-text-toolbar{display:flex;flex-wrap:wrap;gap:.3rem;padding:.5rem;background:var(--panel);border:1px solid var(--border);border-bottom:none;border-radius:8px 8px 0 0;align-items:center;}
 .chapter-text-toolbar button{background:var(--warm-white);color:var(--navy2);border:1px solid var(--border);border-radius:5px;padding:.35rem .55rem;font-family:'Lato',sans-serif;font-size:.78rem;font-weight:700;cursor:pointer;line-height:1;min-width:1.9rem;transition:all .15s;}
 .chapter-text-toolbar button:hover{background:var(--light-blue);}
@@ -1537,6 +1558,8 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .ledger-streak-flame.cold{filter:grayscale(1);opacity:.35;}
 .ledger-streak-count{font-family:'Playfair Display',serif;font-size:2.1rem;color:var(--rust);line-height:1;}
 .ledger-streak-sub{font-size:.78rem;color:var(--muted);margin-top:.15rem;}
+.ledger-streak-today-pts{margin-left:auto;font-size:.68rem;font-weight:700;color:var(--gold);
+  background:rgba(200,149,42,.12);border-radius:10px;padding:.25rem .6rem;white-space:nowrap;align-self:flex-start;}
 .ledger-freeze-row{display:flex;gap:.35rem;margin-top:.7rem;flex-wrap:wrap;}
 .ledger-freeze-chip{font-size:.68rem;font-weight:700;padding:.22rem .55rem;border-radius:12px;background:rgba(42,124,138,.1);color:var(--teal-dark);border:1px solid rgba(42,124,138,.25);}
 
@@ -1635,8 +1658,10 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 
 /* Streak calendar heatmap */
 .ledger-cal-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(11px,1fr));gap:3px;}
-.ledger-cal-cell{aspect-ratio:1;border-radius:3px;background:var(--panel);}
+.ledger-cal-cell{aspect-ratio:1;border-radius:3px;background:var(--panel);display:flex;align-items:center;justify-content:center;
+  font-size:.55rem;line-height:1;}
 .ledger-cal-cell.met{background:var(--rust);}
+.ledger-cal-cell.frozen{background:linear-gradient(160deg,var(--teal-light),var(--light-blue));}
 .ledger-cal-cell.today{outline:1.5px solid var(--teal);outline-offset:1px;}
 .ledger-cal-legend{display:flex;align-items:center;gap:.4rem;margin-top:.6rem;font-size:.65rem;color:var(--muted);}
 .ledger-cal-legend-sw{width:10px;height:10px;border-radius:2px;display:inline-block;}
@@ -1663,6 +1688,8 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .home-ledger-teaser-flame{font-size:1.8rem;flex-shrink:0;}
 .home-ledger-teaser-text{flex:1;min-width:0;}
 .home-ledger-teaser-title{font-size:.85rem;font-weight:700;color:var(--navy2);}
+.home-ledger-teaser-today-pts{font-size:.62rem;font-weight:700;color:var(--gold);background:rgba(200,149,42,.12);
+  border-radius:10px;padding:.12rem .5rem;letter-spacing:.02em;white-space:nowrap;margin-left:.15rem;}
 .home-ledger-teaser-sub{font-size:.72rem;color:var(--muted);margin-top:.1rem;}
 
 /* Ledger popover (reader HUD tap + goal editor) — a bespoke bottom sheet,
@@ -2379,8 +2406,10 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 
 <div class="modal-overlay" id="chapterTextEditModal">
   <div class="modal upload-modal-wide chapter-text-edit-wide">
-    <h3>✎ <span id="chapterTextEditTitle">Edit Chapter Text</span></h3>
+    <h3>✎ Edit Chapter Text</h3>
     <p class="chapter-mgr-save-note">Changes apply when you save the Chapter Manager.</p>
+    <label class="chapter-text-name-label" for="chapterTextEditName">Chapter name (in index)</label>
+    <input type="text" id="chapterTextEditName" class="chapter-text-name-input" spellcheck="false"/>
     <div class="chapter-text-toolbar">
       <select id="chapterTextBlockSelect" title="Paragraph style">
         <option value="p">Paragraph</option>
@@ -3676,26 +3705,16 @@ function renderDetailActionRows(peekContainer, moreContainer, book, isMine){
   </div>`;
 
   const isFav = !!_userLists.find(l => l.id === 'favourites')?.bookIds?.includes(book.id);
-  const isWtr = !!_userLists.find(l => l.id === 'want-to-read')?.bookIds?.includes(book.id);
-  const hasReadingBookmark = _myBookmarks.some(b =>
-    b.type === 'reading_position' && b.bookId === book.id
-  );
 
   peekHtml += `<div class="mob-list-section">
     <div class="mob-list-section-label">🗂️ Lists</div>
-    <div class="mob-list-row">
+    <div class="mob-list-row" style="margin-bottom:.5rem;">
       <button class="mob-list-quickbtn ${isFav?'active':''}" data-list="favourites" data-action="quicklist">
         <span class="lq-icon">${isFav?'❤️':'🤍'}</span><span>Favourites</span>
       </button>
-      <button class="mob-list-quickbtn ${isWtr?'active':''}" data-list="want-to-read" data-action="quicklist">
-        <span class="lq-icon">🔖</span><span>Want to Read</span>
-      </button>
       <button class="mob-list-other-btn" data-action="otherlists" id="mobOtherListsBtn">Other Lists ▾</button>
-      ${hasReadingBookmark ? `
-      <button class="mob-list-markfinished-btn" data-action="markfinished">
-        <span>✓</span><span>Mark Finished</span>
-      </button>` : ''}
     </div>
+    ${readingStageSegmentHtml(book.id)}
   </div>`;
 
   peekContainer.innerHTML = peekHtml;
@@ -3712,75 +3731,74 @@ function renderDetailActionRows(peekContainer, moreContainer, book, isMine){
     </div>
   </div>`;
 
-  // ── Two logically-grouped dropdowns instead of one loose row + one
-  // accordion: "Actions" (things anyone with access to the book can do)
-  // and "Manage" (owner/admin-only book management). Each renders as a
-  // labelled toggle that expands into its buttons, tucked away by default
-  // so the sheet doesn't show a wall of pills at once.
-  const dropdown = (id, label, groups) => {
-    const nonEmpty = groups.filter(g => g.length);
-    if (!nonEmpty.length) return '';
-    return `
-    <button id="${id}Toggle" style="
-      width:100%;text-align:left;background:none;border:none;
-      font-size:.66rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
-      color:var(--muted);cursor:pointer;padding:.75rem 0 .5rem;display:flex;
-      align-items:center;justify-content:space-between;
-      border-top:1px solid var(--border);margin-top:.4rem;">
-      <span>${label}</span>
-      <span id="${id}Chevron" style="transition:transform .2s;display:inline-block">▾</span>
-    </button>
-    <div id="${id}Body" style="display:none;padding-top:.3rem;">
-      ${nonEmpty.map((g, i) => `
-        <div style="display:flex;flex-wrap:wrap;gap:.35rem;margin-bottom:.7rem;
-                    ${i > 0 ? 'border-top:1px solid var(--border);padding-top:.6rem;' : ''}">
-          ${g.join('')}
-        </div>`).join('')}
-    </div>`;
+  // ── Pill-shaped <select> dropdowns instead of a toggle-accordion — each
+  // one fires its action the moment an option is picked, then snaps back to
+  // its label (a native, one-tap control, matching the Timeline year
+  // filter's pill-select elsewhere in the app). Grouped by what the option
+  // actually does: "Actions" (anyone with access), "Share" (publish /
+  // privately share), "Edit" (metadata / contents) — rather than one loose
+  // "Actions" bucket and one catch-all "Manage" accordion.
+  const pillSelect = (id, label, options, opts={}) => {
+    if (!options.length) return '';
+    const { danger=false } = opts;
+    return `<select id="${id}" class="mob-pill-btn mob-pill-sm detail-pill-select${danger?' danger-select':''}">
+      <option value="" selected disabled>${label} ▾</option>
+      ${options.map(o => `<option value="${o.action}">${o.icon} ${o.label}</option>`).join('')}
+    </select>`;
   };
-  const wireDropdown = (container, id) => {
-    const toggleBtn = container.querySelector('#'+id+'Toggle');
-    if(!toggleBtn) return;
-    toggleBtn.addEventListener('click', () => {
-      const body = container.querySelector('#'+id+'Body');
-      const chevron = container.querySelector('#'+id+'Chevron');
-      const isOpen = body.style.display !== 'none';
-      body.style.display = isOpen ? 'none' : 'block';
-      chevron.style.transform = isOpen ? '' : 'rotate(180deg)';
+  const wirePillSelect = (container, id) => {
+    const sel = container.querySelector('#'+id);
+    if(!sel) return;
+    sel.addEventListener('change', () => {
+      const a = sel.value;
+      sel.value = '';
+      runDetailAction(a);
     });
   };
 
   // ── "Actions" — available to anyone viewing the book ────────────────────
-  const generalBtns = [
-    smBtn(book.recommended?'☆':'⭐', book.recommended?'Unrecommend':'Recommend', 'recommend'),
-    smBtn('📎','Copy Link','link'),
-    smBtn('⬇','Download','download'),
+  const actionOpts = [
+    { icon: book.recommended?'☆':'⭐', label: book.recommended?'Unrecommend':'Recommend', action:'recommend' },
+    { icon:'📎', label:'Copy Link', action:'link' },
+    { icon:'⬇', label:'Download', action:'download' },
   ];
-  html += dropdown('detailActions', 'Actions', [generalBtns]);
 
-  // ── "Manage" — Share / Edit / Delete+History, owner/admin only ──────────
-  const shareBtns = [];
-  const editBtns = [];
-  const bottomBtns = [];
-
+  // ── "Share" and "Edit" — owner only ──────────────────────────────────────
+  const shareOpts = [];
+  const editOpts = [];
   if(isMine){
-    if(book.visibility !== 'public') shareBtns.push(smBtn('🌐','Publish','share'));
-    else shareBtns.push(smBtn('🔒','Unpublish','unpublish'));
-    shareBtns.push(smBtn('🔗','Share Privately','shareprivate'));
+    shareOpts.push(book.visibility !== 'public'
+      ? { icon:'🌐', label:'Publish', action:'share' }
+      : { icon:'🔒', label:'Unpublish', action:'unpublish' });
+    shareOpts.push({ icon:'🔗', label:'Share Privately', action:'shareprivate' });
 
-    editBtns.push(smBtn('✎','Edit Details','editmeta'));
-    editBtns.push(smBtn('📑','Chapters','chapters'));
+    editOpts.push({ icon:'✎', label:'Edit Details', action:'editmeta' });
+    editOpts.push({ icon:'📑', label:'Edit Contents', action:'chapters' });
   }
+
+  html += `<div style="display:flex;flex-wrap:wrap;gap:.4rem;padding:.6rem 0 .3rem;border-top:1px solid var(--border);margin-top:.4rem;">
+    ${pillSelect('detailActionsSelect', 'Actions', actionOpts)}
+    ${pillSelect('detailShareSelect', 'Share', shareOpts)}
+    ${pillSelect('detailEditSelect', 'Edit', editOpts)}
+  </div>`;
+
+  // ── History (admin) / Delete (owner) — small, always-visible, kept out of
+  // the dropdowns since one is an audit trail and the other is destructive;
+  // neither belongs to "share" or "edit" and both are rare enough not to
+  // need their own group.
+  const bottomBtns = [];
   if(isAdmin) bottomBtns.push(smBtn('📋','History','history'));
   if(isMine)  bottomBtns.push(smBtn('✕','Delete','delete',{danger:true}));
-
-  html += dropdown('detailManage', 'Manage', [shareBtns, editBtns, bottomBtns]);
+  if(bottomBtns.length){
+    html += `<div style="display:flex;flex-wrap:wrap;gap:.35rem;padding-top:.5rem;">${bottomBtns.join('')}</div>`;
+  }
 
   moreContainer.innerHTML = html;
   moreContainer.querySelectorAll('[data-action]').forEach(b => b.addEventListener('click', handleAction));
 
-  wireDropdown(moreContainer, 'detailActions');
-  wireDropdown(moreContainer, 'detailManage');
+  wirePillSelect(moreContainer, 'detailActionsSelect');
+  wirePillSelect(moreContainer, 'detailShareSelect');
+  wirePillSelect(moreContainer, 'detailEditSelect');
 }
 
 // Quick favourite / want-to-read toggle straight from the Lists row —
@@ -3900,8 +3918,6 @@ function buildDrawerIconBar(book, isMine){
 
   // Quick-list state
   const isFav = !!_userLists.find(l => l.id === 'favourites')?.bookIds?.includes(book.id);
-  const isWtr = !!_userLists.find(l => l.id === 'want-to-read')?.bookIds?.includes(book.id);
-  const hasReadingBookmark = _myBookmarks.some(b => b.type === 'reading_position' && b.bookId === book.id);
 
   let html = `
     <!-- Primary: Read / Continue Reading + Send to Kobo -->
@@ -3916,22 +3932,16 @@ function buildDrawerIconBar(book, isMine){
       </button>
     </div>
 
-    <!-- Lists: Favourites / Want to Read quick-toggles + Mark Finished -->
+    <!-- Lists: Favourites quick-toggle + reading-stage segmented control -->
     <div style="padding:.55rem 1.5rem .45rem;border-bottom:1px solid var(--border);">
       <div style="font-size:.58rem;letter-spacing:.15em;text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:.4rem;">🗂️ Lists</div>
-      <div style="display:flex;flex-wrap:wrap;gap:.4rem;">
+      <div style="display:flex;flex-wrap:wrap;gap:.4rem;margin-bottom:.5rem;">
         <button class="mob-list-quickbtn ${isFav?'active':''}" data-list="favourites" data-action="quicklist">
           <span class="lq-icon">${isFav?'❤️':'🤍'}</span><span>Favourites</span>
         </button>
-        <button class="mob-list-quickbtn ${isWtr?'active':''}" data-list="want-to-read" data-action="quicklist">
-          <span class="lq-icon">🔖</span><span>Want to Read</span>
-        </button>
         <button class="mob-list-other-btn" data-action="addtolist">Other Lists ▾</button>
-        ${hasReadingBookmark ? `
-        <button class="mob-list-markfinished-btn" data-action="markfinished">
-          <span>✓</span><span>Mark Finished</span>
-        </button>` : ''}
       </div>
+      ${readingStageSegmentHtml(book.id)}
     </div>
 
     <!-- Secondary global actions -->
@@ -3965,7 +3975,7 @@ function buildDrawerIconBar(book, isMine){
         <button class="drawer-icon-btn" data-action="editmeta">
           <span class="di-icon">✎</span><span class="di-label">Edit</span></button>
         <button class="drawer-icon-btn" data-action="chapters">
-          <span class="di-icon">📑</span><span class="di-label">Chapters</span></button>
+          <span class="di-icon">📑</span><span class="di-label">Edit Contents</span></button>
         <button class="drawer-icon-btn di-danger" data-action="delete">
           <span class="di-icon">✕</span><span class="di-label">Delete</span></button>
       </div>
@@ -3985,6 +3995,11 @@ document.getElementById('drawerClose').addEventListener('click',closeDrawer);
 function handleAction(e){
   const btn=e.target.closest('[data-action]');if(!btn)return;
   const a=btn.dataset.action;
+  if(a==='quicklist'){ handleQuickListToggle(btn); return; }
+  if(a==='stage'){ handleReadingStageClick(btn); return; }
+  runDetailAction(a);
+}
+function runDetailAction(a){
   if(a==='read')         readCurrentBook();
   if(a==='download')     downloadCurrentBook();
   if(a==='share')        shareCurrentBook();
@@ -4000,7 +4015,6 @@ function handleAction(e){
   if(a==='sendtokobo') { loadKoboDevices().then(()=>showKoboDevicePicker(currentId)); }
   if(a==='addtolist') showListPicker(currentId);
   if(a==='otherlists') toggleOtherListsDropdown();
-  if(a==='quicklist')  handleQuickListToggle(btn);
   if(a==='category')     showQuickCategoryModal();
   if(a==='markfinished')  doMarkFinishedFromDetail();
 }
@@ -4811,7 +4825,7 @@ async function handleMobBulkAction(action){
     const ids = [...mobSelectedIds].filter(id => { const b=library.find(x=>x.id===id); return b&&!b.recommended; });
     showLoading('Updating…');
     try{
-      for(const id of ids){ await updateDoc(doc(db,'books',id),{recommended:true,updatedAt:serverTimestamp()}); const b=library.find(x=>x.id===id); if(b) b.recommended=true; }
+      for(const id of ids){ await updateDoc(doc(db,'books',id),{recommended:true,recommendedAt:serverTimestamp(),updatedAt:serverTimestamp()}); const b=library.find(x=>x.id===id); if(b){ b.recommended=true; b.recommendedAt=new Date(); } }
       hideLoading(); exitMobSelectMode(); renderAll(); showToast('Marked recommended ✓');
     }catch(e){ hideLoading(); showToast('Failed: '+e.message); }
     return;
@@ -4821,7 +4835,7 @@ async function handleMobBulkAction(action){
     const ids = [...mobSelectedIds].filter(id => { const b=library.find(x=>x.id===id); return b&&b.recommended; });
     showLoading('Updating…');
     try{
-      for(const id of ids){ await updateDoc(doc(db,'books',id),{recommended:false,updatedAt:serverTimestamp()}); const b=library.find(x=>x.id===id); if(b) b.recommended=false; }
+      for(const id of ids){ await updateDoc(doc(db,'books',id),{recommended:false,recommendedAt:null,updatedAt:serverTimestamp()}); const b=library.find(x=>x.id===id); if(b){ b.recommended=false; b.recommendedAt=null; } }
       hideLoading(); exitMobSelectMode(); renderAll(); showToast('Unrecommended ✓');
     }catch(e){ hideLoading(); showToast('Failed: '+e.message); }
     return;
@@ -5180,7 +5194,12 @@ function recommendedSection(books) {
   const wtrBooks    = resolve(_userLists.find(l => l.id === 'want-to-read')?.bookIds || []);
   const favBooks    = resolve(_userLists.find(l => l.id === 'favourites')?.bookIds || []);
   const viewedBooks = resolve([...(_userLists.find(l => l.id === 'viewed')?.bookIds || [])].reverse().slice(0, 20));
-  const recBooks    = dedupe([...library, ...communityLib]).filter(b => b.recommended);
+  const recBooks    = dedupe([...library, ...communityLib]).filter(b => b.recommended)
+    .sort((a,b) => {
+      const at = a.recommendedAt?.toMillis?.() ?? (a.recommendedAt instanceof Date ? a.recommendedAt.getTime() : 0);
+      const bt = b.recommendedAt?.toMillis?.() ?? (b.recommendedAt instanceof Date ? b.recommendedAt.getTime() : 0);
+      return bt - at;
+    });
   const sharedBooks = communityLib.filter(b => b.ownerId !== currentUser?.uid && b.allowedUsers?.includes(currentUser?.uid));
   const recentBooks = library.slice(0, 12);
   const customLists = _userLists.filter(l => !l.system);
@@ -6081,8 +6100,13 @@ function _ledgerReconcileStreakOnLoad(todayStr) {
   if (gap <= 1) return; // yesterday — streak is "at risk" but still intact
   if (gap === 2 && ledgerState.freezesAvailable > 0) {
     ledgerState.freezesAvailable -= 1;
-    ledgerState.lastGoalMetDate = _ledgerAddDays(todayStr, -1); // bridge the missed day
+    const frozenDateStr = _ledgerAddDays(todayStr, -1); // the missed day, bridged by the freeze
+    ledgerState.lastGoalMetDate = frozenDateStr;
     _ledgerPersistUserFields({ freezesAvailable: ledgerState.freezesAvailable, lastGoalMetDate: ledgerState.lastGoalMetDate });
+    if (currentUser) {
+      setDoc(doc(db, 'users', currentUser.uid, 'ledgerDays', frozenDateStr), { dateStr: frozenDateStr, frozen: true }, { merge: true })
+        .catch(e => console.warn('ledger freeze-day persist:', e));
+    }
     showToast('🧊 Streak freeze used — your streak is safe!');
     return;
   }
@@ -6492,7 +6516,7 @@ function renderHomeLedgerTeaser() {
     <div class="home-ledger-teaser" id="homeLedgerTeaserBtn">
       <div class="home-ledger-teaser-flame">${ledgerState.streakCount ? '🔥' : '🕯️'}</div>
       <div class="home-ledger-teaser-text">
-        <div class="home-ledger-teaser-title">${ledgerState.streakCount ? `${ledgerState.streakCount}-day streak` : 'Start a streak today'}</div>
+        <div class="home-ledger-teaser-title">${ledgerState.streakCount ? `${ledgerState.streakCount}-day streak` : 'Start a streak today'} <span class="home-ledger-teaser-today-pts">+${ledgerToday.pointsEarned} today</span></div>
         <div class="home-ledger-teaser-sub">${ledgerToday.pagesRead} pages today · goal is ${ledgerState.dailyGoal} · ${ledgerState.totalPoints.toLocaleString()} pts</div>
       </div>
       ${_ledgerGoalRingSvg(pct, 40)}
@@ -6554,6 +6578,7 @@ async function renderLedgerTab() {
           <div class="ledger-streak-count">${ledgerState.streakCount}</div>
           <div class="ledger-streak-sub">${ledgerState.streakCount === 1 ? 'day' : 'days'} · longest ${ledgerState.longestStreak}</div>
         </div>
+        <span class="ledger-streak-today-pts">+${ledgerToday.pointsEarned} today</span>
       </div>
       <div class="ledger-freeze-row">
         ${ledgerState.freezesAvailable > 0
@@ -6590,6 +6615,7 @@ async function renderLedgerTab() {
       <div class="ledger-cal-legend">
         <span class="ledger-cal-legend-sw" style="background:var(--panel)"></span> Missed
         <span class="ledger-cal-legend-sw" style="background:var(--rust);margin-left:.6rem"></span> Goal met
+        <span class="ledger-cal-legend-sw" style="background:linear-gradient(160deg,var(--teal-light),var(--light-blue));margin-left:.6rem"></span> 🧊 Frozen
       </div>
     </div>
 
@@ -6699,10 +6725,15 @@ async function _ledgerRenderCalendar() {
   const todayStr = ledgerDateStr();
   const startStr = _ledgerAddDays(todayStr, -(days - 1));
   const metSet = new Set();
+  const frozenSet = new Set();
   try {
     const q = query(collection(db, 'users', currentUser.uid, 'ledgerDays'), where('dateStr', '>=', startStr));
     const snap = await getDocs(q);
-    snap.forEach(d => { if (d.data().goalMet) metSet.add(d.data().dateStr); });
+    snap.forEach(d => {
+      const data = d.data();
+      if (data.goalMet) metSet.add(data.dateStr);
+      if (data.frozen) frozenSet.add(data.dateStr);
+    });
   } catch(e) { console.warn('ledger calendar load:', e); }
   if (ledgerToday.goalMet) metSet.add(ledgerToday.dateStr);
 
@@ -6710,8 +6741,10 @@ async function _ledgerRenderCalendar() {
   for (let i = days - 1; i >= 0; i--) {
     const dStr = _ledgerAddDays(todayStr, -i);
     const met = metSet.has(dStr);
+    const frozen = frozenSet.has(dStr);
     const isToday = dStr === todayStr;
-    html += `<div class="ledger-cal-cell ${met ? 'met' : ''} ${isToday ? 'today' : ''}" title="${dStr}${met ? ' — goal met' : ''}"></div>`;
+    const titleSuffix = frozen ? ' — saved by a streak freeze' : (met ? ' — goal met' : '');
+    html += `<div class="ledger-cal-cell ${met ? 'met' : ''} ${frozen ? 'frozen' : ''} ${isToday ? 'today' : ''}" title="${dStr}${titleSuffix}">${frozen ? '🧊' : ''}</div>`;
   }
   grid.innerHTML = html;
 }
@@ -9479,6 +9512,17 @@ async function markBookFinished(bookId){
 
   ledgerRecordBookFinished(bookId);
 
+  const wtrList = _userLists.find(l => l.id === 'want-to-read');
+  if(wtrList && (wtrList.bookIds || []).includes(bookId)){
+    const bookIds = (wtrList.bookIds || []).filter(id => id !== bookId);
+    wtrList.bookIds = bookIds;
+    await setDoc(
+      doc(db, 'user_lists', currentUser.uid, 'lists', 'want-to-read'),
+      { bookIds, updatedAt: serverTimestamp() },
+      { merge: true }
+    ).catch(e => console.warn('markBookFinished wtrList:', e));
+  }
+
   const crList = _userLists.find(l => l.id === 'currently-reading');
   if(crList){
     const bookIds = (crList.bookIds || []).filter(id => id !== bookId);
@@ -9528,6 +9572,87 @@ async function doMarkFinishedFromDetail(){
     if(window.innerWidth > 768) showBookById(currentId);
     else mob_showBook(currentId);
   } catch(e) {
+    hideLoading();
+    showToast('Failed: ' + e.message);
+  }
+}
+
+// ── Reading-stage segmented control — Want to Read / Currently Reading /
+// Finished treated as one mutually-exclusive journey rather than three
+// independent list memberships. Favourites stays a separate toggle since
+// it isn't a stage.
+function _readingStageOf(bookId){
+  const inWtr = !!_userLists.find(l => l.id === 'want-to-read')?.bookIds?.includes(bookId);
+  const inCr  = !!_userLists.find(l => l.id === 'currently-reading')?.bookIds?.includes(bookId);
+  const inFin = !!_userLists.find(l => l.id === 'finished')?.bookIds?.includes(bookId);
+  return inFin ? 'finished' : (inCr ? 'currently-reading' : (inWtr ? 'want-to-read' : null));
+}
+
+const READING_STAGE_META = {
+  'want-to-read':      { label: 'Want to Read', color: '#7c3aed' },
+  'currently-reading':  { label: 'Reading',      color: '#c8952a' },
+  'finished':          { label: 'Finished',     color: '#276749' },
+};
+
+function readingStageSegmentHtml(bookId){
+  const stage = _readingStageOf(bookId);
+  const seg = (key) => {
+    const meta = READING_STAGE_META[key];
+    const active = stage === key;
+    return `<button class="mob-stage-seg" data-action="stage" data-stage="${key}" data-bookid="${bookId}"
+      style="${active ? `background:${meta.color};color:var(--warm-white);` : ''}">${meta.label}</button>`;
+  };
+  return `<div class="mob-stage-row">${seg('want-to-read')}${seg('currently-reading')}${seg('finished')}</div>`;
+}
+
+// Moves a book to (or, if already there, out of) one of the three reading
+// stages, keeping membership in exactly one of the three lists at a time.
+async function setReadingStage(bookId, stage){
+  if(!bookId || !currentUser) return;
+  const inWtr = !!_userLists.find(l => l.id === 'want-to-read')?.bookIds?.includes(bookId);
+  const inCr  = !!_userLists.find(l => l.id === 'currently-reading')?.bookIds?.includes(bookId);
+  const inFin = !!_userLists.find(l => l.id === 'finished')?.bookIds?.includes(bookId);
+  const currentStage = inFin ? 'finished' : (inCr ? 'currently-reading' : (inWtr ? 'want-to-read' : null));
+
+  // Tapping the already-active segment clears it back to "no stage".
+  const targetStage = (stage === currentStage) ? null : stage;
+
+  if(targetStage === 'finished'){
+    if(inWtr) await toggleBookInList('want-to-read', bookId);
+    await markBookFinished(bookId); // handles currently-reading removal + finished add + bookmark cleanup
+    return;
+  }
+  if(targetStage === 'currently-reading'){
+    if(inWtr) await toggleBookInList('want-to-read', bookId);
+    if(inFin) await toggleBookInList('finished', bookId);
+    if(!inCr) await toggleBookInList('currently-reading', bookId);
+    return;
+  }
+  if(targetStage === 'want-to-read'){
+    if(inCr)  await toggleBookInList('currently-reading', bookId);
+    if(inFin) await toggleBookInList('finished', bookId);
+    if(!inWtr) await toggleBookInList('want-to-read', bookId);
+    return;
+  }
+  // targetStage === null — clear whichever stage is currently set
+  if(inWtr) await toggleBookInList('want-to-read', bookId);
+  if(inCr)  await toggleBookInList('currently-reading', bookId);
+  if(inFin) await toggleBookInList('finished', bookId);
+}
+
+async function handleReadingStageClick(btn){
+  const bookId = btn.dataset.bookid;
+  const stage = btn.dataset.stage;
+  if(!bookId || !currentUser) return;
+  showLoading('Updating…');
+  try{
+    await setReadingStage(bookId, stage);
+    hideLoading();
+    renderMobHome();
+    renderDeskHome();
+    if(window.innerWidth > 768) showBookById(bookId);
+    else mob_showBook(bookId);
+  }catch(e){
     hideLoading();
     showToast('Failed: ' + e.message);
   }
@@ -10798,14 +10923,17 @@ async function toggleRecommended() {
   const book = library.find(b => b.id === currentId);
   if (!book) return;
   const rec = !book.recommended;
+  const prevRecommendedAt = book.recommendedAt;
   book.recommended = rec;
+  book.recommendedAt = rec ? new Date() : null;
   try {
     await updateDoc(doc(db, 'books', currentId), {
       recommended: rec,
+      recommendedAt: rec ? serverTimestamp() : null,
       updatedAt: serverTimestamp()
     });
     const commBook = communityLib.find(b => b.id === currentId);
-    if (commBook) commBook.recommended = rec;
+    if (commBook) { commBook.recommended = rec; commBook.recommendedAt = book.recommendedAt; }
     renderAll();
     renderMobHome();
     renderDeskHome();
@@ -10815,6 +10943,7 @@ async function toggleRecommended() {
   } catch(e) {
     // Roll back optimistic update if Firestore write failed
     book.recommended = !rec;
+    book.recommendedAt = prevRecommendedAt;
     showToast('Failed: ' + e.message);
   }
 }
@@ -11085,12 +11214,12 @@ document.getElementById('bulkBtnCheckout').addEventListener('click',async()=>{
 });
 document.getElementById('bulkBtnRec').addEventListener('click',async()=>{
   const ids=[...selectedIds].filter(id=>{const b=library.find(x=>x.id===id);return b&&!b.recommended;});if(!ids.length)return;showLoading('Updating…');
-  try{for(const id of ids){await updateDoc(doc(db,'books',id),{recommended:true,updatedAt:serverTimestamp()});const b=library.find(x=>x.id===id);if(b)b.recommended=true;}hideLoading();toggleSelectMode();renderAll();showToast(`${ids.length} marked recommended ✓`);}
+  try{for(const id of ids){await updateDoc(doc(db,'books',id),{recommended:true,recommendedAt:serverTimestamp(),updatedAt:serverTimestamp()});const b=library.find(x=>x.id===id);if(b){b.recommended=true;b.recommendedAt=new Date();}}hideLoading();toggleSelectMode();renderAll();showToast(`${ids.length} marked recommended ✓`);}
   catch(e){hideLoading();showToast('Failed: '+e.message);}
 });
 document.getElementById('bulkBtnUnrec').addEventListener('click',async()=>{
   const ids=[...selectedIds].filter(id=>{const b=library.find(x=>x.id===id);return b&&b.recommended;});if(!ids.length)return;showLoading('Updating…');
-  try{for(const id of ids){await updateDoc(doc(db,'books',id),{recommended:false,updatedAt:serverTimestamp()});const b=library.find(x=>x.id===id);if(b)b.recommended=false;}hideLoading();toggleSelectMode();renderAll();showToast(`${ids.length} unrecommended ✓`);}
+  try{for(const id of ids){await updateDoc(doc(db,'books',id),{recommended:false,recommendedAt:null,updatedAt:serverTimestamp()});const b=library.find(x=>x.id===id);if(b){b.recommended=false;b.recommendedAt=null;}}hideLoading();toggleSelectMode();renderAll();showToast(`${ids.length} unrecommended ✓`);}
   catch(e){hideLoading();showToast('Failed: '+e.message);}
 });
 document.getElementById('bulkBtnCancel').addEventListener('click',toggleSelectMode);
@@ -11147,7 +11276,7 @@ async function openChapterTextEditor(idx){
       ch._shellBefore=before;ch._shellAfter=after;ch._originalBody=body;
     }
     hideLoading();
-    document.getElementById('chapterTextEditTitle').textContent=ch.label||'Chapter';
+    document.getElementById('chapterTextEditName').value=ch.label||'';
     const startBody=ch.editedBody!==undefined?ch.editedBody:ch._originalBody;
     document.getElementById('chapterTextEditArea_visual').innerHTML=startBody;
     document.getElementById('chapterTextEditArea').value=startBody;
@@ -11177,6 +11306,12 @@ function _setChapterTextSourceMode(toSource){
   document.querySelector('.chapter-text-toolbar').classList.toggle('source-hidden',toSource);
   toggleBtn.textContent=toSource?'Visual Editor':'HTML Source';
 }
+document.getElementById('chapterTextEditName').addEventListener('input',e=>{
+  if(_chapterTextEditIdx===null)return;
+  chapterMgrSpine[_chapterTextEditIdx].label=e.target.value;
+  const listInput=document.querySelector(`.chapter-mgr-input[data-idx="${_chapterTextEditIdx}"]`);
+  if(listInput)listInput.value=e.target.value;
+});
 document.getElementById('btnChapterTextToggleSource').addEventListener('click',()=>{
   _setChapterTextSourceMode(!_chapterTextSourceMode);
 });
