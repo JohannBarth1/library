@@ -1671,7 +1671,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 
 /* Streak calendar heatmap */
 .ledger-cal-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(11px,1fr));gap:3px;}
-.ledger-cal-cell{aspect-ratio:1;border-radius:3px;background:var(--panel);display:flex;align-items:center;justify-content:center;
+.ledger-cal-cell{aspect-ratio:1;border-radius:3px;background:var(--panel);display:flex;align-items:center;justify-content:center;cursor:pointer;
   font-size:.55rem;line-height:1;}
 .ledger-cal-cell.met{background:var(--rust);}
 .ledger-cal-cell.frozen{background:linear-gradient(160deg,var(--teal-light),var(--light-blue));}
@@ -6752,9 +6752,49 @@ async function _ledgerRenderCalendar() {
     const frozen = frozenSet.has(dStr);
     const isToday = dStr === todayStr;
     const titleSuffix = frozen ? ' — saved by a streak freeze' : (met ? ' — goal met' : '');
-    html += `<div class="ledger-cal-cell ${met ? 'met' : ''} ${frozen ? 'frozen' : ''} ${isToday ? 'today' : ''}" title="${dStr}${titleSuffix}">${frozen ? '🧊' : ''}</div>`;
+    html += `<div class="ledger-cal-cell ${met ? 'met' : ''} ${frozen ? 'frozen' : ''} ${isToday ? 'today' : ''}" data-date="${dStr}" title="${dStr}${titleSuffix} (tap to fix)">${frozen ? '🧊' : ''}</div>`;
   }
   grid.innerHTML = html;
+  grid.querySelectorAll('[data-date]').forEach(cell => {
+    cell.addEventListener('click', () => showLedgerFreezeFixPopover(cell.dataset.date, cell.classList.contains('frozen')));
+  });
+}
+
+// Lets a past day's calendar cell be corrected by hand — for freezes that
+// were spent before the frozen-day write became reliable (or any other
+// one-off mismatch) and have no other record to backfill from automatically.
+// Purely cosmetic: only ever touches this one day's `frozen` flag, never
+// streakCount/freezesAvailable/lastGoalMetDate.
+function showLedgerFreezeFixPopover(dateStr, isFrozen) {
+  document.getElementById('ledgerPopover')?.remove();
+  const pop = document.createElement('div');
+  pop.id = 'ledgerPopover';
+  pop.className = 'ledger-popover-scrim';
+  pop.innerHTML = `
+    <div class="ledger-popover-card">
+      <button class="ledger-popover-close" id="ledgerPopoverClose">✕</button>
+      <div class="ledger-popover-title">🧊 ${esc(dateStr)}</div>
+      <div style="font-size:.85rem;color:var(--navy2);line-height:1.5;margin-bottom:1rem">
+        ${isFrozen ? 'This day is currently marked as saved by a streak freeze.' : 'Mark this day as saved by a streak freeze, so it shows the ice cube instead of looking missed.'}
+      </div>
+      <button class="btn-google-signin" id="ledgerFreezeFixBtn" style="background:${isFrozen ? '#fff' : 'var(--teal)'};color:${isFrozen ? '#3c4043' : '#fff'};">
+        ${isFrozen ? 'Remove frozen mark' : 'Mark as frozen 🧊'}
+      </button>
+    </div>`;
+  document.body.appendChild(pop);
+  pop.addEventListener('click', e => { if (e.target === pop) pop.remove(); });
+  pop.querySelector('#ledgerPopoverClose').addEventListener('click', () => pop.remove());
+  pop.querySelector('#ledgerFreezeFixBtn').addEventListener('click', async () => {
+    if (!currentUser) return;
+    try {
+      await setDoc(doc(db, 'users', currentUser.uid, 'ledgerDays', dateStr), { dateStr, frozen: !isFrozen }, { merge: true });
+      showToast(isFrozen ? 'Frozen mark removed' : '🧊 Day marked as frozen');
+    } catch(e) {
+      showToast('Could not save: ' + e.message);
+    }
+    pop.remove();
+    _ledgerRenderCalendar();
+  });
 }
 
 // ── Popovers: daily-goal editor + the reader HUD's tap-to-expand summary ──
