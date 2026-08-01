@@ -28,15 +28,21 @@ html,body{height:100%;max-width:100vw;overflow-x:hidden;}
 body{font-family:'Lato',sans-serif;background:var(--cream);color:var(--navy);display:flex;flex-direction:column;height:100%;overflow:hidden;}
 
 /* ── AUTH ── */
-.auth-screen{position:fixed;inset:0;background:var(--navy);display:flex;align-items:center;justify-content:center;z-index:300;flex-direction:column;gap:2rem;}
+.auth-screen{position:fixed;inset:0;
+  background:radial-gradient(ellipse at 50% 0%, #1e3252 0%, var(--navy) 55%, #0a1220 100%);
+  display:flex;align-items:center;justify-content:center;z-index:300;flex-direction:column;gap:2rem;}
 .auth-screen.hidden{display:none;}
-.auth-card{background:var(--navy2);border:1px solid rgba(200,149,42,0.3);border-radius:10px;padding:2.5rem 2.5rem 2rem;text-align:center;max-width:380px;width:90%;}
-.auth-logo{font-size:3rem;margin-bottom:.5rem;}
+.auth-card{background:var(--navy2);border:1px solid rgba(200,149,42,0.28);border-radius:16px;
+  padding:2.75rem 2.5rem 2.25rem;text-align:center;max-width:380px;width:90%;
+  box-shadow:0 24px 60px rgba(0,0,0,.45), 0 0 0 1px rgba(255,255,255,.02) inset;}
+.auth-logo{width:76px;height:76px;border-radius:18px;margin:0 auto .9rem;display:block;
+  box-shadow:0 8px 24px rgba(200,149,42,.25), 0 0 0 1px rgba(255,255,255,.06);}
 .auth-title{font-family:'Playfair Display',serif;font-size:2rem;color:var(--cream);margin-bottom:.3rem;}
 .auth-sub{font-size:.7rem;letter-spacing:.2em;text-transform:uppercase;color:var(--gold);margin-bottom:1.8rem;}
 .auth-desc{font-size:.88rem;color:var(--muted);line-height:1.6;margin-bottom:2rem;}
-.btn-google-signin{display:flex;align-items:center;justify-content:center;gap:.75rem;width:100%;padding:.85rem 1.5rem;background:#fff;color:#3c4043;border:none;border-radius:4px;font-family:'Lato',sans-serif;font-size:.95rem;font-weight:700;cursor:pointer;transition:box-shadow .2s;}
-.btn-google-signin:hover{background:#f8f8f8;box-shadow:0 2px 8px rgba(0,0,0,0.3);}
+.btn-google-signin{display:flex;align-items:center;justify-content:center;gap:.75rem;width:100%;padding:.85rem 1.5rem;background:#fff;color:#3c4043;border:none;border-radius:10px;font-family:'Lato',sans-serif;font-size:.95rem;font-weight:700;cursor:pointer;transition:box-shadow .2s,transform .15s;}
+.btn-google-signin:hover{background:#f8f8f8;box-shadow:0 4px 14px rgba(0,0,0,0.3);transform:translateY(-1px);}
+.btn-google-signin:active{transform:translateY(0);}
 .auth-note{font-size:.72rem;color:rgba(122,138,154,0.7);margin-top:1.2rem;line-height:1.5;}
 
 /* ── HEADER ── */
@@ -989,6 +995,15 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .mob-list-section-label{font-size:.6rem;letter-spacing:.15em;text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:.4rem;}
 .mob-list-row{display:flex;flex-wrap:wrap;gap:.4rem;}
 .mob-list-quickbtn{display:flex;align-items:center;gap:.35rem;padding:.42rem .75rem;border-radius:18px;border:1.5px solid var(--border);background:var(--warm-white);color:var(--navy2);font-size:.72rem;font-weight:700;cursor:pointer;white-space:nowrap;transition:background .15s,border-color .15s,color .15s;}
+/* Favourite heart anchored to the corner of the book cover, instead of a
+   labelled pill competing with Lists row for space. */
+.mob-cover-fav-btn{position:absolute;top:-8px;right:-8px;width:30px;height:30px;border-radius:50%;
+  background:var(--warm-white);border:1.5px solid var(--border);display:flex;align-items:center;
+  justify-content:center;padding:0;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,.18);
+  transition:background .15s,border-color .15s,transform .08s;-webkit-tap-highlight-color:transparent;}
+.mob-cover-fav-btn:active{transform:scale(.9);}
+.mob-cover-fav-btn.active{background:#e11d48;border-color:#e11d48;}
+.mob-cover-fav-btn .lq-icon{font-size:1rem;line-height:1;}
 .mob-list-quickbtn .lq-icon{font-size:.9rem;line-height:1;}
 .mob-list-quickbtn.active[data-list="favourites"]{background:#e11d48;border-color:#e11d48;color:#fff;}
 .mob-list-quickbtn.active[data-list="want-to-read"]{background:#7c3aed;border-color:#7c3aed;color:#fff;}
@@ -1044,13 +1059,11 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .mob-pill-btn:active{transform:scale(.95);background:var(--panel);}
 .mob-pill-btn.mob-pill-md{border-radius:18px;padding:.45rem .75rem;font-size:.72rem;}
 .mob-pill-btn.mob-pill-sm{border-radius:16px;padding:.4rem .7rem;font-size:.68rem;}
-/* Pill-shaped <select> dropdowns for the book detail sheet's Actions/Share/Edit
-   groups — same visual language as the Timeline year filter, so a grouped
-   action menu reads as a native control rather than a bespoke accordion. */
-.detail-pill-select{-webkit-appearance:none;appearance:none;font-family:'Lato',sans-serif;
-  color:var(--navy2);padding-right:1.6rem;
-  background-image:url('data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 12 8%22%3E%3Cpath fill=%22none%22 stroke=%22%232a7c8a%22 stroke-width=%221.4%22 d=%22M1 1l5 5 5-5%22/%3E%3C/svg%3E');
-  background-repeat:no-repeat;background-position:right .6rem center;background-size:9px 6px;}
+/* Pill-button dropdowns for the book detail sheet's Actions/Share/Edit
+   groups — same .mfp look and anchored .mfp-dd popover as the Library tab's
+   Category/Tags/Sort filter pills, so a grouped action menu reads as the
+   same control language rather than a bespoke accordion or native select. */
+.detail-pill-select{color:var(--navy2);border-color:rgba(26,40,64,.3);}
 .detail-pill-select.danger-select{color:var(--danger);border-color:#e0b0b0;}
 /* Tags/Categories: a visually distinct card, separate from Lists */
 .mob-taxonomy-card{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:.7rem .8rem;margin-bottom:.8rem;}
@@ -1723,7 +1736,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 <!-- AUTH -->
 <div class="auth-screen hidden" id="authScreen">
   <div class="auth-card">
-    <div class="auth-logo">📚</div>
+    <img class="auth-logo" src="icon-192.png" alt="eLibrary"/>
     <div class="auth-title">eLibrary</div>
     <div class="auth-sub">Share Great Books</div>
     <p class="auth-desc">Sign in to access your personal library, sync books, and share with the community.</p>
@@ -1924,8 +1937,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
           <span id="mfpSourceLabel">All</span>
           <span class="mfp-caret">▾</span>
         </button>
-        <div class="mfp-divider" aria-hidden="true"></div>
-        <button class="mfp mfp-sort" id="mfpSort" aria-label="Sort">
+        <button class="mfp mfp-sort" id="mfpSort" aria-label="Sort" style="margin-left:auto;">
           <span id="mfpSortLabel">Recent</span>
           <span class="mfp-caret">▾</span>
         </button>
@@ -2007,6 +2019,9 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
         <div class="mob-detail-cover-wrap">
           <img class="mob-detail-cover" id="mobDetailCoverImg" src="" style="display:none"/>
           <div class="mob-detail-cover-ph" id="mobDetailCoverPh">📖</div>
+          <button class="mob-cover-fav-btn" id="mobCoverFavBtn" data-list="favourites" aria-label="Toggle favourite">
+            <span class="lq-icon">🤍</span>
+          </button>
         </div>
         <div class="mob-detail-text">
           <div class="mob-detail-cat" id="mobDetailCat"></div>
@@ -2631,7 +2646,16 @@ self.addEventListener('fetch', e => {
           caches.open(SHELL_CACHE).then(cache => cache.put(e.request, copy));
         }
         return resp;
-      }).catch(() => cached);
+      }).catch(() => {
+        // Network unreachable and nothing cached for this exact request —
+        // for a page navigation (e.g. reopening an already-open tab right
+        // as the device is reconnecting), fall back to the cached app
+        // shell instead of letting the browser show its own "can't load"
+        // page. The app's own online/offline handling takes over from there.
+        if(cached) return cached;
+        if(e.request.mode === 'navigate') return caches.match(self.registration.scope);
+        return undefined;
+      });
       return cached || networkFetch;
     })
   );
@@ -2773,6 +2797,14 @@ onAuthStateChanged(auth, async user => {
       uid: user.uid,
       lastSeen: serverTimestamp()
     }, {merge:true}).catch(e => console.warn(e));
+
+    // Ask the browser not to silently evict this origin's Cache Storage
+    // (where offline EPUBs and covers live) under storage pressure. Without
+    // this, "best-effort" storage can be cleared with no warning — which
+    // looks exactly like a downloaded book quietly disappearing.
+    if('storage' in navigator && navigator.storage.persist) {
+      navigator.storage.persist().catch(()=>{});
+    }
 
     // ── WAVE 1: minimum needed to paint the Home tab meaningfully ──────
     // Run in parallel, re-render Home as each one lands
@@ -3704,16 +3736,13 @@ function renderDetailActionRows(peekContainer, moreContainer, book, isMine){
     ${bigBtn('🔲','Send to Kobo','sendtokobo','var(--teal)','var(--gold)')}
   </div>`;
 
-  const isFav = !!_userLists.find(l => l.id === 'favourites')?.bookIds?.includes(book.id);
+  const hasCustomLists = _userLists.some(l => !l.system);
 
   peekHtml += `<div class="mob-list-section">
-    <div class="mob-list-section-label">🗂️ Lists</div>
+    ${hasCustomLists ? `<div class="mob-list-section-label">🗂️ Lists</div>
     <div class="mob-list-row" style="margin-bottom:.5rem;">
-      <button class="mob-list-quickbtn ${isFav?'active':''}" data-list="favourites" data-action="quicklist">
-        <span class="lq-icon">${isFav?'❤️':'🤍'}</span><span>Favourites</span>
-      </button>
       <button class="mob-list-other-btn" data-action="otherlists" id="mobOtherListsBtn">Other Lists ▾</button>
-    </div>
+    </div>` : ''}
     ${readingStageSegmentHtml(book.id)}
   </div>`;
 
@@ -3731,28 +3760,31 @@ function renderDetailActionRows(peekContainer, moreContainer, book, isMine){
     </div>
   </div>`;
 
-  // ── Pill-shaped <select> dropdowns instead of a toggle-accordion — each
-  // one fires its action the moment an option is picked, then snaps back to
-  // its label (a native, one-tap control, matching the Timeline year
-  // filter's pill-select elsewhere in the app). Grouped by what the option
-  // actually does: "Actions" (anyone with access), "Share" (publish /
-  // privately share), "Edit" (metadata / contents) — rather than one loose
-  // "Actions" bucket and one catch-all "Manage" accordion.
+  // ── Pill buttons that open the same anchored dark dropdown (.mfp-dd) as
+  // the Library tab's Category/Tags/Sort filter pills, instead of a native
+  // <select> — picking an option fires its action immediately and closes.
+  // Grouped by what the option actually does: "Actions" (anyone with
+  // access), "Share" (publish / privately share), "Edit" (metadata /
+  // contents) — rather than one loose "Actions" bucket and one catch-all
+  // "Manage" accordion.
   const pillSelect = (id, label, options, opts={}) => {
     if (!options.length) return '';
     const { danger=false } = opts;
-    return `<select id="${id}" class="mob-pill-btn mob-pill-sm detail-pill-select${danger?' danger-select':''}">
-      <option value="" selected disabled>${label} ▾</option>
-      ${options.map(o => `<option value="${o.action}">${o.icon} ${o.label}</option>`).join('')}
-    </select>`;
+    return `<button type="button" id="${id}" class="mfp detail-pill-select${danger?' danger-select':''}">
+      <span>${label}</span><span class="mfp-caret">▾</span>
+    </button>`;
   };
-  const wirePillSelect = (container, id) => {
-    const sel = container.querySelector('#'+id);
-    if(!sel) return;
-    sel.addEventListener('change', () => {
-      const a = sel.value;
-      sel.value = '';
-      runDetailAction(a);
+  const wirePillSelect = (container, id, options) => {
+    const btn = container.querySelector('#'+id);
+    if(!btn) return;
+    btn.addEventListener('click', (e) => {
+      openMobFilterPicker({
+        anchor: e.currentTarget,
+        items: options,
+        isSelected: () => false,
+        onSelect: it => runDetailAction(it.action),
+        onAfterSelect: () => {},
+      });
     });
   };
 
@@ -3796,9 +3828,9 @@ function renderDetailActionRows(peekContainer, moreContainer, book, isMine){
   moreContainer.innerHTML = html;
   moreContainer.querySelectorAll('[data-action]').forEach(b => b.addEventListener('click', handleAction));
 
-  wirePillSelect(moreContainer, 'detailActionsSelect');
-  wirePillSelect(moreContainer, 'detailShareSelect');
-  wirePillSelect(moreContainer, 'detailEditSelect');
+  wirePillSelect(moreContainer, 'detailActionsSelect', actionOpts);
+  wirePillSelect(moreContainer, 'detailShareSelect', shareOpts);
+  wirePillSelect(moreContainer, 'detailEditSelect', editOpts);
 }
 
 // Quick favourite / want-to-read toggle straight from the Lists row —
@@ -3819,7 +3851,7 @@ async function handleQuickListToggle(btn){
 // (which would clip off-screen when the sheet isn't fully expanded), and
 // not a second bottom sheet stacking behind the first.
 function toggleOtherListsDropdown(){
-  const otherLists = _userLists.filter(l => l.id !== 'favourites' && l.id !== 'want-to-read');
+  const otherLists = _userLists.filter(l => !l.system);
 
   const scrim = document.createElement('div');
   scrim.className = 'mob-picker-scrim';
@@ -4272,6 +4304,12 @@ async function mob_showBook(id){
   const favList = _userLists.find(l => l.id === 'favourites');
   book.__isFav = !!(favList?.bookIds || []).includes(id);
 
+  const coverFavBtn = document.getElementById('mobCoverFavBtn');
+  if(coverFavBtn){
+    coverFavBtn.classList.toggle('active', book.__isFav);
+    coverFavBtn.querySelector('.lq-icon').textContent = book.__isFav ? '❤️' : '🤍';
+  }
+
   const img=document.getElementById('mobDetailCoverImg');
   const ph=document.getElementById('mobDetailCoverPh');
   const coverSrc=getCoverSrc(book);
@@ -4319,6 +4357,7 @@ function closeMobBookSheet(){
 }
 
 document.getElementById('btnMobBack').addEventListener('click', closeMobBookSheet);
+document.getElementById('mobCoverFavBtn').addEventListener('click', (e) => handleQuickListToggle(e.currentTarget));
 document.getElementById('mobBookSheetScrim').addEventListener('click', closeMobBookSheet);
 function mob_showPanel(id){document.querySelectorAll('.mob-panel').forEach(p=>p.classList.remove('active'));document.getElementById(id)?.classList.add('active');}
 
@@ -6615,7 +6654,7 @@ async function renderLedgerTab() {
       <div class="ledger-cal-legend">
         <span class="ledger-cal-legend-sw" style="background:var(--panel)"></span> Missed
         <span class="ledger-cal-legend-sw" style="background:var(--rust);margin-left:.6rem"></span> Goal met
-        <span class="ledger-cal-legend-sw" style="background:linear-gradient(160deg,var(--teal-light),var(--light-blue));margin-left:.6rem"></span> 🧊 Frozen
+        <span style="margin-left:.6rem;">🧊 Frozen</span>
       </div>
     </div>
 
