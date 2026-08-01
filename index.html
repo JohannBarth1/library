@@ -4254,7 +4254,8 @@ document.getElementById('btnSaveEditMeta').addEventListener('click',async()=>{
 });
 
 // ── MOBILE DETAIL ─────────────────────────────────────────────────────────────
-async function mob_showBook(id){
+async function mob_showBook(id, opts={}){
+  const { preserveState=false } = opts;
   const book=await findBookById(id);if(!book)return showToast("Couldn't find that book");
   currentId=id;
   const isMine=book.ownerId===currentUser?.uid;
@@ -4300,6 +4301,14 @@ async function mob_showBook(id){
   // Every book opens as a compact peek — regardless of whether it was
   // reached from Home, Library, or anywhere else — layered as an overlay
   // on top of whatever tab is currently showing, not a separate "page".
+  // Exception: when we're just refreshing the content of a sheet that's
+  // already open (e.g. after tapping a List/reading-stage button), leave
+  // its scroll position and expanded/peek state alone instead of snapping
+  // it back to collapsed — the person didn't ask the sheet to move.
+  const alreadyOpen = document.getElementById('mobPanelDetail')?.classList.contains('open');
+  if(preserveState && alreadyOpen){
+    return;
+  }
   document.getElementById('mobDetailScroll')?.scrollTo(0, 0);
   openMobBookSheet();
 }
@@ -9631,7 +9640,7 @@ async function doMarkFinishedFromDetail(){
     hideLoading();
     showToast('Marked as Finished ✓');
     if(window.innerWidth > 768) showBookById(currentId);
-    else mob_showBook(currentId);
+    else mob_showBook(currentId, { preserveState: true });
   } catch(e) {
     hideLoading();
     showToast('Failed: ' + e.message);
@@ -9712,7 +9721,7 @@ async function handleReadingStageClick(btn){
     renderMobHome();
     renderDeskHome();
     if(window.innerWidth > 768) showBookById(bookId);
-    else mob_showBook(bookId);
+    else mob_showBook(bookId, { preserveState: true });
   }catch(e){
     hideLoading();
     showToast('Failed: ' + e.message);
@@ -10999,7 +11008,7 @@ async function toggleRecommended() {
     renderMobHome();
     renderDeskHome();
     if(window.innerWidth > 768) showBookById(currentId);
-    else mob_showBook(currentId);
+    else mob_showBook(currentId, { preserveState: true });
     showToast(rec ? 'Marked as Recommended ⭐' : 'Removed from Recommended');
   } catch(e) {
     // Roll back optimistic update if Firestore write failed
@@ -12744,7 +12753,7 @@ function showQuickCategoryModal() {
         hideLoading();
         renderAll();
         if(window.innerWidth > 768) showBookById(currentId);
-        else mob_showBook(currentId);
+        else mob_showBook(currentId, { preserveState: true });
         showToast('Category updated ✓');
       } catch(e) {
         hideLoading();
