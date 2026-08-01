@@ -2612,55 +2612,14 @@ import { getStorage, ref as storageRef, uploadBytes, getDownloadURL, getBytes }
   const manifest={name:'eLibrary',short_name:'eLibrary',description:'Your personal EPUB library',start_url:new URL('./', location.href).href,display:'standalone',background_color:'#0f1a2e',theme_color:'#0f1a2e',icons:[{src:"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'%3E%3Crect width='192' height='192' rx='32' fill='%230f1a2e'/%3E%3Ctext y='130' x='30' font-size='120' fill='%23c8952a'%3E📚%3C/text%3E%3C/svg%3E",sizes:'192x192',type:'image/svg+xml'},{src:"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='80' fill='%230f1a2e'/%3E%3Ctext y='360' x='60' font-size='320' fill='%23c8952a'%3E📚%3C/text%3E%3C/svg%3E",sizes:'512x512',type:'image/svg+xml'}]};
   const blob=new Blob([JSON.stringify(manifest)],{type:'application/json'});
   document.getElementById('manifestLink').href=URL.createObjectURL(blob);
-  if('serviceWorker' in navigator){const sw=`
-const SHELL_CACHE = 'elib-shell-v2';
-const SHELL_URLS = [
-  self.registration.scope,
-  'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js',
-  'https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Lato:wght@300;400;700&display=swap'
-];
-self.addEventListener('install', e => {
-  self.skipWaiting();
-  e.waitUntil(caches.open(SHELL_CACHE).then(cache => cache.addAll(SHELL_URLS)).catch(()=>{}));
-});
-self.addEventListener('activate', e => {
-  e.waitUntil(
-    caches.keys().then(keys => Promise.all(
-      keys.filter(k => k !== SHELL_CACHE && !k.startsWith('elib-epub-cache')).map(k => caches.delete(k))
-    ))
-  );
-  self.clients.claim();
-});
-self.addEventListener('fetch', e => {
-  if(e.request.method !== 'GET') return;
-  const url = e.request.url;
-  // Never intercept Firebase/Google API calls — auth, Firestore, and Storage
-  // must always go straight to the network so the app's own online/offline
-  // handling (and the dedicated EPUB cache) stays in control of those.
-  if(url.includes('googleapis.com') || url.includes('gstatic.com') || url.includes('firebasestorage.app')) return;
-  e.respondWith(
-    caches.match(e.request).then(cached => {
-      const networkFetch = fetch(e.request).then(resp => {
-        if(resp && resp.ok && (url.startsWith(self.location.origin) || SHELL_URLS.includes(url))) {
-          const copy = resp.clone();
-          caches.open(SHELL_CACHE).then(cache => cache.put(e.request, copy));
-        }
-        return resp;
-      }).catch(() => {
-        // Network unreachable and nothing cached for this exact request —
-        // for a page navigation (e.g. reopening an already-open tab right
-        // as the device is reconnecting), fall back to the cached app
-        // shell instead of letting the browser show its own "can't load"
-        // page. The app's own online/offline handling takes over from there.
-        if(cached) return cached;
-        if(e.request.mode === 'navigate') return caches.match(self.registration.scope);
-        return undefined;
-      });
-      return cached || networkFetch;
-    })
-  );
-});
-`;navigator.serviceWorker.register(URL.createObjectURL(new Blob([sw],{type:'application/javascript'}))).catch(()=>{});}
+  // Registered from a real file (sw.js, alongside index.html) rather than a
+  // fresh blob: URL generated on every load — a blob URL is a different
+  // "script identity" each time, which defeats the browser's normal
+  // is-this-actually-a-new-version check and forces a reinstall/activate
+  // cycle on every single page load instead of just when the code changes.
+  if('serviceWorker' in navigator){
+    navigator.serviceWorker.register(new URL('./sw.js', location.href).href).catch(e => console.warn('SW registration failed:', e));
+  }
 })();
 
 let deferredInstall=null;
@@ -6143,8 +6102,18 @@ function _ledgerReconcileStreakOnLoad(todayStr) {
     ledgerState.lastGoalMetDate = frozenDateStr;
     _ledgerPersistUserFields({ freezesAvailable: ledgerState.freezesAvailable, lastGoalMetDate: ledgerState.lastGoalMetDate });
     if (currentUser) {
-      setDoc(doc(db, 'users', currentUser.uid, 'ledgerDays', frozenDateStr), { dateStr: frozenDateStr, frozen: true }, { merge: true })
-        .catch(e => console.warn('ledger freeze-day persist:', e));
+      // This write is the ONLY thing that makes the day show as 🧊 on the
+      // 12-week calendar — the streak count above already survives without
+      // it. Awaited with one retry (rather than pure fire-and-forget) so a
+      // closed tab or a drop in connectivity right at this moment doesn't
+      // silently leave the day looking "missed" despite the streak being fine.
+      const frozenDayRef = doc(db, 'users', currentUser.uid, 'ledgerDays', frozenDateStr);
+      setDoc(frozenDayRef, { dateStr: frozenDateStr, frozen: true }, { merge: true })
+        .catch(e => {
+          console.warn('ledger freeze-day persist, retrying once:', e);
+          return setDoc(frozenDayRef, { dateStr: frozenDateStr, frozen: true }, { merge: true })
+            .catch(e2 => console.warn('ledger freeze-day persist retry failed:', e2));
+        });
     }
     showToast('🧊 Streak freeze used — your streak is safe!');
     return;
