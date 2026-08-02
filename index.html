@@ -2043,6 +2043,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
         <hr style="border:none;border-top:1px solid var(--border);margin:.5rem 0 1rem"/>
         <p class="mob-detail-desc" id="mobDetailDesc"></p>
         <div id="mobDetailHighlights" style="display:none;"></div>
+        <div id="mobDetailRelated" style="display:none;"></div>
       </div>
     </div>
 
@@ -3203,6 +3204,7 @@ setUpP(rowId,70,'Saving…');
       description:stripHtml(meta.description||''),
       category: _categories.includes(meta.category) ? meta.category : (_categories.includes(localStorage.getItem('elib_default_cat')||'') ? localStorage.getItem('elib_default_cat') : 'Uncategorised'),
       language:meta.language,publisher:meta.publisher,
+      series:meta.series||null,seriesIndex:meta.seriesIndex??null,
       coverUrl:coverUrl||null,
       epubUrl,
       storagePath:snap.ref.fullPath,
@@ -4297,6 +4299,7 @@ async function mob_showBook(id, opts={}){
   else document.getElementById('mobStarRating').style.display='none';
 
   renderBookHighlightsSummary(document.getElementById('mobDetailHighlights'), id);
+  renderRelatedBooks(document.getElementById('mobDetailRelated'), book);
 
   // Every book opens as a compact peek — regardless of whether it was
   // reached from Home, Library, or anywhere else — layered as an overlay
@@ -7131,6 +7134,66 @@ async function renderBookHighlightsSummary(containerEl, bookId) {
   `;
   containerEl.querySelector('[data-viewhighlights]').addEventListener('click', () => {
     openHighlightsFullList(bookId);
+  });
+}
+
+// ── Related books (same series, then same author) ────────────────────────
+// Scoped across everything the reader can see — their own library, public
+// books, and books shared with them — not just their private shelf.
+function findRelatedBooks(book) {
+  if(!book) return [];
+  const allBooks = dedupe([...library, ...communityLib]);
+  const series = (book.series||'').trim().toLowerCase();
+  const author = (book.author||'').trim().toLowerCase();
+
+  const seriesMatches = series
+    ? allBooks.filter(b => b.id!==book.id && (b.series||'').trim().toLowerCase()===series)
+        .sort((a,b) => (parseFloat(a.seriesIndex)||0) - (parseFloat(b.seriesIndex)||0))
+    : [];
+  const seriesIds = new Set(seriesMatches.map(b => b.id));
+
+  const authorMatches = author
+    ? allBooks.filter(b => b.id!==book.id && !seriesIds.has(b.id) && (b.author||'').trim().toLowerCase()===author)
+    : [];
+
+  return [...seriesMatches, ...authorMatches];
+}
+
+function renderRelatedBooks(containerEl, book) {
+  if(!containerEl) return;
+  containerEl.innerHTML = '';
+  containerEl.style.display = 'none';
+  const related = findRelatedBooks(book);
+  if(!related.length) return;
+
+  containerEl.style.display = '';
+  containerEl.innerHTML = `
+    <div style="margin-top:1rem">
+      <div style="font-size:.74rem;font-weight:700;letter-spacing:.04em;color:var(--muted);margin-bottom:.5rem">
+        RELATED BOOKS
+      </div>
+      <div style="display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;
+        -webkit-overflow-scrolling:touch;scrollbar-width:none;">
+        ${related.map(b => {
+          const src = getCoverSrc(b);
+          const coverHtml = src
+            ? `<img src="${src}" loading="lazy" style="width:64px;height:96px;object-fit:cover;
+                border-radius:2px 4px 4px 2px;display:block;box-shadow:2px 3px 8px rgba(0,0,0,.3);"/>`
+            : `<div style="width:64px;height:96px;background:linear-gradient(145deg,var(--navy2),#2a3d5a);
+                border-radius:2px 4px 4px 2px;box-shadow:2px 3px 8px rgba(0,0,0,.3);
+                display:flex;align-items:center;justify-content:center;font-size:.55rem;
+                color:rgba(200,180,140,0.8);text-align:center;padding:4px;line-height:1.2;">${esc(b.title)}</div>`;
+          return `<div class="related-book-tile" data-bookid="${b.id}" style="flex-shrink:0;width:64px;cursor:pointer;">
+            ${coverHtml}
+            <div style="font-size:.62rem;color:var(--muted);margin-top:.3rem;line-height:1.2;
+              overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;">${esc(b.title)}</div>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>`;
+
+  containerEl.querySelectorAll('.related-book-tile[data-bookid]').forEach(el => {
+    el.addEventListener('click', () => mob_showBook(el.dataset.bookid));
   });
 }
 
@@ -10476,6 +10539,13 @@ async function parseEpubMeta(file){
     if(!opfXml)return fallbackMeta(file);
     const get=tag=>opfXml.match(new RegExp(`<dc:${tag}[^>]*>([^<]+)<\/dc:${tag}>`,'i'))?.[1]?.trim()||'';
     const getAll=tag=>{const re=new RegExp(`<dc:${tag}[^>]*>([^<]+)<\/dc:${tag}>`,'gi'),r=[];let m;while((m=re.exec(opfXml))!==null)r.push(m[1].trim());return r;};
+    // Calibre's de-facto series convention (<meta name="calibre:series" content="…"/>).
+    // EPUB3's native belongs-to-collection/refines metadata isn't handled here.
+    const getOpfMeta=name=>(opfXml.match(new RegExp(`<meta\\s+name="${name}"\\s+content="([^"]*)"`,'i'))?.[1]
+      ||opfXml.match(new RegExp(`<meta\\s+content="([^"]*)"\\s+name="${name}"`,'i'))?.[1]||'').trim();
+    const series=getOpfMeta('calibre:series');
+    const seriesIndexRaw=getOpfMeta('calibre:series_index');
+    const seriesIndex=seriesIndexRaw?parseFloat(seriesIndexRaw):null;
     let coverDataUrl=null;
     try{
       const opfDir=opfPath.includes('/')?opfPath.replace(/\/[^/]+$/,'/'):'';
@@ -10484,7 +10554,7 @@ async function parseEpubMeta(file){
       if(!coverDataUrl){const itemRe=/<item\s+([^>]+)>/gi;let im;while((im=itemRe.exec(opfXml))!==null){const attrs=im[1];const id=attrs.match(/\bid="([^"]+)"/i)?.[1]||'';const href=attrs.match(/\bhref="([^"]+)"/i)?.[1]||'';const mt=attrs.match(/\bmedia-type="([^"]+)"/i)?.[1]||'';if(!mt.startsWith('image/'))continue;if(id.toLowerCase().includes('cover')||href.toLowerCase().includes('cover')){const f=zip.file(opfDir+href)||zip.file(href);if(f){coverDataUrl=await blobToDataUrl(await f.async('blob'));break;}}}}
       if(!coverDataUrl){for(const p of ['cover.jpg','cover.jpeg','cover.png','images/cover.jpg','OEBPS/cover.jpg','OEBPS/cover.jpeg','OEBPS/cover.png','OEBPS/images/cover.jpg','OEBPS/images/cover.jpeg','OPS/images/cover.jpg','OPS/cover.jpg']){const f=zip.file(p);if(f){coverDataUrl=await blobToDataUrl(await f.async('blob'));break;}}}
     }catch(e){/* silent */}
-    return{title:get('title')||file.name.replace(/\.epub$/i,''),author:getAll('creator').join(', ')||'Unknown Author',description:get('description')||'',category:getAll('subject')[0]||'Uncategorised',language:get('language')||'',publisher:get('publisher')||'',coverDataUrl};
+    return{title:get('title')||file.name.replace(/\.epub$/i,''),author:getAll('creator').join(', ')||'Unknown Author',description:get('description')||'',category:getAll('subject')[0]||'Uncategorised',language:get('language')||'',publisher:get('publisher')||'',series,seriesIndex,coverDataUrl};
   }catch(e){return fallbackMeta(file);}
 }
 
@@ -10865,7 +10935,7 @@ async function ensureKoboCoverDeclared(zip, opfPath, opfXml){
   return newOpf;
 }
   
-function fallbackMeta(file){return{title:file.name.replace(/\.epub$/i,''),author:'Unknown Author',description:'',category:'Uncategorised',language:'',publisher:'',coverDataUrl:null};}
+function fallbackMeta(file){return{title:file.name.replace(/\.epub$/i,''),author:'Unknown Author',description:'',category:'Uncategorised',language:'',publisher:'',series:'',seriesIndex:null,coverDataUrl:null};}
 function blobToDataUrl(blob){return new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=rej;r.readAsDataURL(blob);});}
 function dataUrlToBlob(dataUrl){const[header,data]=dataUrl.split(',');const mime=header.match(/:(.*?);/)[1];const binary=atob(data);const arr=new Uint8Array(binary.length);for(let i=0;i<binary.length;i++)arr[i]=binary.charCodeAt(i);return new Blob([arr],{type:mime});}
 
