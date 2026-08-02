@@ -5212,68 +5212,65 @@ function recommendedSection(books) {
   const customLists = _userLists.filter(l => !l.system);
 
   // ── Render ────────────────────────────────────────────────────────────
-  container.innerHTML = `
-    <div style="padding-bottom:calc(var(--mob-nav-h) + var(--sab) + 1.5rem);">
-      ${bookmarksSection()}
-      ${recommendedSection(recBooks)}
-      ${shelfSection('home_fav', 'Favourites', '❤️', '#e11d48', favBooks, {defaultOpen:false, showAddTile:true, listId:'favourites', alwaysShow:true})}
-      ${shelfSection('home_wtr', 'Want to read', '🔖', '#7c3aed', wtrBooks, {defaultOpen:false, showAddTile:true, listId:'want-to-read', alwaysShow:true})}
-      ${shelfSection('home_shared', 'Shared with Me', '🔒', '#5a48b0', sharedBooks, {defaultOpen:false})}
-      ${customLists.map(l =>
-        shelfSection('home_list_'+l.id, l.name, l.icon||'📚', 'var(--teal)',
-          resolve(l.bookIds||[]), {defaultOpen:false, editable:true, listId:l.id, showAddTile:true})
-      ).join('')}
-      ${shelfSection('home_recent', 'Recently added', '🕐', 'var(--muted)', recentBooks, {defaultOpen:false})}
-      ${shelfSection('home_viewed', 'Recently viewed', '👁', 'var(--muted)', viewedBooks, {defaultOpen:false})}
-      ${shelfSection('home_fin', 'Finished', '✓', '#276749', finBooks, {defaultOpen:false})}
-      <div style="text-align:center;padding:.8rem 0 .4rem;border-top:1px dashed var(--border);margin-top:.4rem;">
+  // Reconciled per-section (like the library grids above) instead of a single
+  // container.innerHTML rebuild: renderMobHome() re-runs on every Home tab
+  // switch plus a long list of data-change events, and rebuilding the whole
+  // panel's HTML each time was destroying/recreating every cover <img> in
+  // every shelf even when that shelf's contents hadn't changed — that's what
+  // read as tiles "flashing" on every visit. A shelf whose HTML is byte-
+  // identical to last render reuses its existing DOM node untouched.
+  container.style.paddingBottom = 'calc(var(--mob-nav-h) + var(--sab) + 1.5rem)';
+
+  const sections = [];
+  const addSection = (key, html) => { if(html) sections.push({key, html}); };
+
+  addSection('home_sec_bookmarks', bookmarksSection());
+  addSection('home_sec_recommended', recommendedSection(recBooks));
+  addSection('home_fav', shelfSection('home_fav', 'Favourites', '❤️', '#e11d48', favBooks, {defaultOpen:false, showAddTile:true, listId:'favourites', alwaysShow:true}));
+  addSection('home_wtr', shelfSection('home_wtr', 'Want to read', '🔖', '#7c3aed', wtrBooks, {defaultOpen:false, showAddTile:true, listId:'want-to-read', alwaysShow:true}));
+  addSection('home_shared', shelfSection('home_shared', 'Shared with Me', '🔒', '#5a48b0', sharedBooks, {defaultOpen:false}));
+  customLists.forEach(l =>
+    addSection('home_list_'+l.id, shelfSection('home_list_'+l.id, l.name, l.icon||'📚', 'var(--teal)',
+      resolve(l.bookIds||[]), {defaultOpen:false, editable:true, listId:l.id, showAddTile:true}))
+  );
+  addSection('home_recent', shelfSection('home_recent', 'Recently added', '🕐', 'var(--muted)', recentBooks, {defaultOpen:false}));
+  addSection('home_viewed', shelfSection('home_viewed', 'Recently viewed', '👁', 'var(--muted)', viewedBooks, {defaultOpen:false}));
+  addSection('home_fin', shelfSection('home_fin', 'Finished', '✓', '#276749', finBooks, {defaultOpen:false}));
+  addSection('home_sec_newlist', `<div style="text-align:center;padding:.8rem 0 .4rem;border-top:1px dashed var(--border);margin-top:.4rem;">
         <button id="btnHomeNewList" style="background:none;border:none;
           color:var(--teal);font-size:.78rem;font-weight:700;cursor:pointer;
           padding:.4rem;">+ Create new list</button>
-      </div>
-    </div>`;
+      </div>`);
 
-// ── Bind book taps (every shelf, including Current Reads, opens the same
-  //    unified peek sheet — Read/Continue Reading is just the primary
-  //    action inside it, not a bypass around it) ───────────────────────────
-  container.querySelectorAll('.home-shelf-book[data-bookid]').forEach(el => {
-    if(!el.dataset.bookid) return;
-    el.addEventListener('click', () => {
-      mobPrevPanel = 'mobPanelHome';
-      mob_showBook(el.dataset.bookid);
-    });
-  });
-
-  // ── Bind bookmark tile taps → same unified sheet as everything else ─────
-  container.querySelectorAll('.home-bookmark-item[data-ubid]').forEach(el => {
-    el.addEventListener('click', () => {
-      const ub = _myBookmarks.find(b => b.id === el.dataset.ubid);
-      if(ub) mob_showBook(ub.bookId);
-    });
-  });
-
-  // ── Bind "+" add tiles on custom lists ───────────────────────────────
-  container.querySelectorAll('.home-shelf-addtile[data-listid]').forEach(el => {
-    el.addEventListener('click', () => {
-      showHomeListBookPicker(el.dataset.listid);
-    });
-  });
-
-  // ── Bind shelf "⋯" menu (rename/delete) ──────────────────────────────
-  container.querySelectorAll('.home-shelf-menu-btn[data-listid]').forEach(btn => {
-    btn.addEventListener('click', e => {
-      e.stopPropagation();
-      showHomeShelfMenu(btn.dataset.listid, btn.dataset.listname);
-    });
-  });
-
-  // ── Bind "Create new list" ───────────────────────────────────────────
-  document.getElementById('btnHomeNewList')?.addEventListener('click', () => {
-    showCreateListModal(null);
-  });
+  reconcileGrid(container, sections, s => s.key, s => s.html);
 
   renderHomeLedgerTeaser();
 }
+
+// ── Bind Home tab taps via delegation on the static, never-replaced container.
+//    Sections above are reconciled/reused across renders, so binding a fresh
+//    listener per element inside renderMobHome() (as before) would stack a
+//    duplicate listener on every node that survives unchanged from one render
+//    to the next. One delegated listener, registered once, avoids that.
+document.getElementById('mobHomeContent').addEventListener('click', e => {
+  const menuBtn = e.target.closest('.home-shelf-menu-btn[data-listid]');
+  if(menuBtn) { e.stopPropagation(); showHomeShelfMenu(menuBtn.dataset.listid, menuBtn.dataset.listname); return; }
+
+  const addTile = e.target.closest('.home-shelf-addtile[data-listid]');
+  if(addTile) { showHomeListBookPicker(addTile.dataset.listid); return; }
+
+  const bmItem = e.target.closest('.home-bookmark-item[data-ubid]');
+  if(bmItem) {
+    const ub = _myBookmarks.find(b => b.id === bmItem.dataset.ubid);
+    if(ub) mob_showBook(ub.bookId);
+    return;
+  }
+
+  const shelfBook = e.target.closest('.home-shelf-book[data-bookid]');
+  if(shelfBook) { mobPrevPanel = 'mobPanelHome'; mob_showBook(shelfBook.dataset.bookid); return; }
+
+  if(e.target.closest('#btnHomeNewList')) showCreateListModal(null);
+});
 
 window.toggleHomeShelf = function(id) {
   const body    = document.getElementById(id + '_body');
