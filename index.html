@@ -6715,7 +6715,7 @@ function renderHomeLedgerTeaser() {
     <div class="home-ledger-teaser" id="homeLedgerTeaserBtn">
       <div class="home-ledger-teaser-flame">${ledgerState.streakCount ? '🔥' : '🕯️'}</div>
       <div class="home-ledger-teaser-text">
-        <div class="home-ledger-teaser-title">${ledgerState.streakCount ? `${ledgerState.streakCount}-day streak` : 'Start a streak today'} <span class="home-ledger-teaser-today-pts">+${ledgerToday.pointsEarned} today</span></div>
+        <div class="home-ledger-teaser-title">${ledgerState.streakCount ? `${ledgerState.streakCount}-day streak` : 'Start a streak today'}</div>
         <div class="home-ledger-teaser-sub">${ledgerToday.pagesRead} pages today · goal is ${ledgerState.dailyGoal}</div>
       </div>
       ${_ledgerGoalRingSvg(pct, 40)}
@@ -8573,6 +8573,7 @@ function _attachReaderTapHandlers(doc) {
 
   let tx0 = 0, ty0 = 0;
   let _lpTimer = null; // long-press timer for entering lookup mode
+  let _lpFired = false; // true once the long-press has already opened the lookup popup for this touch
 
   overlay.addEventListener('touchstart', e => {
     e.preventDefault();
@@ -8580,8 +8581,10 @@ function _attachReaderTapHandlers(doc) {
     ty0 = e.touches[0].clientY;
     // Long-press (500 ms, no drag) → enter lookup mode and look up that word
     clearTimeout(_lpTimer);
+    _lpFired = false;
     _lpTimer = setTimeout(() => {
       _lpTimer = null;
+      _lpFired = true;
       if (!readerLookupMode) setReaderLookupMode(true);
       _handleWordLookupTap(doc, tx0, ty0);
     }, 500);
@@ -8594,6 +8597,12 @@ function _attachReaderTapHandlers(doc) {
 
   overlay.addEventListener('touchend', e => {
     clearTimeout(_lpTimer); _lpTimer = null; // short tap: cancel long-press timer
+    if (_lpFired) {
+      // The long-press already opened the lookup popup during this touch —
+      // don't let the matching touchend immediately act on/close it too.
+      _lpFired = false;
+      return;
+    }
     const dx = e.changedTouches[0].clientX - tx0;
     const dy = e.changedTouches[0].clientY - ty0;
     const activeMode = readerSelectMode || readerLookupMode;
