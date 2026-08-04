@@ -2027,6 +2027,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
           <div class="mob-detail-cat" id="mobDetailCat"></div>
           <div class="mob-detail-title" id="mobDetailTitle"></div>
           <div class="mob-detail-author" id="mobDetailAuthor"></div>
+          <div id="mobDetailSeries" style="display:none;font-size:.72rem;color:var(--muted);font-weight:600;margin-top:.15rem"></div>
           <div id="mobDetailSharedBy" style="display:none;font-size:.72rem;color:var(--teal);font-weight:700;margin-top:.2rem"></div>
           <div class="star-rating" id="mobStarRating" style="display:none;margin-top:.4rem">
             <div class="stars" id="mobStars"></div>
@@ -2041,9 +2042,9 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
       <div class="mob-sheet-more" id="mobSheetMore">
         <div class="mob-detail-more-actions" id="mobDetailMoreActions"></div>
         <hr style="border:none;border-top:1px solid var(--border);margin:.5rem 0 1rem"/>
+        <div id="mobDetailRelated" style="display:none;"></div>
         <p class="mob-detail-desc" id="mobDetailDesc"></p>
         <div id="mobDetailHighlights" style="display:none;"></div>
-        <div id="mobDetailRelated" style="display:none;"></div>
       </div>
     </div>
 
@@ -2312,6 +2313,11 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
     <h3>Edit Book Details</h3>
     <div class="form-row"><label>Title</label><input type="text" id="metaTitle"/></div>
     <div class="form-row"><label>Author</label><input type="text" id="metaAuthor"/></div>
+    <div class="form-row" style="display:flex;gap:.6rem">
+      <div style="flex:2"><label>Series</label><input type="text" id="metaSeries" placeholder="e.g. Foundation" list="metaSeriesList"/></div>
+      <div style="flex:1"><label>Book #</label><input type="number" id="metaSeriesIndex" placeholder="e.g. 2" step="0.1" min="0"/></div>
+    </div>
+    <datalist id="metaSeriesList"></datalist>
     <div class="form-row"><label>Category</label><select id="metaCategory"></select></div>
     <div class="form-row"><label>Language</label><input type="text" id="metaLanguage" placeholder="e.g. en"/></div>
     <div class="form-row"><label>Description</label><textarea id="metaDesc" rows="4" style="width:100%;padding:.6rem .85rem;font-family:'Lato',sans-serif;font-size:.88rem;color:var(--navy);background:var(--cream);border:1px solid var(--border);border-radius:3px;outline:none;resize:vertical;line-height:1.5"></textarea></div>
@@ -4244,21 +4250,34 @@ function showEditMeta(){
   document.getElementById('metaAuthor').value=book.author||'';
   document.getElementById('metaLanguage').value=book.language||'';
   document.getElementById('metaDesc').value=stripHtml(book.description||'');
+  document.getElementById('metaSeries').value=book.series||'';
+  document.getElementById('metaSeriesIndex').value=(book.seriesIndex??'')===''?'':book.seriesIndex;
   const catSelect = document.getElementById('metaCategory');
   catSelect.innerHTML = _categories.map(c =>
     `<option value="${esc(c)}" ${(book.category||'Uncategorised')===c?'selected':''}>${catIcon(c)} ${esc(c)}</option>`
   ).join('');
+  // Autocomplete: existing series names across the visible library, so linking
+  // a book to a series already in use is a click instead of retyping the name.
+  const seriesNames = [...new Set(
+    [...library,...communityLib].map(b=>(b.series||'').trim()).filter(Boolean)
+  )].sort((a,b)=>a.localeCompare(b));
+  document.getElementById('metaSeriesList').innerHTML =
+    seriesNames.map(s=>`<option value="${esc(s)}"></option>`).join('');
   document.getElementById('editMetaModal').classList.add('open');
 }
 document.getElementById('btnCancelEditMeta').addEventListener('click',()=>document.getElementById('editMetaModal').classList.remove('open'));
 document.getElementById('btnSaveEditMeta').addEventListener('click',async()=>{
   const book=[...library,...communityLib].find(b=>b.id===currentId);if(!book)return;
+  const seriesVal=document.getElementById('metaSeries').value.trim();
+  const seriesIdxRaw=document.getElementById('metaSeriesIndex').value.trim();
   const updates={
     title:document.getElementById('metaTitle').value.trim()||book.title,
     author:document.getElementById('metaAuthor').value.trim()||book.author,
     category: document.getElementById('metaCategory').value,
     language:document.getElementById('metaLanguage').value.trim(),
     description:stripHtml(document.getElementById('metaDesc').value.trim()),
+    series: seriesVal || null,
+    seriesIndex: seriesVal && seriesIdxRaw!=='' ? parseFloat(seriesIdxRaw) : null,
     updatedAt:serverTimestamp()
   };
   document.getElementById('editMetaModal').classList.remove('open');
@@ -4300,6 +4319,12 @@ async function mob_showBook(id, opts={}){
   document.getElementById('mobDetailCat').textContent=book.category?`${catIcon(book.category)} ${book.category}`:'';
   document.getElementById('mobDetailTitle').textContent=book.title||'';
   document.getElementById('mobDetailAuthor').textContent=book.author||'';
+
+  const mobSeriesEl=document.getElementById('mobDetailSeries');
+  if(book.series){
+    mobSeriesEl.textContent='📚 '+book.series+(book.seriesIndex!=null&&book.seriesIndex!==''?' · Book '+book.seriesIndex:'');
+    mobSeriesEl.style.display='block';
+  } else mobSeriesEl.style.display='none';
 
   const mobSharedByEl=document.getElementById('mobDetailSharedBy');
   const mobIsPrivatelyShared=book.allowedUsers?.includes(currentUser?.uid)&&book.visibility!=='public';
@@ -7255,7 +7280,7 @@ async function renderBookHighlightsSummary(containerEl, bookId) {
 // Scoped across everything the reader can see — their own library, public
 // books, and books shared with them — not just their private shelf.
 function findRelatedBooks(book) {
-  if(!book) return [];
+  if(!book) return { seriesMatches: [], authorMatches: [] };
   const allBooks = dedupe([...library, ...communityLib]);
   const series = (book.series||'').trim().toLowerCase();
   const author = (book.author||'').trim().toLowerCase();
@@ -7270,41 +7295,57 @@ function findRelatedBooks(book) {
     ? allBooks.filter(b => b.id!==book.id && !seriesIds.has(b.id) && (b.author||'').trim().toLowerCase()===author)
     : [];
 
-  return [...seriesMatches, ...authorMatches];
+  return { seriesMatches, authorMatches };
+}
+
+function _relatedBookRow(books) {
+  return `<div style="display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;
+      -webkit-overflow-scrolling:touch;scrollbar-width:none;">
+      ${books.map(b => {
+        const src = getCoverSrc(b);
+        const coverHtml = src
+          ? `<img src="${src}" loading="lazy" style="width:64px;height:96px;object-fit:cover;
+              border-radius:2px 4px 4px 2px;display:block;box-shadow:2px 3px 8px rgba(0,0,0,.3);"/>`
+          : `<div style="width:64px;height:96px;background:linear-gradient(145deg,var(--navy2),#2a3d5a);
+              border-radius:2px 4px 4px 2px;box-shadow:2px 3px 8px rgba(0,0,0,.3);
+              display:flex;align-items:center;justify-content:center;font-size:.55rem;
+              color:rgba(200,180,140,0.8);text-align:center;padding:4px;line-height:1.2;">${esc(b.title)}</div>`;
+        const subLabel = b.seriesIndex!=null && b.seriesIndex!=='' ? `#${b.seriesIndex}` : '';
+        return `<div class="related-book-tile" data-bookid="${b.id}" style="flex-shrink:0;width:64px;cursor:pointer;">
+          ${coverHtml}
+          <div style="font-size:.62rem;color:var(--muted);margin-top:.3rem;line-height:1.2;
+            overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;">${subLabel?esc(subLabel)+' · ':''}${esc(b.title)}</div>
+        </div>`;
+      }).join('')}
+    </div>`;
 }
 
 function renderRelatedBooks(containerEl, book) {
   if(!containerEl) return;
   containerEl.innerHTML = '';
   containerEl.style.display = 'none';
-  const related = findRelatedBooks(book);
-  if(!related.length) return;
+  const { seriesMatches, authorMatches } = findRelatedBooks(book);
+  if(!seriesMatches.length && !authorMatches.length) return;
 
   containerEl.style.display = '';
-  containerEl.innerHTML = `
-    <div style="margin-top:1rem">
+  let html = '';
+  if(seriesMatches.length){
+    html += `<div style="margin-top:1rem">
       <div style="font-size:.74rem;font-weight:700;letter-spacing:.04em;color:var(--muted);margin-bottom:.5rem">
-        RELATED BOOKS
+        ${book.series ? esc(book.series.toUpperCase()) : 'SAME SERIES'}
       </div>
-      <div style="display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;
-        -webkit-overflow-scrolling:touch;scrollbar-width:none;">
-        ${related.map(b => {
-          const src = getCoverSrc(b);
-          const coverHtml = src
-            ? `<img src="${src}" loading="lazy" style="width:64px;height:96px;object-fit:cover;
-                border-radius:2px 4px 4px 2px;display:block;box-shadow:2px 3px 8px rgba(0,0,0,.3);"/>`
-            : `<div style="width:64px;height:96px;background:linear-gradient(145deg,var(--navy2),#2a3d5a);
-                border-radius:2px 4px 4px 2px;box-shadow:2px 3px 8px rgba(0,0,0,.3);
-                display:flex;align-items:center;justify-content:center;font-size:.55rem;
-                color:rgba(200,180,140,0.8);text-align:center;padding:4px;line-height:1.2;">${esc(b.title)}</div>`;
-          return `<div class="related-book-tile" data-bookid="${b.id}" style="flex-shrink:0;width:64px;cursor:pointer;">
-            ${coverHtml}
-            <div style="font-size:.62rem;color:var(--muted);margin-top:.3rem;line-height:1.2;
-              overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;">${esc(b.title)}</div>
-          </div>`;
-        }).join('')}
-      </div>
+      ${_relatedBookRow(seriesMatches)}
     </div>`;
+  }
+  if(authorMatches.length){
+    html += `<div style="margin-top:1rem">
+      <div style="font-size:.74rem;font-weight:700;letter-spacing:.04em;color:var(--muted);margin-bottom:.5rem">
+        MORE BY THIS AUTHOR
+      </div>
+      ${_relatedBookRow(authorMatches)}
+    </div>`;
+  }
+  containerEl.innerHTML = html;
 
   containerEl.querySelectorAll('.related-book-tile[data-bookid]').forEach(el => {
     el.addEventListener('click', () => mob_showBook(el.dataset.bookid));
