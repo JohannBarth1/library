@@ -245,7 +245,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .sb-cr-cover{position:relative;flex-shrink:0;width:58px;cursor:pointer;border-radius:2px 4px 4px 2px;overflow:visible;}
 .sb-cr-cover img,.sb-cr-cover .ph{width:58px;height:87px;object-fit:cover;display:block;border-radius:2px 4px 4px 2px;box-shadow:2px 3px 8px rgba(0,0,0,.35);}
 .sb-cr-cover .ph{background:linear-gradient(145deg,var(--navy2),#2a3d5a);display:flex;align-items:center;justify-content:center;font-size:.45rem;color:rgba(200,180,140,.8);text-align:center;padding:3px;line-height:1.3;}
-.sb-cr-prog{position:absolute;bottom:0;left:0;right:0;height:3px;background:rgba(0,0,0,.3);border-radius:0 0 4px 4px;overflow:hidden;}
+.sb-cr-prog{position:absolute;bottom:0;left:0;right:0;height:3px;background:rgba(0,0,0,.3);border-radius:0 0 4px 2px;overflow:hidden;}
 .sb-cr-prog-fill{height:3px;background:var(--gold);}
 .sb-cr-ribbon{position:absolute;top:-4px;right:5px;filter:drop-shadow(1px 2px 3px rgba(0,0,0,.45));pointer-events:none;}
 .sb-cr-empty{font-size:.75rem;color:var(--muted);font-style:italic;padding:.25rem 0 .4rem;}
@@ -403,7 +403,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .bcs.filled{color:var(--gold);}
 .book-card .community-badge{position:absolute;top:.4rem;right:.4rem;background:var(--gold);color:var(--navy);font-size:.55rem;font-weight:700;padding:2px 5px;border-radius:2px;letter-spacing:.04em;text-transform:uppercase;}
 .rec-badge{position:absolute;top:.4rem;left:.4rem;background:var(--teal);color:#fff;font-size:.55rem;font-weight:700;padding:2px 5px;border-radius:2px;letter-spacing:.04em;text-transform:uppercase;}
-.book-card-progress{height:3px;background:var(--border);border-radius:0 0 2px 2px;overflow:hidden;}
+.book-card-progress{height:3px;background:var(--border);border-radius:0 0 4px 4px;overflow:hidden;}
 .book-card-progress-bar{height:3px;background:var(--teal);transition:width .3s;}
   
 /* ── BOOK DETAIL DRAWER (desktop) ── */
@@ -3724,10 +3724,9 @@ function renderDetailActionRows(peekContainer, moreContainer, book, isMine){
   // ── Pill buttons that open the same anchored dark dropdown (.mfp-dd) as
   // the Library tab's Category/Tags/Sort filter pills, instead of a native
   // <select> — picking an option fires its action immediately and closes.
-  // Grouped by what the option actually does: "Actions" (anyone with
-  // access), "Share" (publish / privately share), "Edit" (metadata /
-  // contents) — rather than one loose "Actions" bucket and one catch-all
-  // "Manage" accordion.
+  // Just two groups now: "Share" (publish/privately share/copy link/
+  // download) and "Edit" (metadata/contents) — Recommend lives on its own
+  // as a toggle since it's a single on/off action, not a menu of options.
   const pillSelect = (id, label, options, opts={}) => {
     if (!options.length) return '';
     const { danger=false } = opts;
@@ -3749,30 +3748,41 @@ function renderDetailActionRows(peekContainer, moreContainer, book, isMine){
     });
   };
 
-  // ── "Actions" — available to anyone viewing the book ────────────────────
-  const actionOpts = [
-    { icon: book.recommended?'☆':'⭐', label: book.recommended?'Unrecommend':'Recommend', action:'recommend' },
-    { icon:'📎', label:'Copy Link', action:'link' },
-    { icon:'⬇', label:'Download', action:'download' },
-  ];
+  // Admins can edit any book they can see (their own, public, or shared
+  // with them) — not just books they uploaded themselves.
+  const canManage = isMine || isAdmin;
 
-  // ── "Share" and "Edit" — owner only ──────────────────────────────────────
+  // ── "Share" — publish/unpublish and share-privately stay owner-only;
+  // Copy Link and Download are available to anyone viewing the book, but
+  // grouped here with the rest of the sharing actions.
   const shareOpts = [];
-  const editOpts = [];
   if(isMine){
     shareOpts.push(book.visibility !== 'public'
       ? { icon:'🌐', label:'Publish', action:'share' }
       : { icon:'🔒', label:'Unpublish', action:'unpublish' });
     shareOpts.push({ icon:'🔗', label:'Share Privately', action:'shareprivate' });
+  }
+  shareOpts.push({ icon:'📎', label:'Copy Link', action:'link' });
+  shareOpts.push({ icon:'⬇', label:'Download', action:'download' });
 
+  // ── "Edit" — owner or admin ───────────────────────────────────────────
+  const editOpts = [];
+  if(canManage){
     editOpts.push({ icon:'✎', label:'Edit Details', action:'editmeta' });
     editOpts.push({ icon:'📑', label:'Edit Contents', action:'chapters' });
   }
 
+  // ── Recommend/Unrecommend — its own toggle, not tucked in a dropdown ────
+  const recToggle = `<button type="button" class="detail-row-btn mob-pill-btn mob-pill-sm" data-action="recommend" style="
+      border-color:${book.recommended?'var(--gold)':'var(--border)'};color:${book.recommended?'var(--gold)':'var(--navy2)'};
+      ${book.recommended?'background:rgba(200,149,42,.1);':''}">
+      <span style="font-size:.78rem;line-height:1">${book.recommended?'⭐':'☆'}</span><span>${book.recommended?'Recommended':'Recommend'}</span>
+    </button>`;
+
   html += `<div style="display:flex;flex-wrap:wrap;gap:.4rem;padding:.6rem 0 .3rem;border-top:1px solid var(--border);margin-top:.4rem;">
-    ${pillSelect('detailActionsSelect', 'Actions', actionOpts)}
     ${pillSelect('detailShareSelect', 'Share', shareOpts)}
     ${pillSelect('detailEditSelect', 'Edit', editOpts)}
+    ${recToggle}
   </div>`;
 
   // ── History (admin) / Delete (owner) — small, always-visible, kept out of
@@ -3789,7 +3799,6 @@ function renderDetailActionRows(peekContainer, moreContainer, book, isMine){
   moreContainer.innerHTML = html;
   moreContainer.querySelectorAll('[data-action]').forEach(b => b.addEventListener('click', handleAction));
 
-  wirePillSelect(moreContainer, 'detailActionsSelect', actionOpts);
   wirePillSelect(moreContainer, 'detailShareSelect', shareOpts);
   wirePillSelect(moreContainer, 'detailEditSelect', editOpts);
 }
@@ -3953,25 +3962,31 @@ function buildDrawerIconBar(book, isMine){
       </div>
     </div>`;
 
-  if(isMine){
-    html += `
-    <!-- Owner-only actions -->
-    <div style="padding:.4rem 1.5rem .6rem;background:rgba(15,26,46,0.03);">
-      <div style="font-size:.58rem;letter-spacing:.15em;text-transform:uppercase;color:var(--gold);font-weight:700;margin-bottom:.35rem;">🔑 Owner Only</div>
-      <div style="display:flex;gap:.4rem;flex-wrap:wrap;">
-        <button class="drawer-icon-btn" data-action="share" ${book.visibility==='public'?'style="display:none"':''}>
+  // Owner-only actions (publish/share/delete) stay gated to isMine; Edit
+  // Details/Edit Contents also open up to admins, who can manage any book
+  // they can see, not just ones they uploaded themselves.
+  if(isMine || isAdmin){
+    let manageBtns = '';
+    if(isMine){
+      manageBtns += `<button class="drawer-icon-btn" data-action="share" ${book.visibility==='public'?'style="display:none"':''}>
           <span class="di-icon">🌐</span><span class="di-label">Publish</span></button>
         <button class="drawer-icon-btn" data-action="unpublish" ${book.visibility!=='public'?'style="display:none"':''}>
           <span class="di-icon">🔒</span><span class="di-label">Unpublish</span></button>
         <button class="drawer-icon-btn" data-action="shareprivate">
-          <span class="di-icon">🔗</span><span class="di-label">Share</span></button>
-        <button class="drawer-icon-btn" data-action="editmeta">
+          <span class="di-icon">🔗</span><span class="di-label">Share</span></button>`;
+    }
+    manageBtns += `<button class="drawer-icon-btn" data-action="editmeta">
           <span class="di-icon">✎</span><span class="di-label">Edit</span></button>
         <button class="drawer-icon-btn" data-action="chapters">
-          <span class="di-icon">📑</span><span class="di-label">Edit Contents</span></button>
-        <button class="drawer-icon-btn di-danger" data-action="delete">
-          <span class="di-icon">✕</span><span class="di-label">Delete</span></button>
-      </div>
+          <span class="di-icon">📑</span><span class="di-label">Edit Contents</span></button>`;
+    if(isMine){
+      manageBtns += `<button class="drawer-icon-btn di-danger" data-action="delete">
+          <span class="di-icon">✕</span><span class="di-label">Delete</span></button>`;
+    }
+    html += `
+    <div style="padding:.4rem 1.5rem .6rem;background:rgba(15,26,46,0.03);">
+      <div style="font-size:.58rem;letter-spacing:.15em;text-transform:uppercase;color:var(--gold);font-weight:700;margin-bottom:.35rem;">${isMine?'🔑 Owner Only':'🛡️ Admin'}</div>
+      <div style="display:flex;gap:.4rem;flex-wrap:wrap;">${manageBtns}</div>
     </div>`;
   }
 
@@ -4224,7 +4239,7 @@ function checkUrlHash(){
 function stripHtml(s){const d=document.createElement('div');d.innerHTML=s;return d.textContent||d.innerText||s;}
 function showEditMeta(){
   if(!currentId)return;
-  const book=library.find(b=>b.id===currentId);if(!book)return;
+  const book=[...library,...communityLib].find(b=>b.id===currentId);if(!book)return;
   document.getElementById('metaTitle').value=book.title||'';
   document.getElementById('metaAuthor').value=book.author||'';
   document.getElementById('metaLanguage').value=book.language||'';
@@ -4237,7 +4252,7 @@ function showEditMeta(){
 }
 document.getElementById('btnCancelEditMeta').addEventListener('click',()=>document.getElementById('editMetaModal').classList.remove('open'));
 document.getElementById('btnSaveEditMeta').addEventListener('click',async()=>{
-  const book=library.find(b=>b.id===currentId);if(!book)return;
+  const book=[...library,...communityLib].find(b=>b.id===currentId);if(!book)return;
   const updates={
     title:document.getElementById('metaTitle').value.trim()||book.title,
     author:document.getElementById('metaAuthor').value.trim()||book.author,
@@ -4763,6 +4778,7 @@ function updateMobBulkBar(){
 
   let html = `<span style="font-size:.78rem;font-weight:700;flex-shrink:0">${n} selected</span>`;
   html += btn('📚 Category','category');
+  html += btn('🏷 Tags','tags');
   if(hasUnpublished) html += btn('⇧ Publish','publish');
   if(hasPublished)   html += btn('↓ Unpublish','unpublish');
   if(hasUnrecommended) html += btn('★ Rec','recommend');
@@ -4782,6 +4798,8 @@ async function handleMobBulkAction(action){
   if(action === 'done'){ exitMobSelectMode(); return; }
 
   if(action === 'category'){ showMobBulkCategoryPicker(); return; }
+
+  if(action === 'tags'){ showMobBulkTagsPicker(); return; }
 
   if(action === 'delete'){
     if(!confirm(`Delete ${mobSelectedIds.size} book${mobSelectedIds.size!==1?'s':''}?`)) return;
@@ -4914,6 +4932,102 @@ function showMobBulkCategoryPicker(){
         showToast(`Category updated for ${ids.length} book${ids.length!==1?'s':''} ✓`);
       }catch(e){ hideLoading(); showToast('Failed: '+e.message); }
     });
+  });
+}
+
+// Bulk-add tags for every book currently selected in mobile multi-select.
+// Tags are multi-select per book (unlike category), so this picker lets you
+// tap several chips before applying — the chosen tags are added on top of
+// whatever tags each book already has, matching the desktop Bulk Edit
+// modal's "added to existing" behaviour for Tags.
+function showMobBulkTagsPicker(){
+  const ids = [...mobSelectedIds].filter(id => library.some(b => b.id === id));
+  if(!ids.length){ showToast('No editable books selected'); return; }
+
+  const pendingTags = new Set();
+
+  const scrim = document.createElement('div');
+  scrim.className = 'mob-picker-scrim';
+  scrim.innerHTML = `
+    <div class="mob-picker-card">
+      <div class="mob-picker-title">
+        <span>🏷 Add Tags to ${ids.length} book${ids.length!==1?'s':''}</span>
+        <button class="mob-picker-close" id="mobBulkTagsCloseBtn">✕</button>
+      </div>
+      <div style="padding:.7rem 1.2rem .6rem;display:flex;gap:.4rem;border-bottom:1px solid var(--border);">
+        <input id="mobBulkTagsCustomInput" type="text" placeholder="Add a custom tag…"
+          style="flex:1;padding:.45rem .7rem;font-size:1rem;font-family:'Lato',sans-serif;
+                 border:1px solid var(--border);border-radius:20px;background:var(--cream);
+                 color:var(--navy);outline:none;"/>
+        <button id="mobBulkTagsCustomAdd"
+          style="background:var(--teal);color:var(--gold);border:none;border-radius:20px;
+                 padding:.45rem 1rem;font-family:'Lato',sans-serif;font-size:.78rem;
+                 font-weight:700;cursor:pointer;">Add</button>
+      </div>
+      <div id="mobBulkTagsAllList" style="padding:.6rem 1.2rem .5rem;max-height:40vh;overflow-y:auto;
+                  display:flex;flex-wrap:wrap;gap:.35rem;align-content:flex-start;">
+        ${(_globalTags||[]).length
+          ? [...(_globalTags||[])].sort().map(t => `<span class="tag-chip selectable" data-tag="${esc(t)}">${tagIcon(t)} ${esc(t)}</span>`).join('')
+          : `<span style="font-size:.8rem;color:var(--muted);font-style:italic;">No tags yet — add one above</span>`}
+      </div>
+      <div style="padding:.5rem 1.2rem .8rem;">
+        <button class="mob-picker-newbtn" id="mobBulkTagsApplyBtn">Add Tags to ${ids.length} Book${ids.length!==1?'s':''}</button>
+      </div>
+    </div>`;
+  document.body.appendChild(scrim);
+
+  const wireChip = (chip) => {
+    chip.addEventListener('click', () => {
+      const tag = chip.dataset.tag;
+      if(pendingTags.has(tag)){ pendingTags.delete(tag); chip.classList.remove('selected'); }
+      else{ pendingTags.add(tag); chip.classList.add('selected'); }
+    });
+  };
+
+  scrim.addEventListener('click', e => { if(e.target === scrim) scrim.remove(); });
+  scrim.querySelector('#mobBulkTagsCloseBtn').addEventListener('click', () => scrim.remove());
+  scrim.querySelectorAll('[data-tag]').forEach(wireChip);
+
+  const customInput = scrim.querySelector('#mobBulkTagsCustomInput');
+  const addCustom = async () => {
+    const tag = customInput.value.trim();
+    if(!tag) return;
+    customInput.value = '';
+    pendingTags.add(tag);
+    if(!_globalTags.includes(tag)){
+      _globalTags.push(tag);
+      _globalTags.sort();
+      await updateDoc(doc(db, 'config', 'tags'), { list: _globalTags });
+    }
+    const list = scrim.querySelector('#mobBulkTagsAllList');
+    const existing = list.querySelector(`[data-tag="${CSS.escape(tag)}"]`);
+    if(existing){
+      existing.classList.add('selected');
+    } else {
+      const empty = list.querySelector('span:not([data-tag])');
+      if(empty) empty.remove();
+      list.insertAdjacentHTML('beforeend', `<span class="tag-chip selectable selected" data-tag="${esc(tag)}">${tagIcon(tag)} ${esc(tag)}</span>`);
+      wireChip(list.lastElementChild);
+    }
+  };
+  scrim.querySelector('#mobBulkTagsCustomAdd').addEventListener('click', addCustom);
+  customInput.addEventListener('keydown', e => { if(e.key === 'Enter') addCustom(); });
+
+  scrim.querySelector('#mobBulkTagsApplyBtn').addEventListener('click', async () => {
+    const newTags = [...pendingTags];
+    if(!newTags.length){ showToast('Select at least one tag'); return; }
+    scrim.remove();
+    showLoading('Adding tags…');
+    try{
+      for(const id of ids){
+        const book = library.find(b=>b.id===id); if(!book) continue;
+        const tags = [...new Set([...(book.tags||[]), ...newTags])];
+        await updateDoc(doc(db,'books',id),{tags,updatedAt:serverTimestamp()});
+        book.tags = tags;
+      }
+      hideLoading(); exitMobSelectMode(); renderAll();
+      showToast(`Tags added to ${ids.length} book${ids.length!==1?'s':''} ✓`);
+    }catch(e){ hideLoading(); showToast('Failed: '+e.message); }
   });
 }
 
