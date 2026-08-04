@@ -2727,6 +2727,14 @@ let _tagIcons = {};        // { "Favourite": "❤️", ... } — per-item emoji,
 
 // Reader state
 let readerZip=null,readerSpine=[],readerChapter=0,readerOpfBase='',readerBookId = null;
+
+// Set while the user has an active "open this book" request in flight, so
+// background/offline-prefetch downloads (see prewarmOfflineEpubs) know to
+// stand down instead of starting the next big EPUB fetch on top of it.
+let _bookOpenPriority = false;
+async function _waitForBookOpenPriority() {
+  while (_bookOpenPriority) await new Promise(r => setTimeout(r, 200));
+}
 let lastOpenedBookId = null;
 let readerPage = 0;
 let readerPageCount = 1;
@@ -5886,6 +5894,11 @@ async function prewarmOfflineEpubs() {
   const crList = _userLists.find(l => l.id === 'currently-reading');
   const bookIds = crList?.bookIds || [];
   for(const bookId of bookIds) {
+    // Yield to a book the user is actively trying to open right now rather
+    // than starting the next multi-MB prefetch on top of it — this is the
+    // "queued behind other loading" contention for on-demand opens.
+    await _waitForBookOpenPriority();
+    if(bookId === readerBookId) continue; // already open / just opened — no need to prefetch it too
     const ok = await cacheEpubForOfflineById(bookId, { silent: true });
     if(!ok && _lastFindBookByIdErrorCode === 'permission-denied') {
       // Book has been deleted or is no longer accessible to this user —
@@ -6047,6 +6060,10 @@ async function readCurrentBook(){
   if(!storagePath&&book.epubUrl){const match=book.epubUrl.match(/\/o\/(.+?)\?/);if(match)storagePath=decodeURIComponent(match[1]);}
   if(!storagePath){showToast('EPUB not available');return;}
   showLoading('Opening book…', book.coverUrl); // show immediately — covers the network fetch too, not just pagination
+  // Claim priority for the duration of the fetch so background prefetches
+  // (prewarmOfflineEpubs) don't start a competing multi-MB download right
+  // as the user is waiting on this one. Cleared in the finally below.
+  _bookOpenPriority = true;
   try{
     let bytes = await getCachedEpubBytes(book.id);
     const fromCache = !!bytes;
@@ -6058,7 +6075,11 @@ async function readCurrentBook(){
           throw new Error("You're offline and this book hasn't been downloaded for offline reading yet.");
         }
         throw netErr;
+      } finally {
+        _bookOpenPriority = false;
       }
+    } else {
+      _bookOpenPriority = false;
     }
     readerZip=await JSZip.loadAsync(bytes);readerSpine=[];readerChapter=0;
     readerBookId = book.id;
@@ -6128,7 +6149,7 @@ async function readCurrentBook(){
     
     requestAnimationFrame(() => requestAnimationFrame(() => recalcReaderHeight()));
     setTimeout(() => recalcReaderHeight(), 300);
-  }catch(e){hideLoading();showToast('Could not open EPUB: '+e.message);console.error(e);}
+  }catch(e){_bookOpenPriority=false;hideLoading();showToast('Could not open EPUB: '+e.message);console.error(e);}
 }
 
 
