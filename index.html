@@ -6716,7 +6716,7 @@ function renderHomeLedgerTeaser() {
       <div class="home-ledger-teaser-flame">${ledgerState.streakCount ? '🔥' : '🕯️'}</div>
       <div class="home-ledger-teaser-text">
         <div class="home-ledger-teaser-title">${ledgerState.streakCount ? `${ledgerState.streakCount}-day streak` : 'Start a streak today'} <span class="home-ledger-teaser-today-pts">+${ledgerToday.pointsEarned} today</span></div>
-        <div class="home-ledger-teaser-sub">${ledgerToday.pagesRead} pages today · goal is ${ledgerState.dailyGoal} · ${ledgerState.totalPoints.toLocaleString()} pts</div>
+        <div class="home-ledger-teaser-sub">${ledgerToday.pagesRead} pages today · goal is ${ledgerState.dailyGoal}</div>
       </div>
       ${_ledgerGoalRingSvg(pct, 40)}
     </div>`;
@@ -8360,6 +8360,9 @@ function _wordRangeAtPoint(doc, x, y) {
 
 let _wordLookupPopup = null;
 function _removeWordLookupPopup() {
+  if (_wordLookupPopup?._wlOutsideHandler) {
+    document.removeEventListener('mousedown', _wordLookupPopup._wlOutsideHandler, true);
+  }
   _wordLookupPopup?.remove();
   _wordLookupPopup = null;
 }
@@ -8401,7 +8404,18 @@ function _showWordLookupPopup(word, range) {
   `;
   document.body.appendChild(popup);
   _wordLookupPopup = popup;
-  popup.querySelector('[data-wl-close]').addEventListener('click', _removeWordLookupPopup);
+  popup.querySelector('[data-wl-close]').addEventListener('click', () => setReaderLookupMode(false));
+
+  // Desktop: clicking anywhere outside the popup exits lookup mode.
+  // Store the handler on the element so _removeWordLookupPopup can clean it up.
+  const _wlOutside = (ev) => {
+    if (_wordLookupPopup && !_wordLookupPopup.contains(ev.target)) {
+      document.removeEventListener('mousedown', _wlOutside, true);
+      setReaderLookupMode(false);
+    }
+  };
+  popup._wlOutsideHandler = _wlOutside;
+  setTimeout(() => document.addEventListener('mousedown', _wlOutside, true), 50);
 
   _fetchWordDefinition(word).then(html => {
     const body = popup.querySelector('#readerWordLookupBody');
@@ -8558,16 +8572,28 @@ function _attachReaderTapHandlers(doc) {
   }
 
   let tx0 = 0, ty0 = 0;
+  let _lpTimer = null; // long-press timer for entering lookup mode
 
   overlay.addEventListener('touchstart', e => {
     e.preventDefault();
     tx0 = e.touches[0].clientX;
     ty0 = e.touches[0].clientY;
+    // Long-press (500 ms, no drag) → enter lookup mode and look up that word
+    clearTimeout(_lpTimer);
+    _lpTimer = setTimeout(() => {
+      _lpTimer = null;
+      if (!readerLookupMode) setReaderLookupMode(true);
+      _handleWordLookupTap(doc, tx0, ty0);
+    }, 500);
   }, { passive: false });
 
-  overlay.addEventListener('touchmove', e => { e.preventDefault(); }, { passive: false });
+  overlay.addEventListener('touchmove', e => {
+    e.preventDefault();
+    clearTimeout(_lpTimer); _lpTimer = null; // any movement cancels long-press
+  }, { passive: false });
 
   overlay.addEventListener('touchend', e => {
+    clearTimeout(_lpTimer); _lpTimer = null; // short tap: cancel long-press timer
     const dx = e.changedTouches[0].clientX - tx0;
     const dy = e.changedTouches[0].clientY - ty0;
     const activeMode = readerSelectMode || readerLookupMode;
@@ -8594,8 +8620,14 @@ function _attachReaderTapHandlers(doc) {
         // sentence or word can sit anywhere, including right at the edge,
         // so a tap there needs to act on it rather than flip the page.
         // Swipe (handled above) is still how you turn pages in both modes.
-        if (readerSelectMode) _handleSentenceTap(doc, x, e.changedTouches[0].clientY);
-        else _handleWordLookupTap(doc, x, e.changedTouches[0].clientY);
+        if (readerSelectMode) {
+          _handleSentenceTap(doc, x, e.changedTouches[0].clientY);
+        } else if (_wordLookupPopup) {
+          // Tap anywhere outside the popup while it's open → dismiss + exit mode
+          setReaderLookupMode(false);
+        } else {
+          _handleWordLookupTap(doc, x, e.changedTouches[0].clientY);
+        }
       }
       return;
     }
