@@ -2514,15 +2514,25 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
     <h3 id="goalModalTitle">New Reading Goal</h3>
     <div class="form-row"><label>Goal name (optional)</label><input type="text" id="goalName" placeholder="e.g. Classics challenge"/></div>
     <div class="form-row" style="display:flex;gap:.6rem">
-      <div style="flex:1"><label>Cadence</label>
+      <div style="flex:1"><label>Starts</label><input type="date" id="goalStartDate"/></div>
+      <div style="flex:1"><label>Duration</label>
         <select id="goalCadence">
-          <option value="weekly">Weekly</option>
-          <option value="monthly" selected>Monthly</option>
-          <option value="yearly">Yearly</option>
+          <option value="weekly">1 week</option>
+          <option value="monthly" selected>1 month</option>
+          <option value="yearly">1 year</option>
         </select>
       </div>
-      <div style="flex:1"><label># of books</label><input type="number" id="goalCount" min="1" value="1"/></div>
     </div>
+    <div class="form-row" style="display:flex;gap:.6rem">
+      <div style="flex:1"><label>Track by</label>
+        <select id="goalMetric">
+          <option value="books">Books</option>
+          <option value="pages">Pages</option>
+        </select>
+      </div>
+      <div style="flex:1"><label id="goalCountLabel"># of books</label><input type="number" id="goalCount" min="1" value="1"/></div>
+    </div>
+    <div class="form-row" id="goalEndedNote" style="display:none;font-size:.8rem;color:var(--muted);"></div>
     <div class="modal-actions">
       <button class="btn-cancel" id="btnDeleteGoal" style="display:none;margin-right:auto;color:var(--danger);border-color:var(--danger)">Delete</button>
       <button class="btn-cancel" id="btnCancelGoal">Cancel</button>
@@ -5437,16 +5447,15 @@ function recommendedSection(books) {
     const linkedGoal = _readingGoals.find(g => g.listId === l.id);
     if(linkedGoal) {
       // Goal-linked list: render a rich section with progress badge
-      const { count, target, pct } = goalProgress(linkedGoal);
-      const cadenceLabel = { weekly: 'this week', monthly: 'this month', yearly: 'this year' }[linkedGoal.cadence] || linkedGoal.cadence;
-      const done = count >= target;
-      const accentColor = done ? '#276749' : 'var(--gold)';
+      const { count, target, pct, ended, achieved } = goalStatus(linkedGoal);
+      const cadenceBadge = { weekly: '7d', monthly: '30d', yearly: '365d' }[linkedGoal.cadence] || '';
+      const accentColor = achieved ? '#276749' : (ended ? 'var(--muted)' : 'var(--gold)');
       const books = resolve(l.bookIds || []);
 
       // Build mini ring
       const R = 11, CIRC = 2 * Math.PI * R;
       const dash = Math.round((Math.min(pct,100) / 100) * CIRC);
-      const miniRing = `<svg width="28" height="28" viewBox="0 0 28 28" style="flex-shrink:0;vertical-align:middle;">
+      const miniRing = `<svg width="28" height="28" viewBox="0 0 28 28" style="flex-shrink:0;vertical-align:middle;${ended ? 'opacity:.6;' : ''}">
         <circle cx="14" cy="14" r="${R}" fill="none" stroke="rgba(200,149,42,.22)" stroke-width="3"/>
         <circle cx="14" cy="14" r="${R}" fill="none" stroke="${accentColor}" stroke-width="3"
           stroke-dasharray="${dash} ${CIRC}" stroke-linecap="round" transform="rotate(-90 14 14)"/>
@@ -5457,10 +5466,10 @@ function recommendedSection(books) {
       const goalBadge = `<span style="display:inline-flex;align-items:center;gap:3px;
         font-size:.6rem;font-weight:700;letter-spacing:.04em;
         padding:1px 7px 1px 5px;border-radius:10px;
-        background:${done ? 'rgba(39,103,73,.12)' : 'rgba(200,149,42,.12)'};
+        background:${achieved ? 'rgba(39,103,73,.12)' : (ended ? 'var(--border)' : 'rgba(200,149,42,.12)')};
         color:${accentColor};flex-shrink:0;">
         ${miniRing}
-        <span>${count}/${target} ${cadenceLabel}${done ? ' ✓' : ''}</span>
+        <span>${count}/${target}${!ended && cadenceBadge ? ' · '+cadenceBadge : ''}${ended ? (achieved ? ' · Ended ✓' : ' · Ended') : ''}</span>
       </span>`;
 
       const coverRow = books.length
@@ -6893,6 +6902,7 @@ async function renderLedgerTab() {
   if (!el) return;
   if (!ledgerState.loaded) await loadLedgerState();
   _ledgerRolloverDayIfNeeded();
+  await _checkAllGoalsForCompletion();
 
   const rank = ledgerRank(ledgerState.totalPoints);
   const floor = _ledgerRankFloor(rank.title);
@@ -6956,71 +6966,78 @@ async function renderLedgerTab() {
       </div>
       ${_readingGoals.length
         ? _readingGoals.map(g => {
-            const { count, target, pct } = goalProgress(g);
-            const cadenceLabel = { weekly: 'This week', monthly: 'This month', yearly: 'This year' }[g.cadence] || g.cadence;
-            const cadenceBadge = { weekly: '7d', monthly: '30d', yearly: '365d' }[g.cadence] || g.cadence;
-            const done = count >= target;
-            const accentColor = done ? '#276749' : 'var(--teal)';
-            const accentLight = done ? 'rgba(39,103,73,.1)' : 'var(--teal-light)';
+            const { count, target, pct, ended, achieved } = goalStatus(g);
+            const metric = g.metric === 'pages' ? 'pages' : 'books';
+            const unitLabel = metric === 'pages' ? 'page' : 'book';
+            const statusBadge = ended ? (achieved ? 'Ended ✓' : 'Ended') : _goalDateRangeLabel(g);
+            const accentColor = achieved ? '#276749' : (ended ? 'var(--muted)' : 'var(--teal)');
+            const accentLight = achieved ? 'rgba(39,103,73,.1)' : (ended ? 'var(--border)' : 'var(--teal-light)');
 
             // Ring SVG
             const R = 28, CIRC = 2 * Math.PI * R;
-            const dash = Math.round((pct / 100) * CIRC);
-            const ringSvg = `<svg width="70" height="70" viewBox="0 0 70 70" style="flex-shrink:0;">
+            const dash = Math.round((Math.min(pct,100) / 100) * CIRC);
+            const ringSvg = `<svg width="70" height="70" viewBox="0 0 70 70" style="flex-shrink:0;${ended ? 'opacity:.6;' : ''}">
               <circle cx="35" cy="35" r="${R}" fill="none" stroke="var(--border)" stroke-width="5"/>
               <circle cx="35" cy="35" r="${R}" fill="none" stroke="${accentColor}" stroke-width="5"
                 stroke-dasharray="${dash} ${CIRC}" stroke-linecap="round"
                 transform="rotate(-90 35 35)" style="transition:stroke-dasharray .4s ease"/>
               <text x="35" y="31" text-anchor="middle" font-size="13" font-weight="700"
-                fill="${done ? '#276749' : 'var(--navy2)'}" font-family="'Playfair Display',serif">${count}</text>
+                fill="${achieved ? '#276749' : 'var(--navy2)'}" font-family="'Playfair Display',serif">${count}</text>
               <text x="35" y="43" text-anchor="middle" font-size="8" fill="var(--muted)"
                 font-family="'Lato',sans-serif">of ${target}</text>
             </svg>`;
 
-            // Books in current period for this goal
-            const list = _userLists.find(l => l.id === g.listId);
-            const { start, end } = goalPeriodBounds(g.cadence);
-            const map = list?.finishedAtMap || {};
-            const periodBookIds = (list?.bookIds || []).filter(id => {
-              const raw = map[id];
-              const dt = raw?.toDate?.() || (raw instanceof Date ? raw : null);
-              return dt && dt >= start && dt < end;
-            });
-            const allBooks = [...library, ...communityLib];
-            const coverHtml = periodBookIds.slice(0, 5).map(id => {
-              const book = allBooks.find(b => b.id === id) || { id };
-              const src = getCoverSrc(book);
-              return src
-                ? `<img src="${src}" style="width:28px;height:40px;object-fit:cover;border-radius:2px;box-shadow:0 1px 4px rgba(0,0,0,.22);flex-shrink:0;"/>`
-                : `<div style="width:28px;height:40px;background:linear-gradient(145deg,var(--navy2),#2a3d5a);border-radius:2px;flex-shrink:0;"></div>`;
-            }).join('');
-            const extraCount = periodBookIds.length > 5 ? periodBookIds.length - 5 : 0;
+            // Books logged within the goal's window — pages-metric goals have
+            // no natural "which books" list, so they skip the cover row.
+            let coverHtml = '', extraCount = 0, bodyLine;
+            if(metric === 'books') {
+              const list = _userLists.find(l => l.id === g.listId);
+              const start = _goalDate(g.startDate), end = _goalDate(g.endDate);
+              const map = list?.finishedAtMap || {};
+              const periodBookIds = (list?.bookIds || []).filter(id => {
+                const raw = map[id];
+                const dt = raw?.toDate?.() || (raw instanceof Date ? raw : null);
+                return dt && start && end && dt >= start && dt < end;
+              });
+              const allBooks = [...library, ...communityLib];
+              coverHtml = periodBookIds.slice(0, 5).map(id => {
+                const book = allBooks.find(b => b.id === id) || { id };
+                const src = getCoverSrc(book);
+                return src
+                  ? `<img src="${src}" style="width:28px;height:40px;object-fit:cover;border-radius:2px;box-shadow:0 1px 4px rgba(0,0,0,.22);flex-shrink:0;${ended ? 'filter:grayscale(.5);' : ''}"/>`
+                  : `<div style="width:28px;height:40px;background:linear-gradient(145deg,var(--navy2),#2a3d5a);border-radius:2px;flex-shrink:0;"></div>`;
+              }).join('');
+              extraCount = periodBookIds.length > 5 ? periodBookIds.length - 5 : 0;
+              bodyLine = `${count} of ${target} ${unitLabel}${target !== 1 ? 's' : ''}`;
+            } else {
+              bodyLine = `${count.toLocaleString()} of ${target.toLocaleString()} ${unitLabel}${target !== 1 ? 's' : ''} read`;
+            }
 
             return `<div class="ledger-goal-tile" data-goal-id="${g.id}" style="
               display:flex;gap:.75rem;align-items:center;
               padding:.75rem .8rem;margin-bottom:.55rem;cursor:pointer;
-              background:${done ? 'rgba(39,103,73,.06)' : 'var(--panel)'};
-              border:1px solid ${done ? 'rgba(39,103,73,.25)' : 'var(--border)'};
+              background:${achieved ? 'rgba(39,103,73,.06)' : 'var(--panel)'};
+              border:1px solid ${achieved ? 'rgba(39,103,73,.25)' : 'var(--border)'};
               border-radius:10px;transition:box-shadow .15s,border-color .15s;
-              position:relative;overflow:hidden;">
-              ${done ? `<div style="position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,#276749,#4abe80);border-radius:10px 10px 0 0;"></div>` : ''}
+              position:relative;overflow:hidden;${ended ? 'opacity:.75;' : ''}">
+              ${achieved ? `<div style="position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,#276749,#4abe80);border-radius:10px 10px 0 0;"></div>` : ''}
               ${ringSvg}
               <div style="flex:1;min-width:0;">
                 <div style="display:flex;align-items:center;gap:.4rem;margin-bottom:.15rem;flex-wrap:wrap;">
                   <span style="font-family:'Playfair Display',serif;font-size:.88rem;font-weight:700;color:var(--navy2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:130px;">${esc(g.name)}</span>
-                  <span style="font-size:.6rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:1px 6px;border-radius:10px;background:${accentLight};color:${accentColor};flex-shrink:0;">${cadenceBadge}</span>
-                  ${done ? `<span style="font-size:.7rem;color:#276749;flex-shrink:0;">✓ Done!</span>` : ''}
+                  <span style="font-size:.6rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:1px 6px;border-radius:10px;background:${accentLight};color:${accentColor};flex-shrink:0;">${esc(statusBadge)}</span>
+                  ${achieved ? `<span style="font-size:.7rem;color:#276749;flex-shrink:0;">✓ ${ended ? 'Completed' : 'Done!'}</span>` : (ended ? `<span style="font-size:.7rem;color:var(--muted);flex-shrink:0;">Goal ended</span>` : '')}
                 </div>
-                <div style="font-size:.7rem;color:var(--muted);margin-bottom:${coverHtml ? '.45rem' : '0'};">${cadenceLabel}: ${count} of ${target} book${target !== 1 ? 's' : ''}</div>
+                <div style="font-size:.7rem;color:var(--muted);margin-bottom:${coverHtml ? '.45rem' : '0'};">${bodyLine}</div>
                 ${coverHtml ? `<div style="display:flex;gap:4px;align-items:flex-end;flex-wrap:nowrap;overflow:hidden;">
                   ${coverHtml}
                   ${extraCount ? `<div style="width:28px;height:40px;border-radius:2px;background:var(--border);display:flex;align-items:center;justify-content:center;font-size:.58rem;color:var(--muted);font-weight:700;flex-shrink:0;">+${extraCount}</div>` : ''}
-                </div>` : `<div style="font-size:.68rem;color:var(--muted);font-style:italic;">No books logged ${cadenceLabel.toLowerCase()} yet</div>`}
+                </div>` : (metric === 'books' ? `<div style="font-size:.68rem;color:var(--muted);font-style:italic;">No books logged yet</div>` : '')}
               </div>
               <span style="color:var(--muted);font-size:.75rem;flex-shrink:0;align-self:flex-start;padding-top:.1rem;">›</span>
             </div>`;
           }).join('')
-        : `<div class="ledger-card-note" style="margin-bottom:.6rem;">Set a weekly, monthly, or yearly target — a linked list on Home will track your reads automatically.</div>`}
+        : `<div class="ledger-card-note" style="margin-bottom:.6rem;">Set a target — books or pages, over a week/month/year starting whenever you like — and a linked list on Home will track your reads automatically.</div>`}
     </div>
 
     <div class="ledger-card">
@@ -7058,7 +7075,19 @@ async function renderLedgerTab() {
         }).join('')}
       </div>
       ${tier2Teaser}
-    </div>`;
+    </div>
+
+    ${_readingGoals.some(g => g.badgeAwarded) ? `<div class="ledger-card">
+      <div class="ledger-card-label">Goal Badges</div>
+      <div class="ledger-card-note">Earned by completing a one-off reading goal — tap to replay.</div>
+      <div class="ledger-badge-grid">
+        ${_readingGoals.filter(g => g.badgeAwarded).map(g => `
+          <button type="button" class="ledger-badge" data-goal-badge-id="${g.id}">
+            <span class="ledger-badge-icon">🎯</span>
+            <span class="ledger-badge-label">${esc(g.name)}</span>
+          </button>`).join('')}
+      </div>
+    </div>` : ''}`;
 
   document.getElementById('btnLedgerEditGoal')?.addEventListener('click', showLedgerGoalPicker);
   document.getElementById('btnLedgerAddGoal')?.addEventListener('click', () => openGoalModal());
@@ -7078,6 +7107,12 @@ async function renderLedgerTab() {
       } else {
         showLedgerAchievementPopover(achievementId);
       }
+    });
+  });
+  el.querySelectorAll('.ledger-badge[data-goal-badge-id]').forEach(b => {
+    b.addEventListener('click', () => {
+      const g = _readingGoals.find(x => x.id === b.dataset.goalBadgeId);
+      if (g) _ledgerPlayAchievementBurst({ icon: '🎯', label: g.name, desc: `Completed your "${g.name}" reading goal` });
     });
   });
   _ledgerRenderCalendar();
@@ -13371,83 +13406,191 @@ async function deleteUserList(listId) {
 }
 
 // ── READING GOALS ────────────────────────────────────────────────────────────
-// A goal is a recurring target (N books per week/month/year) backed by a
-// normal user list — createUserList() already makes any non-system list show
-// up as a Home shelf automatically, so a goal's list needs no special-casing
-// there. Progress is computed on the fly by filtering that list's
-// finishedAtMap against the *current* period window, so the same list keeps
-// working as the goal recurs — nothing needs to be reset each week/month/year.
+// A goal is a one-off target (N books or N pages within a fixed date range)
+// backed by a normal user list — createUserList() already makes any
+// non-system list show up as a Home shelf automatically, so a goal's list
+// needs no special-casing there. Progress is computed on the fly — for a
+// 'books' goal, by filtering that list's finishedAtMap against the goal's
+// own [startDate, endDate) window; for a 'pages' goal, by summing the
+// ledger's per-day page counts over the same window. Once endDate passes,
+// the goal just renders as "ended" — the underlying data doesn't change, so
+// re-computing progress after the fact still gives the correct final tally.
 
 let _readingGoals = [];
+let _goalPagesProgress = {}; // goalId -> summed pagesRead within its fixed window (metric:'pages' goals only)
+
+function _goalDate(x) {
+  if(!x) return null;
+  return x.toDate ? x.toDate() : (x instanceof Date ? x : new Date(x));
+}
+
+function goalEndDate(startDate, cadence) {
+  const end = new Date(startDate);
+  if(cadence === 'weekly') end.setDate(end.getDate() + 7);
+  else if(cadence === 'yearly') end.setFullYear(end.getFullYear() + 1);
+  else end.setMonth(end.getMonth() + 1); // monthly (also the fallback for legacy docs)
+  return end;
+}
+
+function _goalDateRangeLabel(g) {
+  const start = _goalDate(g.startDate), end = _goalDate(g.endDate);
+  if(!start || !end) return '';
+  const endInclusive = new Date(end); endInclusive.setDate(endInclusive.getDate() - 1);
+  const fmt = d => d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+  return `${fmt(start)} – ${fmt(endInclusive)}`;
+}
+
+// Progress plus the two derived facts every render site needs: has the
+// window closed, and was the target actually hit.
+function goalStatus(g) {
+  const { count, target, pct } = goalProgress(g);
+  const end = _goalDate(g.endDate);
+  return { count, target, pct, ended: end ? new Date() >= end : false, achieved: count >= target };
+}
 
 async function loadReadingGoals() {
   if(!currentUser) return;
   try {
     const snap = await getDocs(query(collection(db, 'readingGoals'), where('userId', '==', currentUser.uid)));
     _readingGoals = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    // Migrate goals created before fixed date ranges existed — anchor them
+    // to their creation date so they behave like a one-off goal instead of
+    // breaking on a missing startDate/endDate.
+    for(const g of _readingGoals) {
+      if(g.startDate) continue;
+      const start = _goalDate(g.createdAt) || new Date();
+      const end = goalEndDate(start, g.cadence || 'monthly');
+      g.startDate = Timestamp.fromDate(start);
+      g.endDate = Timestamp.fromDate(end);
+      g.metric = g.metric || 'books';
+      updateDoc(doc(db, 'readingGoals', g.id), { startDate: g.startDate, endDate: g.endDate, metric: g.metric })
+        .catch(e => console.warn('goal migration:', e));
+    }
+    await _checkAllGoalsForCompletion();
   } catch(e) {
     console.warn('loadReadingGoals:', e);
     _readingGoals = [];
   }
 }
 
-async function createReadingGoal(cadence, targetCount, name) {
-  const listName = name || `${targetCount} book${targetCount === 1 ? '' : 's'} / ${cadence.replace('ly', '')}`;
+async function createReadingGoal(cadence, targetCount, name, metric, startDate) {
+  const unit = metric === 'pages' ? 'page' : 'book';
+  const listName = name || `${targetCount} ${unit}${targetCount === 1 ? '' : 's'} / ${cadence.replace('ly', '')}`;
   const listId = await createUserList(listName, '🎯');
-  const data = { userId: currentUser.uid, cadence, targetCount, listId, name: listName, createdAt: serverTimestamp() };
+  const endDate = goalEndDate(startDate, cadence);
+  const data = {
+    userId: currentUser.uid, cadence, targetCount, metric, listId, name: listName,
+    startDate: Timestamp.fromDate(startDate), endDate: Timestamp.fromDate(endDate),
+    badgeAwarded: false, createdAt: serverTimestamp()
+  };
   const ref = await addDoc(collection(db, 'readingGoals'), data);
   _readingGoals.push({ id: ref.id, ...data });
+  await _checkAllGoalsForCompletion();
 }
 
-async function updateReadingGoal(goalId, cadence, targetCount, name) {
+async function updateReadingGoal(goalId, cadence, targetCount, name, metric, startDate) {
   const g = _readingGoals.find(x => x.id === goalId);
   if(!g) return;
-  const listName = name || `${targetCount} book${targetCount === 1 ? '' : 's'} / ${cadence.replace('ly', '')}`;
-  g.cadence = cadence; g.targetCount = targetCount; g.name = listName;
-  await updateDoc(doc(db, 'readingGoals', goalId), { cadence, targetCount, name: listName });
+  const unit = metric === 'pages' ? 'page' : 'book';
+  const listName = name || `${targetCount} ${unit}${targetCount === 1 ? '' : 's'} / ${cadence.replace('ly', '')}`;
+  const endDate = goalEndDate(startDate, cadence);
+  g.cadence = cadence; g.targetCount = targetCount; g.name = listName; g.metric = metric;
+  g.startDate = Timestamp.fromDate(startDate); g.endDate = Timestamp.fromDate(endDate);
+  await updateDoc(doc(db, 'readingGoals', goalId), {
+    cadence, targetCount, name: listName, metric, startDate: g.startDate, endDate: g.endDate
+  });
   const list = _userLists.find(l => l.id === g.listId);
   if(list) list.name = listName;
   await setDoc(doc(db, 'user_lists', currentUser.uid, 'lists', g.listId), { name: listName }, { merge: true }).catch(()=>{});
+  await _checkAllGoalsForCompletion();
 }
 
 async function deleteReadingGoal(goalId) {
   await deleteDoc(doc(db, 'readingGoals', goalId));
   _readingGoals = _readingGoals.filter(x => x.id !== goalId);
-}
-
-function goalPeriodBounds(cadence, ref = new Date()) {
-  const d = new Date(ref);
-  if(cadence === 'weekly') {
-    const start = new Date(d.getFullYear(), d.getMonth(), d.getDate() - d.getDay());
-    const end = new Date(start); end.setDate(start.getDate() + 7);
-    return { start, end };
-  }
-  if(cadence === 'yearly') {
-    return { start: new Date(d.getFullYear(), 0, 1), end: new Date(d.getFullYear() + 1, 0, 1) };
-  }
-  return { start: new Date(d.getFullYear(), d.getMonth(), 1), end: new Date(d.getFullYear(), d.getMonth() + 1, 1) };
+  delete _goalPagesProgress[goalId];
 }
 
 function goalProgress(g) {
+  const target = g.targetCount;
+  if(g.metric === 'pages') {
+    const count = _goalPagesProgress[g.id] || 0;
+    return { count, target, pct: Math.min(100, Math.round((count / Math.max(target, 1)) * 100)) };
+  }
   const list = _userLists.find(l => l.id === g.listId);
-  const { start, end } = goalPeriodBounds(g.cadence);
+  const start = _goalDate(g.startDate), end = _goalDate(g.endDate);
   const map = list?.finishedAtMap || {};
   const count = (list?.bookIds || []).filter(id => {
     const raw = map[id];
     const dt = raw?.toDate?.() || (raw instanceof Date ? raw : null);
-    return dt && dt >= start && dt < end;
+    return dt && start && end && dt >= start && dt < end;
   }).length;
-  return { count, target: g.targetCount, pct: Math.min(100, Math.round((count / Math.max(g.targetCount, 1)) * 100)) };
+  return { count, target, pct: Math.min(100, Math.round((count / Math.max(target, 1)) * 100)) };
+}
+
+// Sums the ledger's per-day page counts across each 'pages' goal's fixed
+// window. Today's persisted ledgerDays doc can lag the in-memory count until
+// the next debounced flush, so today is excluded from the query sum and the
+// live ledgerToday.pagesRead is folded in instead.
+async function _refreshGoalPagesProgress() {
+  if(!currentUser) return false;
+  const pageGoals = _readingGoals.filter(g => g.metric === 'pages');
+  if(!pageGoals.length) return false;
+  let changed = false;
+  for(const g of pageGoals) {
+    const start = _goalDate(g.startDate), end = _goalDate(g.endDate);
+    if(!start || !end) continue;
+    const startStr = ledgerDateStr(start), endStr = ledgerDateStr(new Date(end - 1));
+    let sum = 0;
+    try {
+      const q = query(collection(db, 'users', currentUser.uid, 'ledgerDays'),
+        where('dateStr', '>=', startStr), where('dateStr', '<=', endStr));
+      const snap = await getDocs(q);
+      snap.forEach(d => { if(d.id !== ledgerToday.dateStr) sum += d.data().pagesRead || 0; });
+    } catch(e) { console.warn('goal pages progress:', e); }
+    if(ledgerToday.dateStr >= startStr && ledgerToday.dateStr <= endStr) sum += ledgerToday.pagesRead;
+    if(_goalPagesProgress[g.id] !== sum) changed = true;
+    _goalPagesProgress[g.id] = sum;
+  }
+  return changed;
+}
+
+// Fires the first time a goal's progress reaches its target — a badge named
+// after the goal itself, separate from the fixed LEDGER_ACHIEVEMENTS catalog
+// since every goal earns its own one-off reward. badgeAwarded is persisted
+// so this never re-fires for the same goal (editing a goal never revokes it).
+async function _checkAllGoalsForCompletion() {
+  if(!currentUser || !_readingGoals.length) return;
+  await _refreshGoalPagesProgress();
+  for(const g of _readingGoals) {
+    if(g.badgeAwarded) continue;
+    const { count, target } = goalProgress(g);
+    if(count >= target) await _awardGoalBadge(g);
+  }
+}
+
+async function _awardGoalBadge(g) {
+  g.badgeAwarded = true;
+  g.completedAt = new Date();
+  await updateDoc(doc(db, 'readingGoals', g.id), { badgeAwarded: true, completedAt: serverTimestamp() })
+    .catch(e => console.warn('goal badge persist:', e));
+  _ledgerPlayAchievementBurst({ icon: '🎯', label: g.name, desc: `Completed your "${g.name}" reading goal` });
 }
 
 // Called whenever a book is finished — in-app or a manually logged past
-// read — so it joins every currently active goal's list. Idempotent: safe
-// to call again for the same book (e.g. re-saving an edited manual read).
+// read — so it joins every currently active 'books' goal whose fixed window
+// covers the finish date. Idempotent: safe to call again for the same book
+// (e.g. re-saving an edited manual read) — also how a goal created *after*
+// some past reads were logged can retroactively pick them up, by re-saving
+// those past-read entries once the goal exists.
 async function addBookToActiveGoals(bookId, dateFinished) {
   if(!currentUser || !_readingGoals.length) return;
   const dateObj = dateFinished?.toDate?.() || (dateFinished instanceof Date ? dateFinished : new Date());
   const ts = Timestamp.fromDate(dateObj);
   for(const g of _readingGoals) {
+    if(g.metric === 'pages') continue;
+    const start = _goalDate(g.startDate), end = _goalDate(g.endDate);
+    if(start && end && (dateObj < start || dateObj >= end)) continue; // outside this goal's window
     const list = _userLists.find(l => l.id === g.listId);
     if(!list) continue;
     const bookIds = (list.bookIds || []).includes(bookId) ? list.bookIds : [...(list.bookIds || []), bookId];
@@ -13459,6 +13602,7 @@ async function addBookToActiveGoals(bookId, dateFinished) {
       { merge: true }
     ).catch(e => console.warn('addBookToActiveGoals:', e));
   }
+  await _checkAllGoalsForCompletion();
 }
 
 async function addBookToViewedList(bookId) {
@@ -15198,6 +15342,12 @@ document.getElementById('btnDeleteManualRead')?.addEventListener('click', delete
 
 let _editingGoalId = null;
 
+function _updateGoalCountLabel() {
+  const metric = document.getElementById('goalMetric').value;
+  document.getElementById('goalCountLabel').textContent = metric === 'pages' ? '# of pages' : '# of books';
+}
+document.getElementById('goalMetric')?.addEventListener('change', _updateGoalCountLabel);
+
 function openGoalModal(goalId = null) {
   _editingGoalId = goalId;
   const g = goalId ? _readingGoals.find(x => x.id === goalId) : null;
@@ -15205,7 +15355,21 @@ function openGoalModal(goalId = null) {
   document.getElementById('btnDeleteGoal').style.display = g ? '' : 'none';
   document.getElementById('goalName').value = g?.name || '';
   document.getElementById('goalCadence').value = g?.cadence || 'monthly';
+  document.getElementById('goalMetric').value = g?.metric || 'books';
+  document.getElementById('goalStartDate').value = ledgerDateStr(g ? _goalDate(g.startDate) : new Date());
   document.getElementById('goalCount').value = g?.targetCount || 1;
+  _updateGoalCountLabel();
+
+  const note = document.getElementById('goalEndedNote');
+  const status = g ? goalStatus(g) : null;
+  if(status?.ended) {
+    const endInclusive = _goalDate(g.endDate); endInclusive.setDate(endInclusive.getDate() - 1);
+    const endLabel = endInclusive.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+    note.textContent = `Ended ${endLabel} — ${status.achieved ? 'completed ✓' : `only ${status.count} of ${status.target} reached`}. Change the start date or duration to reopen it.`;
+    note.style.display = '';
+  } else {
+    note.style.display = 'none';
+  }
   document.getElementById('goalModal').classList.add('open');
 }
 
@@ -15216,10 +15380,13 @@ function closeGoalModal() {
 
 async function saveGoalFromModal() {
   const cadence = document.getElementById('goalCadence').value;
+  const metric = document.getElementById('goalMetric').value;
   const targetCount = Math.max(1, parseInt(document.getElementById('goalCount').value, 10) || 1);
   const name = document.getElementById('goalName').value.trim();
-  if(_editingGoalId) await updateReadingGoal(_editingGoalId, cadence, targetCount, name);
-  else await createReadingGoal(cadence, targetCount, name);
+  const startRaw = document.getElementById('goalStartDate').value;
+  const startDate = startRaw ? new Date(startRaw + 'T00:00:00') : new Date();
+  if(_editingGoalId) await updateReadingGoal(_editingGoalId, cadence, targetCount, name, metric, startDate);
+  else await createReadingGoal(cadence, targetCount, name, metric, startDate);
   closeGoalModal();
   renderLedgerTab();
   renderMobHome();
