@@ -1983,11 +1983,16 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
     <div style="display:flex;flex-direction:column;height:100%;overflow:hidden">
       <div style="background:var(--cream);padding:.9rem 1rem .8rem;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);flex-shrink:0">
         <div style="font-family:'Playfair Display',serif;font-size:1.3rem;color:var(--navy2)">Timeline</div>
-        <select id="timelineYearFilter" class="mob-pill-btn mob-pill-sm" style="color:var(--navy2);-webkit-appearance:none;appearance:none;padding-right:1.5rem;
-          background-image:url('data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 12 8%22%3E%3Cpath fill=%22%232a7c8a%22 d=%22M1 1l5 5 5-5%22 stroke=%22%232a7c8a%22 stroke-width=%221.4%22 fill=%22none%22/%3E%3C/svg%3E');
-          background-repeat:no-repeat;background-position:right .55rem center;background-size:9px 6px;">
-          <option value="all">All time</option>
-        </select>
+        <div style="display:flex;align-items:center;gap:.5rem">
+          <button id="btnAddManualRead" style="color:var(--teal);font-weight:700;border:1px solid var(--teal);
+            background:transparent;border-radius:20px;padding:.3rem .75rem;cursor:pointer;font-size:.78rem;
+            line-height:1;font-family:'Lato',sans-serif;">+ Add</button>
+          <select id="timelineYearFilter" class="mob-pill-btn mob-pill-sm" style="color:var(--navy2);-webkit-appearance:none;appearance:none;padding-right:1.5rem;
+            background-image:url('data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 12 8%22%3E%3Cpath fill=%22%232a7c8a%22 d=%22M1 1l5 5 5-5%22 stroke=%22%232a7c8a%22 stroke-width=%221.4%22 fill=%22none%22/%3E%3C/svg%3E');
+            background-repeat:no-repeat;background-position:right .55rem center;background-size:9px 6px;">
+            <option value="all">All time</option>
+          </select>
+        </div>
       </div>
       <div class="mob-grid-scroll" id="timelineContent" style="-webkit-overflow-scrolling:touch">
         <div style="text-align:center;padding:3rem 1rem;color:var(--muted);font-size:.85rem">Tap Timeline to load</div>
@@ -2477,6 +2482,25 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
     <div class="modal-actions">
       <button class="btn-cancel" id="koboPickerCancel">Cancel</button>
       <button class="btn-save" id="koboPickerConfirm">Send ✓</button>
+    </div>
+  </div>
+</div>
+
+  <!-- Manual (off-app) Timeline Read Modal -->
+<div class="modal-overlay" id="manualReadModal">
+  <div class="modal" style="max-width:400px">
+    <h3 id="manualReadModalTitle">Add a Past Read</h3>
+    <div class="form-row"><label>Title</label><input type="text" id="mrTitle" placeholder="Book title"/></div>
+    <div class="form-row"><label>Author</label><input type="text" id="mrAuthor" placeholder="Author name"/></div>
+    <div class="form-row" style="display:flex;gap:.6rem">
+      <div style="flex:1"><label>Finished on</label><input type="date" id="mrDate"/></div>
+      <div style="flex:1"><label>Pages</label><input type="number" id="mrPages" min="1" placeholder="optional"/></div>
+    </div>
+    <div class="form-row"><label>Cover image URL</label><input type="text" id="mrCover" placeholder="optional, https://…"/></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" id="btnDeleteManualRead" style="display:none;margin-right:auto;color:var(--danger);border-color:var(--danger)">Delete</button>
+      <button class="btn-cancel" id="btnCancelManualRead">Cancel</button>
+      <button class="btn-save" id="btnSaveManualRead">Save</button>
     </div>
   </div>
 </div>
@@ -14385,7 +14409,21 @@ async function loadTimelineCheckouts() {
   }
 }
 
+async function loadManualReads() {
+  if(!currentUser) return [];
+  try {
+    const snap = await getDocs(
+      query(collection(db, 'manualReads'), where('userId', '==', currentUser.uid))
+    );
+    return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  } catch(e) {
+    console.warn('loadManualReads:', e);
+    return [];
+  }
+}
+
 function estimatePages(book) {
+  if(book?.pages) return book.pages;
   const map = {
     'Short Stories': 180, 'Poetry': 120, "Children's": 150, 'Young Adult': 280,
     'Graphic Novel': 160,
@@ -14444,6 +14482,24 @@ async function buildTimelineEvents() {
         progress: b.progress || 0,
       });
     });
+
+  const manualReads = await loadManualReads();
+  manualReads.forEach(r => {
+    events.push({
+      type: 'finished',
+      bookId: 'manual_' + r.id,
+      isManual: true,
+      book: {
+        id: 'manual_' + r.id,
+        title: r.title,
+        author: r.author || '',
+        coverUrl: r.coverUrl || null,
+        pages: r.pages || null,
+        isManual: true,
+      },
+      date: r.finishedAt?.toDate?.() || new Date(),
+    });
+  });
 
   events.sort((a, b) => b.date - a.date);
   _timelineEvents = events;
@@ -14527,8 +14583,10 @@ function renderTimelineContent() {
 
   container.querySelectorAll('[data-timeline-bookid]').forEach(el => {
     el.addEventListener('click', () => {
+      const id = el.dataset.timelineBookid;
+      if(id.startsWith('manual_')) { openManualReadModal(id.slice(7)); return; }
       mobPrevPanel = 'mobPanelTimeline';
-      mob_showBook(el.dataset.timelineBookid);
+      mob_showBook(id);
     });
   });
 }
@@ -14623,6 +14681,73 @@ function renderTimelineCard(e) {
     <div style="font-size:.68rem;color:var(--muted);flex-shrink:0;text-align:right;">${dateStr}</div>
   </div>`;
 }
+
+let _editingManualReadId = null;
+
+function openManualReadModal(manualId = null) {
+  _editingManualReadId = manualId;
+  const titleEl = document.getElementById('manualReadModalTitle');
+  const delBtn = document.getElementById('btnDeleteManualRead');
+
+  if(manualId) {
+    const ev = _timelineEvents.find(e => e.isManual && e.bookId === 'manual_' + manualId);
+    titleEl.textContent = 'Edit Past Read';
+    delBtn.style.display = '';
+    document.getElementById('mrTitle').value = ev?.book?.title || '';
+    document.getElementById('mrAuthor').value = ev?.book?.author || '';
+    document.getElementById('mrPages').value = ev?.book?.pages || '';
+    document.getElementById('mrCover').value = ev?.book?.coverUrl || '';
+    document.getElementById('mrDate').value = ev ? ev.date.toISOString().slice(0, 10) : '';
+  } else {
+    titleEl.textContent = 'Add a Past Read';
+    delBtn.style.display = 'none';
+    document.getElementById('mrTitle').value = '';
+    document.getElementById('mrAuthor').value = '';
+    document.getElementById('mrPages').value = '';
+    document.getElementById('mrCover').value = '';
+    document.getElementById('mrDate').value = new Date().toISOString().slice(0, 10);
+  }
+  document.getElementById('manualReadModal').classList.add('open');
+}
+
+function closeManualReadModal() {
+  document.getElementById('manualReadModal').classList.remove('open');
+  _editingManualReadId = null;
+}
+
+async function saveManualRead() {
+  const title = document.getElementById('mrTitle').value.trim();
+  if(!title) { showToast('Title is required'); return; }
+  const author = document.getElementById('mrAuthor').value.trim();
+  const pagesRaw = document.getElementById('mrPages').value;
+  const pages = pagesRaw ? parseInt(pagesRaw, 10) : null;
+  const coverUrl = document.getElementById('mrCover').value.trim() || null;
+  const dateRaw = document.getElementById('mrDate').value;
+  const finishedAt = Timestamp.fromDate(dateRaw ? new Date(dateRaw + 'T12:00:00') : new Date());
+
+  const data = { userId: currentUser.uid, title, author, pages, coverUrl, finishedAt };
+
+  if(_editingManualReadId) {
+    await updateDoc(doc(db, 'manualReads', _editingManualReadId), data);
+  } else {
+    await addDoc(collection(db, 'manualReads'), { ...data, createdAt: serverTimestamp() });
+  }
+  closeManualReadModal();
+  renderTimeline();
+}
+
+async function deleteManualRead() {
+  if(!_editingManualReadId) return;
+  if(!confirm('Remove this book from your timeline?')) return;
+  await deleteDoc(doc(db, 'manualReads', _editingManualReadId));
+  closeManualReadModal();
+  renderTimeline();
+}
+
+document.getElementById('btnAddManualRead')?.addEventListener('click', () => openManualReadModal());
+document.getElementById('btnCancelManualRead')?.addEventListener('click', closeManualReadModal);
+document.getElementById('btnSaveManualRead')?.addEventListener('click', saveManualRead);
+document.getElementById('btnDeleteManualRead')?.addEventListener('click', deleteManualRead);
 
 renderAll();
 </script>
