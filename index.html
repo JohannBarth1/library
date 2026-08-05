@@ -406,13 +406,20 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .book-card-progress{height:3px;background:var(--border);border-radius:0 0 4px 4px;overflow:hidden;}
 .book-card-progress-bar{height:3px;background:var(--teal);transition:width .3s;}
   
-/* Desktop docking for the book-detail panel (.mob-sheet) lives further
-   below, right after the mobile base rules it needs to override — see
-   "BOOK DETAIL PANEL (desktop)" near the end of the .mob-sheet block. */
+/* ── BOOK DETAIL DRAWER (desktop) ── */
+.book-drawer{position:fixed;top:var(--header-h);right:0;bottom:0;width:380px;background:var(--warm-white);border-left:1px solid var(--border);box-shadow:-4px 0 20px rgba(0,0,0,0.1);z-index:30;display:flex;flex-direction:column;transform:translateX(100%);transition:transform .25s ease;}
+.book-drawer.open{transform:translateX(0);z-index:160;}
+@media(min-width:1400px){
+  .book-drawer{width:460px;}
+}
+.drawer-close{position:absolute;top:.7rem;right:.8rem;background:none;border:none;font-size:1.1rem;cursor:pointer;color:var(--muted);padding:.3rem;line-height:1;transition:color .15s;}
+.drawer-close:hover{color:var(--navy);}
+.drawer-cover{width:110px;height:160px;object-fit:cover;border-radius:3px;border:1px solid var(--border);display:block;margin-bottom:1rem;}
 .dbadge{font-size:.65rem;padding:2px 9px;border-radius:10px;font-weight:700;}
 .dbadge-cat{background:var(--teal-light);color:var(--teal);}
 .dbadge-lang{background:#ece8f8;color:#5a48b0;}
 .dbadge-shared{background:#fff4e0;color:#a87820;}
+.drawer-desc{font-size:.85rem;line-height:1.7;color:#3a4a5a;margin-bottom:1rem;}
 .btn-action{display:inline-flex;align-items:center;gap:.35rem;padding:.42rem .85rem;font-size:.72rem;font-family:'Lato',sans-serif;font-weight:700;letter-spacing:.04em;border-radius:20px;cursor:pointer;border:1px solid;transition:all .15s;white-space:nowrap;position:relative;}
 /* PATCH 6d: gold text on dark read button */
 .btn-read{background:var(--navy2);color:var(--gold);border-color:var(--navy2);}
@@ -1110,48 +1117,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
   opacity:0;pointer-events:none;transition:opacity .3s ease;
 }
 .mob-book-sheet-scrim.open{opacity:1;pointer-events:auto;}
-
-/* ── BOOK DETAIL PANEL (desktop): the same .mob-sheet used on mobile,
-   redocked as a permanent right-hand panel instead of a bottom sheet.
-   Must come after the mobile base .mob-sheet/.mob-sheet.open/.mob-sheet.full
-   rules above — equal specificity, so source order decides which wins. ── */
-@media(min-width:769px){
-  .mob-sheet{
-    left:auto;right:0;bottom:0;top:var(--header-h);
-    width:380px;max-width:38vw;height:auto;max-height:none;
-    border-radius:0;border-left:1px solid var(--border);
-    box-shadow:-4px 0 20px rgba(0,0,0,.1);
-    transform:translateX(100%);
-    transition:transform .25s ease,width .25s ease;
-  }
-  .mob-sheet.open{transform:translateX(0);z-index:160;}
-  .mob-sheet.full{height:auto;max-height:none;}
-  /* No swipe-up affordance on desktop — the panel always shows everything. */
-  .mob-sheet-handle{display:none;}
-  .mob-book-sheet-scrim{display:none;} /* permanent panel, not a modal — no scrim */
-}
-@media(min-width:1400px){
-  .mob-sheet{width:460px;}
-}
-/* Slim mode: while the reader is open alongside it (desktop only, see
-   updateDeskReaderLayout), the panel shrinks to a cover+title strip
-   rather than closing or being covered by the reader. */
-@media(min-width:1280px){
-  .mob-sheet.slim{width:112px;max-width:112px;}
-  .mob-sheet.slim .mob-detail-top{flex-direction:column;align-items:center;text-align:center;padding:.9rem .5rem;gap:.5rem;cursor:pointer;}
-  .mob-sheet.slim .mob-detail-cover-wrap{width:76px;}
-  .mob-sheet.slim .mob-detail-cover,.mob-sheet.slim .mob-detail-cover-ph{width:76px;height:112px;}
-  .mob-sheet.slim .mob-cover-fav-btn{display:none;}
-  .mob-sheet.slim .mob-detail-cat,
-  .mob-sheet.slim .mob-detail-author,
-  .mob-sheet.slim #mobDetailSeries,
-  .mob-sheet.slim #mobDetailSharedBy,
-  .mob-sheet.slim .star-rating,
-  .mob-sheet.slim .mob-detail-actions,
-  .mob-sheet.slim .mob-sheet-more{display:none!important;}
-  .mob-sheet.slim .mob-detail-title{font-size:.72rem;line-height:1.25;display:-webkit-box;-webkit-line-clamp:5;-webkit-box-orient:vertical;overflow:hidden;}
-  .reader-overlay.beside-panel{right:112px;}
-}
+@media (min-width:769px){ .mob-sheet, .mob-book-sheet-scrim{ display:none; } }
 
 /* mobile settings */
 .mob-settings-scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:1.4rem 1rem calc(var(--mob-nav-h) + var(--sab) + 1.5rem);background:var(--cream);}
@@ -1325,6 +1291,46 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .bs-action.danger{color:var(--danger);}
 .bs-action.danger:hover{background:#fbeaea;}
 .bs-action.highlight{color:var(--teal);}
+
+/* ── DESKTOP DRAWER — NEW LAYOUT ── */
+.drawer-hero{display:flex;gap:1.1rem;padding:1.2rem 1.5rem 1rem;}
+.drawer-hero-cover{position:relative;flex-shrink:0;cursor:pointer;}
+.drawer-hero-cover img,.drawer-hero-cover-ph{width:100px;height:148px;border-radius:4px;border:1px solid var(--border);display:block;object-fit:cover;}
+.drawer-hero-cover-ph{background:linear-gradient(145deg,var(--navy2),#2a3d5a);display:flex;align-items:center;justify-content:center;font-size:2.2rem;}
+.drawer-cover-read-hint{position:absolute;inset:0;background:rgba(15,26,46,.55);border-radius:4px;display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .2s;border:none;cursor:pointer;width:100%;}
+.drawer-hero-cover:hover .drawer-cover-read-hint{opacity:1;}
+.drawer-cover-read-hint span{color:#fff;font-size:.72rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;}
+.drawer-hero-meta{flex:1;min-width:0;display:flex;flex-direction:column;justify-content:flex-start;padding-top:.2rem;}
+.drawer-hero-cat{font-size:.6rem;letter-spacing:.2em;text-transform:uppercase;color:var(--teal);font-weight:700;margin-bottom:.3rem;}
+.drawer-hero-title{font-family:'Playfair Display',serif;font-size:1.15rem;line-height:1.2;color:var(--navy2);margin-bottom:.2rem;}
+.drawer-hero-author{font-size:.85rem;color:var(--muted);font-style:italic;margin-bottom:.6rem;}
+.drawer-hero-badges{display:flex;flex-wrap:wrap;gap:.3rem;margin-bottom:.6rem;}
+.drawer-hero-stars{margin-bottom:.4rem;}
+.drawer-hero-sharedby{font-size:.72rem;color:var(--teal);font-weight:700;margin-bottom:.4rem;}
+@media(min-width:1400px){
+  /* Must come after the unconditional .drawer-hero* rules above — same
+     selector, equal specificity, source order decides (see the sidebar
+     width fix earlier in this file for the full explanation). */
+  .drawer-hero{gap:1.5rem;padding:1.5rem 1.8rem 1.2rem;}
+  .drawer-hero-cover img,.drawer-hero-cover-ph{width:130px;height:190px;}
+  .drawer-hero-title{font-size:1.3rem;}
+}
+
+/* Icon toolbar — same rounded-pill language as the mobile detail sheet's
+   Favourites/Want-to-Read chips (.mob-list-quickbtn etc.), rather than a
+   separate small icon-stacked-square style unique to desktop. */
+.drawer-icon-bar{display:block;padding:0;border:none;}
+.drawer-icon-btn{display:inline-flex;flex-direction:row;align-items:center;gap:.4rem;padding:.42rem .8rem .42rem .65rem;border-radius:18px;border:1.5px solid var(--border);background:var(--warm-white);color:var(--navy2);cursor:pointer;transition:background .15s,border-color .15s,color .15s;white-space:nowrap;}
+.drawer-icon-btn:hover{background:var(--teal-light);border-color:var(--teal);}
+.drawer-icon-btn .di-icon{font-size:.95rem;line-height:1;}
+.drawer-icon-btn .di-label{font-size:.72rem;font-weight:700;letter-spacing:.02em;color:inherit;white-space:nowrap;}
+.drawer-icon-btn:hover .di-label{color:var(--teal);}
+.drawer-icon-btn.di-danger{border-color:#e0b0b0;color:var(--danger);}
+.drawer-icon-btn.di-danger:hover{background:#fbeaea;border-color:var(--danger);}
+.drawer-icon-btn.di-danger:hover .di-label{color:var(--danger);}
+
+/* Drawer description area */
+.drawer-desc-area{padding:.9rem 1.5rem 1rem;flex:1;overflow-y:auto;}
 
   /* ── ADMIN ── */
 .admin-card {
@@ -1523,6 +1529,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 @media(max-width:768px){
   .filter-sidebar{display:none;}
   .desktop-main{display:none!important;}
+  .book-drawer{display:none;}
   .mob-nav{display:block;}
   .mob-panels{display:flex;}
   .hbtn-upload{display:none;}
@@ -2131,9 +2138,41 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 </div>
 </div>
 
+<!-- Book detail drawer (desktop) -->
+<div class="book-drawer" id="bookDrawer">
+  <button class="drawer-close" id="drawerClose">✕</button>
+  <!-- Hero: cover + meta -->
+  <div class="drawer-hero">
+    <div class="drawer-hero-cover" id="drawerHeroCover">
+      <img id="drawerCoverImg" src="" alt="" style="display:none"/>
+      <div class="drawer-hero-cover-ph" id="drawerCoverPh">📖</div>
+      <button class="drawer-cover-read-hint" id="drawerCoverReadBtn">
+        <span>▶ Read</span>
+      </button>
+    </div>
+    <div class="drawer-hero-meta">
+      <div class="drawer-hero-cat" id="drawerCat"></div>
+      <div class="drawer-hero-title" id="drawerTitle"></div>
+      <div class="drawer-hero-author" id="drawerAuthor"></div>
+      <div class="drawer-hero-badges" id="drawerBadges"></div>
+      <div class="drawer-hero-stars star-rating" id="deskStarRating" style="display:none">
+        <div class="stars" id="deskStars"></div>
+        <span class="rating-count" id="deskRatingCount"></span>
+      </div>
+      <div class="drawer-hero-sharedby" id="drawerSharedBy" style="display:none"></div>
+    </div>
+  </div>
+  <!-- Icon toolbar -->
+  <div class="drawer-icon-bar" id="drawerIconBar"></div>
+  <!-- Description -->
+  <div class="drawer-desc-area">
+    <p class="drawer-desc" id="drawerDesc"></p>
+    <div id="drawerHighlights" style="display:none;"></div>
+  </div>
+</div>
 
-<!-- Full-screen highlights list — opened from the book detail panel's
-     highlights summary (shared by desktop and mobile). Reuses the mob-detail-header/
+<!-- Full-screen highlights list — opened from either the desktop drawer or
+     mobile detail screen's highlights summary. Reuses the mob-detail-header/
      mob-back-btn/mob-detail-scroll classes for a consistent look without
      introducing a parallel set of styles. -->
 <div id="highlightsFullOverlay" style="display:none;position:fixed;inset:0;z-index:540;background:var(--warm-white);flex-direction:column;">
@@ -2826,16 +2865,14 @@ function updateUserUI(user){
 document.getElementById('headerUser').addEventListener('click',e=>{e.stopPropagation();document.getElementById('userDropdown').classList.toggle('open');});
 document.addEventListener('click',(e)=>{
   document.getElementById('userDropdown').classList.remove('open');
-  if(window.innerWidth <= 768) return; // mobile closes the sheet via its own scrim, not this
-  const sheet = document.getElementById('mobPanelDetail');
-  if (
-    sheet.classList.contains('open') &&
-    !sheet.contains(e.target) &&
+  const drawer = document.getElementById('bookDrawer');
+if (
+    drawer.classList.contains('open') &&
+    !drawer.contains(e.target) &&
     !e.target.closest('.book-card') &&
-    !e.target.closest('.reader-overlay') &&
     !e.target.closest('.modal-overlay')
   ) {
-    closeMobBookSheet();
+    closeDrawer();
   }
 });
 
@@ -3021,6 +3058,7 @@ async function submitRating(bookId, rating) {
     // Update local copy
     const book = [...library, ...communityLib].find(b => b.id === bookId);
     if (book) { book.ratingSum = newSum; book.ratingCount = newCount; }
+    renderStars('deskStars', 'deskRatingCount', bookId, true);
     renderStars('mobStars', 'mobRatingCount', bookId, true);
     if (currentUser && ledgerState.loaded) _ledgerUnlockAchievement('critic', bookId);
     showToast('Rating saved ✓');
@@ -3249,7 +3287,7 @@ async function confirmShare() {
     if (currentUser && ledgerState.loaded) _ledgerUnlockAchievement('sharer', currentId);
     hideLoading();
     renderAll();
-    mob_showBook(currentId, { preserveState: true });
+    showBookById(currentId);
     showToast(`"${book.title}" published ✓`);
   } catch (e) {
     hideLoading();
@@ -3347,7 +3385,7 @@ function renderGrid(gridId){
 document.getElementById('deskBookGrid').addEventListener('click',e=>{
   const card=e.target.closest('.book-card[data-bookid]');if(!card)return;
   if(selectMode){const id=card.dataset.bookid;if(selectedIds.has(id)){selectedIds.delete(id);card.classList.remove('selected');}else{selectedIds.add(id);card.classList.add('selected');}updateBulkBar();return;}
-  mob_showBook(card.dataset.bookid);
+  showBookById(card.dataset.bookid);
 });
 document.getElementById('deskSearch').addEventListener('input',e=>{
   searchQ=e.target.value.toLowerCase().trim();
@@ -3504,7 +3542,7 @@ function renderDeskSidebar() {
       }).join('');
 
       strip.querySelectorAll('.sb-cr-cover[data-bookid]').forEach(el => {
-        el.addEventListener('click', () => mob_showBook(el.dataset.bookid));
+        el.addEventListener('click', () => showBookById(el.dataset.bookid));
       });
     }
   }
@@ -3566,6 +3604,70 @@ function renderDeskSidebar() {
 // All real logic moved to renderDeskSidebar (permanent sidebar sections).
 async function renderDeskHome(){ renderDeskSidebar(); }
 // ── BOOK DETAIL ───────────────────────────────────────────────────────────────
+async function showBookById(id){
+  const book=await findBookById(id);if(!book)return showToast("Couldn't find that book");
+  lastOpenedBookId = id;
+  currentId=id;
+  if(book.allowedUsers?.length>0) loadAllUsers();
+  const isMine=book.ownerId===currentUser?.uid;
+  const isComm=communityLib.some(b=>b.id===id);
+
+  // Cover
+  const img=document.getElementById('drawerCoverImg');
+  const ph=document.getElementById('drawerCoverPh');
+  const coverSrc=getCoverSrc(book);
+  if(coverSrc){img.src=coverSrc;img.style.display='block';ph.style.display='none';}
+  else{img.style.display='none';ph.style.display='flex';}
+
+  // Cover read button
+  document.getElementById('drawerCoverReadBtn').onclick=()=>{closeDrawer();readCurrentBook();};
+
+  // Meta
+  document.getElementById('drawerCat').textContent=book.category?`${catIcon(book.category)} ${book.category}`:'';
+  document.getElementById('drawerTitle').textContent=book.title||'';
+  document.getElementById('drawerAuthor').textContent=book.author||'';
+  document.getElementById('drawerDesc').textContent=stripHtml(book.description||'');
+
+  // Shared by
+  const sharedByEl=document.getElementById('drawerSharedBy');
+  const isPrivatelyShared=book.allowedUsers?.includes(currentUser?.uid)&&book.visibility!=='public';
+  if(!isMine&&isPrivatelyShared){
+    sharedByEl.textContent='Shared with you by '+(book.ownerName||'Anonymous');
+    sharedByEl.style.display='block';
+  } else if(isMine&&book.allowedUsers?.length>0){
+    loadAllUsers().then(()=>{
+      const names=book.allowedUsers.map(uid=>{
+        const u=allUsers.find(x=>x.uid===uid);
+        return u?(u.displayName||u.email||uid):uid;
+      });
+      sharedByEl.textContent='Shared with: '+names.join(', ');
+      sharedByEl.style.display='block';
+    });
+  } else {
+    sharedByEl.style.display='none';
+  }
+
+  // Badges
+  let badges='';
+  if(book.category)badges+=`<span class="dbadge dbadge-cat">${catIcon(book.category)} ${esc(book.category)}</span>`;
+  if(book.language)badges+=`<span class="dbadge dbadge-lang">${esc(book.language.toUpperCase())}</span>`;
+  if(book.visibility==='public')badges+=`<span class="dbadge dbadge-shared">Public</span>`;
+  if(book.recommended)badges+=`<span class="dbadge" style="background:#fff8ec;color:var(--gold)">⭐ Pick</span>`;
+  document.getElementById('drawerBadges').innerHTML=badges;
+
+  // Stars
+  if(isComm)renderStars('deskStars','deskRatingCount',id,true);
+  else document.getElementById('deskStarRating').style.display='none';
+
+  // Icon toolbar
+  buildDrawerIconBar(book, isMine);
+
+  document.querySelectorAll('.book-card').forEach(c=>c.classList.toggle('active',c.dataset.bookid===id));
+  document.getElementById('readerOverlay').classList.remove('open'); // reader and details drawer are mutually exclusive on desktop
+  document.getElementById('bookDrawer').classList.add('open');
+
+  renderBookHighlightsSummary(document.getElementById('drawerHighlights'), id);
+}
 
 function renderDetailActionRows(peekContainer, moreContainer, book, isMine){
   const bigBtn = (icon, label, action, bg, col) => `
@@ -3786,28 +3888,6 @@ function mobSheetSetExpanded(expanded){
   if(label) label.textContent = expanded ? '▾ Show less' : '▲ Swipe up for tags, description & more';
   if(scroller) scroller.scrollTop = 0;
 }
-
-// ── Desktop: keep the book-detail panel and the reader open side by side ────
-// Below the 1280px breakpoint the reader is a full-screen overlay (same as
-// mobile), so there's no "alongside" layout to maintain there. At 1280px+
-// the reader docks to the right; if the detail panel is open at the same
-// time, shrink it to a slim cover+title strip that stays docked to the
-// right of it, rather than closing it or letting the reader cover it.
-function updateDeskReaderLayout(){
-  const sheet = document.getElementById('mobPanelDetail');
-  const reader = document.getElementById('readerOverlay');
-  if(!sheet || !reader) return;
-  if(window.innerWidth < 1280){
-    sheet.classList.remove('slim');
-    reader.classList.remove('beside-panel');
-    return;
-  }
-  const both = reader.classList.contains('open') && sheet.classList.contains('open');
-  sheet.classList.toggle('slim', both);
-  reader.classList.toggle('beside-panel', both);
-}
-window.addEventListener('resize', updateDeskReaderLayout);
-
 (function initMobSheetHandle(){
   const sheet = document.getElementById('mobPanelDetail');
   const handle = document.getElementById('mobSheetHandle');
@@ -3844,6 +3924,95 @@ window.addEventListener('resize', updateDeskReaderLayout);
   }, {passive:true});
   sheet.addEventListener('touchend', () => { startY = null; startX = null; });
 })();
+
+function buildDrawerIconBar(book, isMine){
+  const bar = document.getElementById('drawerIconBar');
+
+  // Check if the user has started reading this book (same logic as mobile)
+  const readingPosBm = _myBookmarks.find(b => b.type === 'reading_position' && b.bookId === book.id);
+  const hasStarted = !!readingPosBm && (readingPosBm.progress || 0) > 0;
+
+  // Quick-list state
+  const isFav = !!_userLists.find(l => l.id === 'favourites')?.bookIds?.includes(book.id);
+
+  let html = `
+    <!-- Primary: Read / Continue Reading + Send to Kobo -->
+    <div style="display:flex;gap:.5rem;padding:.65rem 1.5rem .5rem;border-bottom:1px solid var(--border);">
+      <button class="btn-action btn-read" style="flex:1;justify-content:center;padding:.6rem 1rem;font-size:.83rem;border-radius:24px;gap:.4rem;" data-action="read">
+        <span style="font-size:1rem;line-height:1;">📖</span>
+        <span>${hasStarted ? 'Continue Reading' : 'Read'}</span>
+      </button>
+      <button class="btn-action btn-kobo" style="flex:1;justify-content:center;padding:.6rem 1rem;font-size:.83rem;border-radius:24px;gap:.4rem;" data-action="sendtokobo">
+        <span style="font-size:1rem;line-height:1;">🔲</span>
+        <span>Send to Kobo</span>
+      </button>
+    </div>
+
+    <!-- Lists: Favourites quick-toggle + reading-stage segmented control -->
+    <div style="padding:.55rem 1.5rem .45rem;border-bottom:1px solid var(--border);">
+      <div style="font-size:.58rem;letter-spacing:.15em;text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:.4rem;">🗂️ Lists</div>
+      <div style="display:flex;flex-wrap:wrap;gap:.4rem;margin-bottom:.5rem;">
+        <button class="mob-list-quickbtn ${isFav?'active':''}" data-list="favourites" data-action="quicklist">
+          <span class="lq-icon">${isFav?'❤️':'🤍'}</span><span>Favourites</span>
+        </button>
+        <button class="mob-list-other-btn" data-action="addtolist">Other Lists ▾</button>
+      </div>
+      ${readingStageSegmentHtml(book.id)}
+    </div>
+
+    <!-- Secondary global actions -->
+    <div style="padding:.4rem 1.5rem .3rem;border-bottom:1px solid var(--border);">
+      <div style="font-size:.58rem;letter-spacing:.15em;text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:.35rem;">Actions</div>
+      <div style="display:flex;gap:.4rem;flex-wrap:wrap;">
+        <button class="drawer-icon-btn" data-action="category"><span class="di-icon">📚</span><span class="di-label">Category</span></button>
+        <button class="drawer-icon-btn" data-action="tags"><span class="di-icon">🏷</span><span class="di-label">Tags</span></button>
+        <button class="drawer-icon-btn" data-action="recommend">
+          <span class="di-icon">${book.recommended?'☆':'⭐'}</span>
+          <span class="di-label">${book.recommended?'Unrec':'Rec'}</span>
+        </button>
+        <button class="drawer-icon-btn" data-action="download"><span class="di-icon">⬇</span><span class="di-label">Download</span></button>
+        <button class="drawer-icon-btn" data-action="link"><span class="di-icon">📎</span><span class="di-label">Copy Link</span></button>
+        ${isAdmin ? `<button class="drawer-icon-btn" data-action="history"><span class="di-icon">📋</span><span class="di-label">History</span></button>` : ''}
+      </div>
+    </div>`;
+
+  // Owner-only actions (publish/share/delete) stay gated to isMine; Edit
+  // Details/Edit Contents also open up to admins, who can manage any book
+  // they can see, not just ones they uploaded themselves.
+  if(isMine || isAdmin){
+    let manageBtns = '';
+    if(isMine){
+      manageBtns += `<button class="drawer-icon-btn" data-action="share" ${book.visibility==='public'?'style="display:none"':''}>
+          <span class="di-icon">🌐</span><span class="di-label">Publish</span></button>
+        <button class="drawer-icon-btn" data-action="unpublish" ${book.visibility!=='public'?'style="display:none"':''}>
+          <span class="di-icon">🔒</span><span class="di-label">Unpublish</span></button>
+        <button class="drawer-icon-btn" data-action="shareprivate">
+          <span class="di-icon">🔗</span><span class="di-label">Share</span></button>`;
+    }
+    manageBtns += `<button class="drawer-icon-btn" data-action="editmeta">
+          <span class="di-icon">✎</span><span class="di-label">Edit</span></button>
+        <button class="drawer-icon-btn" data-action="chapters">
+          <span class="di-icon">📑</span><span class="di-label">Edit Contents</span></button>`;
+    if(isMine){
+      manageBtns += `<button class="drawer-icon-btn di-danger" data-action="delete">
+          <span class="di-icon">✕</span><span class="di-label">Delete</span></button>`;
+    }
+    html += `
+    <div style="padding:.4rem 1.5rem .6rem;background:rgba(15,26,46,0.03);">
+      <div style="font-size:.58rem;letter-spacing:.15em;text-transform:uppercase;color:var(--gold);font-weight:700;margin-bottom:.35rem;">${isMine?'🔑 Owner Only':'🛡️ Admin'}</div>
+      <div style="display:flex;gap:.4rem;flex-wrap:wrap;">${manageBtns}</div>
+    </div>`;
+  }
+
+  bar.innerHTML = html;
+  bar.style.display = 'block';
+  bar.style.padding = '0';
+  bar.style.border = 'none';
+  bar.querySelectorAll('[data-action]').forEach(b => b.addEventListener('click', handleAction));
+}
+  
+function closeDrawer(){document.getElementById('bookDrawer').classList.remove('open');document.querySelectorAll('.book-card').forEach(c=>c.classList.remove('active'));currentId=null;}
+document.getElementById('drawerClose').addEventListener('click',closeDrawer);
 
 function handleAction(e){
   const btn=e.target.closest('[data-action]');if(!btn)return;
@@ -3887,7 +4056,7 @@ async function unpublishCurrentBook() {
     communityLib = communityLib.filter(b => b.id !== currentId);
     hideLoading();
     renderAll();
-    mob_showBook(currentId, { preserveState: true });
+    showBookById(currentId);
     showToast('Unpublished ✓');
   } catch (e) {
     hideLoading();
@@ -3905,7 +4074,7 @@ async function unpublishCurrentBook() {
     library=library.filter(b=>b.id!==currentId);
     communityLib=communityLib.filter(b=>b.id!==currentId);
     currentId=null;
-    closeMobBookSheet();
+    closeDrawer();
     hideLoading();
     renderAll();
     showToast('Book deleted');
@@ -4070,8 +4239,12 @@ function checkUrlHash(){
     // back to this specific book. The book still opens below as normal.
     history.replaceState(null,'',window.location.pathname+window.location.search);
     setTimeout(()=>{
-      mobPrevPanel = 'mobPanelHome';
-      mob_showBook(m[1]);
+      if(window.innerWidth > 768){
+        showBookById(m[1]);
+      } else {
+        mobPrevPanel = 'mobPanelHome';
+        mob_showBook(m[1]);
+      }
     },400);
   }
 }
@@ -4120,7 +4293,7 @@ document.getElementById('btnSaveEditMeta').addEventListener('click',async()=>{
   try{
     await updateDoc(doc(db,'books',currentId),updates);
     Object.assign(book,updates);
-    hideLoading();renderAll();mob_showBook(currentId, { preserveState: true });showToast('Details saved ✓');
+    hideLoading();renderAll();showBookById(currentId);showToast('Details saved ✓');
   }catch(e){hideLoading();showToast('Save failed: '+e.message);}
 });
 
@@ -4128,9 +4301,7 @@ document.getElementById('btnSaveEditMeta').addEventListener('click',async()=>{
 async function mob_showBook(id, opts={}){
   const { preserveState=false } = opts;
   const book=await findBookById(id);if(!book)return showToast("Couldn't find that book");
-  lastOpenedBookId = id;
   currentId=id;
-  if(book.allowedUsers?.length>0) loadAllUsers();
   const isMine=book.ownerId===currentUser?.uid;
   const isComm=communityLib.some(b=>b.id===id);
 
@@ -4151,13 +4322,7 @@ async function mob_showBook(id, opts={}){
 
   const coverEl = coverSrc ? img : ph;
   coverEl.style.cursor='pointer';
-  coverEl.onclick=()=>{
-    // Desktop "slim" mode: the cover is the primary hit-target on the
-    // shrunk-down strip that sits beside the reader — tapping it there
-    // means "back to full details" (closing the reader), not "start
-    // reading" (we're already reading this book).
-    if(document.getElementById('mobPanelDetail')?.classList.contains('slim')){ closeReader(); return; }
-    const b=[...library,...communityLib].find(x=>x.id===currentId); if(b&&(b.ownerId===currentUser?.uid||myCheckedOutIds.has(b.id))) readCurrentBook(); else showToast('Sign out this book to read it'); };
+  coverEl.onclick=()=>{ const b=[...library,...communityLib].find(x=>x.id===currentId); if(b&&(b.ownerId===currentUser?.uid||myCheckedOutIds.has(b.id))) readCurrentBook(); else showToast('Sign out this book to read it'); };
 
   document.getElementById('mobDetailCat').textContent=book.category?`${catIcon(book.category)} ${book.category}`:'';
   document.getElementById('mobDetailTitle').textContent=book.title||'';
@@ -4172,16 +4337,7 @@ async function mob_showBook(id, opts={}){
   const mobSharedByEl=document.getElementById('mobDetailSharedBy');
   const mobIsPrivatelyShared=book.allowedUsers?.includes(currentUser?.uid)&&book.visibility!=='public';
   if(!isMine&&mobIsPrivatelyShared){mobSharedByEl.textContent='Shared with you by '+(book.ownerName||'Anonymous');mobSharedByEl.style.display='block';}
-  else if(isMine&&book.allowedUsers?.length>0){
-    loadAllUsers().then(()=>{
-      const names=book.allowedUsers.map(uid=>{
-        const u=allUsers.find(x=>x.uid===uid);
-        return u?(u.displayName||u.email||uid):uid;
-      });
-      mobSharedByEl.textContent='Shared with: '+names.join(', ');
-      mobSharedByEl.style.display='block';
-    });
-  } else mobSharedByEl.style.display='none';
+  else mobSharedByEl.style.display='none';
 
   document.getElementById('mobDetailDesc').textContent=stripHtml(book.description||'');
 
@@ -4192,8 +4348,6 @@ async function mob_showBook(id, opts={}){
 
   renderBookHighlightsSummary(document.getElementById('mobDetailHighlights'), id);
   renderRelatedBooks(document.getElementById('mobDetailRelated'), book);
-
-  document.querySelectorAll('.book-card').forEach(c=>c.classList.toggle('active',c.dataset.bookid===id));
 
   // Every book opens as a compact peek — regardless of whether it was
   // reached from Home, Library, or anywhere else — layered as an overlay
@@ -4213,19 +4367,12 @@ async function mob_showBook(id, opts={}){
 function openMobBookSheet(){
   document.getElementById('mobBookSheetScrim').classList.add('open');
   document.getElementById('mobPanelDetail').classList.add('open');
-  // On desktop the sheet is a permanent right-hand panel, not a bottom
-  // sheet — there's no peek/swipe-up affordance, so it always opens
-  // showing everything. On mobile it opens as a compact peek.
-  mobSheetSetExpanded(window.innerWidth > 768);
-  updateDeskReaderLayout();
+  mobSheetSetExpanded(false); // always opens as a peek; swipe up for full screen
 }
 function closeMobBookSheet(){
   document.getElementById('mobBookSheetScrim').classList.remove('open');
   document.getElementById('mobPanelDetail').classList.remove('open');
   mobSheetSetExpanded(false);
-  document.querySelectorAll('.book-card').forEach(c=>c.classList.remove('active'));
-  currentId=null;
-  updateDeskReaderLayout();
 }
 
 document.getElementById('btnMobBack').addEventListener('click', closeMobBookSheet);
@@ -5904,11 +6051,7 @@ document.addEventListener('visibilitychange', () => {
 
 async function readCurrentBook(){
   if(!currentId)return;
-  // Below the "alongside" breakpoint (see updateDeskReaderLayout) the reader
-  // opens full-screen, so the sheet shouldn't linger behind it. At 1280px+
-  // we leave it open on purpose — it shrinks to a slim strip once the
-  // reader finishes opening, instead of closing outright.
-  if(window.innerWidth < 1280) closeMobBookSheet();
+  closeMobBookSheet(); // the reader is about to open full-screen — the bottom sheet shouldn't linger behind it
   const book=await findBookById(currentId);
   if(!book){showToast("Couldn't open that book — try again in a moment");return;}
   recordBookOpened(book);
@@ -5985,9 +6128,9 @@ async function readCurrentBook(){
       .forEach(b => b.classList.toggle('active', parseInt(b.dataset.size) === readerFontSize));
     document.getElementById('readerSettingsBar').classList.remove('open');
     document.getElementById('readerOverlay').classList.remove('toolbar-hidden');
+    document.getElementById('bookDrawer').classList.remove('open'); // reader and details drawer are mutually exclusive on desktop
     document.getElementById('readerOverlay').classList.add('open');
     document.getElementById('readerOverlay').classList.add('reader-loading'); // hides reader content until target page is ready
-    updateDeskReaderLayout(); // desktop: shrink the detail panel to a slim strip alongside the reader, if open
     _acquireWakeLock();
     // (spinner already showing since the top of this function — no need to re-show it here)
     _updateToolbarHandleIcon();
@@ -7106,7 +7249,7 @@ async function loadHighlightsForBook(bookId) {
   }
 }
 
-// For book-detail summaries (shown in the unified detail panel), which may be
+// For book-detail summaries (desktop drawer / mobile detail), which may be
 // viewed for a book that ISN'T the one currently open in the reader — so
 // this deliberately returns its own array instead of touching
 // _currentBookHighlights, which belongs to the live reading session.
@@ -7591,7 +7734,11 @@ async function openNotifThread(notifId) {
     document.getElementById('notifOpenSharedBook').addEventListener('click', (e) => {
       e.preventDefault();
       closeNotifFullList();
-      mob_showBook(n.bookId);
+      // Match the same mobile/desktop branching used everywhere else book
+      // detail is opened (see checkUrlHash) — calling showBookById alone
+      // only opens the desktop drawer, which is why this did nothing on mobile.
+      if(window.innerWidth > 768) showBookById(n.bookId);
+      else mob_showBook(n.bookId);
     });
   }
   document.getElementById('btnNotifThreadDelete').style.display =
@@ -9722,7 +9869,6 @@ function closeReader(){
   }
 
   document.getElementById('readerOverlay').classList.remove('open');
-  updateDeskReaderLayout(); // desktop: restore the detail panel to full width, if open
   document.getElementById('readerChapterList').classList.remove('open');
   document.getElementById('readerBookmarkListPanel').classList.remove('open');
   document.getElementById('readerSearchPanel').classList.remove('open');
@@ -9813,7 +9959,8 @@ async function doMarkFinishedFromDetail(){
     await markBookFinished(currentId);
     hideLoading();
     showToast('Marked as Finished ✓');
-    mob_showBook(currentId, { preserveState: true });
+    if(window.innerWidth > 768) showBookById(currentId);
+    else mob_showBook(currentId, { preserveState: true });
   } catch(e) {
     hideLoading();
     showToast('Failed: ' + e.message);
@@ -9893,7 +10040,8 @@ async function handleReadingStageClick(btn){
     hideLoading();
     renderMobHome();
     renderDeskHome();
-    mob_showBook(bookId, { preserveState: true });
+    if(window.innerWidth > 768) showBookById(bookId);
+    else mob_showBook(bookId, { preserveState: true });
   }catch(e){
     hideLoading();
     showToast('Failed: ' + e.message);
@@ -11032,7 +11180,7 @@ document.getElementById('deskManageTagsBtn')?.addEventListener('click', () => {
 document.addEventListener('click',e=>{const s=document.getElementById('deskSettings');if(s.style.display!=='none'&&!s.contains(e.target)&&e.target.id!=='btnToggleSettings')s.style.display='none';});
 document.getElementById('defaultCatInput').value=localStorage.getItem('elib_default_cat')||'';
 document.getElementById('defaultCatInput').addEventListener('keydown',e=>{if(e.key==='Enter'){localStorage.setItem('elib_default_cat',e.target.value);showToast('Default category saved');}});
-document.getElementById('btnClearCache').addEventListener('click',()=>{if(!confirm('Clear local cache?'))return;library=[];communityLib=[];currentId=null;deskLibCat='All';renderAll();closeMobBookSheet();showToast('Cache cleared');});
+document.getElementById('btnClearCache').addEventListener('click',()=>{if(!confirm('Clear local cache?'))return;library=[];communityLib=[];currentId=null;deskLibCat='All';renderAll();closeDrawer();showToast('Cache cleared');});
 document.getElementById('deskInstallBtn').addEventListener('click',triggerInstall);
 document.getElementById('mobInstallBtn').addEventListener('click',triggerInstall);
 function triggerInstall(){if(deferredInstall){deferredInstall.prompt();deferredInstall.userChoice.then(()=>deferredInstall=null);}}
@@ -11186,7 +11334,8 @@ async function toggleRecommended() {
     renderAll();
     renderMobHome();
     renderDeskHome();
-    mob_showBook(currentId, { preserveState: true });
+    if(window.innerWidth > 768) showBookById(currentId);
+    else mob_showBook(currentId, { preserveState: true });
     showToast(rec ? 'Marked as Recommended ⭐' : 'Removed from Recommended');
   } catch(e) {
     // Roll back optimistic update if Firestore write failed
@@ -12336,7 +12485,7 @@ document.getElementById('mobNavLibrary').onclick  = () => mob_switchTab('library
 document.getElementById('mobNavHome').onclick      = () => mob_switchTab('home');
 document.getElementById('mobNavSettings').onclick  = () => mob_switchTab('settings');
 
-window.showBookById = mob_showBook;
+window.showBookById = showBookById;
 
 // ── ADMIN ────────────────────────────────────────────────────────────────────
 
@@ -12930,7 +13079,8 @@ function showQuickCategoryModal() {
         book.category = newCat;
         hideLoading();
         renderAll();
-        mob_showBook(currentId, { preserveState: true });
+        if(window.innerWidth > 768) showBookById(currentId);
+        else mob_showBook(currentId, { preserveState: true });
         showToast('Category updated ✓');
       } catch(e) {
         hideLoading();
