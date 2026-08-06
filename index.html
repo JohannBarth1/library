@@ -2853,6 +2853,12 @@ onAuthStateChanged(auth, async user => {
     ]).then(() => {
       renderMobHome();
       renderDeskSidebar();
+      // Chained here (rather than fired on a blind timer, as before) so it's
+      // guaranteed to run only once loadUserLists() has actually populated
+      // "Currently Reading" — and starts downloading those EPUBs as soon as
+      // that's known, instead of always waiting a flat 400ms regardless of
+      // how fast the list itself loaded.
+      prewarmOfflineEpubs();
     });
 
     Promise.all([
@@ -2889,7 +2895,6 @@ onAuthStateChanged(auth, async user => {
       checkAdminStatus();
       loadLedgerState();
       prewarmTimeline();
-      prewarmOfflineEpubs();
     }, 400);
 
   } else {
@@ -6030,6 +6035,12 @@ function _refreshCoverTiles(bookId) {
 // already cached). Runs quietly in the background, one at a time.
 async function prewarmOfflineEpubs() {
   if(!currentUser || navigator.onLine === false) return;
+  // Now kicked off as soon as Wave 1 (loadUserLists) resolves, which can
+  // land before Wave 2's loadLibrary() does. Wait for that here rather than
+  // let findBookById() (called down in cacheEpubForOfflineById) discover
+  // it's not ready — that path shows a "Still loading your library…" toast,
+  // appropriate for a user's own tap but not for this silent background pass.
+  if(!_libraryReady) await _libraryReadyPromise;
   const crList = _userLists.find(l => l.id === 'currently-reading');
   const bookIds = crList?.bookIds || [];
   for(const bookId of bookIds) {
@@ -6204,6 +6215,12 @@ async function readCurrentBook(){
   // as the user is waiting on this one. Cleared in the finally below.
   _bookOpenPriority = true;
   try{
+    // Independent of the EPUB fetch below (different backend, different
+    // data) but still needed before the first chapter paints its <mark>
+    // tags — kicked off now rather than after the fetch so its latency
+    // overlaps with the (usually much longer) EPUB download+parse instead
+    // of stacking on top of it.
+    const highlightsPromise = loadHighlightsForBook(book.id);
     let bytes = await getCachedEpubBytes(book.id);
     const fromCache = !!bytes;
     if(!bytes) {
@@ -6274,8 +6291,8 @@ async function readCurrentBook(){
     // (spinner already showing since the top of this function — no need to re-show it here)
     _updateToolbarHandleIcon();
     
-    await loadHighlightsForBook(book.id);
-    
+    await highlightsPromise;
+
     const saved = loadReadingProgress(book.id);
     if(saved && saved.chapterIdx < readerSpine.length && saved.chapterIdx > 0){
       await readerGoToChapter(saved.chapterIdx, saved.pageIdx);
@@ -9550,7 +9567,13 @@ async function inlineImagesInHtml(html, base, chapterHref) {
 
   const unique = [...new Set(found)];
 
-  for(const src of unique) {
+  // Each image's zip-blob lookup + base64 encode is independent of the
+  // others, so resolve them all concurrently (bounded by the slowest one)
+  // instead of one at a time. The `html` string itself is only ever
+  // mutated below, after every decode has finished — mutating it inside
+  // this loop would race, since two concurrent tasks could both read the
+  // same pre-edit snapshot and one's replacement would clobber the other's.
+  const replacements = await Promise.all(unique.map(async (src) => {
     const filename = src.replace(/^.*[\\/]/, '');
     const candidates = [
       normalizePath(chapterDir + src),
@@ -9582,7 +9605,10 @@ async function inlineImagesInHtml(html, base, chapterHref) {
     const replacement = blob
       ? `src="${await blobToDataUrl(blob)}"`
       : `src="${TRANSPARENT_PIXEL}" style="display:none"`;
+    return { src, replacement };
+  }));
 
+  for(const { src, replacement } of replacements) {
     // Replace data-lazysrc back with real src
     html = html.replace(
       new RegExp(`data-lazysrc="${src.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}"`, 'g'),
