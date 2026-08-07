@@ -2828,6 +2828,18 @@ onAuthStateChanged(auth, async user => {
     renderMobHome();
     renderDeskHome();
 
+    // Read admin/restrictedAccess status BEFORE the lastSeen write below
+    // queues its own pending mutation against this same users/{uid} doc.
+    // Firestore's SDK gives a client "read your own writes" priority — with
+    // no complete copy of this document cached yet this session, a getDoc()
+    // issued while that write is still in flight sees a locally-synthesized
+    // snapshot built only from the pending mutation's own fields (exactly
+    // displayName/email/uid/lastSeen, with lastSeen still an unresolved
+    // serverTimestamp() placeholder) rather than the real document — which
+    // silently reads isAdmin as undefined even though the server copy is
+    // untouched. Doing this read first avoids the race entirely.
+    await checkAdminStatus();
+
     // Fire-and-forget lastSeen — never blocks anything
     setDoc(doc(db,'users',user.uid), {
       displayName: user.displayName||'',
@@ -2843,11 +2855,6 @@ onAuthStateChanged(auth, async user => {
     if('storage' in navigator && navigator.storage.persist) {
       navigator.storage.persist().catch(()=>{});
     }
-
-    // Awaited here (moved off its old Wave-3 timer) so isAdmin/hasRestrictedAccess
-    // are both known before Wave 2's loadLibrary() decides whether it's even
-    // worth querying for visibility:'restricted' books at all.
-    await checkAdminStatus();
 
     // ── WAVE 1: minimum needed to paint the Home tab meaningfully ──────
     // Run in parallel, re-render Home as each one lands
@@ -12809,9 +12816,6 @@ async function checkAdminStatus() {
   try {
     const snap = await getDoc(doc(db, 'users', currentUser.uid));
     const data = snap.exists() ? snap.data() : {};
-    console.log('[checkAdminStatus] ref.path=', snap.ref.path, 'projectId=', snap.ref.firestore._databaseId?.projectId);
-    console.log('[checkAdminStatus] raw keys=', JSON.stringify(Object.keys(data)));
-    console.log('[checkAdminStatus] raw data=', JSON.stringify(data));
     isAdmin = data.isAdmin === true;
     hasRestrictedAccess = data.restrictedAccess === true;
     if(isAdmin){
