@@ -2732,7 +2732,7 @@ import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signO
 import { getFirestore, collection, addDoc, getDocs, getDoc, doc,
          query, where, orderBy, updateDoc, deleteDoc, serverTimestamp, setDoc, Timestamp, limit, onSnapshot, deleteField, increment, arrayUnion }
   from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
-import { getStorage, ref as storageRef, uploadBytes, getDownloadURL, getBytes }
+import { getStorage, ref as storageRef, uploadBytes, getDownloadURL, getBytes, deleteObject }
   from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js';
 
 // ── PWA ──────────────────────────────────────────────────────────────────────
@@ -15886,13 +15886,13 @@ async function uploadAudioFiles(files) {
   for (const file of files) {
     const safeFilename = `${Date.now()}_${file.name.replace(/[^a-zA-Z0-9._\-]/g, '_')}`;
     const storagePath = `audio/${currentUser.uid}/${safeFilename}`;
-    const storageRef = ref(storage, storagePath);
+    const fileRef = storageRef(storage, storagePath);
 
     // Show a toast so the user knows something is happening
     showToast(`Uploading ${file.name}…`);
     try {
-      await uploadBytes(storageRef, file);
-      const downloadUrl = await getDownloadURL(storageRef);
+      await uploadBytes(fileRef, file);
+      const downloadUrl = await getDownloadURL(fileRef);
 
       await addDoc(collection(db, 'audioFiles'), {
         userId: currentUser.uid,
@@ -15919,8 +15919,8 @@ async function deleteAudioTrack(id) {
 
   try {
     // Remove from Storage
-    const storageRef = ref(storage, track.storagePath);
-    await deleteObject(storageRef).catch(() => {}); // ignore "not found"
+    const fileRef = storageRef(storage, track.storagePath);
+    await deleteObject(fileRef).catch(() => {}); // ignore "not found"
 
     // Remove from Firestore
     await deleteDoc(doc(db, 'audioFiles', id));
