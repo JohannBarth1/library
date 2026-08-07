@@ -13121,9 +13121,6 @@ function renderAdminBooksList() {
   });
 }
 
-document.getElementById('adminBooksRefresh')?.addEventListener('click', adminLoadBooks);
-document.getElementById('adminBooksSearch')?.addEventListener('input', renderAdminBooksList);
-
 // Generic multi-select user picker, reused for both bulk-restrict and the
 // per-book "add reader" action. Mirrors the existing .mob-picker-scrim
 // pattern used elsewhere (e.g. showQuickCategoryModal) rather than the
@@ -13168,7 +13165,11 @@ function adminOpenUserPicker({ title = '👤 Select readers', preselected = [], 
   });
 }
 
-document.getElementById('adminBooksRestrictBtn')?.addEventListener('click', () => {
+// Bound from buildAdminSections() (see its re-bind section) rather than at
+// top level — these buttons live inside the admin panel's innerHTML, which
+// doesn't exist until that function first runs, so a top-level
+// getElementById here would always find nothing.
+function adminBooksRestrictSelected() {
   const ids = [...adminBooksSelected];
   if(!ids.length) { showToast('Select at least one book'); return; }
   adminOpenUserPicker({
@@ -13193,9 +13194,9 @@ document.getElementById('adminBooksRestrictBtn')?.addEventListener('click', () =
       } catch(e) { hideLoading(); showToast('Failed: ' + e.message); }
     }
   });
-});
+}
 
-document.getElementById('adminBooksUnrestrictBtn')?.addEventListener('click', async () => {
+async function adminBooksUnrestrictSelected() {
   const ids = [...adminBooksSelected];
   if(!ids.length) { showToast('Select at least one book'); return; }
   showLoading('Removing restriction…');
@@ -13209,9 +13210,9 @@ document.getElementById('adminBooksUnrestrictBtn')?.addEventListener('click', as
     showToast('Restriction removed ✓');
     renderAdminBooksList();
   } catch(e) { hideLoading(); showToast('Failed: ' + e.message); }
-});
+}
 
-document.getElementById('adminBooksPublicBtn')?.addEventListener('click', async () => {
+async function adminBooksPublishSelected() {
   const ids = [...adminBooksSelected];
   if(!ids.length) { showToast('Select at least one book'); return; }
   showLoading('Publishing…');
@@ -13225,7 +13226,7 @@ document.getElementById('adminBooksPublicBtn')?.addEventListener('click', async 
     showToast('Made public ✓');
     renderAdminBooksList();
   } catch(e) { hideLoading(); showToast('Failed: ' + e.message); }
-});
+}
 
 // Per-book detail modal: set Public / Private / Restricted and manage the
 // restricted-reader list directly, without needing to go through bulk-select.
@@ -14715,6 +14716,36 @@ function buildAdminSections() {
     </div>
 
     <div class="admin-section">
+      <div class="admin-section-header" data-admin-section="books">
+        <span class="admin-section-title">🔒 Restricted Books</span>
+        <span class="admin-section-chevron">▾</span>
+      </div>
+      <div class="admin-section-body" id="adminBooksBody">
+        <div style="display:flex;gap:.5rem;margin-bottom:.6rem;flex-wrap:wrap">
+          <button class="btn-save" style="font-size:.72rem;padding:.4rem .8rem"
+            id="adminBooksRefresh">↻ Refresh</button>
+          <input type="text" id="adminBooksSearch" placeholder="Search title, author, owner…"
+            style="flex:1;min-width:140px;padding:.4rem .6rem;font-size:.78rem;
+                   border:1px solid var(--border);border-radius:4px;font-family:'Lato',sans-serif"/>
+        </div>
+        <div style="display:flex;gap:.5rem;margin-bottom:.8rem;flex-wrap:wrap">
+          <button class="btn-save" style="font-size:.72rem;padding:.4rem .8rem;background:#a83232;border-color:#a83232"
+            id="adminBooksRestrictBtn">🔒 Restrict to readers…</button>
+          <button class="btn-cancel" style="font-size:.72rem;padding:.4rem .8rem"
+            id="adminBooksUnrestrictBtn">Remove restriction</button>
+          <button class="btn-cancel" style="font-size:.72rem;padding:.4rem .8rem"
+            id="adminBooksPublicBtn">🌐 Make public</button>
+        </div>
+        <div style="font-size:.72rem;color:var(--muted);margin-bottom:.6rem">
+          Select one or more books below, then choose an action. Tap a book itself (not its checkbox) to manage it individually.
+        </div>
+        <div id="adminBooksList">
+          <div style="color:var(--muted);font-size:.85rem">Open to load…</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="admin-section">
       <div class="admin-section-header" data-admin-section="kobo">
         <span class="admin-section-title">📖 Kobo Devices</span>
         <span class="admin-section-chevron">▾</span>
@@ -14782,6 +14813,7 @@ function buildAdminSections() {
       header.classList.toggle('open', !isOpen);
       if(!isOpen) {
         if(section === 'checkouts')   adminLoadCheckouts();
+        if(section === 'books')       adminLoadBooks();
         if(section === 'kobo')        adminLoadKoboDevices();
         if(section === 'users')       adminLoadUsers();
         if(section === 'categories')  adminLoadCategories();
@@ -14800,6 +14832,16 @@ function buildAdminSections() {
       this.textContent = adminCheckoutsShowAll ? 'Show Active Only' : 'Show All';
       adminLoadCheckouts();
     });
+  scroll.querySelector('#adminBooksRefresh')
+    ?.addEventListener('click', adminLoadBooks);
+  scroll.querySelector('#adminBooksSearch')
+    ?.addEventListener('input', renderAdminBooksList);
+  scroll.querySelector('#adminBooksRestrictBtn')
+    ?.addEventListener('click', adminBooksRestrictSelected);
+  scroll.querySelector('#adminBooksUnrestrictBtn')
+    ?.addEventListener('click', adminBooksUnrestrictSelected);
+  scroll.querySelector('#adminBooksPublicBtn')
+    ?.addEventListener('click', adminBooksPublishSelected);
   scroll.querySelector('#adminKoboRefresh')
     ?.addEventListener('click', adminLoadKoboDevices);
   scroll.querySelector('#adminUsersRefresh')
