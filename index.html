@@ -1710,6 +1710,30 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
   border-radius:10px;padding:.12rem .5rem;letter-spacing:.02em;white-space:nowrap;margin-left:.15rem;}
 .home-ledger-teaser-sub{font-size:.72rem;color:var(--muted);margin-top:.1rem;}
 
+/* ── AUDIO PANEL ── */
+.audio-track-row{display:flex;align-items:center;gap:.7rem;padding:.7rem 1rem;
+  background:var(--warm-white);border:1px solid var(--border);border-radius:10px;
+  margin-bottom:.5rem;cursor:pointer;transition:box-shadow .15s;}
+.audio-track-row:hover{box-shadow:0 2px 8px rgba(15,26,46,.1);}
+.audio-track-row.playing{border-color:var(--teal);background:var(--teal-light);}
+.audio-track-icon{font-size:1.4rem;flex-shrink:0;width:2rem;text-align:center;}
+.audio-track-meta{flex:1;min-width:0;}
+.audio-track-name{font-size:.85rem;font-weight:700;color:var(--navy2);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.audio-track-sub{font-size:.7rem;color:var(--muted);margin-top:1px;}
+.audio-del-btn{background:none;border:none;color:var(--muted);font-size:.9rem;
+  cursor:pointer;padding:.3rem .4rem;border-radius:4px;flex-shrink:0;}
+.audio-del-btn:hover{color:var(--danger);background:rgba(160,40,40,.08);}
+#audioPersistentPlayer{
+  position:sticky;bottom:0;background:var(--navy);border-top:2px solid var(--gold);
+  padding:.6rem 1rem;display:none;
+}
+#audioPersistentPlayer.visible{display:block;}
+#audioPersistentPlayer audio{width:100%;height:36px;}
+.audio-now-playing-label{font-size:.7rem;color:var(--gold);letter-spacing:.05em;
+  text-transform:uppercase;margin-bottom:.3rem;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+
 /* Ledger popover (reader HUD tap + goal editor) — a bespoke bottom sheet,
    deliberately not reusing .mob-picker-scrim, so it doesn't read as "the
    same kind of dropdown" as ordinary editing pickers. */
@@ -2005,6 +2029,36 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
     </div>
   </div>
 
+  <!-- ── AUDIO PANEL ── -->
+  <div class="mob-panel" id="mobPanelAudio">
+    <div style="display:flex;flex-direction:column;height:100%;overflow:hidden;">
+      <!-- Header -->
+      <div style="background:var(--cream);padding:.9rem 1rem .8rem;display:flex;
+                  align-items:center;justify-content:space-between;
+                  border-bottom:1px solid var(--border);flex-shrink:0;">
+        <div style="font-family:'Playfair Display',serif;font-size:1.3rem;color:var(--navy2);">Audio</div>
+        <label id="audioUploadLabel" style="display:flex;align-items:center;gap:.4rem;
+          background:var(--teal);color:var(--gold);border:none;border-radius:20px;
+          padding:.35rem .85rem;font-size:.78rem;font-weight:700;cursor:pointer;
+          font-family:'Lato',sans-serif;letter-spacing:.04em;">
+          ＋ Upload
+          <input type="file" id="audioFileInput" accept="audio/*" multiple style="display:none"/>
+        </label>
+      </div>
+      <!-- Track list -->
+      <div style="flex:1;overflow-y:auto;padding:.8rem 1rem 0;" id="audioTrackList">
+        <div style="text-align:center;padding:3rem 1rem;color:var(--muted);font-size:.85rem;">
+          Loading…
+        </div>
+      </div>
+      <!-- Persistent player -->
+      <div id="audioPersistentPlayer">
+        <div class="audio-now-playing-label" id="audioNowPlayingLabel">Now Playing</div>
+        <audio id="audioPlayerEl" controls preload="none" style="width:100%;height:36px;"></audio>
+      </div>
+    </div>
+  </div>
+
   <!-- ── LEDGER PANEL (gamification home) ── -->
   <div class="mob-panel" id="mobPanelLedger">
     <div class="mob-settings-scroll" id="ledgerScroll">
@@ -2269,6 +2323,9 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
     </button>
     <button class="mob-tab" id="mobNavLedger">
       <span class="tab-icon">🔥</span><span>Ledger</span>
+    </button>
+    <button class="mob-tab" id="mobNavAudio">
+      <span class="tab-icon">🎵</span><span>Audio</span>
     </button>
     <button class="mob-tab" id="mobNavSettings">
       <span class="tab-icon">⚙</span><span>Settings</span>
@@ -4502,12 +4559,13 @@ document.getElementById('mobNavHome').addEventListener('click', () => { mob_swit
 document.getElementById('mobNavSettings').addEventListener('click', () => mob_switchTab('settings'));
 document.getElementById('mobNavTimeline')?.addEventListener('click', () => mob_switchTab('timeline'));
 document.getElementById('mobNavLedger')?.addEventListener('click', () => mob_switchTab('ledger'));
+document.getElementById('mobNavAudio')?.addEventListener('click', () => mob_switchTab('audio'));
 
 function mob_switchTab(tab) {
   document.querySelectorAll('.mob-tab, .mob-tab-home').forEach(t => t.classList.remove('active'));
-  const tabMap = { library:'mobNavLibrary', home:'mobNavHome', settings:'mobNavSettings', timeline:'mobNavTimeline', ledger:'mobNavLedger' };
+  const tabMap = { library:'mobNavLibrary', home:'mobNavHome', settings:'mobNavSettings', timeline:'mobNavTimeline', ledger:'mobNavLedger', audio:'mobNavAudio' };
   document.getElementById(tabMap[tab])?.classList.add('active');
-  const panelMap = { library:'mobPanelLibrary', home:'mobPanelHome', settings:'mobPanelSettings', timeline:'mobPanelTimeline', ledger:'mobPanelLedger' };
+  const panelMap = { library:'mobPanelLibrary', home:'mobPanelHome', settings:'mobPanelSettings', timeline:'mobPanelTimeline', ledger:'mobPanelLedger', audio:'mobPanelAudio' };
   mob_showPanel(panelMap[tab] || 'mobPanelHome');
   if (tab === 'home') {
     renderMobHome();
@@ -4524,6 +4582,7 @@ function mob_switchTab(tab) {
   }
   if (tab === 'settings')  renderKoboSettings(document.getElementById('mobKoboSettings'));
   if (tab === 'ledger')    renderLedgerTab();
+  if (tab === 'audio')     renderAudioPanel();
 }
 
 // ── MOBILE LIBRARY PANEL ─────────────────────────────────────────────────────
@@ -15708,6 +15767,187 @@ async function deleteGoalFromModal() {
 document.getElementById('btnCancelGoal')?.addEventListener('click', closeGoalModal);
 document.getElementById('btnSaveGoal')?.addEventListener('click', saveGoalFromModal);
 document.getElementById('btnDeleteGoal')?.addEventListener('click', deleteGoalFromModal);
+
+// ── AUDIO SYSTEM ─────────────────────────────────────────────────────────────
+
+let _audioTracks = [];          // cached list from Firestore
+let _audioCurrentId = null;     // id of track currently loaded in player
+
+// ── helpers ──────────────────────────────────────────────────────────────────
+
+function fmtBytes(b) {
+  if (b < 1024) return b + ' B';
+  if (b < 1024 * 1024) return (b / 1024).toFixed(0) + ' KB';
+  return (b / (1024 * 1024)).toFixed(1) + ' MB';
+}
+
+function fmtAudioDate(ts) {
+  if (!ts) return '';
+  const d = ts.toDate ? ts.toDate() : new Date(ts);
+  return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+// ── load tracks from Firestore ────────────────────────────────────────────────
+
+async function loadAudioTracks() {
+  if (!currentUser) return;
+  const q = query(
+    collection(db, 'audioFiles'),
+    where('userId', '==', currentUser.uid),
+    orderBy('uploadedAt', 'desc')
+  );
+  const snap = await getDocs(q);
+  _audioTracks = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+}
+
+// ── render the audio panel ────────────────────────────────────────────────────
+
+async function renderAudioPanel() {
+  const list = document.getElementById('audioTrackList');
+  if (!list) return;
+  list.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--muted);font-size:.85rem;">Loading…</div>';
+
+  try {
+    await loadAudioTracks();
+  } catch (e) {
+    list.innerHTML = `<div style="text-align:center;padding:2rem;color:var(--danger);font-size:.85rem;">Failed to load: ${e.message}</div>`;
+    return;
+  }
+
+  if (!_audioTracks.length) {
+    list.innerHTML = `<div style="text-align:center;padding:3rem 1rem;color:var(--muted);font-size:.85rem;line-height:1.6;">
+      No audio files yet.<br>Tap <strong>＋ Upload</strong> to add some.
+    </div>`;
+    return;
+  }
+
+  list.innerHTML = _audioTracks.map(t => `
+    <div class="audio-track-row${_audioCurrentId === t.id ? ' playing' : ''}"
+         data-audioid="${t.id}" id="audioRow_${t.id}">
+      <div class="audio-track-icon">${_audioCurrentId === t.id ? '🔊' : '▶️'}</div>
+      <div class="audio-track-meta">
+        <div class="audio-track-name">${esc(t.name)}</div>
+        <div class="audio-track-sub">${fmtBytes(t.size || 0)} · ${fmtAudioDate(t.uploadedAt)}</div>
+      </div>
+      <button class="audio-del-btn" data-audiodel="${t.id}" title="Delete">🗑</button>
+    </div>
+  `).join('');
+
+  // click track → play
+  list.querySelectorAll('.audio-track-row').forEach(row => {
+    row.addEventListener('click', e => {
+      if (e.target.closest('[data-audiodel]')) return; // handled below
+      const id = row.dataset.audioid;
+      const track = _audioTracks.find(t => t.id === id);
+      if (track) playAudioTrack(track);
+    });
+  });
+
+  // delete buttons
+  list.querySelectorAll('[data-audiodel]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const id = btn.dataset.audiodel;
+      if (!confirm('Delete this audio file?')) return;
+      await deleteAudioTrack(id);
+    });
+  });
+}
+
+// ── play a track ─────────────────────────────────────────────────────────────
+
+function playAudioTrack(track) {
+  const playerEl = document.getElementById('audioPlayerEl');
+  const playerDiv = document.getElementById('audioPersistentPlayer');
+  const label    = document.getElementById('audioNowPlayingLabel');
+  if (!playerEl || !playerDiv) return;
+
+  _audioCurrentId = track.id;
+  playerEl.src = track.downloadUrl;
+  playerEl.load();
+  playerEl.play().catch(() => {}); // autoplay may be blocked; native controls let user tap
+
+  label.textContent = track.name;
+  playerDiv.classList.add('visible');
+
+  // update row highlights
+  document.querySelectorAll('.audio-track-row').forEach(r => {
+    const active = r.dataset.audioid === track.id;
+    r.classList.toggle('playing', active);
+    r.querySelector('.audio-track-icon').textContent = active ? '🔊' : '▶️';
+  });
+}
+
+// ── upload audio files ────────────────────────────────────────────────────────
+
+async function uploadAudioFiles(files) {
+  if (!currentUser || !files.length) return;
+  const list = document.getElementById('audioTrackList');
+
+  for (const file of files) {
+    const safeFilename = `${Date.now()}_${file.name.replace(/[^a-zA-Z0-9._\-]/g, '_')}`;
+    const storagePath = `audio/${currentUser.uid}/${safeFilename}`;
+    const storageRef = ref(storage, storagePath);
+
+    // Show a toast so the user knows something is happening
+    showToast(`Uploading ${file.name}…`);
+    try {
+      await uploadBytes(storageRef, file);
+      const downloadUrl = await getDownloadURL(storageRef);
+
+      await addDoc(collection(db, 'audioFiles'), {
+        userId: currentUser.uid,
+        name: file.name,
+        storagePath,
+        downloadUrl,
+        size: file.size,
+        uploadedAt: serverTimestamp(),
+      });
+      showToast(`${file.name} uploaded ✓`);
+    } catch (e) {
+      showToast(`Upload failed: ${e.message}`);
+    }
+  }
+
+  await renderAudioPanel();
+}
+
+// ── delete a track ────────────────────────────────────────────────────────────
+
+async function deleteAudioTrack(id) {
+  const track = _audioTracks.find(t => t.id === id);
+  if (!track) return;
+
+  try {
+    // Remove from Storage
+    const storageRef = ref(storage, track.storagePath);
+    await deleteObject(storageRef).catch(() => {}); // ignore "not found"
+
+    // Remove from Firestore
+    await deleteDoc(doc(db, 'audioFiles', id));
+
+    // Stop player if this was the current track
+    if (_audioCurrentId === id) {
+      const playerEl = document.getElementById('audioPlayerEl');
+      if (playerEl) { playerEl.pause(); playerEl.src = ''; }
+      document.getElementById('audioPersistentPlayer')?.classList.remove('visible');
+      _audioCurrentId = null;
+    }
+
+    _audioTracks = _audioTracks.filter(t => t.id !== id);
+    renderAudioPanel();
+    showToast('Deleted ✓');
+  } catch (e) {
+    showToast('Delete failed: ' + e.message);
+  }
+}
+
+// ── wire file input ───────────────────────────────────────────────────────────
+
+document.getElementById('audioFileInput')?.addEventListener('change', e => {
+  const files = [...e.target.files];
+  e.target.value = '';           // reset so re-uploading same file works
+  if (files.length) uploadAudioFiles(files);
+});
 
 renderAll();
 </script>
