@@ -12805,17 +12805,22 @@ let hasRestrictedAccess = false; // admin-granted: can publish books as 'restric
 let adminCheckoutsShowAll = false;
 
 async function checkAdminStatus() {
-  if(!currentUser) return;
+  if(!currentUser) { console.log('[checkAdminStatus] skipped — no currentUser'); return; }
+  console.log('[checkAdminStatus] called for uid', currentUser.uid);
   try {
     const snap = await getDoc(doc(db, 'users', currentUser.uid));
     const data = snap.exists() ? snap.data() : {};
+    console.log('[checkAdminStatus] doc exists=', snap.exists(), 'isAdmin field=', data.isAdmin, 'restrictedAccess field=', data.restrictedAccess);
     isAdmin = data.isAdmin === true;
     hasRestrictedAccess = data.restrictedAccess === true;
+    console.log('[checkAdminStatus] resolved isAdmin=', isAdmin, 'hasRestrictedAccess=', hasRestrictedAccess);
     if(isAdmin){
-      document.getElementById('mobAdminSettingsCard').style.display = '';
+      const card = document.getElementById('mobAdminSettingsCard');
+      console.log('[checkAdminStatus] admin card element found=', !!card);
+      if(card) card.style.display = '';
     }
   } catch(e) {
-    console.warn('Admin check failed:', e);
+    console.warn('[checkAdminStatus] threw:', e);
   }
 }
 
