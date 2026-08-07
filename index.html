@@ -419,6 +419,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .dbadge-cat{background:var(--teal-light);color:var(--teal);}
 .dbadge-lang{background:#ece8f8;color:#5a48b0;}
 .dbadge-shared{background:#fff4e0;color:#a87820;}
+.dbadge-restricted{background:#f3e6e6;color:#a83232;}
 .drawer-desc{font-size:.85rem;line-height:1.7;color:#3a4a5a;margin-bottom:1rem;}
 .btn-action{display:inline-flex;align-items:center;gap:.35rem;padding:.42rem .85rem;font-size:.72rem;font-family:'Lato',sans-serif;font-weight:700;letter-spacing:.04em;border-radius:20px;cursor:pointer;border:1px solid;transition:all .15s;white-space:nowrap;position:relative;}
 /* PATCH 6d: gold text on dark read button */
@@ -2989,6 +2990,14 @@ async function loadLibrary() {
       collection(db, 'books'),
       where('allowedUsers', 'array-contains', currentUser.uid)
     );
+    // "Forbidden Shelf" — admin-curated restricted books. Separate from
+    // allowedUsers (which is the user-to-user private share list) so an
+    // admin restricting/unrestricting a book never touches a peer share
+    // the owner set up themselves, and vice versa.
+    const restrictedQ = query(
+      collection(db, 'books'),
+      where('restrictedUsers', 'array-contains', currentUser.uid)
+    );
 
     // Load and render my books immediately
     const mySnap = await getDocs(myQ);
@@ -2996,12 +3005,15 @@ async function loadLibrary() {
     renderAll();
 
     // Load public and shared in background without blocking UI
-    Promise.all([getDocs(pubQ), getDocs(sharedQ)]).then(([pubSnap, sharedSnap]) => {
+    Promise.all([getDocs(pubQ), getDocs(sharedQ), getDocs(restrictedQ)]).then(([pubSnap, sharedSnap, restrictedSnap]) => {
       const pubBooks = pubSnap.docs.map(d => ({ id: d.id, ...d.data() }));
       const sharedBooks = sharedSnap.docs
         .map(d => ({ id: d.id, ...d.data() }))
         .filter(b => b.ownerId !== currentUser.uid);
-      communityLib = dedupe([...pubBooks, ...sharedBooks]);
+      const restrictedBooks = restrictedSnap.docs
+        .map(d => ({ id: d.id, ...d.data() }))
+        .filter(b => b.ownerId !== currentUser.uid);
+      communityLib = dedupe([...pubBooks, ...sharedBooks, ...restrictedBooks]);
       renderAll();
       renderMobHome();
       renderDeskHome();
@@ -3700,7 +3712,11 @@ async function showBookById(id){
   // Shared by
   const sharedByEl=document.getElementById('drawerSharedBy');
   const isPrivatelyShared=book.allowedUsers?.includes(currentUser?.uid)&&book.visibility!=='public';
-  if(!isMine&&isPrivatelyShared){
+  const isAdminRestricted=book.restrictedUsers?.includes(currentUser?.uid);
+  if(!isMine&&isAdminRestricted){
+    sharedByEl.textContent='🔒 Restricted access — shared with a limited group by an admin';
+    sharedByEl.style.display='block';
+  } else if(!isMine&&isPrivatelyShared){
     sharedByEl.textContent='Shared with you by '+(book.ownerName||'Anonymous');
     sharedByEl.style.display='block';
   } else if(isMine&&book.allowedUsers?.length>0){
@@ -3721,6 +3737,7 @@ async function showBookById(id){
   if(book.category)badges+=`<span class="dbadge dbadge-cat">${catIcon(book.category)} ${esc(book.category)}</span>`;
   if(book.language)badges+=`<span class="dbadge dbadge-lang">${esc(book.language.toUpperCase())}</span>`;
   if(book.visibility==='public')badges+=`<span class="dbadge dbadge-shared">Public</span>`;
+  if(book.restrictedUsers?.length>0)badges+=`<span class="dbadge dbadge-restricted">🔒 Restricted</span>`;
   if(book.recommended)badges+=`<span class="dbadge" style="background:#fff8ec;color:var(--gold)">⭐ Pick</span>`;
   document.getElementById('drawerBadges').innerHTML=badges;
 
@@ -4405,7 +4422,9 @@ async function mob_showBook(id, opts={}){
 
   const mobSharedByEl=document.getElementById('mobDetailSharedBy');
   const mobIsPrivatelyShared=book.allowedUsers?.includes(currentUser?.uid)&&book.visibility!=='public';
-  if(!isMine&&mobIsPrivatelyShared){mobSharedByEl.textContent='Shared with you by '+(book.ownerName||'Anonymous');mobSharedByEl.style.display='block';}
+  const mobIsAdminRestricted=book.restrictedUsers?.includes(currentUser?.uid);
+  if(!isMine&&mobIsAdminRestricted){mobSharedByEl.textContent='🔒 Restricted access — shared with a limited group by an admin';mobSharedByEl.style.display='block';}
+  else if(!isMine&&mobIsPrivatelyShared){mobSharedByEl.textContent='Shared with you by '+(book.ownerName||'Anonymous');mobSharedByEl.style.display='block';}
   else mobSharedByEl.style.display='none';
 
   document.getElementById('mobDetailDesc').textContent=stripHtml(book.description||'');
@@ -13017,6 +13036,292 @@ async function adminLoadUsers() {
 }
 
 document.getElementById('adminUsersRefresh')?.addEventListener('click', adminLoadUsers);
+
+// ── FORBIDDEN SHELF / RESTRICTED BOOKS ──────────────────────────────────────
+// Admin-curated reader whitelist, kept in `restrictedUsers` on the book doc —
+// deliberately separate from `allowedUsers` (the user-to-user private-share
+// list) so admin actions here never clobber a peer share the owner set up,
+// and vice versa. A restricted book is always visibility:'private' so it
+// drops out of the public pubQ pull; restrictedUsers is what lets the
+// approved readers see it via loadLibrary()'s restrictedQ.
+let adminAllBooks = [];
+let adminAllUsersCache = [];
+const adminBooksSelected = new Set();
+
+async function adminLoadBooks() {
+  const el = document.getElementById('adminBooksList');
+  if(!el) return;
+  el.innerHTML = '<div style="color:var(--muted);font-size:.85rem">Loading…</div>';
+  adminBooksSelected.clear();
+  try {
+    const [bookSnap, userSnap] = await Promise.all([
+      getDocs(collection(db, 'books')),
+      getDocs(collection(db, 'users')),
+    ]);
+    adminAllUsersCache = userSnap.docs.map(d => ({ ...d.data() })).filter(u => u.uid);
+    const userMap = {};
+    adminAllUsersCache.forEach(u => { userMap[u.uid] = u.displayName || u.email || u.uid; });
+
+    adminAllBooks = bookSnap.docs
+      .map(d => ({ id: d.id, ...d.data(), _ownerName: userMap[d.data().ownerId] || d.data().ownerName || 'Unknown' }))
+      .sort((a, b) => (a.title || '').localeCompare(b.title || ''));
+
+    renderAdminBooksList();
+  } catch(e) {
+    el.innerHTML = `<div style="color:var(--danger);font-size:.82rem">Failed to load: ${e.message}</div>`;
+    console.error(e);
+  }
+}
+
+function renderAdminBooksList() {
+  const el = document.getElementById('adminBooksList');
+  if(!el) return;
+  const term = (document.getElementById('adminBooksSearch')?.value || '').trim().toLowerCase();
+  const rows = term
+    ? adminAllBooks.filter(b => (b.title || '').toLowerCase().includes(term) || (b.author || '').toLowerCase().includes(term) || (b._ownerName || '').toLowerCase().includes(term))
+    : adminAllBooks;
+
+  if(!rows.length) {
+    el.innerHTML = '<div style="color:var(--muted);font-size:.85rem;padding:.5rem 0">No books found</div>';
+    return;
+  }
+
+  el.innerHTML = rows.map(b => {
+    const restrictedCount = b.restrictedUsers?.length || 0;
+    const visBadge = b.visibility === 'public'
+      ? `<span class="admin-badge active">Public</span>`
+      : restrictedCount > 0
+        ? `<span class="admin-badge overdue" style="background:#f3e6e6;color:#a83232">🔒 Restricted (${restrictedCount})</span>`
+        : `<span class="admin-badge returned">Private</span>`;
+    return `<div class="admin-card" data-bookid="${b.id}" style="cursor:pointer">
+      <div style="display:flex;align-items:flex-start;gap:.5rem">
+        <input type="checkbox" class="admin-books-check" data-bookid="${b.id}" style="margin-top:.3rem;flex-shrink:0" ${adminBooksSelected.has(b.id) ? 'checked' : ''} onclick="event.stopPropagation()"/>
+        <div style="flex:1;min-width:0">
+          <div class="admin-card-title">📖 ${esc(b.title || 'Untitled')}</div>
+          <div class="admin-card-row">
+            <span>👤 ${esc(b._ownerName)}</span>
+            ${visBadge}
+          </div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+
+  el.querySelectorAll('.admin-books-check').forEach(cb => {
+    cb.addEventListener('change', () => {
+      if(cb.checked) adminBooksSelected.add(cb.dataset.bookid);
+      else adminBooksSelected.delete(cb.dataset.bookid);
+    });
+  });
+  el.querySelectorAll('.admin-card[data-bookid]').forEach(card => {
+    card.addEventListener('click', (e) => {
+      if(e.target.classList.contains('admin-books-check')) return;
+      adminOpenBookModal(card.dataset.bookid);
+    });
+  });
+}
+
+document.getElementById('adminBooksRefresh')?.addEventListener('click', adminLoadBooks);
+document.getElementById('adminBooksSearch')?.addEventListener('input', renderAdminBooksList);
+
+// Generic multi-select user picker, reused for both bulk-restrict and the
+// per-book "add reader" action. Mirrors the existing .mob-picker-scrim
+// pattern used elsewhere (e.g. showQuickCategoryModal) rather than the
+// anchored .mfp-dd dropdown, since this needs to be a standalone modal not
+// tied to a pill button on screen.
+function adminOpenUserPicker({ title = '👤 Select readers', preselected = [], onConfirm }) {
+  const chosen = new Set(preselected);
+  const scrim = document.createElement('div');
+  scrim.className = 'mob-picker-scrim';
+  scrim.innerHTML = `
+    <div class="mob-picker-card">
+      <div class="mob-picker-title">
+        <span>${title}</span>
+        <button class="mob-picker-close" id="adminUserPickerClose">✕</button>
+      </div>
+      <div id="adminUserPickerItems" class="mob-picker-grid" style="grid-template-columns:1fr">
+        ${adminAllUsersCache.map(u => `<div class="mob-picker-item ${chosen.has(u.uid) ? 'selected' : ''}" data-uid="${u.uid}">
+            <span>${esc(u.displayName || u.email || u.uid)}</span>
+            <span class="mpi-check">✓</span>
+          </div>`).join('') || '<div style="color:var(--muted);font-size:.82rem;padding:.5rem 0">No other users found</div>'}
+      </div>
+      <div class="modal-actions" style="margin-top:.8rem">
+        <button class="btn-cancel" id="adminUserPickerCancel">Cancel</button>
+        <button class="btn-save" id="adminUserPickerConfirm">Confirm</button>
+      </div>
+    </div>`;
+  document.body.appendChild(scrim);
+  const close = () => scrim.remove();
+  scrim.addEventListener('click', e => { if(e.target === scrim) close(); });
+  scrim.querySelector('#adminUserPickerClose').addEventListener('click', close);
+  scrim.querySelector('#adminUserPickerCancel').addEventListener('click', close);
+  scrim.querySelectorAll('[data-uid]').forEach(item => {
+    item.addEventListener('click', () => {
+      const uid = item.dataset.uid;
+      if(chosen.has(uid)) { chosen.delete(uid); item.classList.remove('selected'); }
+      else { chosen.add(uid); item.classList.add('selected'); }
+    });
+  });
+  scrim.querySelector('#adminUserPickerConfirm').addEventListener('click', () => {
+    onConfirm([...chosen]);
+    close();
+  });
+}
+
+document.getElementById('adminBooksRestrictBtn')?.addEventListener('click', () => {
+  const ids = [...adminBooksSelected];
+  if(!ids.length) { showToast('Select at least one book'); return; }
+  adminOpenUserPicker({
+    title: '🔒 Restrict to readers…',
+    onConfirm: async (uids) => {
+      if(!uids.length) { showToast('No readers selected'); return; }
+      showLoading('Restricting…');
+      try {
+        for(const id of ids) {
+          const book = adminAllBooks.find(b => b.id === id);
+          const merged = [...new Set([...(book?.restrictedUsers || []), ...uids])];
+          await updateDoc(doc(db, 'books', id), {
+            visibility: 'private',
+            restrictedUsers: merged,
+            updatedAt: serverTimestamp()
+          });
+          if(book) { book.restrictedUsers = merged; book.visibility = 'private'; }
+        }
+        hideLoading();
+        showToast(`Restricted ${ids.length} book${ids.length>1?'s':''} ✓`);
+        renderAdminBooksList();
+      } catch(e) { hideLoading(); showToast('Failed: ' + e.message); }
+    }
+  });
+});
+
+document.getElementById('adminBooksUnrestrictBtn')?.addEventListener('click', async () => {
+  const ids = [...adminBooksSelected];
+  if(!ids.length) { showToast('Select at least one book'); return; }
+  showLoading('Removing restriction…');
+  try {
+    for(const id of ids) {
+      await updateDoc(doc(db, 'books', id), { restrictedUsers: [], updatedAt: serverTimestamp() });
+      const book = adminAllBooks.find(b => b.id === id);
+      if(book) book.restrictedUsers = [];
+    }
+    hideLoading();
+    showToast('Restriction removed ✓');
+    renderAdminBooksList();
+  } catch(e) { hideLoading(); showToast('Failed: ' + e.message); }
+});
+
+document.getElementById('adminBooksPublicBtn')?.addEventListener('click', async () => {
+  const ids = [...adminBooksSelected];
+  if(!ids.length) { showToast('Select at least one book'); return; }
+  showLoading('Publishing…');
+  try {
+    for(const id of ids) {
+      await updateDoc(doc(db, 'books', id), { visibility: 'public', restrictedUsers: [], updatedAt: serverTimestamp() });
+      const book = adminAllBooks.find(b => b.id === id);
+      if(book) { book.visibility = 'public'; book.restrictedUsers = []; }
+    }
+    hideLoading();
+    showToast('Made public ✓');
+    renderAdminBooksList();
+  } catch(e) { hideLoading(); showToast('Failed: ' + e.message); }
+});
+
+// Per-book detail modal: set Public / Private / Restricted and manage the
+// restricted-reader list directly, without needing to go through bulk-select.
+function adminOpenBookModal(bookId) {
+  const book = adminAllBooks.find(b => b.id === bookId);
+  if(!book) return;
+  const userMap = {};
+  adminAllUsersCache.forEach(u => { userMap[u.uid] = u.displayName || u.email || u.uid; });
+
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay open';
+  const render = () => {
+    const restricted = book.restrictedUsers || [];
+    overlay.innerHTML = `
+      <div class="modal" style="max-width:440px">
+        <h3 style="margin-bottom:.6rem">📖 ${esc(book.title || 'Untitled')}</h3>
+        <div style="font-size:.78rem;color:var(--muted);margin-bottom:.8rem">by ${esc(book._ownerName)}</div>
+        <div style="display:flex;gap:.4rem;margin-bottom:1rem;flex-wrap:wrap">
+          <button class="btn-cancel abm-vis" data-vis="public" style="${book.visibility==='public'?'background:var(--teal-light);border-color:var(--teal);color:var(--teal-dark)':''}">🌐 Public</button>
+          <button class="btn-cancel abm-vis" data-vis="private" style="${book.visibility!=='public'&&!restricted.length?'background:var(--teal-light);border-color:var(--teal);color:var(--teal-dark)':''}">Private</button>
+          <button class="btn-cancel abm-vis" data-vis="restricted" style="${restricted.length?'background:#f3e6e6;border-color:#a83232;color:#a83232':''}">🔒 Restricted</button>
+        </div>
+        <div style="font-size:.78rem;font-weight:700;color:var(--navy2);margin-bottom:.4rem">Approved readers</div>
+        <div id="abmReaderList" style="display:flex;flex-direction:column;gap:.3rem;margin-bottom:.6rem;max-height:160px;overflow-y:auto">
+          ${restricted.length ? restricted.map(uid => `<div style="display:flex;align-items:center;justify-content:space-between;background:var(--panel);border-radius:4px;padding:.35rem .6rem;font-size:.78rem">
+              <span>${esc(userMap[uid] || uid)}</span>
+              <button class="abm-remove-reader" data-uid="${uid}" style="border:none;background:none;color:var(--danger);cursor:pointer;font-size:.85rem">✕</button>
+            </div>`).join('') : '<div style="font-size:.78rem;color:var(--muted)">No restricted readers yet</div>'}
+        </div>
+        <button class="btn-save" id="abmAddReader" style="font-size:.75rem;padding:.4rem .8rem;margin-bottom:.8rem">+ Add reader</button>
+        <div class="modal-actions">
+          <button class="btn-cancel" id="abmClose">Close</button>
+        </div>
+      </div>`;
+    overlay.querySelector('#abmClose').addEventListener('click', () => overlay.remove());
+    overlay.querySelectorAll('.abm-vis').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const vis = btn.dataset.vis;
+        showLoading('Updating…');
+        try {
+          if(vis === 'public') {
+            await updateDoc(doc(db, 'books', bookId), { visibility: 'public', restrictedUsers: [], updatedAt: serverTimestamp() });
+            book.visibility = 'public'; book.restrictedUsers = [];
+          } else if(vis === 'private') {
+            await updateDoc(doc(db, 'books', bookId), { visibility: 'private', restrictedUsers: [], updatedAt: serverTimestamp() });
+            book.visibility = 'private'; book.restrictedUsers = [];
+          } else {
+            // Switching to Restricted with no readers yet — prompt to add some.
+            hideLoading();
+            adminOpenUserPicker({
+              title: '🔒 Add restricted readers',
+              onConfirm: async (uids) => {
+                if(!uids.length) return;
+                showLoading('Updating…');
+                await updateDoc(doc(db, 'books', bookId), { visibility: 'private', restrictedUsers: uids, updatedAt: serverTimestamp() });
+                book.visibility = 'private'; book.restrictedUsers = uids;
+                hideLoading(); render(); renderAdminBooksList();
+              }
+            });
+            return;
+          }
+          hideLoading(); render(); renderAdminBooksList();
+        } catch(e) { hideLoading(); showToast('Failed: ' + e.message); }
+      });
+    });
+    overlay.querySelectorAll('.abm-remove-reader').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const uid = btn.dataset.uid;
+        showLoading('Updating…');
+        try {
+          const updated = (book.restrictedUsers || []).filter(u => u !== uid);
+          await updateDoc(doc(db, 'books', bookId), { restrictedUsers: updated, updatedAt: serverTimestamp() });
+          book.restrictedUsers = updated;
+          hideLoading(); render(); renderAdminBooksList();
+        } catch(e) { hideLoading(); showToast('Failed: ' + e.message); }
+      });
+    });
+    overlay.querySelector('#abmAddReader').addEventListener('click', () => {
+      adminOpenUserPicker({
+        title: '🔒 Add restricted readers',
+        preselected: book.restrictedUsers || [],
+        onConfirm: async (uids) => {
+          showLoading('Updating…');
+          try {
+            await updateDoc(doc(db, 'books', bookId), { visibility: 'private', restrictedUsers: uids, updatedAt: serverTimestamp() });
+            book.visibility = 'private'; book.restrictedUsers = uids;
+            hideLoading(); render(); renderAdminBooksList();
+          } catch(e) { hideLoading(); showToast('Failed: ' + e.message); }
+        }
+      });
+    });
+  };
+  render();
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click', e => { if(e.target === overlay) overlay.remove(); });
+}
 
 async function adminToggleUserCard(uid) {
   // Find the expand panel — it may live in either the presence or users section
