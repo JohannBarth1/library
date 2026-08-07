@@ -12809,6 +12809,9 @@ async function checkAdminStatus() {
   try {
     const snap = await getDoc(doc(db, 'users', currentUser.uid));
     const data = snap.exists() ? snap.data() : {};
+    console.log('[checkAdminStatus] ref.path=', snap.ref.path, 'projectId=', snap.ref.firestore._databaseId?.projectId);
+    console.log('[checkAdminStatus] raw keys=', JSON.stringify(Object.keys(data)));
+    console.log('[checkAdminStatus] raw data=', JSON.stringify(data));
     isAdmin = data.isAdmin === true;
     hasRestrictedAccess = data.restrictedAccess === true;
     if(isAdmin){
