@@ -880,6 +880,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .up-visibility-btn:hover{opacity:.8;}
 .up-visibility-btn.is-public{background:var(--teal-light);border-color:var(--teal);color:var(--teal-dark);}
 .up-visibility-btn.is-restricted{background:#f3e6e6;border-color:#a83232;color:#a83232;}
+.up-visibility-btn.is-private{background:var(--panel);border-color:var(--muted);color:var(--navy2);}
 .up-remove-btn{background:none;border:none;color:var(--muted);font-size:.95rem;cursor:pointer;padding:0 .15rem;flex-shrink:0;line-height:1;transition:color .15s;}
 .up-remove-btn:hover{color:var(--danger);}
 .drop-zone.disabled{opacity:.5;pointer-events:none;}
@@ -2403,17 +2404,6 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
   </div>
 </div>
 
-<div class="modal-overlay" id="shareModal">
-  <div class="modal">
-    <h3>Publish to Public Library</h3>
-    <p style="font-size:.85rem;color:var(--muted);line-height:1.6;margin-bottom:1rem">This will make <strong id="shareBookTitle"></strong> visible to all signed-in users in the Public Library.</p>
-    <div class="modal-actions">
-      <button class="btn-cancel" id="btnCancelShare">Cancel</button>
-      <button class="btn-save" id="btnConfirmShare">Share it</button>
-    </div>
-  </div>
-</div>
-
 <div class="modal-overlay" id="broadcastModal">
   <div class="modal" style="max-width:420px">
     <h3 id="broadcastModalTitle">📢 Announcement</h3>
@@ -3503,38 +3493,35 @@ async function downloadCurrentBook(){
 }
 
 // ── SHARE ─────────────────────────────────────────────────────────────────────
-function shareCurrentBook(){
-  if(!currentId)return;
-  const book=library.find(b=>b.id===currentId);if(!book)return;
-  document.getElementById('shareBookTitle').textContent=`"${book.title}"`;
-  document.getElementById('shareModal').classList.add('open');
-}
-document.getElementById('btnCancelShare').addEventListener('click',()=>document.getElementById('shareModal').classList.remove('open'));
-document.getElementById('btnConfirmShare').addEventListener('click',confirmShare);
-async function confirmShare() {
-  document.getElementById('shareModal').classList.remove('open');
-  if (!currentId) return;
+// Sets a book's visibility directly from the drawer's "Share as" control —
+// one tap, no confirmation dialog, matching the upload flow's directness.
+// 'restricted' can only ever be reached if the button was shown at all,
+// which the render step already gates on isAdmin || hasRestrictedAccess.
+async function setBookVisibilityFromDrawer(vis) {
+  if(!currentId) return;
   const book = library.find(b => b.id === currentId);
-  if (!book) return;
-  showLoading('Publishing…', book.coverUrl);
+  if(!book) return;
+  const verb = vis === 'public' ? 'Publishing…' : vis === 'restricted' ? 'Restricting…' : 'Making private…';
+  showLoading(verb, book.coverUrl);
   try {
-    await updateDoc(doc(db, 'books', currentId), {
-      visibility: 'public',
-      updatedAt: serverTimestamp()
-    });
-    book.visibility = 'public';
-    // Add to communityLib so it appears immediately in public view
-    if (!communityLib.find(b => b.id === currentId)) {
-      communityLib.push(book);
+    await updateDoc(doc(db, 'books', currentId), { visibility: vis, updatedAt: serverTimestamp() });
+    book.visibility = vis;
+    if(vis === 'public') {
+      if(!communityLib.find(b => b.id === currentId)) communityLib.push(book);
+      if(currentUser && ledgerState.loaded) _ledgerUnlockAchievement('sharer', currentId);
+    } else {
+      // Restricted/private books are never in everyone's communityLib —
+      // loadLibrary()'s query shapes handle who (if anyone) gets them back.
+      communityLib = communityLib.filter(b => b.id !== currentId);
     }
-    if (currentUser && ledgerState.loaded) _ledgerUnlockAchievement('sharer', currentId);
     hideLoading();
     renderAll();
     showBookById(currentId);
-    showToast(`"${book.title}" published ✓`);
-  } catch (e) {
+    const label = vis === 'public' ? 'published' : vis === 'restricted' ? 'set to Restricted' : 'set to Private';
+    showToast(`"${book.title}" ${label} ✓`);
+  } catch(e) {
     hideLoading();
-    showToast('Share failed: ' + e.message);
+    showToast('Update failed: ' + e.message);
   }
 }
 
@@ -4248,18 +4235,23 @@ function buildDrawerIconBar(book, isMine){
       </div>
     </div>`;
 
-  // Owner-only actions (publish/share/delete) stay gated to isMine; Edit
-  // Details/Edit Contents also open up to admins, who can manage any book
-  // they can see, not just ones they uploaded themselves.
+  // Owner-only actions (share/delete) stay gated to isMine; Edit Details/
+  // Edit Contents also open up to admins, who can manage any book they can
+  // see, not just ones they uploaded themselves.
   if(isMine || isAdmin){
+    let shareRow = '';
     let manageBtns = '';
     if(isMine){
-      manageBtns += `<button class="drawer-icon-btn" data-action="share" ${book.visibility==='public'?'style="display:none"':''}>
-          <span class="di-icon">🌐</span><span class="di-label">Publish</span></button>
-        <button class="drawer-icon-btn" data-action="unpublish" ${book.visibility!=='public'?'style="display:none"':''}>
-          <span class="di-icon">🔒</span><span class="di-label">Unpublish</span></button>
-        <button class="drawer-icon-btn" data-action="shareprivate">
-          <span class="di-icon">🔗</span><span class="di-label">Share</span></button>`;
+      shareRow = `<div style="padding:.4rem 1.5rem 0;">
+        <div style="font-size:.58rem;letter-spacing:.15em;text-transform:uppercase;color:var(--gold);font-weight:700;margin-bottom:.35rem;">Share as</div>
+        <div style="display:flex;gap:.4rem;flex-wrap:wrap;align-items:center;">
+          <button class="up-visibility-btn drawer-share-btn ${book.visibility==='public'?'is-public':''}" data-share-vis="public">🌐 Public</button>
+          ${(isAdmin || hasRestrictedAccess) ? `<button class="up-visibility-btn drawer-share-btn ${book.visibility==='restricted'?'is-restricted':''}" data-share-vis="restricted">🔒 Restricted</button>` : ''}
+          <button class="up-visibility-btn drawer-share-btn ${(book.visibility!=='public' && book.visibility!=='restricted')?'is-private':''}" data-share-vis="private">Private</button>
+        </div>
+      </div>`;
+      manageBtns += `<button class="drawer-icon-btn" data-action="shareprivate">
+          <span class="di-icon">🔗</span><span class="di-label">Share Link</span></button>`;
     }
     manageBtns += `<button class="drawer-icon-btn" data-action="editmeta">
           <span class="di-icon">✎</span><span class="di-label">Edit</span></button>`;
@@ -4271,7 +4263,7 @@ function buildDrawerIconBar(book, isMine){
       manageBtns += `<button class="drawer-icon-btn di-danger" data-action="delete">
           <span class="di-icon">✕</span><span class="di-label">Delete</span></button>`;
     }
-    html += `
+    html += shareRow + `
     <div style="padding:.4rem 1.5rem .6rem;background:rgba(15,26,46,0.03);">
       <div style="font-size:.58rem;letter-spacing:.15em;text-transform:uppercase;color:var(--gold);font-weight:700;margin-bottom:.35rem;">${isMine?'🔑 Owner Only':'🛡️ Admin'}</div>
       <div style="display:flex;gap:.4rem;flex-wrap:wrap;">${manageBtns}</div>
@@ -4283,6 +4275,7 @@ function buildDrawerIconBar(book, isMine){
   bar.style.padding = '0';
   bar.style.border = 'none';
   bar.querySelectorAll('[data-action]').forEach(b => b.addEventListener('click', handleAction));
+  bar.querySelectorAll('[data-share-vis]').forEach(b => b.addEventListener('click', () => setBookVisibilityFromDrawer(b.dataset.shareVis)));
 }
   
 function closeDrawer(){document.getElementById('bookDrawer').classList.remove('open');document.querySelectorAll('.book-card').forEach(c=>c.classList.remove('active'));currentId=null;}
@@ -4303,8 +4296,6 @@ function runDetailAction(a){
     return;
   }
   if(a==='download')     downloadCurrentBook();
-  if(a==='share')        shareCurrentBook();
-  if(a==='unpublish')    unpublishCurrentBook();
   if(a==='shareprivate') showPrivateShare();
   if(a==='link')         showDirectLink();
   if(a==='editmeta')     showEditMeta();
@@ -4321,28 +4312,6 @@ function runDetailAction(a){
 }
 
 // ── UNPUBLISH and DELETE functions ─────────────────────────────────────────────────────────────────
-async function unpublishCurrentBook() {
-  if (!currentId) return;
-  const book = library.find(b => b.id === currentId);
-  if (!book || !confirm(`Remove "${book.title}" from the Public Library?`)) return;
-  showLoading('Unpublishing…', book.coverUrl);
-  try {
-    await updateDoc(doc(db, 'books', currentId), {
-      visibility: 'private',
-      updatedAt: serverTimestamp()
-    });
-    book.visibility = 'private';
-    communityLib = communityLib.filter(b => b.id !== currentId);
-    hideLoading();
-    renderAll();
-    showBookById(currentId);
-    showToast('Unpublished ✓');
-  } catch (e) {
-    hideLoading();
-    showToast('Unpublish failed: ' + e.message);
-  }
-}
-
   async function deleteCurrentBook(){
   if(!currentId)return;
   const book=library.find(b=>b.id===currentId)||communityLib.find(b=>b.id===currentId);
@@ -12992,8 +12961,9 @@ window.showBookById = showBookById;
 
 // ── ADMIN ────────────────────────────────────────────────────────────────────
 
+let accessLevel = 'standard'; // 'standard' | 'elevated' | 'admin' — see checkAdminStatus()
 let isAdmin = false;
-let hasRestrictedAccess = false; // admin-granted: can publish books as 'restricted' and can read anyone's
+let hasRestrictedAccess = false; // true for 'elevated' and 'admin' — can see/set Restricted books
 let adminCheckoutsShowAll = false;
 
 async function checkAdminStatus() {
@@ -13001,8 +12971,13 @@ async function checkAdminStatus() {
   try {
     const snap = await getDoc(doc(db, 'users', currentUser.uid));
     const data = snap.exists() ? snap.data() : {};
-    isAdmin = data.isAdmin === true;
-    hasRestrictedAccess = data.restrictedAccess === true;
+    // accessLevel is the source of truth going forward. Accounts flagged
+    // under the old two independent booleans (before this field existed)
+    // still resolve correctly without needing a manual data migration.
+    accessLevel = data.accessLevel
+      || (data.isAdmin === true ? 'admin' : (data.restrictedAccess === true ? 'elevated' : 'standard'));
+    isAdmin = accessLevel === 'admin';
+    hasRestrictedAccess = accessLevel === 'elevated' || accessLevel === 'admin';
     if(isAdmin){
       document.getElementById('mobAdminSettingsCard').style.display = '';
     }
@@ -13221,14 +13196,14 @@ async function adminLoadUsers() {
           </div>
           <div style="display:flex;flex-direction:column;align-items:flex-end;
                       gap:3px;flex-shrink:0;">
-            ${u.isAdmin
-              ? `<span style="font-size:.6rem;font-weight:700;padding:1px 6px;
-                  border-radius:8px;background:#fff8ec;color:var(--gold);">Admin</span>`
-              : ''}
-            ${u.restrictedAccess
-              ? `<span style="font-size:.6rem;font-weight:700;padding:1px 6px;
-                  border-radius:8px;background:#f3e6e6;color:#a83232;">🔒 Restricted access</span>`
-              : ''}
+            ${(() => {
+              const lvl = u.accessLevel || (u.isAdmin === true ? 'admin' : (u.restrictedAccess === true ? 'elevated' : 'standard'));
+              if(lvl === 'admin') return `<span style="font-size:.6rem;font-weight:700;padding:1px 6px;
+                  border-radius:8px;background:#fff8ec;color:var(--gold);">Admin</span>`;
+              if(lvl === 'elevated') return `<span style="font-size:.6rem;font-weight:700;padding:1px 6px;
+                  border-radius:8px;background:#f3e6e6;color:#a83232;">🔒 Elevated</span>`;
+              return '';
+            })()}
             ${activeCheckouts.length
               ? `<span style="font-size:.6rem;color:var(--teal);font-weight:700;">
                   📖 ${activeCheckouts.length} out</span>`
@@ -13473,16 +13448,24 @@ async function adminToggleUserCard(uid) {
 
     // Kobo sends — pulled from the cache stashed on adminUsersList by adminLoadUsers()
     const koboSends = document.getElementById('adminUsersList')?._koboSendsByUser?.[uid] || [];
-    const hasRestricted = adminAllUsersCache.find(x => x.uid === uid)?.restrictedAccess === true;
+    const u = adminAllUsersCache.find(x => x.uid === uid);
+    const currentLevel = u?.accessLevel || (u?.isAdmin === true ? 'admin' : (u?.restrictedAccess === true ? 'elevated' : 'standard'));
 
     panel.innerHTML = `
       <div style="padding:.7rem .8rem;display:flex;flex-direction:column;gap:.75rem;">
 
-        <button id="adminGrantRestricted_${uid}" class="btn-save" style="font-size:.72rem;
-          padding:.35rem .7rem;align-self:flex-start;
-          ${hasRestricted ? 'background:#a83232;border-color:#a83232' : ''}">
-          ${hasRestricted ? '✕ Revoke restricted access' : '🔒 Grant restricted access'}
-        </button>
+        <div>
+          <div style="font-size:.6rem;letter-spacing:.15em;text-transform:uppercase;
+                      font-weight:700;color:var(--muted);margin-bottom:.35rem;">Access Level</div>
+          <div style="display:flex;gap:.4rem;flex-wrap:wrap;" id="adminAccessLevel_${uid}">
+            <button class="btn-cancel admin-access-btn" data-level="standard" data-uid="${uid}"
+              style="font-size:.72rem;padding:.35rem .7rem;${currentLevel==='standard'?'background:var(--teal-light);border-color:var(--teal);color:var(--teal-dark)':''}">Standard</button>
+            <button class="btn-cancel admin-access-btn" data-level="elevated" data-uid="${uid}"
+              style="font-size:.72rem;padding:.35rem .7rem;${currentLevel==='elevated'?'background:#f3e6e6;border-color:#a83232;color:#a83232':''}">🔒 Elevated</button>
+            <button class="btn-cancel admin-access-btn" data-level="admin" data-uid="${uid}"
+              style="font-size:.72rem;padding:.35rem .7rem;${currentLevel==='admin'?'background:#fff8ec;border-color:var(--gold);color:var(--gold)':''}">🛡️ Admin</button>
+          </div>
+        </div>
 
         ${crIds.length ? `
           <div>
@@ -13598,8 +13581,9 @@ async function adminToggleUserCard(uid) {
 
       </div>`;
 
-    document.getElementById('adminGrantRestricted_' + uid)
-      ?.addEventListener('click', (e) => { e.stopPropagation(); adminToggleRestrictedAccess(uid); });
+    panel.querySelectorAll('.admin-access-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => { e.stopPropagation(); adminSetAccessLevel(uid, btn.dataset.level); });
+    });
 
   } catch(e) {
     panel.innerHTML = `<div style="padding:.6rem .8rem;font-size:.75rem;
@@ -13611,25 +13595,34 @@ async function adminToggleUserCard(uid) {
 window.adminToggleUserCard = adminToggleUserCard;
 
 // The expand panel only ever builds its content once per page session (see
-// the dataset.loaded guard above), so on toggle this patches the button's
-// own label/color directly rather than re-rendering — the passive "🔒
-// Restricted access" badge on the collapsed card will pick up the change
+// the dataset.loaded guard above), so on change this patches the button
+// group's own highlighted state directly rather than re-rendering — the
+// passive access-level badge on the collapsed card will pick up the change
 // next time the list itself is refreshed, same as its other admin-panel
 // snapshot-style badges (checkout/Kobo counts).
-async function adminToggleRestrictedAccess(uid) {
+async function adminSetAccessLevel(uid, level) {
   const u = adminAllUsersCache.find(x => x.uid === uid);
-  const next = !(u?.restrictedAccess === true);
-  showLoading(next ? 'Granting…' : 'Revoking…');
+  if(u?.accessLevel === level) return;
+  showLoading('Updating access…');
   try {
-    await updateDoc(doc(db, 'users', uid), { restrictedAccess: next });
-    if(u) u.restrictedAccess = next;
+    await updateDoc(doc(db, 'users', uid), { accessLevel: level });
+    if(u) u.accessLevel = level;
     hideLoading();
-    showToast(next ? 'Restricted access granted ✓' : 'Restricted access revoked ✓');
-    const btn = document.getElementById('adminGrantRestricted_' + uid);
-    if(btn) {
-      btn.textContent = next ? '✕ Revoke restricted access' : '🔒 Grant restricted access';
-      btn.style.background = next ? '#a83232' : '';
-      btn.style.borderColor = next ? '#a83232' : '';
+    showToast(`Access level set to ${level[0].toUpperCase() + level.slice(1)} ✓`);
+    const group = document.getElementById('adminAccessLevel_' + uid);
+    if(group) {
+      group.querySelectorAll('.admin-access-btn').forEach(btn => {
+        const active = btn.dataset.level === level;
+        btn.style.background = active
+          ? (level === 'admin' ? '#fff8ec' : level === 'elevated' ? '#f3e6e6' : 'var(--teal-light)')
+          : '';
+        btn.style.borderColor = active
+          ? (level === 'admin' ? 'var(--gold)' : level === 'elevated' ? '#a83232' : 'var(--teal)')
+          : '';
+        btn.style.color = active
+          ? (level === 'admin' ? 'var(--gold)' : level === 'elevated' ? '#a83232' : 'var(--teal-dark)')
+          : '';
+      });
     }
   } catch(e) { hideLoading(); showToast('Failed: ' + e.message); }
 }
