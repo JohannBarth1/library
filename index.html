@@ -3493,13 +3493,15 @@ async function downloadCurrentBook(){
 }
 
 // ── SHARE ─────────────────────────────────────────────────────────────────────
-// Sets a book's visibility directly from the drawer's "Share as" control —
-// one tap, no confirmation dialog, matching the upload flow's directness.
-// 'restricted' can only ever be reached if the button was shown at all,
-// which the render step already gates on isAdmin || hasRestrictedAccess.
+// Sets a book's visibility directly from either drawer's "Share as"/Share
+// control — one tap, no confirmation dialog. Uses findBookById (not
+// library.find) since an admin acting on someone else's book won't have it
+// in their own `library` array. 'restricted' can only ever be reached if
+// the option was shown at all, which render always gates on
+// isAdmin || hasRestrictedAccess.
 async function setBookVisibilityFromDrawer(vis) {
   if(!currentId) return;
-  const book = library.find(b => b.id === currentId);
+  const book = await findBookById(currentId);
   if(!book) return;
   const verb = vis === 'public' ? 'Publishing…' : vis === 'restricted' ? 'Restricting…' : 'Making private…';
   showLoading(verb, book.coverUrl);
@@ -3508,7 +3510,7 @@ async function setBookVisibilityFromDrawer(vis) {
     book.visibility = vis;
     if(vis === 'public') {
       if(!communityLib.find(b => b.id === currentId)) communityLib.push(book);
-      if(currentUser && ledgerState.loaded) _ledgerUnlockAchievement('sharer', currentId);
+      if(currentUser && book.ownerId === currentUser.uid && ledgerState.loaded) _ledgerUnlockAchievement('sharer', currentId);
     } else {
       // Restricted/private books are never in everyone's communityLib —
       // loadLibrary()'s query shapes handle who (if anyone) gets them back.
@@ -3517,6 +3519,7 @@ async function setBookVisibilityFromDrawer(vis) {
     hideLoading();
     renderAll();
     showBookById(currentId);
+    mob_showBook(currentId, { preserveState: true });
     const label = vis === 'public' ? 'published' : vis === 'restricted' ? 'set to Restricted' : 'set to Private';
     showToast(`"${book.title}" ${label} ✓`);
   } catch(e) {
@@ -3993,7 +3996,7 @@ function renderDetailActionRows(peekContainer, moreContainer, book, isMine){
   // ── Pill buttons that open the same anchored dark dropdown (.mfp-dd) as
   // the Library tab's Category/Tags/Sort filter pills, instead of a native
   // <select> — picking an option fires its action immediately and closes.
-  // Just two groups now: "Share" (publish/privately share/copy link/
+  // Just two groups now: "Share" (visibility + privately share/copy link/
   // download) and "Edit" (metadata/contents) — Recommend lives on its own
   // as a toggle since it's a single on/off action, not a menu of options.
   const pillSelect = (id, label, options, opts={}) => {
@@ -4003,15 +4006,15 @@ function renderDetailActionRows(peekContainer, moreContainer, book, isMine){
       <span>${label}</span><span class="mfp-caret">▾</span>
     </button>`;
   };
-  const wirePillSelect = (container, id, options) => {
+  const wirePillSelect = (container, id, options, custom={}) => {
     const btn = container.querySelector('#'+id);
     if(!btn) return;
     btn.addEventListener('click', (e) => {
       openMobFilterPicker({
         anchor: e.currentTarget,
         items: options,
-        isSelected: () => false,
-        onSelect: it => runDetailAction(it.action),
+        isSelected: custom.isSelected || (() => false),
+        onSelect: custom.onSelect || (it => runDetailAction(it.action)),
         onAfterSelect: () => {},
       });
     });
@@ -4021,14 +4024,21 @@ function renderDetailActionRows(peekContainer, moreContainer, book, isMine){
   // with them) — not just books they uploaded themselves.
   const canManage = isMine || isAdmin;
 
-  // ── "Share" — publish/unpublish and share-privately stay owner-only;
-  // Copy Link and Download are available to anyone viewing the book, but
-  // grouped here with the rest of the sharing actions.
+  // ── "Share" — visibility (Public/Restricted/Private) plus Share
+  // Privately stay owner-or-admin; Copy Link and Download are available to
+  // anyone viewing the book, but grouped here with the rest of sharing.
+  // This is the one place in the app a book's visibility gets set — admins
+  // manage any book's restriction/publication from here too, on the book
+  // itself, rather than through a separate admin list.
   const shareOpts = [];
+  if(canManage){
+    shareOpts.push({ icon:'🌐', label:'Public', action:'setvis', vis:'public' });
+    if(isAdmin || hasRestrictedAccess){
+      shareOpts.push({ icon:'🔒', label:'Restricted', action:'setvis', vis:'restricted' });
+    }
+    shareOpts.push({ icon:'🔏', label:'Private', action:'setvis', vis:'private' });
+  }
   if(isMine){
-    shareOpts.push(book.visibility !== 'public'
-      ? { icon:'🌐', label:'Publish', action:'share' }
-      : { icon:'🔒', label:'Unpublish', action:'unpublish' });
     shareOpts.push({ icon:'🔗', label:'Share Privately', action:'shareprivate' });
   }
   shareOpts.push({ icon:'📎', label:'Copy Link', action:'link' });
@@ -4048,8 +4058,12 @@ function renderDetailActionRows(peekContainer, moreContainer, book, isMine){
       <span style="font-size:.78rem;line-height:1">${book.recommended?'⭐':'☆'}</span><span>${book.recommended?'Recommended':'Recommend'}</span>
     </button>`;
 
+  const shareLabel = canManage
+    ? (book.visibility === 'public' ? '🌐 Public' : book.visibility === 'restricted' ? '🔒 Restricted' : '🔏 Private')
+    : 'Share';
+
   html += `<div style="display:flex;flex-wrap:wrap;gap:.4rem;padding:.6rem 0 .3rem;border-top:1px solid var(--border);margin-top:.4rem;">
-    ${pillSelect('detailShareSelect', 'Share', shareOpts)}
+    ${pillSelect('detailShareSelect', shareLabel, shareOpts)}
     ${pillSelect('detailEditSelect', 'Edit', editOpts)}
     ${recToggle}
   </div>`;
@@ -4068,7 +4082,10 @@ function renderDetailActionRows(peekContainer, moreContainer, book, isMine){
   moreContainer.innerHTML = html;
   moreContainer.querySelectorAll('[data-action]').forEach(b => b.addEventListener('click', handleAction));
 
-  wirePillSelect(moreContainer, 'detailShareSelect', shareOpts);
+  wirePillSelect(moreContainer, 'detailShareSelect', shareOpts, {
+    isSelected: it => it.action === 'setvis' && it.vis === (book.visibility || 'private'),
+    onSelect: it => it.action === 'setvis' ? setBookVisibilityFromDrawer(it.vis) : runDetailAction(it.action),
+  });
   wirePillSelect(moreContainer, 'detailEditSelect', editOpts);
 }
 
@@ -4235,13 +4252,13 @@ function buildDrawerIconBar(book, isMine){
       </div>
     </div>`;
 
-  // Owner-only actions (share/delete) stay gated to isMine; Edit Details/
-  // Edit Contents also open up to admins, who can manage any book they can
-  // see, not just ones they uploaded themselves.
+  // Share/Edit/Delete stay gated to isMine or isAdmin; Share Link and
+  // Delete are owner-only (admins can restrict/publish any book "on the
+  // book itself" without needing to individually manage each user's grant).
   if(isMine || isAdmin){
     let shareRow = '';
     let manageBtns = '';
-    if(isMine){
+    if(isMine || isAdmin){
       shareRow = `<div style="padding:.4rem 1.5rem 0;">
         <div style="font-size:.58rem;letter-spacing:.15em;text-transform:uppercase;color:var(--gold);font-weight:700;margin-bottom:.35rem;">Share as</div>
         <div style="display:flex;gap:.4rem;flex-wrap:wrap;align-items:center;">
@@ -4250,6 +4267,8 @@ function buildDrawerIconBar(book, isMine){
           <button class="up-visibility-btn drawer-share-btn ${(book.visibility!=='public' && book.visibility!=='restricted')?'is-private':''}" data-share-vis="private">Private</button>
         </div>
       </div>`;
+    }
+    if(isMine){
       manageBtns += `<button class="drawer-icon-btn" data-action="shareprivate">
           <span class="di-icon">🔗</span><span class="di-label">Share Link</span></button>`;
     }
@@ -13236,150 +13255,9 @@ async function adminLoadUsers() {
 
 document.getElementById('adminUsersRefresh')?.addEventListener('click', adminLoadUsers);
 
-// ── RESTRICTED BOOKS ─────────────────────────────────────────────────────────
-// 'restricted' is a third visibility tier on the book doc, alongside
-// 'public'/'private' — visible to anyone admin-granted restrictedAccess
-// (see the Users section below), the same way 'public' is visible to
-// everyone. Granting/revoking is a per-USER flag, not a per-book reader
-// list, so there's nothing here to manage beyond the book's own visibility.
-let adminAllBooks = [];
+// adminAllUsersCache is populated by adminLoadUsers() (Users section)
+// and shared here for the access-level buttons in each user's expand panel.
 let adminAllUsersCache = [];
-const adminBooksSelected = new Set();
-
-async function adminLoadBooks() {
-  const el = document.getElementById('adminBooksList');
-  if(!el) return;
-  el.innerHTML = '<div style="color:var(--muted);font-size:.85rem">Loading…</div>';
-  adminBooksSelected.clear();
-  try {
-    const [bookSnap, userSnap] = await Promise.all([
-      getDocs(collection(db, 'books')),
-      getDocs(collection(db, 'users')),
-    ]);
-    adminAllUsersCache = userSnap.docs.map(d => ({ ...d.data() })).filter(u => u.uid);
-    const userMap = {};
-    adminAllUsersCache.forEach(u => { userMap[u.uid] = u.displayName || u.email || u.uid; });
-
-    adminAllBooks = bookSnap.docs
-      .map(d => ({ id: d.id, ...d.data(), _ownerName: userMap[d.data().ownerId] || d.data().ownerName || 'Unknown' }))
-      .sort((a, b) => (a.title || '').localeCompare(b.title || ''));
-
-    renderAdminBooksList();
-  } catch(e) {
-    el.innerHTML = `<div style="color:var(--danger);font-size:.82rem">Failed to load: ${e.message}</div>`;
-    console.error(e);
-  }
-}
-
-function renderAdminBooksList() {
-  const el = document.getElementById('adminBooksList');
-  if(!el) return;
-  const term = (document.getElementById('adminBooksSearch')?.value || '').trim().toLowerCase();
-  const rows = term
-    ? adminAllBooks.filter(b => (b.title || '').toLowerCase().includes(term) || (b.author || '').toLowerCase().includes(term) || (b._ownerName || '').toLowerCase().includes(term))
-    : adminAllBooks;
-
-  if(!rows.length) {
-    el.innerHTML = '<div style="color:var(--muted);font-size:.85rem;padding:.5rem 0">No books found</div>';
-    return;
-  }
-
-  el.innerHTML = rows.map(b => {
-    const visBadge = b.visibility === 'public'
-      ? `<span class="admin-badge active">Public</span>`
-      : b.visibility === 'restricted'
-        ? `<span class="admin-badge overdue" style="background:#f3e6e6;color:#a83232">🔒 Restricted</span>`
-        : `<span class="admin-badge returned">Private</span>`;
-    return `<div class="admin-card" data-bookid="${b.id}" style="cursor:pointer">
-      <div style="display:flex;align-items:flex-start;gap:.5rem">
-        <input type="checkbox" class="admin-books-check" data-bookid="${b.id}" style="margin-top:.3rem;flex-shrink:0" ${adminBooksSelected.has(b.id) ? 'checked' : ''} onclick="event.stopPropagation()"/>
-        <div style="flex:1;min-width:0">
-          <div class="admin-card-title">📖 ${esc(b.title || 'Untitled')}</div>
-          <div class="admin-card-row">
-            <span>👤 ${esc(b._ownerName)}</span>
-            ${visBadge}
-          </div>
-        </div>
-      </div>
-    </div>`;
-  }).join('');
-
-  el.querySelectorAll('.admin-books-check').forEach(cb => {
-    cb.addEventListener('change', () => {
-      if(cb.checked) adminBooksSelected.add(cb.dataset.bookid);
-      else adminBooksSelected.delete(cb.dataset.bookid);
-    });
-  });
-  el.querySelectorAll('.admin-card[data-bookid]').forEach(card => {
-    card.addEventListener('click', (e) => {
-      if(e.target.classList.contains('admin-books-check')) return;
-      adminOpenBookModal(card.dataset.bookid);
-    });
-  });
-}
-
-// Bound from buildAdminSections() (see its re-bind section) rather than at
-// top level — these buttons live inside the admin panel's innerHTML, which
-// doesn't exist until that function first runs, so a top-level
-// getElementById here would always find nothing.
-async function adminBooksSetVisibility(ids, visibility) {
-  if(!ids.length) { showToast('Select at least one book'); return; }
-  showLoading('Updating…');
-  try {
-    for(const id of ids) {
-      await updateDoc(doc(db, 'books', id), { visibility, updatedAt: serverTimestamp() });
-      const book = adminAllBooks.find(b => b.id === id);
-      if(book) book.visibility = visibility;
-    }
-    hideLoading();
-    showToast(`Updated ${ids.length} book${ids.length > 1 ? 's' : ''} ✓`);
-    renderAdminBooksList();
-  } catch(e) { hideLoading(); showToast('Failed: ' + e.message); }
-}
-
-function adminBooksRestrictSelected()   { adminBooksSetVisibility([...adminBooksSelected], 'restricted'); }
-function adminBooksUnrestrictSelected() { adminBooksSetVisibility([...adminBooksSelected], 'private'); }
-function adminBooksPublishSelected()    { adminBooksSetVisibility([...adminBooksSelected], 'public'); }
-
-// Per-book detail modal: set Public / Private / Restricted directly,
-// without needing to go through bulk-select.
-function adminOpenBookModal(bookId) {
-  const book = adminAllBooks.find(b => b.id === bookId);
-  if(!book) return;
-
-  const overlay = document.createElement('div');
-  overlay.className = 'modal-overlay open';
-  const render = () => {
-    overlay.innerHTML = `
-      <div class="modal" style="max-width:400px">
-        <h3 style="margin-bottom:.6rem">📖 ${esc(book.title || 'Untitled')}</h3>
-        <div style="font-size:.78rem;color:var(--muted);margin-bottom:1rem">by ${esc(book._ownerName)}</div>
-        <div style="display:flex;gap:.4rem;margin-bottom:1rem;flex-wrap:wrap">
-          <button class="btn-cancel abm-vis" data-vis="public" style="${book.visibility==='public'?'background:var(--teal-light);border-color:var(--teal);color:var(--teal-dark)':''}">🌐 Public</button>
-          <button class="btn-cancel abm-vis" data-vis="private" style="${book.visibility!=='public'&&book.visibility!=='restricted'?'background:var(--teal-light);border-color:var(--teal);color:var(--teal-dark)':''}">Private</button>
-          <button class="btn-cancel abm-vis" data-vis="restricted" style="${book.visibility==='restricted'?'background:#f3e6e6;border-color:#a83232;color:#a83232':''}">🔒 Restricted</button>
-        </div>
-        <div class="modal-actions">
-          <button class="btn-cancel" id="abmClose">Close</button>
-        </div>
-      </div>`;
-    overlay.querySelector('#abmClose').addEventListener('click', () => overlay.remove());
-    overlay.querySelectorAll('.abm-vis').forEach(btn => {
-      btn.addEventListener('click', async () => {
-        const vis = btn.dataset.vis;
-        showLoading('Updating…');
-        try {
-          await updateDoc(doc(db, 'books', bookId), { visibility: vis, updatedAt: serverTimestamp() });
-          book.visibility = vis;
-          hideLoading(); render(); renderAdminBooksList();
-        } catch(e) { hideLoading(); showToast('Failed: ' + e.message); }
-      });
-    });
-  };
-  render();
-  document.body.appendChild(overlay);
-  overlay.addEventListener('click', e => { if(e.target === overlay) overlay.remove(); });
-}
 
 async function adminToggleUserCard(uid) {
   // Find the expand panel — it may live in either the presence or users section
@@ -14825,36 +14703,6 @@ function buildAdminSections() {
     </div>
 
     <div class="admin-section">
-      <div class="admin-section-header" data-admin-section="books">
-        <span class="admin-section-title">🔒 Restricted Books</span>
-        <span class="admin-section-chevron">▾</span>
-      </div>
-      <div class="admin-section-body" id="adminBooksBody">
-        <div style="display:flex;gap:.5rem;margin-bottom:.6rem;flex-wrap:wrap">
-          <button class="btn-save" style="font-size:.72rem;padding:.4rem .8rem"
-            id="adminBooksRefresh">↻ Refresh</button>
-          <input type="text" id="adminBooksSearch" placeholder="Search title, author, owner…"
-            style="flex:1;min-width:140px;padding:.4rem .6rem;font-size:.78rem;
-                   border:1px solid var(--border);border-radius:4px;font-family:'Lato',sans-serif"/>
-        </div>
-        <div style="display:flex;gap:.5rem;margin-bottom:.8rem;flex-wrap:wrap">
-          <button class="btn-save" style="font-size:.72rem;padding:.4rem .8rem;background:#a83232;border-color:#a83232"
-            id="adminBooksRestrictBtn">🔒 Restrict to readers…</button>
-          <button class="btn-cancel" style="font-size:.72rem;padding:.4rem .8rem"
-            id="adminBooksUnrestrictBtn">Remove restriction</button>
-          <button class="btn-cancel" style="font-size:.72rem;padding:.4rem .8rem"
-            id="adminBooksPublicBtn">🌐 Make public</button>
-        </div>
-        <div style="font-size:.72rem;color:var(--muted);margin-bottom:.6rem">
-          Select one or more books below, then choose an action. Tap a book itself (not its checkbox) to manage it individually.
-        </div>
-        <div id="adminBooksList">
-          <div style="color:var(--muted);font-size:.85rem">Open to load…</div>
-        </div>
-      </div>
-    </div>
-
-    <div class="admin-section">
       <div class="admin-section-header" data-admin-section="kobo">
         <span class="admin-section-title">📖 Kobo Devices</span>
         <span class="admin-section-chevron">▾</span>
@@ -14922,7 +14770,6 @@ function buildAdminSections() {
       header.classList.toggle('open', !isOpen);
       if(!isOpen) {
         if(section === 'checkouts')   adminLoadCheckouts();
-        if(section === 'books')       adminLoadBooks();
         if(section === 'kobo')        adminLoadKoboDevices();
         if(section === 'users')       adminLoadUsers();
         if(section === 'categories')  adminLoadCategories();
@@ -14941,16 +14788,6 @@ function buildAdminSections() {
       this.textContent = adminCheckoutsShowAll ? 'Show Active Only' : 'Show All';
       adminLoadCheckouts();
     });
-  scroll.querySelector('#adminBooksRefresh')
-    ?.addEventListener('click', adminLoadBooks);
-  scroll.querySelector('#adminBooksSearch')
-    ?.addEventListener('input', renderAdminBooksList);
-  scroll.querySelector('#adminBooksRestrictBtn')
-    ?.addEventListener('click', adminBooksRestrictSelected);
-  scroll.querySelector('#adminBooksUnrestrictBtn')
-    ?.addEventListener('click', adminBooksUnrestrictSelected);
-  scroll.querySelector('#adminBooksPublicBtn')
-    ?.addEventListener('click', adminBooksPublishSelected);
   scroll.querySelector('#adminKoboRefresh')
     ?.addEventListener('click', adminLoadKoboDevices);
   scroll.querySelector('#adminUsersRefresh')
