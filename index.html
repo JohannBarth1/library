@@ -1755,7 +1755,33 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
   font-family:'Playfair Display',serif;font-size:1.35rem;color:var(--gold);
   text-align:center;max-width:90vw;line-height:1.4;
 }
-.audio-player-overlay audio{width:min(90vw,440px);height:40px;}
+.audio-player-progress-wrap{width:min(90vw,440px);}
+.audio-player-seek{
+  width:100%;-webkit-appearance:none;appearance:none;height:5px;border-radius:3px;
+  background:rgba(255,255,255,.2);outline:none;cursor:pointer;
+}
+.audio-player-seek::-webkit-slider-thumb{
+  -webkit-appearance:none;appearance:none;width:16px;height:16px;border-radius:50%;
+  background:var(--gold);cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,.4);
+}
+.audio-player-seek::-moz-range-thumb{
+  width:16px;height:16px;border-radius:50%;background:var(--gold);border:none;cursor:pointer;
+}
+.audio-player-times{display:flex;justify-content:space-between;margin-top:.4rem;
+  font-size:.72rem;color:rgba(255,255,255,.6);font-variant-numeric:tabular-nums;}
+.audio-player-controls{display:flex;align-items:center;justify-content:center;gap:1.6rem;}
+.audio-player-btn{
+  background:none;border:none;color:#fff;cursor:pointer;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
+}
+.audio-player-btn-play{
+  width:5.5rem;height:5.5rem;border-radius:50%;background:var(--teal);
+  font-size:2.2rem;box-shadow:0 8px 22px rgba(0,0,0,.35);
+}
+.audio-player-btn-play:active{transform:scale(.96);}
+.audio-player-btn-skip{width:3.4rem;height:3.4rem;}
+.audio-player-btn-skip .apb-icon{font-size:1.7rem;line-height:1;}
+.audio-player-btn-skip .apb-label{font-size:.6rem;font-weight:700;color:rgba(255,255,255,.75);}
 
 /* Ledger popover (reader HUD tap + goal editor) — a bespoke bottom sheet,
    deliberately not reusing .mob-picker-scrim, so it doesn't read as "the
@@ -2630,7 +2656,26 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
   <button class="audio-player-close" id="audioPlayerCloseBtn" title="Close">✕</button>
   <div class="audio-player-art">🎧</div>
   <div class="audio-now-playing-label" id="audioNowPlayingLabel">Now Playing</div>
-  <audio id="audioPlayerEl" controls preload="none"></audio>
+
+  <div class="audio-player-progress-wrap">
+    <input type="range" id="audioSeek" class="audio-player-seek" min="0" max="0" value="0" step="1"/>
+    <div class="audio-player-times">
+      <span id="audioCurTime">0:00</span>
+      <span id="audioDurTime">0:00</span>
+    </div>
+  </div>
+
+  <div class="audio-player-controls">
+    <button class="audio-player-btn audio-player-btn-skip" id="audioBackBtn" title="Back 10 seconds">
+      <span class="apb-icon">⟲</span><span class="apb-label">10</span>
+    </button>
+    <button class="audio-player-btn audio-player-btn-play" id="audioPlayPauseBtn" title="Play/Pause">▶️</button>
+    <button class="audio-player-btn audio-player-btn-skip" id="audioFwdBtn" title="Forward 10 seconds">
+      <span class="apb-icon">⟳</span><span class="apb-label">10</span>
+    </button>
+  </div>
+
+  <audio id="audioPlayerEl" preload="none"></audio>
 </div>
 
 <!-- EPUB Reader — PATCH 5: toolbar moved to bottom -->
@@ -4525,8 +4570,11 @@ document.getElementById('btnSaveEditMeta').addEventListener('click',async()=>{
   document.getElementById('editMetaModal').classList.remove('open');
   showLoading('Saving…', book.coverUrl);
   try{
-    await updateDoc(doc(db,'books',currentId),updates);
+    // Audiobooks are stored in `audioFiles`, not `books` — same shape of
+    // edit, different collection.
+    await updateDoc(doc(db, book.isAudio ? 'audioFiles' : 'books', currentId),updates);
     Object.assign(book,updates);
+    if(book.isAudio && book._audioTrack) Object.assign(book._audioTrack,updates);
     hideLoading();renderAll();showBookById(currentId);showToast('Details saved ✓');
   }catch(e){hideLoading();showToast('Save failed: '+e.message);}
 });
@@ -15887,10 +15935,14 @@ async function loadAudioTracks() {
 function audioTrackToBookLike(t) {
   return {
     id: t.id,
-    title: (t.name || 'Untitled').replace(/\.[^./]+$/, ''),
-    author: 'Audiobook',
-    category: 'Audiobooks',
-    tags: [],
+    title: t.title || (t.name || 'Untitled').replace(/\.[^./]+$/, ''),
+    author: t.author || 'Audiobook',
+    category: t.category || 'Audiobooks',
+    language: t.language || '',
+    description: t.description || '',
+    series: t.series || null,
+    seriesIndex: t.seriesIndex ?? null,
+    tags: t.tags || [],
     visibility: 'private',
     ownerId: currentUser?.uid,
     createdAt: t.uploadedAt,
