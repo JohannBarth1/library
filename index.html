@@ -3157,7 +3157,7 @@ async function loadLibrary() {
     renderAll();
 
     // Load public and shared in background without blocking UI
-    Promise.all([getDocs(pubQ), getDocs(sharedQ), restrictedPromise]).then(([pubSnap, sharedSnap, restrictedSnap]) => {
+    Promise.all([getDocs(pubQ), getDocs(sharedQ), restrictedPromise, loadCommunityAudioTracks()]).then(([pubSnap, sharedSnap, restrictedSnap, communityAudio]) => {
       const pubBooks = pubSnap.docs.map(d => ({ id: d.id, ...d.data() }));
       const sharedBooks = sharedSnap.docs
         .map(d => ({ id: d.id, ...d.data() }))
@@ -3165,7 +3165,7 @@ async function loadLibrary() {
       const restrictedBooks = restrictedSnap.docs
         .map(d => ({ id: d.id, ...d.data() }))
         .filter(b => b.ownerId !== currentUser.uid);
-      communityLib = dedupe([...pubBooks, ...sharedBooks, ...restrictedBooks]);
+      communityLib = dedupe([...pubBooks, ...sharedBooks, ...restrictedBooks, ...communityAudio]);
       renderAll();
       renderMobHome();
       renderDeskHome();
@@ -3520,8 +3520,11 @@ async function setBookVisibilityFromDrawer(vis) {
   const verb = vis === 'public' ? 'Publishing…' : vis === 'restricted' ? 'Restricting…' : 'Making private…';
   showLoading(verb, book.coverUrl);
   try {
-    await updateDoc(doc(db, 'books', currentId), { visibility: vis, updatedAt: serverTimestamp() });
+    // Audiobooks live in `audioFiles`, not `books` — same pattern as
+    // showEditMeta's save handler.
+    await updateDoc(doc(db, book.isAudio ? 'audioFiles' : 'books', currentId), { visibility: vis, updatedAt: serverTimestamp() });
     book.visibility = vis;
+    if(book.isAudio && book._audioTrack) book._audioTrack.visibility = vis;
     if(vis === 'public') {
       if(!communityLib.find(b => b.id === currentId)) communityLib.push(book);
       if(currentUser && book.ownerId === currentUser.uid && ledgerState.loaded) _ledgerUnlockAchievement('sharer', currentId);
@@ -4465,8 +4468,11 @@ document.getElementById('btnConfirmPrivateShare').addEventListener('click',async
   try{
     const allowed=[...(book.allowedUsers||[])];
     if(!allowed.includes(uid))allowed.push(uid);
-    await updateDoc(doc(db,'books',currentId),{allowedUsers:allowed,updatedAt:serverTimestamp()});
-    book.allowedUsers=allowed;hideLoading();
+    // Audiobooks live in `audioFiles`, not `books`.
+    await updateDoc(doc(db, book.isAudio ? 'audioFiles' : 'books', currentId),{allowedUsers:allowed,updatedAt:serverTimestamp()});
+    book.allowedUsers=allowed;
+    if(book.isAudio && book._audioTrack) book._audioTrack.allowedUsers=allowed;
+    hideLoading();
     const recipientName = document.getElementById('privateShareUserSelect').selectedOptions[0]?.textContent;
     notifyBookShared(uid, book, recipientName);
     const link=getDirectLink(currentId);
@@ -15770,6 +15776,32 @@ async function loadAudioTracks() {
   _audioTracks = snap.docs.map(d => ({ id: d.id, ...d.data() }));
 }
 
+// Mirrors loadLibrary()'s public/shared/restricted queries for `books`, but
+// against `audioFiles` (field is `userId` there, not `ownerId`). Feeds
+// communityLib the same way books do, so publishing/sharing an audiobook
+// actually surfaces it to other users instead of only updating your own copy.
+async function loadCommunityAudioTracks() {
+  if (!currentUser) return [];
+  const pubQ = query(
+    collection(db, 'audioFiles'),
+    where('visibility', '==', 'public')
+  );
+  const sharedQ = query(
+    collection(db, 'audioFiles'),
+    where('allowedUsers', 'array-contains', currentUser.uid)
+  );
+  const restrictedPromise = (isAdmin || hasRestrictedAccess)
+    ? getDocs(query(collection(db, 'audioFiles'), where('visibility', '==', 'restricted')))
+    : Promise.resolve({ docs: [] });
+
+  const [pubSnap, sharedSnap, restrictedSnap] = await Promise.all([getDocs(pubQ), getDocs(sharedQ), restrictedPromise]);
+  const toBookLike = d => audioTrackToBookLike({ id: d.id, ...d.data() });
+  const pub = pubSnap.docs.map(toBookLike);
+  const shared = sharedSnap.docs.map(toBookLike).filter(b => b.ownerId !== currentUser.uid);
+  const restricted = restrictedSnap.docs.map(toBookLike).filter(b => b.ownerId !== currentUser.uid);
+  return [...pub, ...shared, ...restricted];
+}
+
 // ── surface audio tracks in the main library grid ──────────────────────────────
 // Audiobooks live in their own `audioFiles` collection (no title/author/cover
 // metadata — just a filename), so we wrap each track in a lightweight
@@ -15787,8 +15819,8 @@ function audioTrackToBookLike(t) {
     series: t.series || null,
     seriesIndex: t.seriesIndex ?? null,
     tags: t.tags || [],
-    visibility: 'private',
-    ownerId: currentUser?.uid,
+    visibility: t.visibility || 'private',
+    ownerId: t.userId || currentUser?.uid,
     createdAt: t.uploadedAt,
     isAudio: true,
     _audioTrack: t,
@@ -16009,6 +16041,7 @@ async function uploadAudioFiles(files) {
         storagePath,
         downloadUrl,
         size: file.size,
+        visibility: 'private',
         uploadedAt: serverTimestamp(),
       });
       showToast(`${file.name} uploaded ✓`);
