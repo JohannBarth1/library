@@ -927,6 +927,9 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 /* Tags pill — purple */
 .mfp-tags{color:#5a48b0;border-color:rgba(90,72,176,.3);}
 
+/* Format pill — rust (matches the audiobook tile accent) */
+.mfp-format{color:var(--rust);border-color:rgba(184,76,26,.35);}
+
 /* Sort pill — teal */
 .mfp-sort{color:var(--teal);border-color:rgba(42,124,138,.35);}
 
@@ -935,6 +938,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .mfp-source.mfp-active{background:var(--navy2);border-color:var(--navy2);}
 .mfp-cat.mfp-active{background:var(--gold);border-color:var(--gold);}
 .mfp-tags.mfp-active{background:#5a48b0;border-color:#5a48b0;}
+.mfp-format.mfp-active{background:var(--rust);border-color:var(--rust);}
 .mfp.mfp-active .mfp-caret{opacity:.8;}
 
 /* Library filter/sort dropdowns — anchored directly under their pill button,
@@ -1541,6 +1545,8 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
   .desktop-main{display:none!important;}
   .book-drawer{display:none;}
   .mob-nav{display:block;}
+  .audio-mini-bar{left:.6rem;right:.6rem;width:auto;max-width:none;
+    bottom:calc(var(--mob-nav-h) + var(--sab) + .6rem);}
   .mob-panels{display:flex;}
   .hbtn-upload{display:none;}
   .btnToggleSettingsDesk{display:none;}
@@ -1746,6 +1752,29 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
   display:flex;align-items:center;justify-content:center;
 }
 .audio-player-close:hover{background:rgba(255,255,255,.18);}
+.audio-player-minimize{right:4.2rem;font-size:1.3rem;}
+.audio-mini-bar{
+  display:none;position:fixed;z-index:150;
+  right:1.1rem;bottom:1.1rem;width:300px;max-width:calc(100vw - 2.2rem);
+  background:var(--navy2);border:1px solid rgba(255,255,255,.14);border-radius:14px;
+  box-shadow:0 10px 28px rgba(0,0,0,.35);
+  padding:.55rem .65rem;align-items:center;gap:.6rem;cursor:pointer;
+  -webkit-tap-highlight-color:transparent;
+}
+.audio-mini-bar.visible{display:flex;}
+.audio-mini-bar-art{width:2.5rem;height:2.5rem;border-radius:8px;flex-shrink:0;
+  background:linear-gradient(145deg,var(--rust),#5c2f26);
+  display:flex;align-items:center;justify-content:center;font-size:1.2rem;color:#fff;}
+.audio-mini-bar-info{flex:1;min-width:0;}
+.audio-mini-bar-title{font-size:.78rem;font-weight:700;color:#fff;white-space:nowrap;
+  overflow:hidden;text-overflow:ellipsis;font-family:'Lato',sans-serif;}
+.audio-mini-bar-sub{font-size:.66rem;color:rgba(255,255,255,.55);margin-top:.15rem;
+  font-variant-numeric:tabular-nums;}
+.audio-mini-bar-btn{background:rgba(255,255,255,.14);border:none;color:#fff;
+  width:2.15rem;height:2.15rem;border-radius:50%;font-size:.9rem;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;cursor:pointer;
+  -webkit-tap-highlight-color:transparent;}
+.audio-mini-bar-btn:active{transform:scale(.94);}
 .audio-player-art{
   width:min(58vw,240px);height:min(58vw,240px);border-radius:14px;
   background:linear-gradient(145deg,var(--rust),#5c2f26);
@@ -1944,6 +1973,10 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
             <span id="deskPillTagsLabel">Tags</span>
             <span class="mfp-caret">▾</span>
           </button>
+          <button class="mfp mfp-format" id="deskPillFormat" aria-label="Filter by format">
+            <span id="deskPillFormatLabel">Format</span>
+            <span class="mfp-caret">▾</span>
+          </button>
           <div class="mfp-divider" aria-hidden="true"></div>
           <button class="mfp mfp-source" id="deskPillSource" aria-label="Filter by source">
             <span id="deskPillSourceLabel">All</span>
@@ -2015,6 +2048,10 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
         </button>
         <button class="mfp mfp-tags" id="mfpTags" aria-label="Filter by tags">
           <span id="mfpTagsLabel">Tags</span>
+          <span class="mfp-caret">▾</span>
+        </button>
+        <button class="mfp mfp-format" id="mfpFormat" aria-label="Filter by format">
+          <span id="mfpFormatLabel">Format</span>
           <span class="mfp-caret">▾</span>
         </button>
         <div class="mfp-divider" aria-hidden="true"></div>
@@ -2649,6 +2686,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 
 <!-- Audiobook Player — full screen -->
 <div class="audio-player-overlay" id="audioPersistentPlayer">
+  <button class="audio-player-close audio-player-minimize" id="audioPlayerMinimizeBtn" title="Minimize">⌄</button>
   <button class="audio-player-close" id="audioPlayerCloseBtn" title="Close">✕</button>
   <div class="audio-player-art">🎧</div>
   <div class="audio-now-playing-label" id="audioNowPlayingLabel">Now Playing</div>
@@ -2680,6 +2718,18 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
   </div>
 
   <audio id="audioPlayerEl" preload="none"></audio>
+</div>
+
+<!-- Minimized audio player — stays visible (and audio keeps playing) while
+     browsing the rest of the app; tapping it re-expands the full player. -->
+<div class="audio-mini-bar" id="audioMiniBar">
+  <div class="audio-mini-bar-art">🎧</div>
+  <div class="audio-mini-bar-info">
+    <div class="audio-mini-bar-title" id="audioMiniBarTitle">Now Playing</div>
+    <div class="audio-mini-bar-sub" id="audioMiniBarSub">0:00 / 0:00</div>
+  </div>
+  <button class="audio-mini-bar-btn" id="audioMiniPlayPauseBtn" title="Play/Pause">▶️</button>
+  <button class="audio-mini-bar-btn" id="audioMiniCloseBtn" title="Stop">✕</button>
 </div>
 
 <!-- EPUB Reader — PATCH 5: toolbar moved to bottom -->
@@ -2841,6 +2891,7 @@ const auth=getAuth(app),db=getFirestore(app),storage=getStorage(app),gprovider=n
 const COVER_CACHE_NAME = 'elib-cover-cache-v1'; // hoisted above primeCoverCache()'s call site below — it's a const, so it must be initialized before that call runs
 let mobLibFilter = 'all';
 let mobLibCat    = 'All';
+let mobLibFormat = 'all';   // 'all' | 'book' | 'audio' — format filter, mobile Library
 let mobLibSearch = '';
 let mobLibSort   = 'recent';
 let mobPrevPanel = 'mobPanelLibrary';
@@ -2853,6 +2904,7 @@ let _coverCachePrimed = primeCoverCache();
 // (mobLibFilter/mobLibCat/mobActiveTags/mobLibSort below), just its own copy
 // so each surface renders and filters independently.
 let deskLibFilter='all',deskLibCat='All',deskLibSort='recent',searchQ='';
+let deskLibFormat='all';         // 'all' | 'book' | 'audio' — format filter, desktop Library
 let deskActiveTags = new Set();   // tag-filter picker selections, desktop Library
 let mobActiveTags = new Set();    // tag-filter picker selections, mobile Library
 let selectMode=false,selectedIds=new Set(),deskView='library';
@@ -3557,6 +3609,8 @@ function filteredBooks(){
     books=dedupe([...library,...communityLib]).filter(b=>ids.has(b.id));
   }
   if(deskLibCat!=='All')books=books.filter(b=>(b.category||'Uncategorised')===deskLibCat);
+  if(deskLibFormat==='book')books=books.filter(b=>!b.isAudio);
+  if(deskLibFormat==='audio')books=books.filter(b=>b.isAudio);
   if(searchQ)books=books.filter(b=>b.title?.toLowerCase().includes(searchQ)||b.author?.toLowerCase().includes(searchQ)||b.category?.toLowerCase().includes(searchQ));
   if(deskActiveTags.size)books=books.filter(b=>(b.tags||[]).some(t=>deskActiveTags.has(t)));
   return sortBooks(books,deskLibSort);
@@ -3674,6 +3728,10 @@ function updateDeskFilterPillLabels() {
   if (tagsLabel) tagsLabel.textContent = deskActiveTags.size ? `Tags (${deskActiveTags.size})` : 'Tags';
   document.getElementById('deskPillTags')?.classList.toggle('mfp-active', deskActiveTags.size > 0);
 
+  const formatLabel = document.getElementById('deskPillFormatLabel');
+  if (formatLabel) formatLabel.textContent = (FORMAT_OPTIONS.find(o => o.id === deskLibFormat) || FORMAT_OPTIONS[0]).label;
+  document.getElementById('deskPillFormat')?.classList.toggle('mfp-active', deskLibFormat !== 'all');
+
   const sortLabel = document.getElementById('deskPillSortLabel');
   if (sortLabel) sortLabel.textContent = (MOB_SORT_OPTIONS.find(o => o.id === deskLibSort) || MOB_SORT_OPTIONS[0]).label;
 
@@ -3714,6 +3772,17 @@ document.getElementById('deskPillTags').addEventListener('click', (e) => {
     multi: true,
     isSelected: it => deskActiveTags.has(it.id),
     onSelect: it => { deskActiveTags.has(it.id) ? deskActiveTags.delete(it.id) : deskActiveTags.add(it.id); },
+    onAfterSelect: renderAll,
+  });
+});
+
+document.getElementById('deskPillFormat').addEventListener('click', (e) => {
+  openMobFilterPicker({
+    anchor: e.currentTarget,
+    title: '🎧 Format',
+    items: FORMAT_OPTIONS,
+    isSelected: it => deskLibFormat === it.id,
+    onSelect: it => { deskLibFormat = it.id; },
     onAfterSelect: renderAll,
   });
 });
@@ -4764,6 +4833,11 @@ const MOB_SOURCE_OPTIONS = [
   { id:'public',  label:'Public' },
   { id:'shared',  label:'Shared with Me' },
 ];
+const FORMAT_OPTIONS = [
+  { id:'all',   label:'All',        icon:'📚' },
+  { id:'book',  label:'Books',      icon:'📖' },
+  { id:'audio', label:'Audiobooks', icon:'🎧' },
+];
 
 function getAllMobTags() {
   const set = new Set();
@@ -4781,6 +4855,10 @@ function updateMobFilterPillLabels() {
   const tagsLabel = document.getElementById('mfpTagsLabel');
   if (tagsLabel) tagsLabel.textContent = mobActiveTags.size ? `Tags (${mobActiveTags.size})` : 'Tags';
   document.getElementById('mfpTags')?.classList.toggle('mfp-active', mobActiveTags.size > 0);
+
+  const formatLabel = document.getElementById('mfpFormatLabel');
+  if (formatLabel) formatLabel.textContent = (FORMAT_OPTIONS.find(o => o.id === mobLibFormat) || FORMAT_OPTIONS[0]).label;
+  document.getElementById('mfpFormat')?.classList.toggle('mfp-active', mobLibFormat !== 'all');
 
   const sortLabel = document.getElementById('mfpSortLabel');
   if (sortLabel) sortLabel.textContent = (MOB_SORT_OPTIONS.find(o => o.id === mobLibSort) || MOB_SORT_OPTIONS[0]).label;
@@ -4873,6 +4951,16 @@ document.getElementById('mfpTags').addEventListener('click', (e) => {
   });
 });
 
+document.getElementById('mfpFormat').addEventListener('click', (e) => {
+  openMobFilterPicker({
+    anchor: e.currentTarget,
+    title: '🎧 Format',
+    items: FORMAT_OPTIONS,
+    isSelected: it => mobLibFormat === it.id,
+    onSelect: it => { mobLibFormat = it.id; },
+  });
+});
+
 document.getElementById('mfpSort').addEventListener('click', (e) => {
   openMobFilterPicker({
     anchor: e.currentTarget,
@@ -4919,6 +5007,9 @@ function getMobLibBooks() {
   let src = getMobLibSourceBooks();
   // Category filter
   if (mobLibCat !== 'All') src = src.filter(b => (b.category || 'Uncategorised') === mobLibCat);
+  // Format filter
+  if (mobLibFormat === 'book') src = src.filter(b => !b.isAudio);
+  if (mobLibFormat === 'audio') src = src.filter(b => b.isAudio);
   // Tags filter (book must match every selected tag — AND logic)
   if (mobActiveTags.size) src = src.filter(b => [...mobActiveTags].every(t => (b.tags || []).includes(t)));
   // Search
@@ -13659,8 +13750,10 @@ function showQuickCategoryModal() {
       scrim.remove();
       showLoading('Saving…', book.coverUrl);
       try {
-        await updateDoc(doc(db, 'books', currentId), { category: newCat, updatedAt: serverTimestamp() });
+        // Audiobooks live in `audioFiles`, not `books`.
+        await updateDoc(doc(db, book.isAudio ? 'audioFiles' : 'books', currentId), { category: newCat, updatedAt: serverTimestamp() });
         book.category = newCat;
+        if(book.isAudio && book._audioTrack) book._audioTrack.category = newCat;
         hideLoading();
         renderAll();
         if(window.innerWidth > 768) showBookById(currentId);
@@ -14354,7 +14447,9 @@ function showTagsModal() {
           : [...new Set([...(book.tags || []), tag])];
         book.tags = tags;
         item.classList.toggle('selected');
-        await updateDoc(doc(db, 'books', currentId), { tags, updatedAt: serverTimestamp() });
+        // Audiobooks live in `audioFiles`, not `books`.
+        await updateDoc(doc(db, book.isAudio ? 'audioFiles' : 'books', currentId), { tags, updatedAt: serverTimestamp() });
+        if(book.isAudio && book._audioTrack) book._audioTrack.tags = tags;
         renderAll();
       });
     });
@@ -14367,7 +14462,9 @@ function showTagsModal() {
       customInput.value = '';
       const tags = [...new Set([...(book.tags || []), tag])];
       book.tags = tags;
-      await updateDoc(doc(db, 'books', currentId), { tags, updatedAt: serverTimestamp() });
+      // Audiobooks live in `audioFiles`, not `books`.
+      await updateDoc(doc(db, book.isAudio ? 'audioFiles' : 'books', currentId), { tags, updatedAt: serverTimestamp() });
+      if(book.isAudio && book._audioTrack) book._audioTrack.tags = tags;
       // Add to global tag list if new
       if(!_globalTags.includes(tag)) {
         _globalTags.push(tag);
@@ -15813,7 +15910,7 @@ function audioTrackToBookLike(t) {
     id: t.id,
     title: t.title || (t.name || 'Untitled').replace(/\.[^./]+$/, ''),
     author: t.author || 'Audiobook',
-    category: t.category || 'Audiobooks',
+    category: t.category || 'Uncategorised',
     language: t.language || '',
     description: t.description || '',
     series: t.series || null,
@@ -15904,8 +16001,14 @@ function playAudioTrack(track) {
     playerEl.play().catch(() => {});
   }
 
-  label.textContent = (track.name || '').replace(/\.[^./]+$/, '');
-  playerDiv.classList.add('open');
+  const title = (track.name || '').replace(/\.[^./]+$/, '');
+  label.textContent = title;
+  const miniTitle = document.getElementById('audioMiniBarTitle');
+  if (miniTitle) miniTitle.textContent = title;
+
+  // Starting/resuming a track always brings the full player to the front —
+  // if it was minimized from a previous track, that state doesn't carry over.
+  expandAudioPlayer();
 
   // update row highlights (audio tab list, if it's rendered)
   document.querySelectorAll('.audio-track-row').forEach(r => {
@@ -15927,19 +16030,38 @@ function fmtAudioTime(sec) {
   return `${m}:${String(s).padStart(2, '0')}`;
 }
 
+// Hide the full-screen overlay but keep the audio element playing, and show
+// the floating mini-bar instead — lets the person keep browsing the library
+// while listening, the same way a music app's mini-player works.
+function minimizeAudioPlayer() {
+  document.getElementById('audioPersistentPlayer')?.classList.remove('open');
+  if (_audioCurrentId) document.getElementById('audioMiniBar')?.classList.add('visible');
+}
+
+// Bring the full-screen player back to front and hide the mini-bar.
+function expandAudioPlayer() {
+  document.getElementById('audioMiniBar')?.classList.remove('visible');
+  document.getElementById('audioPersistentPlayer')?.classList.add('open');
+}
+
 function stopAudioPlayback() {
   const playerEl = document.getElementById('audioPlayerEl');
   if (playerEl) { playerEl.pause(); playerEl.src = ''; playerEl.removeAttribute('src'); }
   _audioCurrentId = null;
 
-  const playBtn   = document.getElementById('audioPlayPauseBtn');
-  const seek      = document.getElementById('audioSeek');
-  const curTimeEl = document.getElementById('audioCurTime');
-  const durTimeEl = document.getElementById('audioDurTime');
+  const playBtn     = document.getElementById('audioPlayPauseBtn');
+  const seek        = document.getElementById('audioSeek');
+  const curTimeEl   = document.getElementById('audioCurTime');
+  const durTimeEl   = document.getElementById('audioDurTime');
+  const miniPlayBtn = document.getElementById('audioMiniPlayPauseBtn');
+  const miniSub     = document.getElementById('audioMiniBarSub');
   if (playBtn) playBtn.textContent = '▶️';
+  if (miniPlayBtn) miniPlayBtn.textContent = '▶️';
   if (seek) { seek.value = 0; seek.max = 0; }
   if (curTimeEl) curTimeEl.textContent = '0:00';
   if (durTimeEl) durTimeEl.textContent = '0:00';
+  if (miniSub) miniSub.textContent = '0:00 / 0:00';
+  document.getElementById('audioMiniBar')?.classList.remove('visible');
 
   document.querySelectorAll('.audio-track-row').forEach(r => {
     r.classList.remove('playing');
@@ -15949,15 +16071,20 @@ function stopAudioPlayback() {
 }
 
 (function initAudioPlayerControls() {
-  const playerEl   = document.getElementById('audioPlayerEl');
-  const playerDiv  = document.getElementById('audioPersistentPlayer');
-  const playBtn    = document.getElementById('audioPlayPauseBtn');
-  const backBtn    = document.getElementById('audioBackBtn');
-  const fwdBtn     = document.getElementById('audioFwdBtn');
-  const seek       = document.getElementById('audioSeek');
-  const curTimeEl  = document.getElementById('audioCurTime');
-  const durTimeEl  = document.getElementById('audioDurTime');
-  const speedWrap  = document.getElementById('audioSpeedWrap');
+  const playerEl    = document.getElementById('audioPlayerEl');
+  const playerDiv   = document.getElementById('audioPersistentPlayer');
+  const playBtn     = document.getElementById('audioPlayPauseBtn');
+  const backBtn     = document.getElementById('audioBackBtn');
+  const fwdBtn      = document.getElementById('audioFwdBtn');
+  const seek        = document.getElementById('audioSeek');
+  const curTimeEl   = document.getElementById('audioCurTime');
+  const durTimeEl   = document.getElementById('audioDurTime');
+  const speedWrap   = document.getElementById('audioSpeedWrap');
+  const minimizeBtn = document.getElementById('audioPlayerMinimizeBtn');
+  const miniBar     = document.getElementById('audioMiniBar');
+  const miniPlayBtn = document.getElementById('audioMiniPlayPauseBtn');
+  const miniCloseBtn= document.getElementById('audioMiniCloseBtn');
+  const miniSub     = document.getElementById('audioMiniBarSub');
   if (!playerEl || !playerDiv) return;
 
   let seeking = false;
@@ -15995,9 +16122,9 @@ function stopAudioPlayback() {
     });
   });
 
-  playerEl.addEventListener('play',  () => { playBtn.textContent = '⏸️'; });
-  playerEl.addEventListener('pause', () => { playBtn.textContent = '▶️'; });
-  playerEl.addEventListener('ended', () => { playBtn.textContent = '▶️'; });
+  playerEl.addEventListener('play',  () => { playBtn.textContent = '⏸️'; if (miniPlayBtn) miniPlayBtn.textContent = '⏸️'; });
+  playerEl.addEventListener('pause', () => { playBtn.textContent = '▶️'; if (miniPlayBtn) miniPlayBtn.textContent = '▶️'; });
+  playerEl.addEventListener('ended', () => { playBtn.textContent = '▶️'; if (miniPlayBtn) miniPlayBtn.textContent = '▶️'; });
 
   playerEl.addEventListener('loadedmetadata', () => {
     seek.max = Math.floor(playerEl.duration || 0);
@@ -16008,12 +16135,32 @@ function stopAudioPlayback() {
     if (seeking) return;
     seek.value = Math.floor(playerEl.currentTime);
     curTimeEl.textContent = fmtAudioTime(playerEl.currentTime);
+    if (miniSub) miniSub.textContent = `${fmtAudioTime(playerEl.currentTime)} / ${fmtAudioTime(playerEl.duration)}`;
+  });
+
+  // ── minimize / mini-bar ────────────────────────────────────────────────
+  minimizeBtn?.addEventListener('click', minimizeAudioPlayer);
+
+  // Tapping the mini-bar itself re-expands the full player; its own buttons
+  // (play/pause, stop) stop propagation so they don't also trigger that.
+  miniBar?.addEventListener('click', expandAudioPlayer);
+
+  miniPlayBtn?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (!playerEl.src) return;
+    if (playerEl.paused) playerEl.play().catch(() => {});
+    else playerEl.pause();
+  });
+
+  miniCloseBtn?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    stopAudioPlayback();
   });
 })();
 
 document.getElementById('audioPlayerCloseBtn')?.addEventListener('click', () => {
-  // Closing the full-screen player stops playback entirely (rather than
-  // minimizing it), so it doesn't keep running silently in the background.
+  // Closing the full-screen player stops playback entirely — that's
+  // distinct from minimizing, which keeps it running in the mini-bar.
   stopAudioPlayback();
   document.getElementById('audioPersistentPlayer')?.classList.remove('open');
 });
