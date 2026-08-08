@@ -362,6 +362,13 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .book-card-cover-ph .ph-icon{font-size:2rem;opacity:.6;}
 .book-card-cover-ph .ph-title{font-family:'Playfair Display',serif;font-size:.62rem;color:rgba(200,180,140,0.8);text-align:center;line-height:1.3;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;padding:0 .3rem;}
 .book-card-cover-ph .ph-author{font-size:.55rem;color:rgba(200,180,140,0.5);text-align:center;}
+/* Audiobooks use a square tile instead of the 2:3 book-cover rectangle, so
+   they read as a distinct media type at a glance while sitting in the same
+   grid as EPUBs. */
+.book-card.audio-tile .book-card-cover,
+.book-card.audio-tile .book-card-cover-ph{aspect-ratio:1/1;}
+.book-card.audio-tile .book-card-cover-ph{background:linear-gradient(145deg,var(--rust,#8a4a3a),#5c2f26);}
+.book-card.audio-tile .audio-badge{position:absolute;top:.4rem;left:.4rem;background:rgba(15,26,46,.65);color:#fff;font-size:.65rem;padding:2px 5px;border-radius:2px;line-height:1;}
 .book-card-body{
   padding:.45rem .5rem .5rem;
   background:var(--warm-white);
@@ -3070,9 +3077,10 @@ async function loadLibrary() {
       ? getDocs(query(collection(db, 'books'), where('visibility', '==', 'restricted')))
       : Promise.resolve({ docs: [] });
 
-    // Load and render my books immediately
-    const mySnap = await getDocs(myQ);
+    // Load and render my books (+ audiobooks) immediately
+    const [mySnap] = await Promise.all([getDocs(myQ), loadAudioTracks()]);
     library = mySnap.docs.map(d => ({ id: d.id, ...d.data() }));
+    mergeAudioIntoLibrary();
     renderAll();
 
     // Load public and shared in background without blocking UI
@@ -3532,12 +3540,18 @@ function renderGrid(gridId){
     return;
   }
   reconcileGrid(grid, books, b => b.id, b => {
+    const coverSrc=getCoverSrc(b);
+    const isSelected=selectedIds.has(b.id);
+    if(b.isAudio){
+      const coverHtml=coverSrc?`<img class="book-card-cover" src="${coverSrc}" alt="" loading="lazy"/>`:`<div class="book-card-cover-ph"><div class="ph-icon">🎧</div><div class="ph-title">${esc(b.title)}</div><div class="ph-author">${esc(b.author)}</div></div>`;
+      return `<div class="book-card audio-tile ${isSelected?'selected':''}" data-bookid="${b.id}"><div style="position:relative">${coverHtml}<span class="audio-badge">🎧 Audio</span></div><div class="select-check">✓</div>
+      <div class="book-card-body"><div class="book-card-title">${esc(b.title)}</div>
+      <div class="book-card-author">${esc(b.author)}</div></div></div>`;
+    }
     const isComm=communityLib.some(x=>x.id===b.id);
     const avg=isComm?getAvgRating(b):0;
     const starsHtml=isComm?[1,2,3,4,5].map(n=>`<span class="bcs ${n<=Math.round(avg)?'filled':''}">★</span>`).join(''):'';
-    const coverSrc=getCoverSrc(b);
     const coverHtml=coverSrc?`<img class="book-card-cover" src="${coverSrc}" alt="" loading="lazy"/>`:`<div class="book-card-cover-ph"><div class="ph-icon">📖</div><div class="ph-title">${esc(b.title)}</div><div class="ph-author">${esc(b.author)}</div></div>`;
-    const isSelected=selectedIds.has(b.id);
     // PATCH 4: hide "Shared" badge when browsing the public/community shelf
     const isMyPublicBook=b.ownerId===currentUser?.uid&&b.visibility==='public';
     return `<div class="book-card ${isSelected?'selected':''}" data-bookid="${b.id}">${coverHtml}<div class="select-check">✓</div>${isMyPublicBook?'<span class="community-badge">Public</span>':''}
@@ -3550,8 +3564,15 @@ function renderGrid(gridId){
 
 document.getElementById('deskBookGrid').addEventListener('click',e=>{
   const card=e.target.closest('.book-card[data-bookid]');if(!card)return;
-  if(selectMode){const id=card.dataset.bookid;if(selectedIds.has(id)){selectedIds.delete(id);card.classList.remove('selected');}else{selectedIds.add(id);card.classList.add('selected');}updateBulkBar();return;}
-  showBookById(card.dataset.bookid);
+  const id=card.dataset.bookid;
+  const book=library.find(x=>x.id===id);
+  if(book?.isAudio){
+    if(selectMode)return; // audio tracks aren't part of bulk book actions (delete/move/etc.)
+    playAudioTrack(book._audioTrack);
+    return;
+  }
+  if(selectMode){if(selectedIds.has(id)){selectedIds.delete(id);card.classList.remove('selected');}else{selectedIds.add(id);card.classList.add('selected');}updateBulkBar();return;}
+  showBookById(id);
 });
 document.getElementById('deskSearch').addEventListener('input',e=>{
   searchQ=e.target.value.toLowerCase().trim();
@@ -4841,8 +4862,11 @@ document.getElementById('mobGridLibrary').addEventListener('click', e => {
   if(mobSelectMode) return; // let grid.onclick handle it in select mode
   const card = e.target.closest('.book-card[data-bookid]');
   if (!card) return;
+  const id = card.dataset.bookid;
+  const book = library.find(x => x.id === id);
+  if(book?.isAudio){ playAudioTrack(book._audioTrack); return; }
   mobPrevPanel = 'mobPanelLibrary';
-  mob_showBook(card.dataset.bookid);
+  mob_showBook(id);
 });
 
 // ── MOBILE LONG PRESS → MULTI SELECT ─────────────────────────────────────────
@@ -4871,6 +4895,8 @@ function startLongPress(bookId){
 document.getElementById('mobGridLibrary').addEventListener('touchstart', e => {
     const card = e.target.closest('.book-card[data-bookid]');
     if(!card) return;
+    const book = library.find(x => x.id === card.dataset.bookid);
+    if(book?.isAudio) return; // audio tracks don't join book multi-select/bulk actions
     startLongPress(card.dataset.bookid);
   }, {passive: false});
 
@@ -4883,10 +4909,12 @@ document.getElementById('mobGridLibrary').addEventListener('touchstart', e => {
   }, {passive: true});
 
 document.getElementById('mobGridLibrary').addEventListener('click', e => {
+  const card = e.target.closest('.book-card[data-bookid]');
+  if (!card) return;
+  const id = card.dataset.bookid;
+  const book = library.find(x => x.id === id);
   if(mobSelectMode) {
-    const card = e.target.closest('.book-card[data-bookid]');
-    if(!card) return;
-    const id = card.dataset.bookid;
+    if(book?.isAudio) return; // audio tracks aren't selectable for bulk book actions
     if(mobSelectedIds.has(id)){ mobSelectedIds.delete(id); }
     else { mobSelectedIds.add(id); }
     if(mobSelectedIds.size === 0){ exitMobSelectMode(); return; }
@@ -4894,10 +4922,9 @@ document.getElementById('mobGridLibrary').addEventListener('click', e => {
     updateMobBulkBar();
     return;
   }
-  const card = e.target.closest('.book-card[data-bookid]');
-  if (!card) return;
+  if(book?.isAudio){ playAudioTrack(book._audioTrack); return; }
   mobPrevPanel = 'mobPanelLibrary';
-  mob_showBook(card.dataset.bookid);
+  mob_showBook(id);
 });
 })();
 
@@ -5738,10 +5765,23 @@ function bookCardHtml(b, isComm, showProgress=false){
   const coverHtml = coverSrc
     ? `<img class="book-card-cover" src="${coverSrc}" alt="" loading="lazy"/>`
     : `<div class="book-card-cover-ph">
-        <div class="ph-icon">📖</div>
+        <div class="ph-icon">${b.isAudio ? '🎧' : '📖'}</div>
         <div class="ph-title">${esc(b.title)}</div>
         <div class="ph-author">${esc(b.author)}</div>
        </div>`;
+
+  if(b.isAudio){
+    return `<div class="book-card audio-tile" data-bookid="${b.id}">
+      <div style="position:relative">
+        ${coverHtml}
+        <span class="audio-badge">🎧 Audio</span>
+      </div>
+      <div class="book-card-body">
+        <div class="book-card-title">${esc(b.title)}</div>
+        <div class="book-card-author">${esc(b.author)}</div>
+      </div>
+    </div>`;
+  }
 
   const isMyPublicBook = b.ownerId === currentUser?.uid && b.visibility === 'public';
 
@@ -13598,7 +13638,7 @@ function getCategoryList() { return _categories; }
 function getTagList() { return _globalTags; }
 // Per-item emoji, with sensible fallbacks for anything not yet set
 // (e.g. a brand-new category/tag an admin just added).
-function catIcon(name){ return _categoryIcons[name] || '🗂️'; }
+function catIcon(name){ if(name==='Audiobooks') return '🎧'; return _categoryIcons[name] || '🗂️'; }
 function tagIcon(name){ return _tagIcons[name] || '🏷️'; }
 async function setCatIcon(name, icon){
   _categoryIcons[name] = icon;
@@ -15800,6 +15840,31 @@ async function loadAudioTracks() {
   _audioTracks = snap.docs.map(d => ({ id: d.id, ...d.data() }));
 }
 
+// ── surface audio tracks in the main library grid ──────────────────────────────
+// Audiobooks live in their own `audioFiles` collection (no title/author/cover
+// metadata — just a filename), so we wrap each track in a lightweight
+// book-shaped object that the existing grid/card/filter code can render
+// without changes, tagged with isAudio so the card gets a square tile and
+// clicks open the player instead of the reader.
+function audioTrackToBookLike(t) {
+  return {
+    id: t.id,
+    title: (t.name || 'Untitled').replace(/\.[^./]+$/, ''),
+    author: 'Audiobook',
+    category: 'Audiobooks',
+    tags: [],
+    visibility: 'private',
+    ownerId: currentUser?.uid,
+    createdAt: t.uploadedAt,
+    isAudio: true,
+    _audioTrack: t,
+  };
+}
+function mergeAudioIntoLibrary() {
+  library = library.filter(b => !b.isAudio);
+  library.push(..._audioTracks.map(audioTrackToBookLike));
+}
+
 // ── render the audio panel ────────────────────────────────────────────────────
 
 async function renderAudioPanel() {
@@ -15909,6 +15974,8 @@ async function uploadAudioFiles(files) {
   }
 
   await renderAudioPanel();
+  mergeAudioIntoLibrary();
+  renderAll();
 }
 
 // ── delete a track ────────────────────────────────────────────────────────────
@@ -15935,6 +16002,8 @@ async function deleteAudioTrack(id) {
 
     _audioTracks = _audioTracks.filter(t => t.id !== id);
     renderAudioPanel();
+    mergeAudioIntoLibrary();
+    renderAll();
     showToast('Deleted ✓');
   } catch (e) {
     showToast('Delete failed: ' + e.message);
