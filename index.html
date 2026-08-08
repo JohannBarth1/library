@@ -245,7 +245,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .sb-cr-cover{position:relative;flex-shrink:0;width:58px;cursor:pointer;border-radius:2px 4px 4px 2px;overflow:visible;}
 .sb-cr-cover img,.sb-cr-cover .ph{width:58px;height:87px;object-fit:cover;display:block;border-radius:2px 4px 4px 2px;box-shadow:2px 3px 8px rgba(0,0,0,.35);}
 .sb-cr-cover .ph{background:linear-gradient(145deg,var(--navy2),#2a3d5a);display:flex;align-items:center;justify-content:center;font-size:.45rem;color:rgba(200,180,140,.8);text-align:center;padding:3px;line-height:1.3;}
-.sb-cr-prog{position:absolute;bottom:0;left:0;right:0;height:3px;background:rgba(0,0,0,.3);border-radius:0 0 4px 4px;overflow:hidden;}
+.sb-cr-prog{position:absolute;bottom:0;left:0;right:0;height:3px;background:rgba(0,0,0,.3);border-radius:0 0 4px 2px;overflow:hidden;}
 .sb-cr-prog-fill{height:3px;background:var(--gold);}
 .sb-cr-ribbon{position:absolute;top:-4px;right:5px;filter:drop-shadow(1px 2px 3px rgba(0,0,0,.45));pointer-events:none;}
 .sb-cr-empty{font-size:.75rem;color:var(--muted);font-style:italic;padding:.25rem 0 .4rem;}
@@ -362,6 +362,13 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .book-card-cover-ph .ph-icon{font-size:2rem;opacity:.6;}
 .book-card-cover-ph .ph-title{font-family:'Playfair Display',serif;font-size:.62rem;color:rgba(200,180,140,0.8);text-align:center;line-height:1.3;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;padding:0 .3rem;}
 .book-card-cover-ph .ph-author{font-size:.55rem;color:rgba(200,180,140,0.5);text-align:center;}
+/* Audiobooks use a square tile instead of the 2:3 book-cover rectangle, so
+   they read as a distinct media type at a glance while sitting in the same
+   grid as EPUBs. */
+.book-card.audio-tile .book-card-cover,
+.book-card.audio-tile .book-card-cover-ph{aspect-ratio:1/1;}
+.book-card.audio-tile .book-card-cover-ph{background:linear-gradient(145deg,var(--rust,#8a4a3a),#5c2f26);}
+.book-card.audio-tile .audio-badge{position:absolute;top:.4rem;left:.4rem;background:rgba(15,26,46,.65);color:#fff;font-size:.65rem;padding:2px 5px;border-radius:2px;line-height:1;}
 .book-card-body{
   padding:.45rem .5rem .5rem;
   background:var(--warm-white);
@@ -403,7 +410,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .bcs.filled{color:var(--gold);}
 .book-card .community-badge{position:absolute;top:.4rem;right:.4rem;background:var(--gold);color:var(--navy);font-size:.55rem;font-weight:700;padding:2px 5px;border-radius:2px;letter-spacing:.04em;text-transform:uppercase;}
 .rec-badge{position:absolute;top:.4rem;left:.4rem;background:var(--teal);color:#fff;font-size:.55rem;font-weight:700;padding:2px 5px;border-radius:2px;letter-spacing:.04em;text-transform:uppercase;}
-.book-card-progress{height:3px;background:var(--border);border-radius:0 0 2px 2px;overflow:hidden;}
+.book-card-progress{height:3px;background:var(--border);border-radius:0 0 4px 4px;overflow:hidden;}
 .book-card-progress-bar{height:3px;background:var(--teal);transition:width .3s;}
   
 /* ── BOOK DETAIL DRAWER (desktop) ── */
@@ -419,6 +426,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .dbadge-cat{background:var(--teal-light);color:var(--teal);}
 .dbadge-lang{background:#ece8f8;color:#5a48b0;}
 .dbadge-shared{background:#fff4e0;color:#a87820;}
+.dbadge-restricted{background:#f3e6e6;color:#a83232;}
 .drawer-desc{font-size:.85rem;line-height:1.7;color:#3a4a5a;margin-bottom:1rem;}
 .btn-action{display:inline-flex;align-items:center;gap:.35rem;padding:.42rem .85rem;font-size:.72rem;font-family:'Lato',sans-serif;font-weight:700;letter-spacing:.04em;border-radius:20px;cursor:pointer;border:1px solid;transition:all .15s;white-space:nowrap;position:relative;}
 /* PATCH 6d: gold text on dark read button */
@@ -871,6 +879,8 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .up-visibility-btn{background:var(--warm-white);border:1px solid var(--border);color:var(--muted);font-family:'Lato',sans-serif;font-weight:700;font-size:.68rem;letter-spacing:.02em;padding:.32rem .7rem;border-radius:20px;cursor:pointer;white-space:nowrap;transition:all .15s;flex-shrink:0;}
 .up-visibility-btn:hover{opacity:.8;}
 .up-visibility-btn.is-public{background:var(--teal-light);border-color:var(--teal);color:var(--teal-dark);}
+.up-visibility-btn.is-restricted{background:#f3e6e6;border-color:#a83232;color:#a83232;}
+.up-visibility-btn.is-private{background:var(--panel);border-color:var(--muted);color:var(--navy2);}
 .up-remove-btn{background:none;border:none;color:var(--muted);font-size:.95rem;cursor:pointer;padding:0 .15rem;flex-shrink:0;line-height:1;transition:color .15s;}
 .up-remove-btn:hover{color:var(--danger);}
 .drop-zone.disabled{opacity:.5;pointer-events:none;}
@@ -1599,6 +1609,9 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .ledger-points-num{font-family:'Playfair Display',serif;font-size:1.7rem;color:var(--gold2);}
 .ledger-rank-title{font-size:.85rem;font-weight:700;color:var(--cream);margin-top:.15rem;}
 .ledger-card-note{font-size:.74rem;color:var(--muted);line-height:1.5;margin-bottom:.7rem;}
+.ledger-goal-tile{-webkit-tap-highlight-color:transparent;}
+.ledger-goal-tile:active{box-shadow:0 0 0 2px var(--teal) !important;transform:scale(.99);}
+@media(hover:hover){.ledger-goal-tile:hover{box-shadow:0 2px 12px rgba(15,26,46,.12) !important;border-color:var(--teal) !important;}}
 .ledger-badge{cursor:pointer;-webkit-tap-highlight-color:transparent;background:none;border:none;font-family:'Lato',sans-serif;padding:.3rem;border-radius:10px;transition:background .15s;}
 .ledger-badge:active{background:var(--panel);}
 .ledger-badge-reward{font-size:.9rem;margin-top:-.1rem;}
@@ -1704,6 +1717,78 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .home-ledger-teaser-today-pts{font-size:.62rem;font-weight:700;color:var(--gold);background:rgba(200,149,42,.12);
   border-radius:10px;padding:.12rem .5rem;letter-spacing:.02em;white-space:nowrap;margin-left:.15rem;}
 .home-ledger-teaser-sub{font-size:.72rem;color:var(--muted);margin-top:.1rem;}
+
+/* ── AUDIO PANEL ── */
+.audio-track-row{display:flex;align-items:center;gap:.7rem;padding:.7rem 1rem;
+  background:var(--warm-white);border:1px solid var(--border);border-radius:10px;
+  margin-bottom:.5rem;cursor:pointer;transition:box-shadow .15s;}
+.audio-track-row:hover{box-shadow:0 2px 8px rgba(15,26,46,.1);}
+.audio-track-row.playing{border-color:var(--teal);background:var(--teal-light);}
+.audio-track-icon{font-size:1.4rem;flex-shrink:0;width:2rem;text-align:center;}
+.audio-track-meta{flex:1;min-width:0;}
+.audio-track-name{font-size:.85rem;font-weight:700;color:var(--navy2);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.audio-track-sub{font-size:.7rem;color:var(--muted);margin-top:1px;}
+.audio-del-btn{background:none;border:none;color:var(--muted);font-size:.9rem;
+  cursor:pointer;padding:.3rem .4rem;border-radius:4px;flex-shrink:0;}
+.audio-del-btn:hover{color:var(--danger);background:rgba(160,40,40,.08);}
+.audio-player-overlay{
+  display:none;position:fixed;inset:0;z-index:155;
+  flex-direction:column;align-items:center;justify-content:center;gap:1.5rem;
+  background:radial-gradient(circle at 50% 30%, #1e3a5c 0%, var(--navy) 70%);
+  padding:2rem;
+}
+.audio-player-overlay.open{display:flex;}
+.audio-player-close{
+  position:absolute;top:calc(env(safe-area-inset-top,0px) + 1rem);right:1rem;
+  background:rgba(255,255,255,.1);border:none;color:#fff;
+  width:2.5rem;height:2.5rem;border-radius:50%;font-size:1.15rem;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+}
+.audio-player-close:hover{background:rgba(255,255,255,.18);}
+.audio-player-art{
+  width:min(58vw,240px);height:min(58vw,240px);border-radius:14px;
+  background:linear-gradient(145deg,var(--rust),#5c2f26);
+  display:flex;align-items:center;justify-content:center;font-size:4.5rem;
+  box-shadow:0 14px 36px rgba(0,0,0,.4);
+}
+.audio-now-playing-label{
+  font-family:'Playfair Display',serif;font-size:1.35rem;color:var(--gold);
+  text-align:center;max-width:90vw;line-height:1.4;
+}
+.audio-player-progress-wrap{width:min(90vw,440px);}
+.audio-player-seek{
+  width:100%;-webkit-appearance:none;appearance:none;height:5px;border-radius:3px;
+  background:rgba(255,255,255,.2);outline:none;cursor:pointer;
+}
+.audio-player-seek::-webkit-slider-thumb{
+  -webkit-appearance:none;appearance:none;width:16px;height:16px;border-radius:50%;
+  background:var(--gold);cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,.4);
+}
+.audio-player-seek::-moz-range-thumb{
+  width:16px;height:16px;border-radius:50%;background:var(--gold);border:none;cursor:pointer;
+}
+.audio-player-times{display:flex;justify-content:space-between;margin-top:.4rem;
+  font-size:.72rem;color:rgba(255,255,255,.6);font-variant-numeric:tabular-nums;}
+.audio-player-controls{display:flex;align-items:center;justify-content:center;gap:1.6rem;}
+.audio-player-btn{
+  background:none;border:none;color:#fff;cursor:pointer;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
+}
+.audio-player-btn-play{
+  width:5.5rem;height:5.5rem;border-radius:50%;background:var(--teal);
+  font-size:2.2rem;box-shadow:0 8px 22px rgba(0,0,0,.35);
+}
+.audio-player-btn-play:active{transform:scale(.96);}
+.audio-player-btn-skip{width:3.4rem;height:3.4rem;}
+.audio-player-btn-skip .apb-icon{font-size:1.7rem;line-height:1;}
+.audio-player-btn-skip .apb-label{font-size:.6rem;font-weight:700;color:rgba(255,255,255,.75);}
+.audio-player-speed-wrap{display:flex;align-items:center;justify-content:center;gap:.4rem;flex-wrap:wrap;width:min(90vw,440px);}
+.audio-speed-btn{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.16);color:rgba(255,255,255,.75);
+  font-size:.72rem;font-weight:700;padding:.32rem .65rem;border-radius:20px;cursor:pointer;
+  transition:background .15s,border-color .15s,color .15s;-webkit-tap-highlight-color:transparent;}
+.audio-speed-btn:hover{background:rgba(255,255,255,.14);}
+.audio-speed-btn.active{background:var(--gold);border-color:var(--gold);color:var(--navy);}
 
 /* Ledger popover (reader HUD tap + goal editor) — a bespoke bottom sheet,
    deliberately not reusing .mob-picker-scrim, so it doesn't read as "the
@@ -1983,14 +2068,44 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
     <div style="display:flex;flex-direction:column;height:100%;overflow:hidden">
       <div style="background:var(--cream);padding:.9rem 1rem .8rem;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);flex-shrink:0">
         <div style="font-family:'Playfair Display',serif;font-size:1.3rem;color:var(--navy2)">Timeline</div>
-        <select id="timelineYearFilter" class="mob-pill-btn mob-pill-sm" style="color:var(--navy2);-webkit-appearance:none;appearance:none;padding-right:1.5rem;
-          background-image:url('data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 12 8%22%3E%3Cpath fill=%22%232a7c8a%22 d=%22M1 1l5 5 5-5%22 stroke=%22%232a7c8a%22 stroke-width=%221.4%22 fill=%22none%22/%3E%3C/svg%3E');
-          background-repeat:no-repeat;background-position:right .55rem center;background-size:9px 6px;">
-          <option value="all">All time</option>
-        </select>
+        <div style="display:flex;align-items:center;gap:.5rem">
+          <button id="btnAddManualRead" style="color:var(--teal);font-weight:700;border:1px solid var(--teal);
+            background:transparent;border-radius:20px;padding:.3rem .75rem;cursor:pointer;font-size:.78rem;
+            line-height:1;font-family:'Lato',sans-serif;">+ Add</button>
+          <select id="timelineYearFilter" class="mob-pill-btn mob-pill-sm" style="color:var(--navy2);-webkit-appearance:none;appearance:none;padding-right:1.5rem;
+            background-image:url('data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 12 8%22%3E%3Cpath fill=%22%232a7c8a%22 d=%22M1 1l5 5 5-5%22 stroke=%22%232a7c8a%22 stroke-width=%221.4%22 fill=%22none%22/%3E%3C/svg%3E');
+            background-repeat:no-repeat;background-position:right .55rem center;background-size:9px 6px;">
+            <option value="all">All time</option>
+          </select>
+        </div>
       </div>
       <div class="mob-grid-scroll" id="timelineContent" style="-webkit-overflow-scrolling:touch">
         <div style="text-align:center;padding:3rem 1rem;color:var(--muted);font-size:.85rem">Tap Timeline to load</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── AUDIO PANEL ── -->
+  <div class="mob-panel" id="mobPanelAudio">
+    <div style="display:flex;flex-direction:column;height:100%;overflow:hidden;">
+      <!-- Header -->
+      <div style="background:var(--cream);padding:.9rem 1rem .8rem;display:flex;
+                  align-items:center;justify-content:space-between;
+                  border-bottom:1px solid var(--border);flex-shrink:0;">
+        <div style="font-family:'Playfair Display',serif;font-size:1.3rem;color:var(--navy2);">Audio</div>
+        <label id="audioUploadLabel" style="display:flex;align-items:center;gap:.4rem;
+          background:var(--teal);color:var(--gold);border:none;border-radius:20px;
+          padding:.35rem .85rem;font-size:.78rem;font-weight:700;cursor:pointer;
+          font-family:'Lato',sans-serif;letter-spacing:.04em;">
+          ＋ Upload
+          <input type="file" id="audioFileInput" accept="audio/*" multiple style="display:none"/>
+        </label>
+      </div>
+      <!-- Track list -->
+      <div style="flex:1;overflow-y:auto;padding:.8rem 1rem 0;" id="audioTrackList">
+        <div style="text-align:center;padding:3rem 1rem;color:var(--muted);font-size:.85rem;">
+          Loading…
+        </div>
       </div>
     </div>
   </div>
@@ -2027,6 +2142,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
           <div class="mob-detail-cat" id="mobDetailCat"></div>
           <div class="mob-detail-title" id="mobDetailTitle"></div>
           <div class="mob-detail-author" id="mobDetailAuthor"></div>
+          <div id="mobDetailSeries" style="display:none;font-size:.72rem;color:var(--muted);font-weight:600;margin-top:.15rem"></div>
           <div id="mobDetailSharedBy" style="display:none;font-size:.72rem;color:var(--teal);font-weight:700;margin-top:.2rem"></div>
           <div class="star-rating" id="mobStarRating" style="display:none;margin-top:.4rem">
             <div class="stars" id="mobStars"></div>
@@ -2041,6 +2157,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
       <div class="mob-sheet-more" id="mobSheetMore">
         <div class="mob-detail-more-actions" id="mobDetailMoreActions"></div>
         <hr style="border:none;border-top:1px solid var(--border);margin:.5rem 0 1rem"/>
+        <div id="mobDetailRelated" style="display:none;"></div>
         <p class="mob-detail-desc" id="mobDetailDesc"></p>
         <div id="mobDetailHighlights" style="display:none;"></div>
       </div>
@@ -2258,6 +2375,9 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
     <button class="mob-tab" id="mobNavLedger">
       <span class="tab-icon">🔥</span><span>Ledger</span>
     </button>
+    <button class="mob-tab" id="mobNavAudio" style="display:none">
+      <span class="tab-icon">🎵</span><span>Audio</span>
+    </button>
     <button class="mob-tab" id="mobNavSettings">
       <span class="tab-icon">⚙</span><span>Settings</span>
     </button>
@@ -2275,23 +2395,17 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
     </div>
     <div class="upload-select-all" id="uploadSelectAll" style="display:none">
       <span>Set visibility for all</span>
-      <button class="up-visibility-btn is-public" id="uploadVisibilityAllBtn" data-public="true">🌐 Public</button>
+      <button class="up-visibility-btn is-public" id="uploadVisibilityAllBtn" data-visibility="public">🌐 Public</button>
     </div>
     <div class="upload-list" id="uploadList"></div>
+    <div style="text-align:center;padding:.4rem 0 0;">
+      <button type="button" id="btnOpenAudioUpload" style="background:none;border:none;color:var(--teal);font-size:.8rem;font-weight:700;cursor:pointer;font-family:'Lato',sans-serif;">
+        🎧 Uploading an audiobook instead?
+      </button>
+    </div>
     <div class="modal-actions">
       <button class="btn-cancel" id="btnCloseUpload">Close</button>
       <button class="btn-save" id="btnStartUpload" style="display:none">Start Upload</button>
-    </div>
-  </div>
-</div>
-
-<div class="modal-overlay" id="shareModal">
-  <div class="modal">
-    <h3>Publish to Public Library</h3>
-    <p style="font-size:.85rem;color:var(--muted);line-height:1.6;margin-bottom:1rem">This will make <strong id="shareBookTitle"></strong> visible to all signed-in users in the Public Library.</p>
-    <div class="modal-actions">
-      <button class="btn-cancel" id="btnCancelShare">Cancel</button>
-      <button class="btn-save" id="btnConfirmShare">Share it</button>
     </div>
   </div>
 </div>
@@ -2311,6 +2425,11 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
     <h3>Edit Book Details</h3>
     <div class="form-row"><label>Title</label><input type="text" id="metaTitle"/></div>
     <div class="form-row"><label>Author</label><input type="text" id="metaAuthor"/></div>
+    <div class="form-row" style="display:flex;gap:.6rem">
+      <div style="flex:2"><label>Series</label><input type="text" id="metaSeries" placeholder="e.g. Foundation" list="metaSeriesList"/></div>
+      <div style="flex:1"><label>Book #</label><input type="number" id="metaSeriesIndex" placeholder="e.g. 2" step="0.1" min="0"/></div>
+    </div>
+    <datalist id="metaSeriesList"></datalist>
     <div class="form-row"><label>Category</label><select id="metaCategory"></select></div>
     <div class="form-row"><label>Language</label><input type="text" id="metaLanguage" placeholder="e.g. en"/></div>
     <div class="form-row"><label>Description</label><textarea id="metaDesc" rows="4" style="width:100%;padding:.6rem .85rem;font-family:'Lato',sans-serif;font-size:.88rem;color:var(--navy);background:var(--cream);border:1px solid var(--border);border-radius:3px;outline:none;resize:vertical;line-height:1.5"></textarea></div>
@@ -2474,6 +2593,95 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
   </div>
 </div>
 
+  <!-- Manual (off-app) Timeline Read Modal -->
+<div class="modal-overlay" id="manualReadModal">
+  <div class="modal" style="max-width:400px">
+    <h3 id="manualReadModalTitle">Add a Past Read</h3>
+    <div class="form-row"><label>Title</label><input type="text" id="mrTitle" placeholder="Book title"/></div>
+    <div class="form-row"><label>Author</label><input type="text" id="mrAuthor" placeholder="Author name"/></div>
+    <div class="form-row" style="display:flex;gap:.6rem">
+      <div style="flex:1"><label>Finished on</label><input type="date" id="mrDate"/></div>
+      <div style="flex:1"><label>Pages</label><input type="number" id="mrPages" min="1" placeholder="optional"/></div>
+    </div>
+    <div class="form-row"><label>Cover image URL</label><input type="text" id="mrCover" placeholder="optional, https://…"/></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" id="btnDeleteManualRead" style="display:none;margin-right:auto;color:var(--danger);border-color:var(--danger)">Delete</button>
+      <button class="btn-cancel" id="btnCancelManualRead">Cancel</button>
+      <button class="btn-save" id="btnSaveManualRead">Save</button>
+    </div>
+  </div>
+</div>
+
+  <!-- Reading Goal Modal -->
+<div class="modal-overlay" id="goalModal">
+  <div class="modal" style="max-width:400px">
+    <h3 id="goalModalTitle">New Reading Goal</h3>
+    <div class="form-row"><label>Goal name (optional)</label><input type="text" id="goalName" placeholder="e.g. Classics challenge"/></div>
+    <div class="form-row" style="display:flex;gap:.6rem">
+      <div style="flex:1"><label>Starts</label><input type="date" id="goalStartDate"/></div>
+      <div style="flex:1"><label>Duration</label>
+        <select id="goalCadence">
+          <option value="weekly">1 week</option>
+          <option value="monthly" selected>1 month</option>
+          <option value="yearly">1 year</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row" style="display:flex;gap:.6rem">
+      <div style="flex:1"><label>Track by</label>
+        <select id="goalMetric">
+          <option value="books">Books</option>
+          <option value="pages">Pages</option>
+        </select>
+      </div>
+      <div style="flex:1"><label id="goalCountLabel"># of books</label><input type="number" id="goalCount" min="1" value="1"/></div>
+    </div>
+    <div class="form-row" id="goalEndedNote" style="display:none;font-size:.8rem;color:var(--muted);"></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" id="btnDeleteGoal" style="display:none;margin-right:auto;color:var(--danger);border-color:var(--danger)">Delete</button>
+      <button class="btn-cancel" id="btnCancelGoal">Cancel</button>
+      <button class="btn-save" id="btnSaveGoal">Save</button>
+    </div>
+  </div>
+</div>
+  </div>
+</div>
+
+<!-- Audiobook Player — full screen -->
+<div class="audio-player-overlay" id="audioPersistentPlayer">
+  <button class="audio-player-close" id="audioPlayerCloseBtn" title="Close">✕</button>
+  <div class="audio-player-art">🎧</div>
+  <div class="audio-now-playing-label" id="audioNowPlayingLabel">Now Playing</div>
+
+  <div class="audio-player-progress-wrap">
+    <input type="range" id="audioSeek" class="audio-player-seek" min="0" max="0" value="0" step="1"/>
+    <div class="audio-player-times">
+      <span id="audioCurTime">0:00</span>
+      <span id="audioDurTime">0:00</span>
+    </div>
+  </div>
+
+  <div class="audio-player-controls">
+    <button class="audio-player-btn audio-player-btn-skip" id="audioBackBtn" title="Back 10 seconds">
+      <span class="apb-icon">⟲</span><span class="apb-label">10</span>
+    </button>
+    <button class="audio-player-btn audio-player-btn-play" id="audioPlayPauseBtn" title="Play/Pause">▶️</button>
+    <button class="audio-player-btn audio-player-btn-skip" id="audioFwdBtn" title="Forward 10 seconds">
+      <span class="apb-icon">⟳</span><span class="apb-label">10</span>
+    </button>
+  </div>
+
+  <div class="audio-player-speed-wrap" id="audioSpeedWrap">
+    <button class="audio-speed-btn" data-speed="0.75">0.75×</button>
+    <button class="audio-speed-btn active" data-speed="1">1×</button>
+    <button class="audio-speed-btn" data-speed="1.25">1.25×</button>
+    <button class="audio-speed-btn" data-speed="1.5">1.5×</button>
+    <button class="audio-speed-btn" data-speed="2">2×</button>
+  </div>
+
+  <audio id="audioPlayerEl" preload="none"></audio>
+</div>
+
 <!-- EPUB Reader — PATCH 5: toolbar moved to bottom -->
 <div class="reader-overlay theme-day" id="readerOverlay">
 <div class="reader-settings-bar" id="readerSettingsBar">
@@ -2604,7 +2812,7 @@ import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signO
 import { getFirestore, collection, addDoc, getDocs, getDoc, doc,
          query, where, orderBy, updateDoc, deleteDoc, serverTimestamp, setDoc, Timestamp, limit, onSnapshot, deleteField, increment, arrayUnion }
   from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
-import { getStorage, ref as storageRef, uploadBytes, getDownloadURL, getBytes }
+import { getStorage, ref as storageRef, uploadBytes, getDownloadURL, getBytes, deleteObject }
   from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js';
 
 // ── PWA ──────────────────────────────────────────────────────────────────────
@@ -2720,6 +2928,14 @@ let _tagIcons = {};        // { "Favourite": "❤️", ... } — per-item emoji,
 
 // Reader state
 let readerZip=null,readerSpine=[],readerChapter=0,readerOpfBase='',readerBookId = null;
+
+// Set while the user has an active "open this book" request in flight, so
+// background/offline-prefetch downloads (see prewarmOfflineEpubs) know to
+// stand down instead of starting the next big EPUB fetch on top of it.
+let _bookOpenPriority = false;
+async function _waitForBookOpenPriority() {
+  while (_bookOpenPriority) await new Promise(r => setTimeout(r, 200));
+}
 let lastOpenedBookId = null;
 let readerPage = 0;
 let readerPageCount = 1;
@@ -2749,6 +2965,18 @@ onAuthStateChanged(auth, async user => {
     renderMobHome();
     renderDeskHome();
 
+    // Read admin/restrictedAccess status BEFORE the lastSeen write below
+    // queues its own pending mutation against this same users/{uid} doc.
+    // Firestore's SDK gives a client "read your own writes" priority — with
+    // no complete copy of this document cached yet this session, a getDoc()
+    // issued while that write is still in flight sees a locally-synthesized
+    // snapshot built only from the pending mutation's own fields (exactly
+    // displayName/email/uid/lastSeen, with lastSeen still an unresolved
+    // serverTimestamp() placeholder) rather than the real document — which
+    // silently reads isAdmin as undefined even though the server copy is
+    // untouched. Doing this read first avoids the race entirely.
+    await checkAdminStatus();
+
     // Fire-and-forget lastSeen — never blocks anything
     setDoc(doc(db,'users',user.uid), {
       displayName: user.displayName||'',
@@ -2770,10 +2998,18 @@ onAuthStateChanged(auth, async user => {
     Promise.all([
       loadUserLists(),
       loadConfig(),
+      loadReadingGoals(),
+      loadManualReads(),
       _coverCachePrimed,
     ]).then(() => {
       renderMobHome();
       renderDeskSidebar();
+      // Chained here (rather than fired on a blind timer, as before) so it's
+      // guaranteed to run only once loadUserLists() has actually populated
+      // "Currently Reading" — and starts downloading those EPUBs as soon as
+      // that's known, instead of always waiting a flat 400ms regardless of
+      // how fast the list itself loaded.
+      prewarmOfflineEpubs();
     });
 
     Promise.all([
@@ -2807,10 +3043,8 @@ onAuthStateChanged(auth, async user => {
       });
 
       startAppNotifListener();
-      checkAdminStatus();
       loadLedgerState();
       prewarmTimeline();
-      prewarmOfflineEpubs();
     }, 400);
 
   } else {
@@ -2905,19 +3139,33 @@ async function loadLibrary() {
       collection(db, 'books'),
       where('allowedUsers', 'array-contains', currentUser.uid)
     );
+    // Restricted-visibility books are a cohort-wide tier, not a per-book
+    // reader list: anyone admin-granted restrictedAccess (or an admin
+    // themselves) can see every book marked 'restricted', the same way
+    // 'public' is visible to everyone. Only issue this query for readers
+    // the rules will actually let through — for anyone else it would be
+    // guaranteed permission-denied (Firestore has to satisfy the security
+    // rule for the whole query, not just filter out what it can't see).
+    const restrictedPromise = (isAdmin || hasRestrictedAccess)
+      ? getDocs(query(collection(db, 'books'), where('visibility', '==', 'restricted')))
+      : Promise.resolve({ docs: [] });
 
-    // Load and render my books immediately
-    const mySnap = await getDocs(myQ);
+    // Load and render my books (+ audiobooks) immediately
+    const [mySnap] = await Promise.all([getDocs(myQ), loadAudioTracks()]);
     library = mySnap.docs.map(d => ({ id: d.id, ...d.data() }));
+    mergeAudioIntoLibrary();
     renderAll();
 
     // Load public and shared in background without blocking UI
-    Promise.all([getDocs(pubQ), getDocs(sharedQ)]).then(([pubSnap, sharedSnap]) => {
+    Promise.all([getDocs(pubQ), getDocs(sharedQ), restrictedPromise, loadCommunityAudioTracks()]).then(([pubSnap, sharedSnap, restrictedSnap, communityAudio]) => {
       const pubBooks = pubSnap.docs.map(d => ({ id: d.id, ...d.data() }));
       const sharedBooks = sharedSnap.docs
         .map(d => ({ id: d.id, ...d.data() }))
         .filter(b => b.ownerId !== currentUser.uid);
-      communityLib = dedupe([...pubBooks, ...sharedBooks]);
+      const restrictedBooks = restrictedSnap.docs
+        .map(d => ({ id: d.id, ...d.data() }))
+        .filter(b => b.ownerId !== currentUser.uid);
+      communityLib = dedupe([...pubBooks, ...sharedBooks, ...restrictedBooks, ...communityAudio]);
       renderAll();
       renderMobHome();
       renderDeskHome();
@@ -3069,7 +3317,29 @@ document.addEventListener('mouseout',e=>{const star=e.target.closest('.star[data
 document.addEventListener('click',e=>{const star=e.target.closest('.star[data-editable]');if(!star)return;submitRating(star.dataset.bookid,parseInt(star.dataset.n));});
 
 // ── UPLOAD ────────────────────────────────────────────────────────────────────
-let _uploadQueue = []; // {file, rowId, isPublic} — staged, not-yet-started uploads
+let _uploadQueue = []; // {file, rowId, visibility} — staged, not-yet-started uploads
+
+// Restricted is a third visibility a book can be uploaded as, alongside
+// Public/Private — but only for uploaders an admin has granted
+// restrictedAccess to (or admins themselves); everyone else only ever
+// cycles between the original two, exactly as before.
+const UPLOAD_VIS_LABEL = { public: '🌐 Public', private: '🔒 Private', restricted: '🔒 Restricted' };
+function _uploadVisibilityStates() {
+  return (isAdmin || hasRestrictedAccess) ? ['public', 'private', 'restricted'] : ['public', 'private'];
+}
+function _cycleUploadVisibility(current) {
+  const states = _uploadVisibilityStates();
+  const idx = states.indexOf(current);
+  return states[(idx < 0 ? 0 : idx + 1) % states.length];
+}
+function _setUploadVisBtn(btn, visibility) {
+  if(!btn) return;
+  btn.dataset.visibility = visibility;
+  btn.textContent = UPLOAD_VIS_LABEL[visibility];
+  btn.classList.toggle('is-public', visibility === 'public');
+  btn.classList.toggle('is-restricted', visibility === 'restricted');
+}
+
 function showUploadModal(){
   if(!currentUser){showToast('Please sign in first');return;}
   document.getElementById('uploadList').innerHTML='';
@@ -3077,8 +3347,7 @@ function showUploadModal(){
   const startBtn=document.getElementById('btnStartUpload');
   startBtn.style.display='none'; startBtn.disabled=false; startBtn.textContent='Start Upload';
   document.getElementById('dropZone').classList.remove('disabled');
-  const allBtn=document.getElementById('uploadVisibilityAllBtn');
-  allBtn.dataset.public='true'; allBtn.textContent='🌐 Public'; allBtn.classList.add('is-public');
+  _setUploadVisBtn(document.getElementById('uploadVisibilityAllBtn'), 'public');
   _uploadQueue=[];
   document.getElementById('uploadModal').classList.add('open');
 }
@@ -3095,16 +3364,16 @@ document.getElementById('btnCloseUpload').addEventListener('click',closeUploadMo
 // never be raced by an upload that's already finished by the time they get
 // to it.
 function stageUploadFiles(files){
-  files.forEach(file=>_uploadQueue.push({file, rowId: renderUploadRow(file), isPublic:true}));
+  files.forEach(file=>_uploadQueue.push({file, rowId: renderUploadRow(file), visibility:'public'}));
   document.getElementById('uploadSelectAll').style.display = _uploadQueue.length>1 ? 'flex' : 'none';
   document.getElementById('btnStartUpload').style.display = _uploadQueue.length ? 'inline-block' : 'none';
 }
 function renderUploadRow(file){
   const rowId='up_'+Date.now()+Math.random().toString(36).slice(2);
-  document.getElementById('uploadList').insertAdjacentHTML('beforeend',`<div class="upload-progress" id="${rowId}" data-status="staged"><span class="up-icon" id="${rowId}_icon">⏳</span><div style="flex:1;min-width:0"><div class="up-name">${esc(file.name)}</div><div class="progress-bar-wrap"><div class="progress-bar" id="${rowId}_bar" style="width:0%"></div></div></div><button class="up-visibility-btn is-public" id="${rowId}_pub" data-public="true">🌐 Public</button><button class="up-remove-btn" id="${rowId}_remove" title="Remove">✕</button><span class="up-status" id="${rowId}_st" style="display:none">Waiting…</span></div>`);
+  document.getElementById('uploadList').insertAdjacentHTML('beforeend',`<div class="upload-progress" id="${rowId}" data-status="staged"><span class="up-icon" id="${rowId}_icon">⏳</span><div style="flex:1;min-width:0"><div class="up-name">${esc(file.name)}</div><div class="progress-bar-wrap"><div class="progress-bar" id="${rowId}_bar" style="width:0%"></div></div></div><button class="up-visibility-btn is-public" id="${rowId}_pub" data-visibility="public">🌐 Public</button><button class="up-remove-btn" id="${rowId}_remove" title="Remove">✕</button><span class="up-status" id="${rowId}_st" style="display:none">Waiting…</span></div>`);
   document.getElementById(rowId+'_pub').addEventListener('click', () => {
     const btn = document.getElementById(rowId+'_pub');
-    setRowVisibility(rowId, btn.dataset.public !== 'true');
+    setRowVisibility(rowId, _cycleUploadVisibility(btn.dataset.visibility));
   });
   document.getElementById(rowId+'_remove').addEventListener('click', () => {
     _uploadQueue = _uploadQueue.filter(q => q.rowId !== rowId);
@@ -3114,22 +3383,16 @@ function renderUploadRow(file){
   });
   return rowId;
 }
-function setRowVisibility(rowId, isPublic){
+function setRowVisibility(rowId, visibility){
   const q = _uploadQueue.find(q => q.rowId === rowId);
-  if(q) q.isPublic = isPublic;
-  const btn = document.getElementById(rowId+'_pub');
-  if(!btn) return;
-  btn.dataset.public = isPublic ? 'true' : 'false';
-  btn.textContent = isPublic ? '🌐 Public' : '🔒 Private';
-  btn.classList.toggle('is-public', isPublic);
+  if(q) q.visibility = visibility;
+  _setUploadVisBtn(document.getElementById(rowId+'_pub'), visibility);
 }
 document.getElementById('uploadVisibilityAllBtn').addEventListener('click', () => {
   const allBtn = document.getElementById('uploadVisibilityAllBtn');
-  const nowPublic = allBtn.dataset.public !== 'true';
-  allBtn.dataset.public = nowPublic ? 'true' : 'false';
-  allBtn.textContent = nowPublic ? '🌐 Public' : '🔒 Private';
-  allBtn.classList.toggle('is-public', nowPublic);
-  _uploadQueue.forEach(q => { if(document.getElementById(q.rowId)?.dataset.status === 'staged') setRowVisibility(q.rowId, nowPublic); });
+  const next = _cycleUploadVisibility(allBtn.dataset.visibility);
+  _setUploadVisBtn(allBtn, next);
+  _uploadQueue.forEach(q => { if(document.getElementById(q.rowId)?.dataset.status === 'staged') setRowVisibility(q.rowId, next); });
 });
 
 document.getElementById('btnStartUpload').addEventListener('click', startQueuedUploads);
@@ -3143,14 +3406,14 @@ async function startQueuedUploads(){
   const queue = [..._uploadQueue];
   for(const item of queue){
     // Lock this row's controls the instant its own upload begins — the
-    // Public/Private choice is already captured in `item.isPublic`, so
+    // visibility choice is already captured in `item.visibility`, so
     // there's no more DOM state left to race.
     document.getElementById(item.rowId)?.setAttribute('data-status','uploading');
     document.getElementById(item.rowId+'_pub')?.remove();
     document.getElementById(item.rowId+'_remove')?.remove();
     const stEl = document.getElementById(item.rowId+'_st');
     if(stEl) stEl.style.display = 'inline';
-    await uploadOneEpub(item.file, item.rowId, item.isPublic);
+    await uploadOneEpub(item.file, item.rowId, item.visibility);
   }
   _uploadQueue = [];
   await loadLibrary();
@@ -3158,7 +3421,7 @@ async function startQueuedUploads(){
   setTimeout(() => { startBtn.style.display = 'none'; }, 1500);
 }
 
-async function uploadOneEpub(file, rowId, isPublic){
+async function uploadOneEpub(file, rowId, visibility){
   try{
     setUpP(rowId,20,'Parsing…');
     const meta=await parseEpubMeta(file);
@@ -3193,7 +3456,6 @@ setUpP(rowId,70,'Saving…');
         coverUrl=await getDownloadURL(coverSnap.ref);
       }catch(e){console.warn('Cover upload failed, skipping:',e);}
     }
-    const publishNow = isPublic;
     const newBookRef = await addDoc(collection(db,'books'),{
       ownerId:currentUser.uid,
       ownerName:currentUser.displayName||currentUser.email,
@@ -3203,16 +3465,17 @@ setUpP(rowId,70,'Saving…');
       description:stripHtml(meta.description||''),
       category: _categories.includes(meta.category) ? meta.category : (_categories.includes(localStorage.getItem('elib_default_cat')||'') ? localStorage.getItem('elib_default_cat') : 'Uncategorised'),
       language:meta.language,publisher:meta.publisher,
+      series:meta.series||null,seriesIndex:meta.seriesIndex??null,
       coverUrl:coverUrl||null,
       epubUrl,
       storagePath:snap.ref.fullPath,
-      visibility: publishNow ? 'public' : 'private',
+      visibility,
       createdAt:serverTimestamp(),
       updatedAt:serverTimestamp(),
       fileSizeBytes:file.size
     });
-    if (publishNow && currentUser && ledgerState.loaded) _ledgerUnlockAchievement('sharer', newBookRef.id);
-    setUpP(rowId,100, publishNow ? '✓ Uploaded — Public' : '✓ Uploaded — Private');
+    if (visibility !== 'private' && currentUser && ledgerState.loaded) _ledgerUnlockAchievement('sharer', newBookRef.id);
+    setUpP(rowId,100, `✓ Uploaded — ${UPLOAD_VIS_LABEL[visibility].replace(/^\S+\s/, '')}`);
     document.getElementById(rowId)?.classList.add('done');
     document.getElementById(rowId)?.setAttribute('data-status','done');
     const icon=document.getElementById(rowId+'_icon'); if(icon) icon.textContent='✅';
@@ -3244,38 +3507,41 @@ async function downloadCurrentBook(){
 }
 
 // ── SHARE ─────────────────────────────────────────────────────────────────────
-function shareCurrentBook(){
-  if(!currentId)return;
-  const book=library.find(b=>b.id===currentId);if(!book)return;
-  document.getElementById('shareBookTitle').textContent=`"${book.title}"`;
-  document.getElementById('shareModal').classList.add('open');
-}
-document.getElementById('btnCancelShare').addEventListener('click',()=>document.getElementById('shareModal').classList.remove('open'));
-document.getElementById('btnConfirmShare').addEventListener('click',confirmShare);
-async function confirmShare() {
-  document.getElementById('shareModal').classList.remove('open');
-  if (!currentId) return;
-  const book = library.find(b => b.id === currentId);
-  if (!book) return;
-  showLoading('Publishing…', book.coverUrl);
+// Sets a book's visibility directly from either drawer's "Share as"/Share
+// control — one tap, no confirmation dialog. Uses findBookById (not
+// library.find) since an admin acting on someone else's book won't have it
+// in their own `library` array. 'restricted' can only ever be reached if
+// the option was shown at all, which render always gates on
+// isAdmin || hasRestrictedAccess.
+async function setBookVisibilityFromDrawer(vis) {
+  if(!currentId) return;
+  const book = await findBookById(currentId);
+  if(!book) return;
+  const verb = vis === 'public' ? 'Publishing…' : vis === 'restricted' ? 'Restricting…' : 'Making private…';
+  showLoading(verb, book.coverUrl);
   try {
-    await updateDoc(doc(db, 'books', currentId), {
-      visibility: 'public',
-      updatedAt: serverTimestamp()
-    });
-    book.visibility = 'public';
-    // Add to communityLib so it appears immediately in public view
-    if (!communityLib.find(b => b.id === currentId)) {
-      communityLib.push(book);
+    // Audiobooks live in `audioFiles`, not `books` — same pattern as
+    // showEditMeta's save handler.
+    await updateDoc(doc(db, book.isAudio ? 'audioFiles' : 'books', currentId), { visibility: vis, updatedAt: serverTimestamp() });
+    book.visibility = vis;
+    if(book.isAudio && book._audioTrack) book._audioTrack.visibility = vis;
+    if(vis === 'public') {
+      if(!communityLib.find(b => b.id === currentId)) communityLib.push(book);
+      if(currentUser && book.ownerId === currentUser.uid && ledgerState.loaded) _ledgerUnlockAchievement('sharer', currentId);
+    } else {
+      // Restricted/private books are never in everyone's communityLib —
+      // loadLibrary()'s query shapes handle who (if anyone) gets them back.
+      communityLib = communityLib.filter(b => b.id !== currentId);
     }
-    if (currentUser && ledgerState.loaded) _ledgerUnlockAchievement('sharer', currentId);
     hideLoading();
     renderAll();
     showBookById(currentId);
-    showToast(`"${book.title}" published ✓`);
-  } catch (e) {
+    mob_showBook(currentId, { preserveState: true });
+    const label = vis === 'public' ? 'published' : vis === 'restricted' ? 'set to Restricted' : 'set to Private';
+    showToast(`"${book.title}" ${label} ✓`);
+  } catch(e) {
     hideLoading();
-    showToast('Share failed: ' + e.message);
+    showToast('Update failed: ' + e.message);
   }
 }
 
@@ -3350,12 +3616,18 @@ function renderGrid(gridId){
     return;
   }
   reconcileGrid(grid, books, b => b.id, b => {
+    const coverSrc=getCoverSrc(b);
+    const isSelected=selectedIds.has(b.id);
+    if(b.isAudio){
+      const coverHtml=coverSrc?`<img class="book-card-cover" src="${coverSrc}" alt="" loading="lazy"/>`:`<div class="book-card-cover-ph"><div class="ph-icon">🎧</div><div class="ph-title">${esc(b.title)}</div><div class="ph-author">${esc(b.author)}</div></div>`;
+      return `<div class="book-card audio-tile ${isSelected?'selected':''}" data-bookid="${b.id}"><div style="position:relative">${coverHtml}<span class="audio-badge">🎧 Audio</span></div><div class="select-check">✓</div>
+      <div class="book-card-body"><div class="book-card-title">${esc(b.title)}</div>
+      <div class="book-card-author">${esc(b.author)}</div></div></div>`;
+    }
     const isComm=communityLib.some(x=>x.id===b.id);
     const avg=isComm?getAvgRating(b):0;
     const starsHtml=isComm?[1,2,3,4,5].map(n=>`<span class="bcs ${n<=Math.round(avg)?'filled':''}">★</span>`).join(''):'';
-    const coverSrc=getCoverSrc(b);
     const coverHtml=coverSrc?`<img class="book-card-cover" src="${coverSrc}" alt="" loading="lazy"/>`:`<div class="book-card-cover-ph"><div class="ph-icon">📖</div><div class="ph-title">${esc(b.title)}</div><div class="ph-author">${esc(b.author)}</div></div>`;
-    const isSelected=selectedIds.has(b.id);
     // PATCH 4: hide "Shared" badge when browsing the public/community shelf
     const isMyPublicBook=b.ownerId===currentUser?.uid&&b.visibility==='public';
     return `<div class="book-card ${isSelected?'selected':''}" data-bookid="${b.id}">${coverHtml}<div class="select-check">✓</div>${isMyPublicBook?'<span class="community-badge">Public</span>':''}
@@ -3368,8 +3640,13 @@ function renderGrid(gridId){
 
 document.getElementById('deskBookGrid').addEventListener('click',e=>{
   const card=e.target.closest('.book-card[data-bookid]');if(!card)return;
-  if(selectMode){const id=card.dataset.bookid;if(selectedIds.has(id)){selectedIds.delete(id);card.classList.remove('selected');}else{selectedIds.add(id);card.classList.add('selected');}updateBulkBar();return;}
-  showBookById(card.dataset.bookid);
+  const id=card.dataset.bookid;
+  if(selectMode){
+    const book=library.find(x=>x.id===id);
+    if(book?.isAudio)return; // audio tracks aren't part of bulk book actions (delete/move/etc.)
+    if(selectedIds.has(id)){selectedIds.delete(id);card.classList.remove('selected');}else{selectedIds.add(id);card.classList.add('selected');}updateBulkBar();return;
+  }
+  showBookById(id);
 });
 document.getElementById('deskSearch').addEventListener('input',e=>{
   searchQ=e.target.value.toLowerCase().trim();
@@ -3603,8 +3880,12 @@ async function showBookById(id){
   if(coverSrc){img.src=coverSrc;img.style.display='block';ph.style.display='none';}
   else{img.style.display='none';ph.style.display='flex';}
 
-  // Cover read button
-  document.getElementById('drawerCoverReadBtn').onclick=()=>{closeDrawer();readCurrentBook();};
+  // Cover read/listen button
+  document.getElementById('drawerCoverReadBtn').onclick=()=>{
+    closeDrawer();
+    if(book.isAudio){ playAudioTrack(book._audioTrack); return; }
+    readCurrentBook();
+  };
 
   // Meta
   document.getElementById('drawerCat').textContent=book.category?`${catIcon(book.category)} ${book.category}`:'';
@@ -3615,7 +3896,11 @@ async function showBookById(id){
   // Shared by
   const sharedByEl=document.getElementById('drawerSharedBy');
   const isPrivatelyShared=book.allowedUsers?.includes(currentUser?.uid)&&book.visibility!=='public';
-  if(!isMine&&isPrivatelyShared){
+  const isAdminRestricted=book.visibility==='restricted';
+  if(!isMine&&isAdminRestricted){
+    sharedByEl.textContent='🔒 Restricted access — shared with a limited group by an admin';
+    sharedByEl.style.display='block';
+  } else if(!isMine&&isPrivatelyShared){
     sharedByEl.textContent='Shared with you by '+(book.ownerName||'Anonymous');
     sharedByEl.style.display='block';
   } else if(isMine&&book.allowedUsers?.length>0){
@@ -3636,6 +3921,7 @@ async function showBookById(id){
   if(book.category)badges+=`<span class="dbadge dbadge-cat">${catIcon(book.category)} ${esc(book.category)}</span>`;
   if(book.language)badges+=`<span class="dbadge dbadge-lang">${esc(book.language.toUpperCase())}</span>`;
   if(book.visibility==='public')badges+=`<span class="dbadge dbadge-shared">Public</span>`;
+  if(book.visibility==='restricted')badges+=`<span class="dbadge dbadge-restricted">🔒 Restricted</span>`;
   if(book.recommended)badges+=`<span class="dbadge" style="background:#fff8ec;color:var(--gold)">⭐ Pick</span>`;
   document.getElementById('drawerBadges').innerHTML=badges;
 
@@ -3683,16 +3969,21 @@ function renderDetailActionRows(peekContainer, moreContainer, book, isMine){
 
   // Same "already started?" check the Current Reads popup uses — a
   // reading_position bookmark with progress > 0 means the label should
-  // read "Continue Reading" instead of "Read".
+  // read "Continue Reading" instead of "Read". For audio, "started" just
+  // means this track is the one currently loaded in the persistent player.
   const readingPosBm = _myBookmarks.find(b => b.type === 'reading_position' && b.bookId === book.id);
-  const hasStarted = !!readingPosBm && (readingPosBm.progress || 0) > 0;
+  const hasStarted = book.isAudio
+    ? _audioCurrentId === book._audioTrack?.id
+    : !!readingPosBm && (readingPosBm.progress || 0) > 0;
 
   // ═══════════════════════════════════════════════════════════════════════
   // PEEK — visible the moment the sheet opens: primary actions + Lists
   // ═══════════════════════════════════════════════════════════════════════
   let peekHtml = `<div style="display:flex;gap:.5rem;margin-bottom:.7rem;flex-wrap:wrap;">
-    ${bigBtn('📖', hasStarted ? 'Continue Reading' : 'Read', 'read','#3d7a96','var(--gold)')}
-    ${bigBtn('🔲','Send to Kobo','sendtokobo','var(--teal)','var(--gold)')}
+    ${book.isAudio
+      ? bigBtn('🎧', hasStarted ? 'Continue Listening' : 'Listen', 'read','#3d7a96','var(--gold)')
+      : bigBtn('📖', hasStarted ? 'Continue Reading' : 'Read', 'read','#3d7a96','var(--gold)')}
+    ${book.isAudio ? '' : bigBtn('🔲','Send to Kobo','sendtokobo','var(--teal)','var(--gold)')}
   </div>`;
 
   const hasCustomLists = _userLists.some(l => !l.system);
@@ -3722,10 +4013,9 @@ function renderDetailActionRows(peekContainer, moreContainer, book, isMine){
   // ── Pill buttons that open the same anchored dark dropdown (.mfp-dd) as
   // the Library tab's Category/Tags/Sort filter pills, instead of a native
   // <select> — picking an option fires its action immediately and closes.
-  // Grouped by what the option actually does: "Actions" (anyone with
-  // access), "Share" (publish / privately share), "Edit" (metadata /
-  // contents) — rather than one loose "Actions" bucket and one catch-all
-  // "Manage" accordion.
+  // Just two groups now: "Share" (visibility + privately share/copy link/
+  // download) and "Edit" (metadata/contents) — Recommend lives on its own
+  // as a toggle since it's a single on/off action, not a menu of options.
   const pillSelect = (id, label, options, opts={}) => {
     if (!options.length) return '';
     const { danger=false } = opts;
@@ -3733,44 +4023,66 @@ function renderDetailActionRows(peekContainer, moreContainer, book, isMine){
       <span>${label}</span><span class="mfp-caret">▾</span>
     </button>`;
   };
-  const wirePillSelect = (container, id, options) => {
+  const wirePillSelect = (container, id, options, custom={}) => {
     const btn = container.querySelector('#'+id);
     if(!btn) return;
     btn.addEventListener('click', (e) => {
       openMobFilterPicker({
         anchor: e.currentTarget,
         items: options,
-        isSelected: () => false,
-        onSelect: it => runDetailAction(it.action),
+        isSelected: custom.isSelected || (() => false),
+        onSelect: custom.onSelect || (it => runDetailAction(it.action)),
         onAfterSelect: () => {},
       });
     });
   };
 
-  // ── "Actions" — available to anyone viewing the book ────────────────────
-  const actionOpts = [
-    { icon: book.recommended?'☆':'⭐', label: book.recommended?'Unrecommend':'Recommend', action:'recommend' },
-    { icon:'📎', label:'Copy Link', action:'link' },
-    { icon:'⬇', label:'Download', action:'download' },
-  ];
+  // Admins can edit any book they can see (their own, public, or shared
+  // with them) — not just books they uploaded themselves.
+  const canManage = isMine || isAdmin;
 
-  // ── "Share" and "Edit" — owner only ──────────────────────────────────────
+  // ── "Share" — visibility (Public/Restricted/Private) plus Share
+  // Privately stay owner-or-admin; Copy Link and Download are available to
+  // anyone viewing the book, but grouped here with the rest of sharing.
+  // This is the one place in the app a book's visibility gets set — admins
+  // manage any book's restriction/publication from here too, on the book
+  // itself, rather than through a separate admin list.
   const shareOpts = [];
-  const editOpts = [];
+  if(canManage){
+    shareOpts.push({ icon:'🌐', label:'Public', action:'setvis', vis:'public' });
+    if(isAdmin || hasRestrictedAccess){
+      shareOpts.push({ icon:'🔒', label:'Restricted', action:'setvis', vis:'restricted' });
+    }
+    shareOpts.push({ icon:'🔏', label:'Private', action:'setvis', vis:'private' });
+  }
   if(isMine){
-    shareOpts.push(book.visibility !== 'public'
-      ? { icon:'🌐', label:'Publish', action:'share' }
-      : { icon:'🔒', label:'Unpublish', action:'unpublish' });
     shareOpts.push({ icon:'🔗', label:'Share Privately', action:'shareprivate' });
+  }
+  shareOpts.push({ icon:'📎', label:'Copy Link', action:'link' });
+  shareOpts.push({ icon:'⬇', label:'Download', action:'download' });
 
+  // ── "Edit" — owner or admin ───────────────────────────────────────────
+  const editOpts = [];
+  if(canManage){
     editOpts.push({ icon:'✎', label:'Edit Details', action:'editmeta' });
-    editOpts.push({ icon:'📑', label:'Edit Contents', action:'chapters' });
+    if(!book.isAudio) editOpts.push({ icon:'📑', label:'Edit Contents', action:'chapters' });
   }
 
+  // ── Recommend/Unrecommend — its own toggle, not tucked in a dropdown ────
+  const recToggle = `<button type="button" class="detail-row-btn mob-pill-btn mob-pill-sm" data-action="recommend" style="
+      border-color:${book.recommended?'var(--gold)':'var(--border)'};color:${book.recommended?'var(--gold)':'var(--navy2)'};
+      ${book.recommended?'background:rgba(200,149,42,.1);':''}">
+      <span style="font-size:.78rem;line-height:1">${book.recommended?'⭐':'☆'}</span><span>${book.recommended?'Recommended':'Recommend'}</span>
+    </button>`;
+
+  const shareLabel = canManage
+    ? (book.visibility === 'public' ? '🌐 Public' : book.visibility === 'restricted' ? '🔒 Restricted' : '🔏 Private')
+    : 'Share';
+
   html += `<div style="display:flex;flex-wrap:wrap;gap:.4rem;padding:.6rem 0 .3rem;border-top:1px solid var(--border);margin-top:.4rem;">
-    ${pillSelect('detailActionsSelect', 'Actions', actionOpts)}
-    ${pillSelect('detailShareSelect', 'Share', shareOpts)}
+    ${pillSelect('detailShareSelect', shareLabel, shareOpts)}
     ${pillSelect('detailEditSelect', 'Edit', editOpts)}
+    ${recToggle}
   </div>`;
 
   // ── History (admin) / Delete (owner) — small, always-visible, kept out of
@@ -3787,8 +4099,10 @@ function renderDetailActionRows(peekContainer, moreContainer, book, isMine){
   moreContainer.innerHTML = html;
   moreContainer.querySelectorAll('[data-action]').forEach(b => b.addEventListener('click', handleAction));
 
-  wirePillSelect(moreContainer, 'detailActionsSelect', actionOpts);
-  wirePillSelect(moreContainer, 'detailShareSelect', shareOpts);
+  wirePillSelect(moreContainer, 'detailShareSelect', shareOpts, {
+    isSelected: it => it.action === 'setvis' && it.vis === (book.visibility || 'private'),
+    onSelect: it => it.action === 'setvis' ? setBookVisibilityFromDrawer(it.vis) : runDetailAction(it.action),
+  });
   wirePillSelect(moreContainer, 'detailEditSelect', editOpts);
 }
 
@@ -3903,24 +4217,28 @@ function mobSheetSetExpanded(expanded){
 function buildDrawerIconBar(book, isMine){
   const bar = document.getElementById('drawerIconBar');
 
-  // Check if the user has started reading this book (same logic as mobile)
+  // Check if the user has started reading this book (same logic as mobile).
+  // For audio, "started" just means this track is the one currently loaded
+  // in the persistent player — there's no saved listening position yet.
   const readingPosBm = _myBookmarks.find(b => b.type === 'reading_position' && b.bookId === book.id);
-  const hasStarted = !!readingPosBm && (readingPosBm.progress || 0) > 0;
+  const hasStarted = book.isAudio
+    ? _audioCurrentId === book._audioTrack?.id
+    : !!readingPosBm && (readingPosBm.progress || 0) > 0;
 
   // Quick-list state
   const isFav = !!_userLists.find(l => l.id === 'favourites')?.bookIds?.includes(book.id);
 
   let html = `
-    <!-- Primary: Read / Continue Reading + Send to Kobo -->
+    <!-- Primary: Read/Listen (+ Continue variants) + Send to Kobo -->
     <div style="display:flex;gap:.5rem;padding:.65rem 1.5rem .5rem;border-bottom:1px solid var(--border);">
       <button class="btn-action btn-read" style="flex:1;justify-content:center;padding:.6rem 1rem;font-size:.83rem;border-radius:24px;gap:.4rem;" data-action="read">
-        <span style="font-size:1rem;line-height:1;">📖</span>
-        <span>${hasStarted ? 'Continue Reading' : 'Read'}</span>
+        <span style="font-size:1rem;line-height:1;">${book.isAudio ? '🎧' : '📖'}</span>
+        <span>${book.isAudio ? (hasStarted ? 'Continue Listening' : 'Listen') : (hasStarted ? 'Continue Reading' : 'Read')}</span>
       </button>
-      <button class="btn-action btn-kobo" style="flex:1;justify-content:center;padding:.6rem 1rem;font-size:.83rem;border-radius:24px;gap:.4rem;" data-action="sendtokobo">
+      ${book.isAudio ? '' : `<button class="btn-action btn-kobo" style="flex:1;justify-content:center;padding:.6rem 1rem;font-size:.83rem;border-radius:24px;gap:.4rem;" data-action="sendtokobo">
         <span style="font-size:1rem;line-height:1;">🔲</span>
         <span>Send to Kobo</span>
-      </button>
+      </button>`}
     </div>
 
     <!-- Lists: Favourites quick-toggle + reading-stage segmented control -->
@@ -3951,25 +4269,40 @@ function buildDrawerIconBar(book, isMine){
       </div>
     </div>`;
 
-  if(isMine){
-    html += `
-    <!-- Owner-only actions -->
+  // Share/Edit/Delete stay gated to isMine or isAdmin; Share Link and
+  // Delete are owner-only (admins can restrict/publish any book "on the
+  // book itself" without needing to individually manage each user's grant).
+  if(isMine || isAdmin){
+    let shareRow = '';
+    let manageBtns = '';
+    if(isMine || isAdmin){
+      shareRow = `<div style="padding:.4rem 1.5rem 0;">
+        <div style="font-size:.58rem;letter-spacing:.15em;text-transform:uppercase;color:var(--gold);font-weight:700;margin-bottom:.35rem;">Share as</div>
+        <div style="display:flex;gap:.4rem;flex-wrap:wrap;align-items:center;">
+          <button class="up-visibility-btn drawer-share-btn ${book.visibility==='public'?'is-public':''}" data-share-vis="public">🌐 Public</button>
+          ${(isAdmin || hasRestrictedAccess) ? `<button class="up-visibility-btn drawer-share-btn ${book.visibility==='restricted'?'is-restricted':''}" data-share-vis="restricted">🔒 Restricted</button>` : ''}
+          <button class="up-visibility-btn drawer-share-btn ${(book.visibility!=='public' && book.visibility!=='restricted')?'is-private':''}" data-share-vis="private">Private</button>
+        </div>
+      </div>`;
+    }
+    if(isMine){
+      manageBtns += `<button class="drawer-icon-btn" data-action="shareprivate">
+          <span class="di-icon">🔗</span><span class="di-label">Share Link</span></button>`;
+    }
+    manageBtns += `<button class="drawer-icon-btn" data-action="editmeta">
+          <span class="di-icon">✎</span><span class="di-label">Edit</span></button>`;
+    if(!book.isAudio){
+      manageBtns += `<button class="drawer-icon-btn" data-action="chapters">
+          <span class="di-icon">📑</span><span class="di-label">Edit Contents</span></button>`;
+    }
+    if(isMine){
+      manageBtns += `<button class="drawer-icon-btn di-danger" data-action="delete">
+          <span class="di-icon">✕</span><span class="di-label">Delete</span></button>`;
+    }
+    html += shareRow + `
     <div style="padding:.4rem 1.5rem .6rem;background:rgba(15,26,46,0.03);">
-      <div style="font-size:.58rem;letter-spacing:.15em;text-transform:uppercase;color:var(--gold);font-weight:700;margin-bottom:.35rem;">🔑 Owner Only</div>
-      <div style="display:flex;gap:.4rem;flex-wrap:wrap;">
-        <button class="drawer-icon-btn" data-action="share" ${book.visibility==='public'?'style="display:none"':''}>
-          <span class="di-icon">🌐</span><span class="di-label">Publish</span></button>
-        <button class="drawer-icon-btn" data-action="unpublish" ${book.visibility!=='public'?'style="display:none"':''}>
-          <span class="di-icon">🔒</span><span class="di-label">Unpublish</span></button>
-        <button class="drawer-icon-btn" data-action="shareprivate">
-          <span class="di-icon">🔗</span><span class="di-label">Share</span></button>
-        <button class="drawer-icon-btn" data-action="editmeta">
-          <span class="di-icon">✎</span><span class="di-label">Edit</span></button>
-        <button class="drawer-icon-btn" data-action="chapters">
-          <span class="di-icon">📑</span><span class="di-label">Edit Contents</span></button>
-        <button class="drawer-icon-btn di-danger" data-action="delete">
-          <span class="di-icon">✕</span><span class="di-label">Delete</span></button>
-      </div>
+      <div style="font-size:.58rem;letter-spacing:.15em;text-transform:uppercase;color:var(--gold);font-weight:700;margin-bottom:.35rem;">${isMine?'🔑 Owner Only':'🛡️ Admin'}</div>
+      <div style="display:flex;gap:.4rem;flex-wrap:wrap;">${manageBtns}</div>
     </div>`;
   }
 
@@ -3978,6 +4311,7 @@ function buildDrawerIconBar(book, isMine){
   bar.style.padding = '0';
   bar.style.border = 'none';
   bar.querySelectorAll('[data-action]').forEach(b => b.addEventListener('click', handleAction));
+  bar.querySelectorAll('[data-share-vis]').forEach(b => b.addEventListener('click', () => setBookVisibilityFromDrawer(b.dataset.shareVis)));
 }
   
 function closeDrawer(){document.getElementById('bookDrawer').classList.remove('open');document.querySelectorAll('.book-card').forEach(c=>c.classList.remove('active'));currentId=null;}
@@ -3991,10 +4325,13 @@ function handleAction(e){
   runDetailAction(a);
 }
 function runDetailAction(a){
-  if(a==='read')         readCurrentBook();
+  if(a==='read'){
+    const book=[...library,...communityLib].find(b=>b.id===currentId);
+    if(book?.isAudio){ playAudioTrack(book._audioTrack); closeMobBookSheet(); closeDrawer(); return; }
+    readCurrentBook();
+    return;
+  }
   if(a==='download')     downloadCurrentBook();
-  if(a==='share')        shareCurrentBook();
-  if(a==='unpublish')    unpublishCurrentBook();
   if(a==='shareprivate') showPrivateShare();
   if(a==='link')         showDirectLink();
   if(a==='editmeta')     showEditMeta();
@@ -4011,28 +4348,6 @@ function runDetailAction(a){
 }
 
 // ── UNPUBLISH and DELETE functions ─────────────────────────────────────────────────────────────────
-async function unpublishCurrentBook() {
-  if (!currentId) return;
-  const book = library.find(b => b.id === currentId);
-  if (!book || !confirm(`Remove "${book.title}" from the Public Library?`)) return;
-  showLoading('Unpublishing…', book.coverUrl);
-  try {
-    await updateDoc(doc(db, 'books', currentId), {
-      visibility: 'private',
-      updatedAt: serverTimestamp()
-    });
-    book.visibility = 'private';
-    communityLib = communityLib.filter(b => b.id !== currentId);
-    hideLoading();
-    renderAll();
-    showBookById(currentId);
-    showToast('Unpublished ✓');
-  } catch (e) {
-    hideLoading();
-    showToast('Unpublish failed: ' + e.message);
-  }
-}
-
   async function deleteCurrentBook(){
   if(!currentId)return;
   const book=library.find(b=>b.id===currentId)||communityLib.find(b=>b.id===currentId);
@@ -4153,8 +4468,11 @@ document.getElementById('btnConfirmPrivateShare').addEventListener('click',async
   try{
     const allowed=[...(book.allowedUsers||[])];
     if(!allowed.includes(uid))allowed.push(uid);
-    await updateDoc(doc(db,'books',currentId),{allowedUsers:allowed,updatedAt:serverTimestamp()});
-    book.allowedUsers=allowed;hideLoading();
+    // Audiobooks live in `audioFiles`, not `books`.
+    await updateDoc(doc(db, book.isAudio ? 'audioFiles' : 'books', currentId),{allowedUsers:allowed,updatedAt:serverTimestamp()});
+    book.allowedUsers=allowed;
+    if(book.isAudio && book._audioTrack) book._audioTrack.allowedUsers=allowed;
+    hideLoading();
     const recipientName = document.getElementById('privateShareUserSelect').selectedOptions[0]?.textContent;
     notifyBookShared(uid, book, recipientName);
     const link=getDirectLink(currentId);
@@ -4222,33 +4540,49 @@ function checkUrlHash(){
 function stripHtml(s){const d=document.createElement('div');d.innerHTML=s;return d.textContent||d.innerText||s;}
 function showEditMeta(){
   if(!currentId)return;
-  const book=library.find(b=>b.id===currentId);if(!book)return;
+  const book=[...library,...communityLib].find(b=>b.id===currentId);if(!book)return;
   document.getElementById('metaTitle').value=book.title||'';
   document.getElementById('metaAuthor').value=book.author||'';
   document.getElementById('metaLanguage').value=book.language||'';
   document.getElementById('metaDesc').value=stripHtml(book.description||'');
+  document.getElementById('metaSeries').value=book.series||'';
+  document.getElementById('metaSeriesIndex').value=(book.seriesIndex??'')===''?'':book.seriesIndex;
   const catSelect = document.getElementById('metaCategory');
   catSelect.innerHTML = _categories.map(c =>
     `<option value="${esc(c)}" ${(book.category||'Uncategorised')===c?'selected':''}>${catIcon(c)} ${esc(c)}</option>`
   ).join('');
+  // Autocomplete: existing series names across the visible library, so linking
+  // a book to a series already in use is a click instead of retyping the name.
+  const seriesNames = [...new Set(
+    [...library,...communityLib].map(b=>(b.series||'').trim()).filter(Boolean)
+  )].sort((a,b)=>a.localeCompare(b));
+  document.getElementById('metaSeriesList').innerHTML =
+    seriesNames.map(s=>`<option value="${esc(s)}"></option>`).join('');
   document.getElementById('editMetaModal').classList.add('open');
 }
 document.getElementById('btnCancelEditMeta').addEventListener('click',()=>document.getElementById('editMetaModal').classList.remove('open'));
 document.getElementById('btnSaveEditMeta').addEventListener('click',async()=>{
-  const book=library.find(b=>b.id===currentId);if(!book)return;
+  const book=[...library,...communityLib].find(b=>b.id===currentId);if(!book)return;
+  const seriesVal=document.getElementById('metaSeries').value.trim();
+  const seriesIdxRaw=document.getElementById('metaSeriesIndex').value.trim();
   const updates={
     title:document.getElementById('metaTitle').value.trim()||book.title,
     author:document.getElementById('metaAuthor').value.trim()||book.author,
     category: document.getElementById('metaCategory').value,
     language:document.getElementById('metaLanguage').value.trim(),
     description:stripHtml(document.getElementById('metaDesc').value.trim()),
+    series: seriesVal || null,
+    seriesIndex: seriesVal && seriesIdxRaw!=='' ? parseFloat(seriesIdxRaw) : null,
     updatedAt:serverTimestamp()
   };
   document.getElementById('editMetaModal').classList.remove('open');
   showLoading('Saving…', book.coverUrl);
   try{
-    await updateDoc(doc(db,'books',currentId),updates);
+    // Audiobooks are stored in `audioFiles`, not `books` — same shape of
+    // edit, different collection.
+    await updateDoc(doc(db, book.isAudio ? 'audioFiles' : 'books', currentId),updates);
     Object.assign(book,updates);
+    if(book.isAudio && book._audioTrack) Object.assign(book._audioTrack,updates);
     hideLoading();renderAll();showBookById(currentId);showToast('Details saved ✓');
   }catch(e){hideLoading();showToast('Save failed: '+e.message);}
 });
@@ -4278,15 +4612,23 @@ async function mob_showBook(id, opts={}){
 
   const coverEl = coverSrc ? img : ph;
   coverEl.style.cursor='pointer';
-  coverEl.onclick=()=>{ const b=[...library,...communityLib].find(x=>x.id===currentId); if(b&&(b.ownerId===currentUser?.uid||myCheckedOutIds.has(b.id))) readCurrentBook(); else showToast('Sign out this book to read it'); };
+  coverEl.onclick=()=>{ const b=[...library,...communityLib].find(x=>x.id===currentId); if(b?.isAudio){ playAudioTrack(b._audioTrack); return; } if(b&&(b.ownerId===currentUser?.uid||myCheckedOutIds.has(b.id))) readCurrentBook(); else showToast('Sign out this book to read it'); };
 
   document.getElementById('mobDetailCat').textContent=book.category?`${catIcon(book.category)} ${book.category}`:'';
   document.getElementById('mobDetailTitle').textContent=book.title||'';
   document.getElementById('mobDetailAuthor').textContent=book.author||'';
 
+  const mobSeriesEl=document.getElementById('mobDetailSeries');
+  if(book.series){
+    mobSeriesEl.textContent='📚 '+book.series+(book.seriesIndex!=null&&book.seriesIndex!==''?' · Book '+book.seriesIndex:'');
+    mobSeriesEl.style.display='block';
+  } else mobSeriesEl.style.display='none';
+
   const mobSharedByEl=document.getElementById('mobDetailSharedBy');
   const mobIsPrivatelyShared=book.allowedUsers?.includes(currentUser?.uid)&&book.visibility!=='public';
-  if(!isMine&&mobIsPrivatelyShared){mobSharedByEl.textContent='Shared with you by '+(book.ownerName||'Anonymous');mobSharedByEl.style.display='block';}
+  const mobIsAdminRestricted=book.visibility==='restricted';
+  if(!isMine&&mobIsAdminRestricted){mobSharedByEl.textContent='🔒 Restricted access — shared with a limited group by an admin';mobSharedByEl.style.display='block';}
+  else if(!isMine&&mobIsPrivatelyShared){mobSharedByEl.textContent='Shared with you by '+(book.ownerName||'Anonymous');mobSharedByEl.style.display='block';}
   else mobSharedByEl.style.display='none';
 
   document.getElementById('mobDetailDesc').textContent=stripHtml(book.description||'');
@@ -4297,6 +4639,7 @@ async function mob_showBook(id, opts={}){
   else document.getElementById('mobStarRating').style.display='none';
 
   renderBookHighlightsSummary(document.getElementById('mobDetailHighlights'), id);
+  renderRelatedBooks(document.getElementById('mobDetailRelated'), book);
 
   // Every book opens as a compact peek — regardless of whether it was
   // reached from Home, Library, or anywhere else — layered as an overlay
@@ -4335,12 +4678,13 @@ document.getElementById('mobNavHome').addEventListener('click', () => { mob_swit
 document.getElementById('mobNavSettings').addEventListener('click', () => mob_switchTab('settings'));
 document.getElementById('mobNavTimeline')?.addEventListener('click', () => mob_switchTab('timeline'));
 document.getElementById('mobNavLedger')?.addEventListener('click', () => mob_switchTab('ledger'));
+document.getElementById('mobNavAudio')?.addEventListener('click', () => mob_switchTab('audio'));
 
 function mob_switchTab(tab) {
   document.querySelectorAll('.mob-tab, .mob-tab-home').forEach(t => t.classList.remove('active'));
-  const tabMap = { library:'mobNavLibrary', home:'mobNavHome', settings:'mobNavSettings', timeline:'mobNavTimeline', ledger:'mobNavLedger' };
+  const tabMap = { library:'mobNavLibrary', home:'mobNavHome', settings:'mobNavSettings', timeline:'mobNavTimeline', ledger:'mobNavLedger', audio:'mobNavAudio' };
   document.getElementById(tabMap[tab])?.classList.add('active');
-  const panelMap = { library:'mobPanelLibrary', home:'mobPanelHome', settings:'mobPanelSettings', timeline:'mobPanelTimeline', ledger:'mobPanelLedger' };
+  const panelMap = { library:'mobPanelLibrary', home:'mobPanelHome', settings:'mobPanelSettings', timeline:'mobPanelTimeline', ledger:'mobPanelLedger', audio:'mobPanelAudio' };
   mob_showPanel(panelMap[tab] || 'mobPanelHome');
   if (tab === 'home') {
     renderMobHome();
@@ -4357,6 +4701,7 @@ function mob_switchTab(tab) {
   }
   if (tab === 'settings')  renderKoboSettings(document.getElementById('mobKoboSettings'));
   if (tab === 'ledger')    renderLedgerTab();
+  if (tab === 'audio')     renderAudioPanel();
 }
 
 // ── MOBILE LIBRARY PANEL ─────────────────────────────────────────────────────
@@ -4645,6 +4990,8 @@ function startLongPress(bookId){
 document.getElementById('mobGridLibrary').addEventListener('touchstart', e => {
     const card = e.target.closest('.book-card[data-bookid]');
     if(!card) return;
+    const book = library.find(x => x.id === card.dataset.bookid);
+    if(book?.isAudio) return; // audio tracks don't join book multi-select/bulk actions
     startLongPress(card.dataset.bookid);
   }, {passive: false});
 
@@ -4657,10 +5004,12 @@ document.getElementById('mobGridLibrary').addEventListener('touchstart', e => {
   }, {passive: true});
 
 document.getElementById('mobGridLibrary').addEventListener('click', e => {
+  const card = e.target.closest('.book-card[data-bookid]');
+  if (!card) return;
+  const id = card.dataset.bookid;
+  const book = library.find(x => x.id === id);
   if(mobSelectMode) {
-    const card = e.target.closest('.book-card[data-bookid]');
-    if(!card) return;
-    const id = card.dataset.bookid;
+    if(book?.isAudio) return; // audio tracks aren't selectable for bulk book actions
     if(mobSelectedIds.has(id)){ mobSelectedIds.delete(id); }
     else { mobSelectedIds.add(id); }
     if(mobSelectedIds.size === 0){ exitMobSelectMode(); return; }
@@ -4668,10 +5017,8 @@ document.getElementById('mobGridLibrary').addEventListener('click', e => {
     updateMobBulkBar();
     return;
   }
-  const card = e.target.closest('.book-card[data-bookid]');
-  if (!card) return;
   mobPrevPanel = 'mobPanelLibrary';
-  mob_showBook(card.dataset.bookid);
+  mob_showBook(id);
 });
 })();
 
@@ -4760,6 +5107,7 @@ function updateMobBulkBar(){
 
   let html = `<span style="font-size:.78rem;font-weight:700;flex-shrink:0">${n} selected</span>`;
   html += btn('📚 Category','category');
+  html += btn('🏷 Tags','tags');
   if(hasUnpublished) html += btn('⇧ Publish','publish');
   if(hasPublished)   html += btn('↓ Unpublish','unpublish');
   if(hasUnrecommended) html += btn('★ Rec','recommend');
@@ -4779,6 +5127,8 @@ async function handleMobBulkAction(action){
   if(action === 'done'){ exitMobSelectMode(); return; }
 
   if(action === 'category'){ showMobBulkCategoryPicker(); return; }
+
+  if(action === 'tags'){ showMobBulkTagsPicker(); return; }
 
   if(action === 'delete'){
     if(!confirm(`Delete ${mobSelectedIds.size} book${mobSelectedIds.size!==1?'s':''}?`)) return;
@@ -4911,6 +5261,102 @@ function showMobBulkCategoryPicker(){
         showToast(`Category updated for ${ids.length} book${ids.length!==1?'s':''} ✓`);
       }catch(e){ hideLoading(); showToast('Failed: '+e.message); }
     });
+  });
+}
+
+// Bulk-add tags for every book currently selected in mobile multi-select.
+// Tags are multi-select per book (unlike category), so this picker lets you
+// tap several chips before applying — the chosen tags are added on top of
+// whatever tags each book already has, matching the desktop Bulk Edit
+// modal's "added to existing" behaviour for Tags.
+function showMobBulkTagsPicker(){
+  const ids = [...mobSelectedIds].filter(id => library.some(b => b.id === id));
+  if(!ids.length){ showToast('No editable books selected'); return; }
+
+  const pendingTags = new Set();
+
+  const scrim = document.createElement('div');
+  scrim.className = 'mob-picker-scrim';
+  scrim.innerHTML = `
+    <div class="mob-picker-card">
+      <div class="mob-picker-title">
+        <span>🏷 Add Tags to ${ids.length} book${ids.length!==1?'s':''}</span>
+        <button class="mob-picker-close" id="mobBulkTagsCloseBtn">✕</button>
+      </div>
+      <div style="padding:.7rem 1.2rem .6rem;display:flex;gap:.4rem;border-bottom:1px solid var(--border);">
+        <input id="mobBulkTagsCustomInput" type="text" placeholder="Add a custom tag…"
+          style="flex:1;padding:.45rem .7rem;font-size:1rem;font-family:'Lato',sans-serif;
+                 border:1px solid var(--border);border-radius:20px;background:var(--cream);
+                 color:var(--navy);outline:none;"/>
+        <button id="mobBulkTagsCustomAdd"
+          style="background:var(--teal);color:var(--gold);border:none;border-radius:20px;
+                 padding:.45rem 1rem;font-family:'Lato',sans-serif;font-size:.78rem;
+                 font-weight:700;cursor:pointer;">Add</button>
+      </div>
+      <div id="mobBulkTagsAllList" style="padding:.6rem 1.2rem .5rem;max-height:40vh;overflow-y:auto;
+                  display:flex;flex-wrap:wrap;gap:.35rem;align-content:flex-start;">
+        ${(_globalTags||[]).length
+          ? [...(_globalTags||[])].sort().map(t => `<span class="tag-chip selectable" data-tag="${esc(t)}">${tagIcon(t)} ${esc(t)}</span>`).join('')
+          : `<span style="font-size:.8rem;color:var(--muted);font-style:italic;">No tags yet — add one above</span>`}
+      </div>
+      <div style="padding:.5rem 1.2rem .8rem;">
+        <button class="mob-picker-newbtn" id="mobBulkTagsApplyBtn">Add Tags to ${ids.length} Book${ids.length!==1?'s':''}</button>
+      </div>
+    </div>`;
+  document.body.appendChild(scrim);
+
+  const wireChip = (chip) => {
+    chip.addEventListener('click', () => {
+      const tag = chip.dataset.tag;
+      if(pendingTags.has(tag)){ pendingTags.delete(tag); chip.classList.remove('selected'); }
+      else{ pendingTags.add(tag); chip.classList.add('selected'); }
+    });
+  };
+
+  scrim.addEventListener('click', e => { if(e.target === scrim) scrim.remove(); });
+  scrim.querySelector('#mobBulkTagsCloseBtn').addEventListener('click', () => scrim.remove());
+  scrim.querySelectorAll('[data-tag]').forEach(wireChip);
+
+  const customInput = scrim.querySelector('#mobBulkTagsCustomInput');
+  const addCustom = async () => {
+    const tag = customInput.value.trim();
+    if(!tag) return;
+    customInput.value = '';
+    pendingTags.add(tag);
+    if(!_globalTags.includes(tag)){
+      _globalTags.push(tag);
+      _globalTags.sort();
+      await updateDoc(doc(db, 'config', 'tags'), { list: _globalTags });
+    }
+    const list = scrim.querySelector('#mobBulkTagsAllList');
+    const existing = list.querySelector(`[data-tag="${CSS.escape(tag)}"]`);
+    if(existing){
+      existing.classList.add('selected');
+    } else {
+      const empty = list.querySelector('span:not([data-tag])');
+      if(empty) empty.remove();
+      list.insertAdjacentHTML('beforeend', `<span class="tag-chip selectable selected" data-tag="${esc(tag)}">${tagIcon(tag)} ${esc(tag)}</span>`);
+      wireChip(list.lastElementChild);
+    }
+  };
+  scrim.querySelector('#mobBulkTagsCustomAdd').addEventListener('click', addCustom);
+  customInput.addEventListener('keydown', e => { if(e.key === 'Enter') addCustom(); });
+
+  scrim.querySelector('#mobBulkTagsApplyBtn').addEventListener('click', async () => {
+    const newTags = [...pendingTags];
+    if(!newTags.length){ showToast('Select at least one tag'); return; }
+    scrim.remove();
+    showLoading('Adding tags…');
+    try{
+      for(const id of ids){
+        const book = library.find(b=>b.id===id); if(!book) continue;
+        const tags = [...new Set([...(book.tags||[]), ...newTags])];
+        await updateDoc(doc(db,'books',id),{tags,updatedAt:serverTimestamp()});
+        book.tags = tags;
+      }
+      hideLoading(); exitMobSelectMode(); renderAll();
+      showToast(`Tags added to ${ids.length} book${ids.length!==1?'s':''} ✓`);
+    }catch(e){ hideLoading(); showToast('Failed: '+e.message); }
   });
 }
 
@@ -5194,7 +5640,7 @@ function recommendedSection(books) {
 
   // ── Gather data ───────────────────────────────────────────────────────
   const resolve = ids => ids
-    .map(id => allBooks.find(b => b.id === id))
+    .map(id => id.startsWith('manual_') ? manualReadAsBook(id.slice(7)) : allBooks.find(b => b.id === id))
     .filter(Boolean);
 
   const finBooks    = resolve(_userLists.find(l => l.id === 'finished')?.bookIds || []);
@@ -5229,10 +5675,81 @@ function recommendedSection(books) {
   addSection('home_fav', shelfSection('home_fav', 'Favourites', '❤️', '#e11d48', favBooks, {defaultOpen:false, showAddTile:true, listId:'favourites', alwaysShow:true}));
   addSection('home_wtr', shelfSection('home_wtr', 'Want to read', '🔖', '#7c3aed', wtrBooks, {defaultOpen:false, showAddTile:true, listId:'want-to-read', alwaysShow:true}));
   addSection('home_shared', shelfSection('home_shared', 'Shared with Me', '🔒', '#5a48b0', sharedBooks, {defaultOpen:false}));
-  customLists.forEach(l =>
-    addSection('home_list_'+l.id, shelfSection('home_list_'+l.id, l.name, l.icon||'📚', 'var(--teal)',
-      resolve(l.bookIds||[]), {defaultOpen:false, editable:true, listId:l.id, showAddTile:true}))
-  );
+  customLists.forEach(l => {
+    const linkedGoal = _readingGoals.find(g => g.listId === l.id);
+    if(linkedGoal) {
+      // Goal-linked list: render a rich section with progress badge
+      const { count, target, pct, ended, achieved } = goalStatus(linkedGoal);
+      const cadenceBadge = { weekly: '7d', monthly: '30d', yearly: '365d' }[linkedGoal.cadence] || '';
+      const accentColor = achieved ? '#276749' : (ended ? 'var(--muted)' : 'var(--gold)');
+      const books = resolve(l.bookIds || []);
+
+      // Build mini ring
+      const R = 11, CIRC = 2 * Math.PI * R;
+      const dash = Math.round((Math.min(pct,100) / 100) * CIRC);
+      const miniRing = `<svg width="28" height="28" viewBox="0 0 28 28" style="flex-shrink:0;vertical-align:middle;${ended ? 'opacity:.6;' : ''}">
+        <circle cx="14" cy="14" r="${R}" fill="none" stroke="rgba(200,149,42,.22)" stroke-width="3"/>
+        <circle cx="14" cy="14" r="${R}" fill="none" stroke="${accentColor}" stroke-width="3"
+          stroke-dasharray="${dash} ${CIRC}" stroke-linecap="round" transform="rotate(-90 14 14)"/>
+        <text x="14" y="18" text-anchor="middle" font-size="7" font-weight="700"
+          fill="${accentColor}" font-family="'Lato',sans-serif">${count}</text>
+      </svg>`;
+
+      const goalBadge = `<span style="display:inline-flex;align-items:center;gap:3px;
+        font-size:.6rem;font-weight:700;letter-spacing:.04em;
+        padding:1px 7px 1px 5px;border-radius:10px;
+        background:${achieved ? 'rgba(39,103,73,.12)' : (ended ? 'var(--border)' : 'rgba(200,149,42,.12)')};
+        color:${accentColor};flex-shrink:0;">
+        ${miniRing}
+        <span>${count}/${target}${!ended && cadenceBadge ? ' · '+cadenceBadge : ''}${ended ? (achieved ? ' · Ended ✓' : ' · Ended') : ''}</span>
+      </span>`;
+
+      const coverRow = books.length
+        ? books.slice(0,12).map(b => {
+            const src = getCoverSrc(b);
+            const bmTpl = (_bookmarkTemplates.length && _myBookmarks !== undefined)
+              ? getDisplayBookmarkTemplate(b.id) : null;
+            const ribbonHtml = bmTpl
+              ? `<div style="position:absolute;top:0;right:0;z-index:3;filter:drop-shadow(1px 2px 3px rgba(0,0,0,0.5))">${renderBookmarkSVG(bmTpl, 20, 32, 'gshelf'+b.id, true)}</div>`
+              : '';
+            return `<div class="home-shelf-book" data-bookid="${b.id}" style="flex-shrink:0;width:64px;cursor:pointer;position:relative;">
+              ${src ? `<img src="${src}" loading="lazy" style="width:64px;height:96px;object-fit:cover;border-radius:2px 4px 4px 2px;display:block;box-shadow:2px 3px 8px rgba(0,0,0,.3);"/>`
+                    : `<div style="width:64px;height:96px;background:linear-gradient(145deg,var(--navy2),#2a3d5a);border-radius:2px 4px 4px 2px;box-shadow:2px 3px 8px rgba(0,0,0,.3);display:flex;align-items:center;justify-content:center;font-size:.55rem;color:rgba(200,180,140,0.8);text-align:center;padding:4px;line-height:1.2;">${esc(b.title)}</div>`}
+              ${ribbonHtml}
+            </div>`;
+          }).join('')
+        : `<div style="font-size:.78rem;color:var(--muted);padding:.5rem 0;font-style:italic;">No books yet — finish a read to add it here automatically.</div>`;
+
+      const extraCount = books.length > 12 ? books.length - 12 : 0;
+      const sectionId = 'home_list_' + l.id;
+
+      addSection(sectionId, `<div class="home-shelf-section" id="${sectionId}" style="margin-bottom:1.2rem;">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:.1rem 0 .45rem;-webkit-tap-highlight-color:transparent;">
+          <div onclick="toggleHomeShelf('${sectionId}')" style="display:flex;align-items:center;gap:.5rem;cursor:pointer;user-select:none;flex:1;min-width:0;">
+            <span style="font-size:.95rem;flex-shrink:0;">${l.icon||'🎯'}</span>
+            <span style="font-size:.74rem;font-weight:700;letter-spacing:.04em;color:${accentColor};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:120px;">${esc(l.name)}</span>
+            ${goalBadge}
+          </div>
+          <div style="display:flex;align-items:center;gap:.2rem;flex-shrink:0;">
+            <button class="home-shelf-menu-btn" data-listid="${l.id}" data-listname="${esc(l.name)}"
+              style="background:none;border:none;font-size:.95rem;color:var(--muted);cursor:pointer;padding:.1rem .3rem;line-height:1;">⋯</button>
+            <span id="${sectionId}_chevron" onclick="toggleHomeShelf('${sectionId}')"
+              style="font-size:.75rem;color:var(--muted);cursor:pointer;padding:.1rem .3rem;transition:transform .2s;transform:rotate(-90deg)">▾</span>
+          </div>
+        </div>
+        <div style="height:2px;border-radius:1px;margin-bottom:.65rem;background:linear-gradient(90deg,${accentColor},${accentColor} ${Math.max(8,Math.round(pct*0.4))}px,transparent ${Math.max(8,Math.round(pct*0.4))}px);"></div>
+        <div id="${sectionId}_body" style="overflow:hidden;max-height:0;transition:max-height .3s ease;">
+          <div style="display:flex;gap:8px;overflow-x:auto;padding-bottom:6px;-webkit-overflow-scrolling:touch;scrollbar-width:none;">
+            ${coverRow}
+            ${extraCount ? `<div style="flex-shrink:0;width:48px;height:96px;display:flex;align-items:center;justify-content:center;font-size:.65rem;color:var(--muted);font-weight:700;text-align:center;line-height:1.4;">+${extraCount}<br>more</div>` : ''}
+          </div>
+        </div>
+      </div>`);
+    } else {
+      addSection('home_list_'+l.id, shelfSection('home_list_'+l.id, l.name, l.icon||'📚', 'var(--teal)',
+        resolve(l.bookIds||[]), {defaultOpen:false, editable:true, listId:l.id, showAddTile:true}));
+    }
+  });
   addSection('home_recent', shelfSection('home_recent', 'Recently added', '🕐', 'var(--muted)', recentBooks, {defaultOpen:false}));
   addSection('home_viewed', shelfSection('home_viewed', 'Recently viewed', '👁', 'var(--muted)', viewedBooks, {defaultOpen:false}));
   addSection('home_fin', shelfSection('home_fin', 'Finished', '✓', '#276749', finBooks, {defaultOpen:false}));
@@ -5267,7 +5784,11 @@ document.getElementById('mobHomeContent').addEventListener('click', e => {
   }
 
   const shelfBook = e.target.closest('.home-shelf-book[data-bookid]');
-  if(shelfBook) { mobPrevPanel = 'mobPanelHome'; mob_showBook(shelfBook.dataset.bookid); return; }
+  if(shelfBook) {
+    const id = shelfBook.dataset.bookid;
+    if(id.startsWith('manual_')) { openManualReadModal(id.slice(7)); return; }
+    mobPrevPanel = 'mobPanelHome'; mob_showBook(id); return;
+  }
 
   if(e.target.closest('#btnHomeNewList')) showCreateListModal(null);
 });
@@ -5338,10 +5859,23 @@ function bookCardHtml(b, isComm, showProgress=false){
   const coverHtml = coverSrc
     ? `<img class="book-card-cover" src="${coverSrc}" alt="" loading="lazy"/>`
     : `<div class="book-card-cover-ph">
-        <div class="ph-icon">📖</div>
+        <div class="ph-icon">${b.isAudio ? '🎧' : '📖'}</div>
         <div class="ph-title">${esc(b.title)}</div>
         <div class="ph-author">${esc(b.author)}</div>
        </div>`;
+
+  if(b.isAudio){
+    return `<div class="book-card audio-tile" data-bookid="${b.id}">
+      <div style="position:relative">
+        ${coverHtml}
+        <span class="audio-badge">🎧 Audio</span>
+      </div>
+      <div class="book-card-body">
+        <div class="book-card-title">${esc(b.title)}</div>
+        <div class="book-card-author">${esc(b.author)}</div>
+      </div>
+    </div>`;
+  }
 
   const isMyPublicBook = b.ownerId === currentUser?.uid && b.visibility === 'public';
 
@@ -5741,9 +6275,20 @@ function _refreshCoverTiles(bookId) {
 // already cached). Runs quietly in the background, one at a time.
 async function prewarmOfflineEpubs() {
   if(!currentUser || navigator.onLine === false) return;
+  // Now kicked off as soon as Wave 1 (loadUserLists) resolves, which can
+  // land before Wave 2's loadLibrary() does. Wait for that here rather than
+  // let findBookById() (called down in cacheEpubForOfflineById) discover
+  // it's not ready — that path shows a "Still loading your library…" toast,
+  // appropriate for a user's own tap but not for this silent background pass.
+  if(!_libraryReady) await _libraryReadyPromise;
   const crList = _userLists.find(l => l.id === 'currently-reading');
   const bookIds = crList?.bookIds || [];
   for(const bookId of bookIds) {
+    // Yield to a book the user is actively trying to open right now rather
+    // than starting the next multi-MB prefetch on top of it — this is the
+    // "queued behind other loading" contention for on-demand opens.
+    await _waitForBookOpenPriority();
+    if(bookId === readerBookId) continue; // already open / just opened — no need to prefetch it too
     const ok = await cacheEpubForOfflineById(bookId, { silent: true });
     if(!ok && _lastFindBookByIdErrorCode === 'permission-denied') {
       // Book has been deleted or is no longer accessible to this user —
@@ -5905,7 +6450,17 @@ async function readCurrentBook(){
   if(!storagePath&&book.epubUrl){const match=book.epubUrl.match(/\/o\/(.+?)\?/);if(match)storagePath=decodeURIComponent(match[1]);}
   if(!storagePath){showToast('EPUB not available');return;}
   showLoading('Opening book…', book.coverUrl); // show immediately — covers the network fetch too, not just pagination
+  // Claim priority for the duration of the fetch so background prefetches
+  // (prewarmOfflineEpubs) don't start a competing multi-MB download right
+  // as the user is waiting on this one. Cleared in the finally below.
+  _bookOpenPriority = true;
   try{
+    // Independent of the EPUB fetch below (different backend, different
+    // data) but still needed before the first chapter paints its <mark>
+    // tags — kicked off now rather than after the fetch so its latency
+    // overlaps with the (usually much longer) EPUB download+parse instead
+    // of stacking on top of it.
+    const highlightsPromise = loadHighlightsForBook(book.id);
     let bytes = await getCachedEpubBytes(book.id);
     const fromCache = !!bytes;
     if(!bytes) {
@@ -5916,7 +6471,11 @@ async function readCurrentBook(){
           throw new Error("You're offline and this book hasn't been downloaded for offline reading yet.");
         }
         throw netErr;
+      } finally {
+        _bookOpenPriority = false;
       }
+    } else {
+      _bookOpenPriority = false;
     }
     readerZip=await JSZip.loadAsync(bytes);readerSpine=[];readerChapter=0;
     readerBookId = book.id;
@@ -5972,8 +6531,8 @@ async function readCurrentBook(){
     // (spinner already showing since the top of this function — no need to re-show it here)
     _updateToolbarHandleIcon();
     
-    await loadHighlightsForBook(book.id);
-    
+    await highlightsPromise;
+
     const saved = loadReadingProgress(book.id);
     if(saved && saved.chapterIdx < readerSpine.length && saved.chapterIdx > 0){
       await readerGoToChapter(saved.chapterIdx, saved.pageIdx);
@@ -5986,7 +6545,7 @@ async function readCurrentBook(){
     
     requestAnimationFrame(() => requestAnimationFrame(() => recalcReaderHeight()));
     setTimeout(() => recalcReaderHeight(), 300);
-  }catch(e){hideLoading();showToast('Could not open EPUB: '+e.message);console.error(e);}
+  }catch(e){_bookOpenPriority=false;hideLoading();showToast('Could not open EPUB: '+e.message);console.error(e);}
 }
 
 
@@ -6573,8 +7132,8 @@ function renderHomeLedgerTeaser() {
     <div class="home-ledger-teaser" id="homeLedgerTeaserBtn">
       <div class="home-ledger-teaser-flame">${ledgerState.streakCount ? '🔥' : '🕯️'}</div>
       <div class="home-ledger-teaser-text">
-        <div class="home-ledger-teaser-title">${ledgerState.streakCount ? `${ledgerState.streakCount}-day streak` : 'Start a streak today'} <span class="home-ledger-teaser-today-pts">+${ledgerToday.pointsEarned} today</span></div>
-        <div class="home-ledger-teaser-sub">${ledgerToday.pagesRead} pages today · goal is ${ledgerState.dailyGoal} · ${ledgerState.totalPoints.toLocaleString()} pts</div>
+        <div class="home-ledger-teaser-title">${ledgerState.streakCount ? `${ledgerState.streakCount}-day streak` : 'Start a streak today'}</div>
+        <div class="home-ledger-teaser-sub">${ledgerToday.pagesRead} pages today · goal is ${ledgerState.dailyGoal}</div>
       </div>
       ${_ledgerGoalRingSvg(pct, 40)}
     </div>`;
@@ -6600,6 +7159,7 @@ async function renderLedgerTab() {
   if (!el) return;
   if (!ledgerState.loaded) await loadLedgerState();
   _ledgerRolloverDayIfNeeded();
+  await _checkAllGoalsForCompletion();
 
   const rank = ledgerRank(ledgerState.totalPoints);
   const floor = _ledgerRankFloor(rank.title);
@@ -6656,6 +7216,87 @@ async function renderLedgerTab() {
       <button class="ledger-goal-edit" id="btnLedgerEditGoal">Change daily goal</button>
     </div>
 
+    <div class="ledger-card" style="padding-bottom:.5rem;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.75rem;">
+        <div class="ledger-card-label" style="margin-bottom:0;">Reading Goals</div>
+        <button class="ledger-goal-edit" id="btnLedgerAddGoal" style="margin-top:0;padding:.28rem .75rem;font-size:.65rem;">+ New goal</button>
+      </div>
+      ${_readingGoals.length
+        ? _readingGoals.map(g => {
+            const { count, target, pct, ended, achieved } = goalStatus(g);
+            const metric = g.metric === 'pages' ? 'pages' : 'books';
+            const unitLabel = metric === 'pages' ? 'page' : 'book';
+            const statusBadge = ended ? (achieved ? 'Ended ✓' : 'Ended') : _goalDateRangeLabel(g);
+            const accentColor = achieved ? '#276749' : (ended ? 'var(--muted)' : 'var(--teal)');
+            const accentLight = achieved ? 'rgba(39,103,73,.1)' : (ended ? 'var(--border)' : 'var(--teal-light)');
+
+            // Ring SVG
+            const R = 28, CIRC = 2 * Math.PI * R;
+            const dash = Math.round((Math.min(pct,100) / 100) * CIRC);
+            const ringSvg = `<svg width="70" height="70" viewBox="0 0 70 70" style="flex-shrink:0;${ended ? 'opacity:.6;' : ''}">
+              <circle cx="35" cy="35" r="${R}" fill="none" stroke="var(--border)" stroke-width="5"/>
+              <circle cx="35" cy="35" r="${R}" fill="none" stroke="${accentColor}" stroke-width="5"
+                stroke-dasharray="${dash} ${CIRC}" stroke-linecap="round"
+                transform="rotate(-90 35 35)" style="transition:stroke-dasharray .4s ease"/>
+              <text x="35" y="31" text-anchor="middle" font-size="13" font-weight="700"
+                fill="${achieved ? '#276749' : 'var(--navy2)'}" font-family="'Playfair Display',serif">${count}</text>
+              <text x="35" y="43" text-anchor="middle" font-size="8" fill="var(--muted)"
+                font-family="'Lato',sans-serif">of ${target}</text>
+            </svg>`;
+
+            // Books logged within the goal's window — pages-metric goals have
+            // no natural "which books" list, so they skip the cover row.
+            let coverHtml = '', extraCount = 0, bodyLine;
+            if(metric === 'books') {
+              const list = _userLists.find(l => l.id === g.listId);
+              const start = _goalDate(g.startDate), end = _goalDate(g.endDate);
+              const map = list?.finishedAtMap || {};
+              const periodBookIds = (list?.bookIds || []).filter(id => {
+                const raw = map[id];
+                const dt = raw?.toDate?.() || (raw instanceof Date ? raw : null);
+                return dt && start && end && dt >= start && dt < end;
+              });
+              const allBooks = [...library, ...communityLib];
+              coverHtml = periodBookIds.slice(0, 5).map(id => {
+                const book = allBooks.find(b => b.id === id) || { id };
+                const src = getCoverSrc(book);
+                return src
+                  ? `<img src="${src}" style="width:28px;height:40px;object-fit:cover;border-radius:2px;box-shadow:0 1px 4px rgba(0,0,0,.22);flex-shrink:0;${ended ? 'filter:grayscale(.5);' : ''}"/>`
+                  : `<div style="width:28px;height:40px;background:linear-gradient(145deg,var(--navy2),#2a3d5a);border-radius:2px;flex-shrink:0;"></div>`;
+              }).join('');
+              extraCount = periodBookIds.length > 5 ? periodBookIds.length - 5 : 0;
+              bodyLine = `${count} of ${target} ${unitLabel}${target !== 1 ? 's' : ''}`;
+            } else {
+              bodyLine = `${count.toLocaleString()} of ${target.toLocaleString()} ${unitLabel}${target !== 1 ? 's' : ''} read`;
+            }
+
+            return `<div class="ledger-goal-tile" data-goal-id="${g.id}" style="
+              display:flex;gap:.75rem;align-items:center;
+              padding:.75rem .8rem;margin-bottom:.55rem;cursor:pointer;
+              background:${achieved ? 'rgba(39,103,73,.06)' : 'var(--panel)'};
+              border:1px solid ${achieved ? 'rgba(39,103,73,.25)' : 'var(--border)'};
+              border-radius:10px;transition:box-shadow .15s,border-color .15s;
+              position:relative;overflow:hidden;${ended ? 'opacity:.75;' : ''}">
+              ${achieved ? `<div style="position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,#276749,#4abe80);border-radius:10px 10px 0 0;"></div>` : ''}
+              ${ringSvg}
+              <div style="flex:1;min-width:0;">
+                <div style="display:flex;align-items:center;gap:.4rem;margin-bottom:.15rem;flex-wrap:wrap;">
+                  <span style="font-family:'Playfair Display',serif;font-size:.88rem;font-weight:700;color:var(--navy2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:130px;">${esc(g.name)}</span>
+                  <span style="font-size:.6rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:1px 6px;border-radius:10px;background:${accentLight};color:${accentColor};flex-shrink:0;">${esc(statusBadge)}</span>
+                  ${achieved ? `<span style="font-size:.7rem;color:#276749;flex-shrink:0;">✓ ${ended ? 'Completed' : 'Done!'}</span>` : (ended ? `<span style="font-size:.7rem;color:var(--muted);flex-shrink:0;">Goal ended</span>` : '')}
+                </div>
+                <div style="font-size:.7rem;color:var(--muted);margin-bottom:${coverHtml ? '.45rem' : '0'};">${bodyLine}</div>
+                ${coverHtml ? `<div style="display:flex;gap:4px;align-items:flex-end;flex-wrap:nowrap;overflow:hidden;">
+                  ${coverHtml}
+                  ${extraCount ? `<div style="width:28px;height:40px;border-radius:2px;background:var(--border);display:flex;align-items:center;justify-content:center;font-size:.58rem;color:var(--muted);font-weight:700;flex-shrink:0;">+${extraCount}</div>` : ''}
+                </div>` : (metric === 'books' ? `<div style="font-size:.68rem;color:var(--muted);font-style:italic;">No books logged yet</div>` : '')}
+              </div>
+              <span style="color:var(--muted);font-size:.75rem;flex-shrink:0;align-self:flex-start;padding-top:.1rem;">›</span>
+            </div>`;
+          }).join('')
+        : `<div class="ledger-card-note" style="margin-bottom:.6rem;">Set a target — books or pages, over a week/month/year starting whenever you like — and a linked list on Home will track your reads automatically.</div>`}
+    </div>
+
     <div class="ledger-card">
       <div class="ledger-card-label">Points &amp; Rank</div>
       <div class="ledger-points-num">${ledgerState.totalPoints.toLocaleString()} pts</div>
@@ -6691,9 +7332,25 @@ async function renderLedgerTab() {
         }).join('')}
       </div>
       ${tier2Teaser}
-    </div>`;
+    </div>
+
+    ${_readingGoals.some(g => g.badgeAwarded) ? `<div class="ledger-card">
+      <div class="ledger-card-label">Goal Badges</div>
+      <div class="ledger-card-note">Earned by completing a one-off reading goal — tap to replay.</div>
+      <div class="ledger-badge-grid">
+        ${_readingGoals.filter(g => g.badgeAwarded).map(g => `
+          <button type="button" class="ledger-badge" data-goal-badge-id="${g.id}">
+            <span class="ledger-badge-icon">🎯</span>
+            <span class="ledger-badge-label">${esc(g.name)}</span>
+          </button>`).join('')}
+      </div>
+    </div>` : ''}`;
 
   document.getElementById('btnLedgerEditGoal')?.addEventListener('click', showLedgerGoalPicker);
+  document.getElementById('btnLedgerAddGoal')?.addEventListener('click', () => openGoalModal());
+  el.querySelectorAll('.ledger-goal-tile[data-goal-id]').forEach(row => {
+    row.addEventListener('click', () => openGoalModal(row.dataset.goalId));
+  });
   el.querySelectorAll('.ledger-badge[data-achievement-id]').forEach(b => {
     b.addEventListener('click', e => {
       const achievementId = b.dataset.achievementId;
@@ -6707,6 +7364,12 @@ async function renderLedgerTab() {
       } else {
         showLedgerAchievementPopover(achievementId);
       }
+    });
+  });
+  el.querySelectorAll('.ledger-badge[data-goal-badge-id]').forEach(b => {
+    b.addEventListener('click', () => {
+      const g = _readingGoals.find(x => x.id === b.dataset.goalBadgeId);
+      if (g) _ledgerPlayAchievementBurst({ icon: '🎯', label: g.name, desc: `Completed your "${g.name}" reading goal` });
     });
   });
   _ledgerRenderCalendar();
@@ -7131,6 +7794,82 @@ async function renderBookHighlightsSummary(containerEl, bookId) {
   `;
   containerEl.querySelector('[data-viewhighlights]').addEventListener('click', () => {
     openHighlightsFullList(bookId);
+  });
+}
+
+// ── Related books (same series, then same author) ────────────────────────
+// Scoped across everything the reader can see — their own library, public
+// books, and books shared with them — not just their private shelf.
+function findRelatedBooks(book) {
+  if(!book) return { seriesMatches: [], authorMatches: [] };
+  const allBooks = dedupe([...library, ...communityLib]);
+  const series = (book.series||'').trim().toLowerCase();
+  const author = (book.author||'').trim().toLowerCase();
+
+  const seriesMatches = series
+    ? allBooks.filter(b => b.id!==book.id && (b.series||'').trim().toLowerCase()===series)
+        .sort((a,b) => (parseFloat(a.seriesIndex)||0) - (parseFloat(b.seriesIndex)||0))
+    : [];
+  const seriesIds = new Set(seriesMatches.map(b => b.id));
+
+  const authorMatches = author
+    ? allBooks.filter(b => b.id!==book.id && !seriesIds.has(b.id) && (b.author||'').trim().toLowerCase()===author)
+    : [];
+
+  return { seriesMatches, authorMatches };
+}
+
+function _relatedBookRow(books) {
+  return `<div style="display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;
+      -webkit-overflow-scrolling:touch;scrollbar-width:none;">
+      ${books.map(b => {
+        const src = getCoverSrc(b);
+        const coverHtml = src
+          ? `<img src="${src}" loading="lazy" style="width:64px;height:96px;object-fit:cover;
+              border-radius:2px 4px 4px 2px;display:block;box-shadow:2px 3px 8px rgba(0,0,0,.3);"/>`
+          : `<div style="width:64px;height:96px;background:linear-gradient(145deg,var(--navy2),#2a3d5a);
+              border-radius:2px 4px 4px 2px;box-shadow:2px 3px 8px rgba(0,0,0,.3);
+              display:flex;align-items:center;justify-content:center;font-size:.55rem;
+              color:rgba(200,180,140,0.8);text-align:center;padding:4px;line-height:1.2;">${esc(b.title)}</div>`;
+        const subLabel = b.seriesIndex!=null && b.seriesIndex!=='' ? `#${b.seriesIndex}` : '';
+        return `<div class="related-book-tile" data-bookid="${b.id}" style="flex-shrink:0;width:64px;cursor:pointer;">
+          ${coverHtml}
+          <div style="font-size:.62rem;color:var(--muted);margin-top:.3rem;line-height:1.2;
+            overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;">${subLabel?esc(subLabel)+' · ':''}${esc(b.title)}</div>
+        </div>`;
+      }).join('')}
+    </div>`;
+}
+
+function renderRelatedBooks(containerEl, book) {
+  if(!containerEl) return;
+  containerEl.innerHTML = '';
+  containerEl.style.display = 'none';
+  const { seriesMatches, authorMatches } = findRelatedBooks(book);
+  if(!seriesMatches.length && !authorMatches.length) return;
+
+  containerEl.style.display = '';
+  let html = '';
+  if(seriesMatches.length){
+    html += `<div style="margin-top:1rem">
+      <div style="font-size:.74rem;font-weight:700;letter-spacing:.04em;color:var(--muted);margin-bottom:.5rem">
+        ${book.series ? esc(book.series.toUpperCase()) : 'SAME SERIES'}
+      </div>
+      ${_relatedBookRow(seriesMatches)}
+    </div>`;
+  }
+  if(authorMatches.length){
+    html += `<div style="margin-top:1rem">
+      <div style="font-size:.74rem;font-weight:700;letter-spacing:.04em;color:var(--muted);margin-bottom:.5rem">
+        MORE BY THIS AUTHOR
+      </div>
+      ${_relatedBookRow(authorMatches)}
+    </div>`;
+  }
+  containerEl.innerHTML = html;
+
+  containerEl.querySelectorAll('.related-book-tile[data-bookid]').forEach(el => {
+    el.addEventListener('click', () => mob_showBook(el.dataset.bookid));
   });
 }
 
@@ -8142,6 +8881,9 @@ function _wordRangeAtPoint(doc, x, y) {
 
 let _wordLookupPopup = null;
 function _removeWordLookupPopup() {
+  if (_wordLookupPopup?._wlOutsideHandler) {
+    document.removeEventListener('mousedown', _wordLookupPopup._wlOutsideHandler, true);
+  }
   _wordLookupPopup?.remove();
   _wordLookupPopup = null;
 }
@@ -8183,7 +8925,18 @@ function _showWordLookupPopup(word, range) {
   `;
   document.body.appendChild(popup);
   _wordLookupPopup = popup;
-  popup.querySelector('[data-wl-close]').addEventListener('click', _removeWordLookupPopup);
+  popup.querySelector('[data-wl-close]').addEventListener('click', () => setReaderLookupMode(false));
+
+  // Desktop: clicking anywhere outside the popup exits lookup mode.
+  // Store the handler on the element so _removeWordLookupPopup can clean it up.
+  const _wlOutside = (ev) => {
+    if (_wordLookupPopup && !_wordLookupPopup.contains(ev.target)) {
+      document.removeEventListener('mousedown', _wlOutside, true);
+      setReaderLookupMode(false);
+    }
+  };
+  popup._wlOutsideHandler = _wlOutside;
+  setTimeout(() => document.addEventListener('mousedown', _wlOutside, true), 50);
 
   _fetchWordDefinition(word).then(html => {
     const body = popup.querySelector('#readerWordLookupBody');
@@ -8340,16 +9093,37 @@ function _attachReaderTapHandlers(doc) {
   }
 
   let tx0 = 0, ty0 = 0;
+  let _lpTimer = null; // long-press timer for entering lookup mode
+  let _lpFired = false; // true once the long-press has already opened the lookup popup for this touch
 
   overlay.addEventListener('touchstart', e => {
     e.preventDefault();
     tx0 = e.touches[0].clientX;
     ty0 = e.touches[0].clientY;
+    // Long-press (500 ms, no drag) → enter lookup mode and look up that word
+    clearTimeout(_lpTimer);
+    _lpFired = false;
+    _lpTimer = setTimeout(() => {
+      _lpTimer = null;
+      _lpFired = true;
+      if (!readerLookupMode) setReaderLookupMode(true);
+      _handleWordLookupTap(doc, tx0, ty0);
+    }, 500);
   }, { passive: false });
 
-  overlay.addEventListener('touchmove', e => { e.preventDefault(); }, { passive: false });
+  overlay.addEventListener('touchmove', e => {
+    e.preventDefault();
+    clearTimeout(_lpTimer); _lpTimer = null; // any movement cancels long-press
+  }, { passive: false });
 
   overlay.addEventListener('touchend', e => {
+    clearTimeout(_lpTimer); _lpTimer = null; // short tap: cancel long-press timer
+    if (_lpFired) {
+      // The long-press already opened the lookup popup during this touch —
+      // don't let the matching touchend immediately act on/close it too.
+      _lpFired = false;
+      return;
+    }
     const dx = e.changedTouches[0].clientX - tx0;
     const dy = e.changedTouches[0].clientY - ty0;
     const activeMode = readerSelectMode || readerLookupMode;
@@ -8376,8 +9150,14 @@ function _attachReaderTapHandlers(doc) {
         // sentence or word can sit anywhere, including right at the edge,
         // so a tap there needs to act on it rather than flip the page.
         // Swipe (handled above) is still how you turn pages in both modes.
-        if (readerSelectMode) _handleSentenceTap(doc, x, e.changedTouches[0].clientY);
-        else _handleWordLookupTap(doc, x, e.changedTouches[0].clientY);
+        if (readerSelectMode) {
+          _handleSentenceTap(doc, x, e.changedTouches[0].clientY);
+        } else if (_wordLookupPopup) {
+          // Tap anywhere outside the popup while it's open → dismiss + exit mode
+          setReaderLookupMode(false);
+        } else {
+          _handleWordLookupTap(doc, x, e.changedTouches[0].clientY);
+        }
       }
       return;
     }
@@ -9027,7 +9807,13 @@ async function inlineImagesInHtml(html, base, chapterHref) {
 
   const unique = [...new Set(found)];
 
-  for(const src of unique) {
+  // Each image's zip-blob lookup + base64 encode is independent of the
+  // others, so resolve them all concurrently (bounded by the slowest one)
+  // instead of one at a time. The `html` string itself is only ever
+  // mutated below, after every decode has finished — mutating it inside
+  // this loop would race, since two concurrent tasks could both read the
+  // same pre-edit snapshot and one's replacement would clobber the other's.
+  const replacements = await Promise.all(unique.map(async (src) => {
     const filename = src.replace(/^.*[\\/]/, '');
     const candidates = [
       normalizePath(chapterDir + src),
@@ -9059,7 +9845,10 @@ async function inlineImagesInHtml(html, base, chapterHref) {
     const replacement = blob
       ? `src="${await blobToDataUrl(blob)}"`
       : `src="${TRANSPARENT_PIXEL}" style="display:none"`;
+    return { src, replacement };
+  }));
 
+  for(const { src, replacement } of replacements) {
     // Replace data-lazysrc back with real src
     html = html.replace(
       new RegExp(`data-lazysrc="${src.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}"`, 'g'),
@@ -9583,6 +10372,7 @@ function closeReader(){
           { bookIds: finIds, finishedAtMap: { [readerBookId]: serverTimestamp() }, updatedAt: serverTimestamp() },
           { merge: true }
         ).catch(e => console.warn('closeReader finished update:', e));
+        addBookToActiveGoals(readerBookId, new Date());
         showToast('Added to Finished ✓');
       }
     }
@@ -9654,6 +10444,7 @@ async function markBookFinished(bookId){
       { bookIds: finIds, finishedAtMap: { [bookId]: serverTimestamp() }, updatedAt: serverTimestamp() },
       { merge: true }
     ).catch(e => console.warn('markBookFinished finList:', e));
+    addBookToActiveGoals(bookId, new Date());
   }
 
   // Remove the reading-position bookmark so it drops off the Home tab.
@@ -10476,6 +11267,13 @@ async function parseEpubMeta(file){
     if(!opfXml)return fallbackMeta(file);
     const get=tag=>opfXml.match(new RegExp(`<dc:${tag}[^>]*>([^<]+)<\/dc:${tag}>`,'i'))?.[1]?.trim()||'';
     const getAll=tag=>{const re=new RegExp(`<dc:${tag}[^>]*>([^<]+)<\/dc:${tag}>`,'gi'),r=[];let m;while((m=re.exec(opfXml))!==null)r.push(m[1].trim());return r;};
+    // Calibre's de-facto series convention (<meta name="calibre:series" content="…"/>).
+    // EPUB3's native belongs-to-collection/refines metadata isn't handled here.
+    const getOpfMeta=name=>(opfXml.match(new RegExp(`<meta\\s+name="${name}"\\s+content="([^"]*)"`,'i'))?.[1]
+      ||opfXml.match(new RegExp(`<meta\\s+content="([^"]*)"\\s+name="${name}"`,'i'))?.[1]||'').trim();
+    const series=getOpfMeta('calibre:series');
+    const seriesIndexRaw=getOpfMeta('calibre:series_index');
+    const seriesIndex=seriesIndexRaw?parseFloat(seriesIndexRaw):null;
     let coverDataUrl=null;
     try{
       const opfDir=opfPath.includes('/')?opfPath.replace(/\/[^/]+$/,'/'):'';
@@ -10484,7 +11282,7 @@ async function parseEpubMeta(file){
       if(!coverDataUrl){const itemRe=/<item\s+([^>]+)>/gi;let im;while((im=itemRe.exec(opfXml))!==null){const attrs=im[1];const id=attrs.match(/\bid="([^"]+)"/i)?.[1]||'';const href=attrs.match(/\bhref="([^"]+)"/i)?.[1]||'';const mt=attrs.match(/\bmedia-type="([^"]+)"/i)?.[1]||'';if(!mt.startsWith('image/'))continue;if(id.toLowerCase().includes('cover')||href.toLowerCase().includes('cover')){const f=zip.file(opfDir+href)||zip.file(href);if(f){coverDataUrl=await blobToDataUrl(await f.async('blob'));break;}}}}
       if(!coverDataUrl){for(const p of ['cover.jpg','cover.jpeg','cover.png','images/cover.jpg','OEBPS/cover.jpg','OEBPS/cover.jpeg','OEBPS/cover.png','OEBPS/images/cover.jpg','OEBPS/images/cover.jpeg','OPS/images/cover.jpg','OPS/cover.jpg']){const f=zip.file(p);if(f){coverDataUrl=await blobToDataUrl(await f.async('blob'));break;}}}
     }catch(e){/* silent */}
-    return{title:get('title')||file.name.replace(/\.epub$/i,''),author:getAll('creator').join(', ')||'Unknown Author',description:get('description')||'',category:getAll('subject')[0]||'Uncategorised',language:get('language')||'',publisher:get('publisher')||'',coverDataUrl};
+    return{title:get('title')||file.name.replace(/\.epub$/i,''),author:getAll('creator').join(', ')||'Unknown Author',description:get('description')||'',category:getAll('subject')[0]||'Uncategorised',language:get('language')||'',publisher:get('publisher')||'',series,seriesIndex,coverDataUrl};
   }catch(e){return fallbackMeta(file);}
 }
 
@@ -10865,7 +11663,7 @@ async function ensureKoboCoverDeclared(zip, opfPath, opfXml){
   return newOpf;
 }
   
-function fallbackMeta(file){return{title:file.name.replace(/\.epub$/i,''),author:'Unknown Author',description:'',category:'Uncategorised',language:'',publisher:'',coverDataUrl:null};}
+function fallbackMeta(file){return{title:file.name.replace(/\.epub$/i,''),author:'Unknown Author',description:'',category:'Uncategorised',language:'',publisher:'',series:'',seriesIndex:null,coverDataUrl:null};}
 function blobToDataUrl(blob){return new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=rej;r.readAsDataURL(blob);});}
 function dataUrlToBlob(dataUrl){const[header,data]=dataUrl.split(',');const mime=header.match(/:(.*?);/)[1];const binary=atob(data);const arr=new Uint8Array(binary.length);for(let i=0;i<binary.length;i++)arr[i]=binary.charCodeAt(i);return new Blob([arr],{type:mime});}
 
@@ -11555,7 +12353,7 @@ async function openChapterManager(){
 function renderChapterMgrList(){
   const list=document.getElementById('chapterMgrList');
   const active=chapterMgrSpine.filter(c=>!c.deleted);
-  list.innerHTML=chapterMgrSpine.map((ch,i)=>`<div class="chapter-mgr-row ${ch.deleted?'deleted':''} ${ch.editedBody!==undefined?'text-edited':''}" data-idx="${i}" draggable="${!ch.deleted}"><span class="chapter-mgr-drag" title="Drag to reorder">⠿</span><span class="chapter-mgr-num">${ch.deleted?'–':active.indexOf(ch)+1}</span><input class="chapter-mgr-input" type="text" value="${esc(ch.label)}" data-idx="${i}" ${ch.deleted?'disabled':''} title="Click to rename"/>${ch.deleted?`<button class="chapter-mgr-restore" data-restore="${i}">Restore</button>`:`<button class="chapter-mgr-edit-text" data-edit="${i}" title="Edit chapter text">✎</button><button class="chapter-mgr-del" data-delete="${i}" title="Mark for deletion">✕</button>`}</div>`).join('');
+  list.innerHTML=chapterMgrSpine.map((ch,i)=>`<div class="chapter-mgr-row ${ch.deleted?'deleted':''} ${ch.editedBody!==undefined?'text-edited':''}" data-idx="${i}" draggable="${!ch.deleted}"><span class="chapter-mgr-drag" title="Drag to reorder">⠿</span><span class="chapter-mgr-num">${ch.deleted?'–':active.indexOf(ch)+1}</span><input class="chapter-mgr-input" type="text" draggable="false" value="${esc(ch.label)}" data-idx="${i}" ${ch.deleted?'disabled':''} title="Click to rename"/>${ch.deleted?`<button class="chapter-mgr-restore" draggable="false" data-restore="${i}">Restore</button>`:`<button class="chapter-mgr-edit-text" draggable="false" data-edit="${i}" title="Edit chapter text">✎</button><button class="chapter-mgr-del" draggable="false" data-delete="${i}" title="Mark for deletion">✕</button>`}</div>`).join('');
   document.getElementById('chapterMgrInfo').textContent=`${active.length} chapter${active.length!==1?'s':''} · ${chapterMgrSpine.filter(c=>c.deleted).length} marked for deletion`;
   list.querySelectorAll('.chapter-mgr-input').forEach(inp=>{inp.addEventListener('change',e=>{chapterMgrSpine[parseInt(e.target.dataset.idx)].label=e.target.value;});inp.addEventListener('input',e=>{chapterMgrSpine[parseInt(e.target.dataset.idx)].label=e.target.value;});});
   list.querySelectorAll('[data-edit]').forEach(btn=>{btn.addEventListener('click',e=>{openChapterTextEditor(parseInt(e.target.dataset.edit));});});
@@ -12202,14 +13000,23 @@ window.showBookById = showBookById;
 
 // ── ADMIN ────────────────────────────────────────────────────────────────────
 
+let accessLevel = 'standard'; // 'standard' | 'elevated' | 'admin' — see checkAdminStatus()
 let isAdmin = false;
+let hasRestrictedAccess = false; // true for 'elevated' and 'admin' — can see/set Restricted books
 let adminCheckoutsShowAll = false;
 
 async function checkAdminStatus() {
   if(!currentUser) return;
   try {
     const snap = await getDoc(doc(db, 'users', currentUser.uid));
-    isAdmin = snap.exists() && snap.data().isAdmin === true;
+    const data = snap.exists() ? snap.data() : {};
+    // accessLevel is the source of truth going forward. Accounts flagged
+    // under the old two independent booleans (before this field existed)
+    // still resolve correctly without needing a manual data migration.
+    accessLevel = data.accessLevel
+      || (data.isAdmin === true ? 'admin' : (data.restrictedAccess === true ? 'elevated' : 'standard'));
+    isAdmin = accessLevel === 'admin';
+    hasRestrictedAccess = accessLevel === 'elevated' || accessLevel === 'admin';
     if(isAdmin){
       document.getElementById('mobAdminSettingsCard').style.display = '';
     }
@@ -12382,6 +13189,10 @@ async function adminLoadUsers() {
         const tb = b.lastSeen?.toMillis?.() || 0;
         return tb - ta;
       });
+    // Shared with the Restricted Books section below, so adminToggleUserCard()
+    // can look a user's current restrictedAccess up regardless of which
+    // admin section happened to load the cache first.
+    adminAllUsersCache = users;
 
     if(!users.length) {
       el.innerHTML = '<div style="color:var(--muted);font-size:.85rem">No users</div>';
@@ -12424,10 +13235,14 @@ async function adminLoadUsers() {
           </div>
           <div style="display:flex;flex-direction:column;align-items:flex-end;
                       gap:3px;flex-shrink:0;">
-            ${u.isAdmin
-              ? `<span style="font-size:.6rem;font-weight:700;padding:1px 6px;
-                  border-radius:8px;background:#fff8ec;color:var(--gold);">Admin</span>`
-              : ''}
+            ${(() => {
+              const lvl = u.accessLevel || (u.isAdmin === true ? 'admin' : (u.restrictedAccess === true ? 'elevated' : 'standard'));
+              if(lvl === 'admin') return `<span style="font-size:.6rem;font-weight:700;padding:1px 6px;
+                  border-radius:8px;background:#fff8ec;color:var(--gold);">Admin</span>`;
+              if(lvl === 'elevated') return `<span style="font-size:.6rem;font-weight:700;padding:1px 6px;
+                  border-radius:8px;background:#f3e6e6;color:#a83232;">🔒 Elevated</span>`;
+              return '';
+            })()}
             ${activeCheckouts.length
               ? `<span style="font-size:.6rem;color:var(--teal);font-weight:700;">
                   📖 ${activeCheckouts.length} out</span>`
@@ -12459,6 +13274,10 @@ async function adminLoadUsers() {
 }
 
 document.getElementById('adminUsersRefresh')?.addEventListener('click', adminLoadUsers);
+
+// adminAllUsersCache is populated by adminLoadUsers() (Users section)
+// and shared here for the access-level buttons in each user's expand panel.
+let adminAllUsersCache = [];
 
 async function adminToggleUserCard(uid) {
   // Find the expand panel — it may live in either the presence or users section
@@ -12527,9 +13346,24 @@ async function adminToggleUserCard(uid) {
 
     // Kobo sends — pulled from the cache stashed on adminUsersList by adminLoadUsers()
     const koboSends = document.getElementById('adminUsersList')?._koboSendsByUser?.[uid] || [];
+    const u = adminAllUsersCache.find(x => x.uid === uid);
+    const currentLevel = u?.accessLevel || (u?.isAdmin === true ? 'admin' : (u?.restrictedAccess === true ? 'elevated' : 'standard'));
 
     panel.innerHTML = `
       <div style="padding:.7rem .8rem;display:flex;flex-direction:column;gap:.75rem;">
+
+        <div>
+          <div style="font-size:.6rem;letter-spacing:.15em;text-transform:uppercase;
+                      font-weight:700;color:var(--muted);margin-bottom:.35rem;">Access Level</div>
+          <div style="display:flex;gap:.4rem;flex-wrap:wrap;" id="adminAccessLevel_${uid}">
+            <button class="btn-cancel admin-access-btn" data-level="standard" data-uid="${uid}"
+              style="font-size:.72rem;padding:.35rem .7rem;${currentLevel==='standard'?'background:var(--teal-light);border-color:var(--teal);color:var(--teal-dark)':''}">Standard</button>
+            <button class="btn-cancel admin-access-btn" data-level="elevated" data-uid="${uid}"
+              style="font-size:.72rem;padding:.35rem .7rem;${currentLevel==='elevated'?'background:#f3e6e6;border-color:#a83232;color:#a83232':''}">🔒 Elevated</button>
+            <button class="btn-cancel admin-access-btn" data-level="admin" data-uid="${uid}"
+              style="font-size:.72rem;padding:.35rem .7rem;${currentLevel==='admin'?'background:#fff8ec;border-color:var(--gold);color:var(--gold)':''}">🛡️ Admin</button>
+          </div>
+        </div>
 
         ${crIds.length ? `
           <div>
@@ -12645,6 +13479,10 @@ async function adminToggleUserCard(uid) {
 
       </div>`;
 
+    panel.querySelectorAll('.admin-access-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => { e.stopPropagation(); adminSetAccessLevel(uid, btn.dataset.level); });
+    });
+
   } catch(e) {
     panel.innerHTML = `<div style="padding:.6rem .8rem;font-size:.75rem;
       color:var(--danger);">Failed to load: ${e.message}</div>`;
@@ -12653,6 +13491,39 @@ async function adminToggleUserCard(uid) {
 }
 
 window.adminToggleUserCard = adminToggleUserCard;
+
+// The expand panel only ever builds its content once per page session (see
+// the dataset.loaded guard above), so on change this patches the button
+// group's own highlighted state directly rather than re-rendering — the
+// passive access-level badge on the collapsed card will pick up the change
+// next time the list itself is refreshed, same as its other admin-panel
+// snapshot-style badges (checkout/Kobo counts).
+async function adminSetAccessLevel(uid, level) {
+  const u = adminAllUsersCache.find(x => x.uid === uid);
+  if(u?.accessLevel === level) return;
+  showLoading('Updating access…');
+  try {
+    await updateDoc(doc(db, 'users', uid), { accessLevel: level });
+    if(u) u.accessLevel = level;
+    hideLoading();
+    showToast(`Access level set to ${level[0].toUpperCase() + level.slice(1)} ✓`);
+    const group = document.getElementById('adminAccessLevel_' + uid);
+    if(group) {
+      group.querySelectorAll('.admin-access-btn').forEach(btn => {
+        const active = btn.dataset.level === level;
+        btn.style.background = active
+          ? (level === 'admin' ? '#fff8ec' : level === 'elevated' ? '#f3e6e6' : 'var(--teal-light)')
+          : '';
+        btn.style.borderColor = active
+          ? (level === 'admin' ? 'var(--gold)' : level === 'elevated' ? '#a83232' : 'var(--teal)')
+          : '';
+        btn.style.color = active
+          ? (level === 'admin' ? 'var(--gold)' : level === 'elevated' ? '#a83232' : 'var(--teal-dark)')
+          : '';
+      });
+    }
+  } catch(e) { hideLoading(); showToast('Failed: ' + e.message); }
+}
 
 // ── NAV ───────────────────────────────────────────────────────────────────────
   // ── CATEGORIES (admin-managed) ────────────────────────────────────────────────
@@ -12744,7 +13615,7 @@ function getCategoryList() { return _categories; }
 function getTagList() { return _globalTags; }
 // Per-item emoji, with sensible fallbacks for anything not yet set
 // (e.g. a brand-new category/tag an admin just added).
-function catIcon(name){ return _categoryIcons[name] || '🗂️'; }
+function catIcon(name){ if(name==='Audiobooks') return '🎧'; return _categoryIcons[name] || '🗂️'; }
 function tagIcon(name){ return _tagIcons[name] || '🏷️'; }
 async function setCatIcon(name, icon){
   _categoryIcons[name] = icon;
@@ -12871,6 +13742,206 @@ async function createUserList(name, icon='📚') {
 async function deleteUserList(listId) {
   await deleteDoc(doc(db, 'user_lists', currentUser.uid, 'lists', listId));
   _userLists = _userLists.filter(l => l.id !== listId);
+}
+
+// ── READING GOALS ────────────────────────────────────────────────────────────
+// A goal is a one-off target (N books or N pages within a fixed date range)
+// backed by a normal user list — createUserList() already makes any
+// non-system list show up as a Home shelf automatically, so a goal's list
+// needs no special-casing there. Progress is computed on the fly — for a
+// 'books' goal, by filtering that list's finishedAtMap against the goal's
+// own [startDate, endDate) window; for a 'pages' goal, by summing the
+// ledger's per-day page counts over the same window. Once endDate passes,
+// the goal just renders as "ended" — the underlying data doesn't change, so
+// re-computing progress after the fact still gives the correct final tally.
+
+let _readingGoals = [];
+let _goalPagesProgress = {}; // goalId -> summed pagesRead within its fixed window (metric:'pages' goals only)
+
+function _goalDate(x) {
+  if(!x) return null;
+  return x.toDate ? x.toDate() : (x instanceof Date ? x : new Date(x));
+}
+
+function goalEndDate(startDate, cadence) {
+  const end = new Date(startDate);
+  if(cadence === 'weekly') end.setDate(end.getDate() + 7);
+  else if(cadence === 'yearly') end.setFullYear(end.getFullYear() + 1);
+  else end.setMonth(end.getMonth() + 1); // monthly (also the fallback for legacy docs)
+  return end;
+}
+
+function _goalDateRangeLabel(g) {
+  const start = _goalDate(g.startDate), end = _goalDate(g.endDate);
+  if(!start || !end) return '';
+  const endInclusive = new Date(end); endInclusive.setDate(endInclusive.getDate() - 1);
+  const fmt = d => d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+  return `${fmt(start)} – ${fmt(endInclusive)}`;
+}
+
+// Progress plus the two derived facts every render site needs: has the
+// window closed, and was the target actually hit.
+function goalStatus(g) {
+  const { count, target, pct } = goalProgress(g);
+  const end = _goalDate(g.endDate);
+  return { count, target, pct, ended: end ? new Date() >= end : false, achieved: count >= target };
+}
+
+async function loadReadingGoals() {
+  if(!currentUser) return;
+  try {
+    const snap = await getDocs(query(collection(db, 'readingGoals'), where('userId', '==', currentUser.uid)));
+    _readingGoals = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    // Migrate goals created before fixed date ranges existed — anchor them
+    // to their creation date so they behave like a one-off goal instead of
+    // breaking on a missing startDate/endDate.
+    for(const g of _readingGoals) {
+      if(g.startDate) continue;
+      const start = _goalDate(g.createdAt) || new Date();
+      const end = goalEndDate(start, g.cadence || 'monthly');
+      g.startDate = Timestamp.fromDate(start);
+      g.endDate = Timestamp.fromDate(end);
+      g.metric = g.metric || 'books';
+      updateDoc(doc(db, 'readingGoals', g.id), { startDate: g.startDate, endDate: g.endDate, metric: g.metric })
+        .catch(e => console.warn('goal migration:', e));
+    }
+    await _checkAllGoalsForCompletion();
+  } catch(e) {
+    console.warn('loadReadingGoals:', e);
+    _readingGoals = [];
+  }
+}
+
+async function createReadingGoal(cadence, targetCount, name, metric, startDate) {
+  const unit = metric === 'pages' ? 'page' : 'book';
+  const listName = name || `${targetCount} ${unit}${targetCount === 1 ? '' : 's'} / ${cadence.replace('ly', '')}`;
+  const listId = await createUserList(listName, '🎯');
+  const endDate = goalEndDate(startDate, cadence);
+  const data = {
+    userId: currentUser.uid, cadence, targetCount, metric, listId, name: listName,
+    startDate: Timestamp.fromDate(startDate), endDate: Timestamp.fromDate(endDate),
+    badgeAwarded: false, createdAt: serverTimestamp()
+  };
+  const ref = await addDoc(collection(db, 'readingGoals'), data);
+  _readingGoals.push({ id: ref.id, ...data });
+  await _checkAllGoalsForCompletion();
+}
+
+async function updateReadingGoal(goalId, cadence, targetCount, name, metric, startDate) {
+  const g = _readingGoals.find(x => x.id === goalId);
+  if(!g) return;
+  const unit = metric === 'pages' ? 'page' : 'book';
+  const listName = name || `${targetCount} ${unit}${targetCount === 1 ? '' : 's'} / ${cadence.replace('ly', '')}`;
+  const endDate = goalEndDate(startDate, cadence);
+  g.cadence = cadence; g.targetCount = targetCount; g.name = listName; g.metric = metric;
+  g.startDate = Timestamp.fromDate(startDate); g.endDate = Timestamp.fromDate(endDate);
+  await updateDoc(doc(db, 'readingGoals', goalId), {
+    cadence, targetCount, name: listName, metric, startDate: g.startDate, endDate: g.endDate
+  });
+  const list = _userLists.find(l => l.id === g.listId);
+  if(list) list.name = listName;
+  await setDoc(doc(db, 'user_lists', currentUser.uid, 'lists', g.listId), { name: listName }, { merge: true }).catch(()=>{});
+  await _checkAllGoalsForCompletion();
+}
+
+async function deleteReadingGoal(goalId) {
+  await deleteDoc(doc(db, 'readingGoals', goalId));
+  _readingGoals = _readingGoals.filter(x => x.id !== goalId);
+  delete _goalPagesProgress[goalId];
+}
+
+function goalProgress(g) {
+  const target = g.targetCount;
+  if(g.metric === 'pages') {
+    const count = _goalPagesProgress[g.id] || 0;
+    return { count, target, pct: Math.min(100, Math.round((count / Math.max(target, 1)) * 100)) };
+  }
+  const list = _userLists.find(l => l.id === g.listId);
+  const start = _goalDate(g.startDate), end = _goalDate(g.endDate);
+  const map = list?.finishedAtMap || {};
+  const count = (list?.bookIds || []).filter(id => {
+    const raw = map[id];
+    const dt = raw?.toDate?.() || (raw instanceof Date ? raw : null);
+    return dt && start && end && dt >= start && dt < end;
+  }).length;
+  return { count, target, pct: Math.min(100, Math.round((count / Math.max(target, 1)) * 100)) };
+}
+
+// Sums the ledger's per-day page counts across each 'pages' goal's fixed
+// window. Today's persisted ledgerDays doc can lag the in-memory count until
+// the next debounced flush, so today is excluded from the query sum and the
+// live ledgerToday.pagesRead is folded in instead.
+async function _refreshGoalPagesProgress() {
+  if(!currentUser) return false;
+  const pageGoals = _readingGoals.filter(g => g.metric === 'pages');
+  if(!pageGoals.length) return false;
+  let changed = false;
+  for(const g of pageGoals) {
+    const start = _goalDate(g.startDate), end = _goalDate(g.endDate);
+    if(!start || !end) continue;
+    const startStr = ledgerDateStr(start), endStr = ledgerDateStr(new Date(end - 1));
+    let sum = 0;
+    try {
+      const q = query(collection(db, 'users', currentUser.uid, 'ledgerDays'),
+        where('dateStr', '>=', startStr), where('dateStr', '<=', endStr));
+      const snap = await getDocs(q);
+      snap.forEach(d => { if(d.id !== ledgerToday.dateStr) sum += d.data().pagesRead || 0; });
+    } catch(e) { console.warn('goal pages progress:', e); }
+    if(ledgerToday.dateStr >= startStr && ledgerToday.dateStr <= endStr) sum += ledgerToday.pagesRead;
+    if(_goalPagesProgress[g.id] !== sum) changed = true;
+    _goalPagesProgress[g.id] = sum;
+  }
+  return changed;
+}
+
+// Fires the first time a goal's progress reaches its target — a badge named
+// after the goal itself, separate from the fixed LEDGER_ACHIEVEMENTS catalog
+// since every goal earns its own one-off reward. badgeAwarded is persisted
+// so this never re-fires for the same goal (editing a goal never revokes it).
+async function _checkAllGoalsForCompletion() {
+  if(!currentUser || !_readingGoals.length) return;
+  await _refreshGoalPagesProgress();
+  for(const g of _readingGoals) {
+    if(g.badgeAwarded) continue;
+    const { count, target } = goalProgress(g);
+    if(count >= target) await _awardGoalBadge(g);
+  }
+}
+
+async function _awardGoalBadge(g) {
+  g.badgeAwarded = true;
+  g.completedAt = new Date();
+  await updateDoc(doc(db, 'readingGoals', g.id), { badgeAwarded: true, completedAt: serverTimestamp() })
+    .catch(e => console.warn('goal badge persist:', e));
+  _ledgerPlayAchievementBurst({ icon: '🎯', label: g.name, desc: `Completed your "${g.name}" reading goal` });
+}
+
+// Called whenever a book is finished — in-app or a manually logged past
+// read — so it joins every currently active 'books' goal whose fixed window
+// covers the finish date. Idempotent: safe to call again for the same book
+// (e.g. re-saving an edited manual read) — also how a goal created *after*
+// some past reads were logged can retroactively pick them up, by re-saving
+// those past-read entries once the goal exists.
+async function addBookToActiveGoals(bookId, dateFinished) {
+  if(!currentUser || !_readingGoals.length) return;
+  const dateObj = dateFinished?.toDate?.() || (dateFinished instanceof Date ? dateFinished : new Date());
+  const ts = Timestamp.fromDate(dateObj);
+  for(const g of _readingGoals) {
+    if(g.metric === 'pages') continue;
+    const start = _goalDate(g.startDate), end = _goalDate(g.endDate);
+    if(start && end && (dateObj < start || dateObj >= end)) continue; // outside this goal's window
+    const list = _userLists.find(l => l.id === g.listId);
+    if(!list) continue;
+    const bookIds = (list.bookIds || []).includes(bookId) ? list.bookIds : [...(list.bookIds || []), bookId];
+    list.bookIds = bookIds;
+    list.finishedAtMap = { ...(list.finishedAtMap || {}), [bookId]: dateObj };
+    await setDoc(
+      doc(db, 'user_lists', currentUser.uid, 'lists', g.listId),
+      { bookIds, finishedAtMap: { [bookId]: ts }, updatedAt: serverTimestamp() },
+      { merge: true }
+    ).catch(e => console.warn('addBookToActiveGoals:', e));
+  }
+  await _checkAllGoalsForCompletion();
 }
 
 async function addBookToViewedList(bookId) {
@@ -14098,7 +15169,35 @@ async function loadTimelineCheckouts() {
   }
 }
 
+let _manualReadsCache = [];
+async function loadManualReads() {
+  if(!currentUser) return [];
+  try {
+    const snap = await getDocs(
+      query(collection(db, 'manualReads'), where('userId', '==', currentUser.uid))
+    );
+    const reads = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    _manualReadsCache = reads;
+    return reads;
+  } catch(e) {
+    console.warn('loadManualReads:', e);
+    return [];
+  }
+}
+
+// A user list (including a goal's linked list) can contain either a real
+// library bookId or a 'manual_<id>' reference to a manualReads entry. This
+// turns the latter back into a book-shaped object so shelf rendering,
+// getCoverSrc(), etc. don't need to know the difference.
+function manualReadAsBook(manualId) {
+  const r = _manualReadsCache.find(x => x.id === manualId);
+  if(!r) return null;
+  return { id: 'manual_' + r.id, title: r.title, author: r.author || '',
+           coverUrl: r.coverUrl || null, pages: r.pages || null, isManual: true };
+}
+
 function estimatePages(book) {
+  if(book?.pages) return book.pages;
   const map = {
     'Short Stories': 180, 'Poetry': 120, "Children's": 150, 'Young Adult': 280,
     'Graphic Novel': 160,
@@ -14158,6 +15257,24 @@ async function buildTimelineEvents() {
       });
     });
 
+  const manualReads = await loadManualReads();
+  manualReads.forEach(r => {
+    events.push({
+      type: 'finished',
+      bookId: 'manual_' + r.id,
+      isManual: true,
+      book: {
+        id: 'manual_' + r.id,
+        title: r.title,
+        author: r.author || '',
+        coverUrl: r.coverUrl || null,
+        pages: r.pages || null,
+        isManual: true,
+      },
+      date: r.finishedAt?.toDate?.() || new Date(),
+    });
+  });
+
   events.sort((a, b) => b.date - a.date);
   _timelineEvents = events;
   return events;
@@ -14209,9 +15326,10 @@ function renderTimelineContent() {
     .map(e => e.book);
 
   const heroHtml = renderTimelineHero(recentFinished, finishedThisYear, inProgress, pagesRead);
+  const chartHtml = renderTimelineProgressChart();
 
   if(!filtered.length) {
-    container.innerHTML = heroHtml + `
+    container.innerHTML = heroHtml + chartHtml + `
       <div style="text-align:center;padding:3rem 1.5rem;color:var(--muted);">
         <div style="font-size:2.2rem;opacity:.25;margin-bottom:.6rem">📖</div>
         <div style="font-size:.88rem;line-height:1.6">Your reading timeline will appear here as you start and finish books.</div>
@@ -14236,12 +15354,14 @@ function renderTimelineContent() {
       ${g.events.map(e => renderTimelineCard(e)).join('')}
     </div>`).join('');
 
-  container.innerHTML = heroHtml + groupsHtml + `<div style="height:1rem"></div>`;
+  container.innerHTML = heroHtml + chartHtml + groupsHtml + `<div style="height:1rem"></div>`;
 
   container.querySelectorAll('[data-timeline-bookid]').forEach(el => {
     el.addEventListener('click', () => {
+      const id = el.dataset.timelineBookid;
+      if(id.startsWith('manual_')) { openManualReadModal(id.slice(7)); return; }
       mobPrevPanel = 'mobPanelTimeline';
-      mob_showBook(el.dataset.timelineBookid);
+      mob_showBook(id);
     });
   });
 }
@@ -14302,16 +15422,166 @@ function renderTimelineHero(books, finishedThisYear, inProgress, pagesRead) {
     </div>`;
 }
 
+function renderTimelineProgressChart() {
+  const now = new Date();
+  const thisYear = now.getFullYear();
+
+  // Build last-12-months bucket array
+  const months = [];
+  for(let i = 11; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    months.push({
+      key: d.getFullYear() + '-' + d.getMonth(),
+      year: d.getFullYear(),
+      label: d.toLocaleDateString(undefined, { month: 'short' }),
+      shortYear: d.getFullYear() !== thisYear ? String(d.getFullYear()).slice(2) : '',
+      count: 0
+    });
+  }
+  _timelineEvents.filter(e => e.type === 'finished').forEach(e => {
+    const key = e.date.getFullYear() + '-' + e.date.getMonth();
+    const m = months.find(x => x.key === key);
+    if(m) m.count++;
+  });
+
+  // Cumulative counts for line chart
+  let cumulative = 0;
+  months.forEach(m => { cumulative += m.count; m.cum = cumulative; });
+
+  // Yearly goal line (if any yearly goal exists)
+  const yearlyGoal = _readingGoals.find(g => g.cadence === 'yearly');
+  const yearlyTarget = yearlyGoal ? yearlyGoal.targetCount : null;
+
+  const W = 340, H = 110;
+  const PAD_L = 22, PAD_R = 8, PAD_T = 14, PAD_B = 20;
+  const plotW = W - PAD_L - PAD_R;
+  const plotH = H - PAD_T - PAD_B;
+  const n = months.length;
+  const slot = plotW / n;
+  const barW = Math.max(6, slot - 4);
+
+  const maxBar = Math.max(1, ...months.map(m => m.count));
+  const maxCum  = Math.max(1, cumulative, yearlyTarget || 0);
+
+  // Bar chart elements
+  const bars = months.map((m, i) => {
+    const bh = m.count ? Math.max(3, Math.round((m.count / maxBar) * plotH * 0.72)) : 2;
+    const bx = PAD_L + i * slot + (slot - barW) / 2;
+    const by = PAD_T + plotH - bh;
+    const isCurrentMonth = i === n - 1;
+    const fill = m.count
+      ? (isCurrentMonth ? 'var(--gold)' : 'var(--teal)')
+      : 'var(--border)';
+    return `<rect x="${bx.toFixed(1)}" y="${by.toFixed(1)}" width="${barW.toFixed(1)}" height="${bh.toFixed(1)}" rx="2" fill="${fill}" opacity="${m.count ? 1 : 0.5}"/>
+      ${m.count ? `<text x="${(bx + barW/2).toFixed(1)}" y="${(by - 3).toFixed(1)}" font-size="7" text-anchor="middle" fill="var(--muted)">${m.count}</text>` : ''}
+      <text x="${(bx + barW/2).toFixed(1)}" y="${(PAD_T + plotH + 12).toFixed(1)}" font-size="6.5" text-anchor="middle" fill="${isCurrentMonth ? 'var(--gold)' : 'var(--muted)'}" font-weight="${isCurrentMonth ? '700' : '400'}">${m.label}${m.shortYear ? `'${m.shortYear}` : ''}</text>`;
+  }).join('');
+
+  // Cumulative line chart points (scaled independently on right axis)
+  const cumPts = months.map((m, i) => {
+    const cx = PAD_L + i * slot + slot / 2;
+    const cy = PAD_T + plotH - Math.round((m.cum / maxCum) * plotH * 0.92);
+    return { cx, cy, cum: m.cum };
+  });
+
+  const lineD = cumPts.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.cx.toFixed(1)},${p.cy.toFixed(1)}`).join(' ');
+  const areaD = lineD + ` L${cumPts[cumPts.length-1].cx.toFixed(1)},${(PAD_T+plotH).toFixed(1)} L${cumPts[0].cx.toFixed(1)},${(PAD_T+plotH).toFixed(1)} Z`;
+
+  // Goal line for yearly goals (pro-rated)
+  let goalLineEl = '';
+  if(yearlyTarget) {
+    const monthsElapsed = now.getMonth() + 1; // 1-12
+    const pacePerMonth = yearlyTarget / 12;
+    const goalLinePts = months.map((m, i) => {
+      // Position goal as a straight line from 0 to target over 12 months
+      const goalAtMonth = Math.min(yearlyTarget, pacePerMonth * (12 - (n - 1 - i)));
+      const cx = PAD_L + i * slot + slot / 2;
+      const cy = PAD_T + plotH - Math.round((goalAtMonth / maxCum) * plotH * 0.92);
+      return `${cx.toFixed(1)},${cy.toFixed(1)}`;
+    });
+    goalLineEl = `<polyline points="${goalLinePts.join(' ')}" fill="none" stroke="var(--rust)" stroke-width="1.5" stroke-dasharray="4,3" opacity="0.7"/>`;
+  }
+
+  // Dots on line
+  const dots = cumPts.map(p =>
+    p.cum > 0 ? `<circle cx="${p.cx.toFixed(1)}" cy="${p.cy.toFixed(1)}" r="2.5" fill="var(--cream)" stroke="var(--gold2)" stroke-width="1.5"/>` : ''
+  ).join('');
+
+  // Left axis label (max bar count)
+  const axisLabel = `<text x="${PAD_L - 2}" y="${(PAD_T + 3).toFixed(1)}" font-size="6.5" text-anchor="end" fill="var(--muted)" opacity="0.7">${maxBar}</text>
+    <text x="${PAD_L - 2}" y="${(PAD_T + plotH).toFixed(1)}" font-size="6.5" text-anchor="end" fill="var(--muted)" opacity="0.7">0</text>`;
+
+  // Legend
+  const legendGoal = yearlyTarget
+    ? `<span style="display:inline-flex;align-items:center;gap:3px;margin-left:.7rem">
+        <svg width="16" height="4"><line x1="0" y1="2" x2="16" y2="2" stroke="var(--rust)" stroke-width="1.5" stroke-dasharray="4,3"/></svg>
+        <span style="font-size:.6rem;color:var(--rust)">yearly pace</span>
+      </span>` : '';
+
+  return `<div style="padding:.9rem 1rem .5rem;border-bottom:1px solid var(--border);background:var(--warm-white);">
+    <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:.5rem;">
+      <div style="font-size:.65rem;letter-spacing:.1em;text-transform:uppercase;font-weight:700;color:var(--muted);">Reading Progress</div>
+      <div style="display:flex;align-items:center;gap:.3rem;flex-wrap:wrap;justify-content:flex-end;">
+        <span style="display:inline-flex;align-items:center;gap:3px">
+          <svg width="10" height="10"><rect x="1" y="3" width="8" height="6" rx="1" fill="var(--teal)"/></svg>
+          <span style="font-size:.6rem;color:var(--muted)">per month</span>
+        </span>
+        <span style="display:inline-flex;align-items:center;gap:3px;margin-left:.5rem">
+          <svg width="16" height="4"><polyline points="0,2 16,2" fill="none" stroke="var(--gold2)" stroke-width="1.5"/></svg>
+          <span style="font-size:.6rem;color:var(--muted)">cumulative</span>
+        </span>
+        ${legendGoal}
+      </div>
+    </div>
+    <svg viewBox="0 0 ${W} ${H}" style="width:100%;height:${H}px;display:block;overflow:visible;">
+      <defs>
+        <linearGradient id="tlAreaGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="var(--gold)" stop-opacity="0.18"/>
+          <stop offset="100%" stop-color="var(--gold)" stop-opacity="0.02"/>
+        </linearGradient>
+      </defs>
+      <!-- Grid line -->
+      <line x1="${PAD_L}" y1="${PAD_T + plotH}" x2="${W - PAD_R}" y2="${PAD_T + plotH}" stroke="var(--border)" stroke-width="1"/>
+      ${axisLabel}
+      ${bars}
+      <!-- Area fill under cumulative line -->
+      <path d="${areaD}" fill="url(#tlAreaGrad)"/>
+      <!-- Goal pace line -->
+      ${goalLineEl}
+      <!-- Cumulative line -->
+      <polyline points="${cumPts.map(p => `${p.cx.toFixed(1)},${p.cy.toFixed(1)}`).join(' ')}" fill="none" stroke="var(--gold2)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+      ${dots}
+    </svg>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:.2rem;padding-top:.35rem;border-top:1px solid var(--border);">
+      <span style="font-size:.68rem;color:var(--muted);">${cumulative} book${cumulative !== 1 ? 's' : ''} in last 12 months</span>
+      ${yearlyTarget ? `<span style="font-size:.68rem;color:${cumulative >= yearlyTarget ? '#276749' : 'var(--muted)'};">${yearlyGoal.name}: ${Math.min(cumulative, yearlyTarget)}/${yearlyTarget}${cumulative >= yearlyTarget ? ' ✓' : ''}</span>` : ''}
+    </div>
+  </div>`;
+}
+
 function renderTimelineCard(e) {
   const b = e.book;
-  const src = getCoverSrc(b);
   const dateStr = e.date.toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
-  const bmTpl = getDisplayBookmarkTemplate(b.id);
 
   let icon = '', label = '', labelColor = '';
   if(e.type === 'started')  { icon = '▶'; label = 'Started';  labelColor = 'var(--teal)'; }
   if(e.type === 'finished') { icon = '✓'; label = 'Finished'; labelColor = '#276749'; }
   if(e.type === 'reading')  { icon = '📖'; label = `Reading — ${Math.round((e.progress || 0) * 100)}%`; labelColor = 'var(--gold)'; }
+
+  if(e.type === 'started' || e.type === 'reading') {
+    return `<div data-timeline-bookid="${b.id}" style="display:flex;align-items:center;gap:.5rem;
+                padding:.35rem 0;border-bottom:1px solid var(--border);cursor:pointer;">
+      <span style="font-size:.68rem;flex-shrink:0;color:${labelColor}">${icon}</span>
+      <span style="font-size:.62rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;
+                  color:${labelColor};flex-shrink:0;">${label}</span>
+      <span style="font-family:'Playfair Display',serif;font-size:.8rem;color:var(--navy2);flex:1;
+                  min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(b.title)}</span>
+      <span style="font-size:.65rem;color:var(--muted);flex-shrink:0;">${dateStr}</span>
+    </div>`;
+  }
+
+  const src = getCoverSrc(b);
+  const bmTpl = getDisplayBookmarkTemplate(b.id);
 
   const coverHtml = src
     ? `<img src="${src}" style="width:44px;height:64px;object-fit:cover;border-radius:2px;
@@ -14336,6 +15606,496 @@ function renderTimelineCard(e) {
     <div style="font-size:.68rem;color:var(--muted);flex-shrink:0;text-align:right;">${dateStr}</div>
   </div>`;
 }
+
+let _editingManualReadId = null;
+
+function openManualReadModal(manualId = null) {
+  _editingManualReadId = manualId;
+  const titleEl = document.getElementById('manualReadModalTitle');
+  const delBtn = document.getElementById('btnDeleteManualRead');
+
+  if(manualId) {
+    const ev = _timelineEvents.find(e => e.isManual && e.bookId === 'manual_' + manualId);
+    titleEl.textContent = 'Edit Past Read';
+    delBtn.style.display = '';
+    document.getElementById('mrTitle').value = ev?.book?.title || '';
+    document.getElementById('mrAuthor').value = ev?.book?.author || '';
+    document.getElementById('mrPages').value = ev?.book?.pages || '';
+    document.getElementById('mrCover').value = ev?.book?.coverUrl || '';
+    document.getElementById('mrDate').value = ev ? ev.date.toISOString().slice(0, 10) : '';
+  } else {
+    titleEl.textContent = 'Add a Past Read';
+    delBtn.style.display = 'none';
+    document.getElementById('mrTitle').value = '';
+    document.getElementById('mrAuthor').value = '';
+    document.getElementById('mrPages').value = '';
+    document.getElementById('mrCover').value = '';
+    document.getElementById('mrDate').value = new Date().toISOString().slice(0, 10);
+  }
+  document.getElementById('manualReadModal').classList.add('open');
+}
+
+function closeManualReadModal() {
+  document.getElementById('manualReadModal').classList.remove('open');
+  _editingManualReadId = null;
+}
+
+async function saveManualRead() {
+  const title = document.getElementById('mrTitle').value.trim();
+  if(!title) { showToast('Title is required'); return; }
+  const author = document.getElementById('mrAuthor').value.trim();
+  const pagesRaw = document.getElementById('mrPages').value;
+  const pages = pagesRaw ? parseInt(pagesRaw, 10) : null;
+  const coverUrl = document.getElementById('mrCover').value.trim() || null;
+  const dateRaw = document.getElementById('mrDate').value;
+  const finishedAt = Timestamp.fromDate(dateRaw ? new Date(dateRaw + 'T12:00:00') : new Date());
+
+  const data = { userId: currentUser.uid, title, author, pages, coverUrl, finishedAt };
+
+  let manualId = _editingManualReadId;
+  if(_editingManualReadId) {
+    await updateDoc(doc(db, 'manualReads', _editingManualReadId), data);
+  } else {
+    const ref = await addDoc(collection(db, 'manualReads'), { ...data, createdAt: serverTimestamp() });
+    manualId = ref.id;
+  }
+  await loadManualReads();
+  addBookToActiveGoals('manual_' + manualId, finishedAt);
+  closeManualReadModal();
+  renderTimeline();
+  renderMobHome();
+}
+
+async function deleteManualRead() {
+  if(!_editingManualReadId) return;
+  if(!confirm('Remove this book from your timeline?')) return;
+  await deleteDoc(doc(db, 'manualReads', _editingManualReadId));
+  closeManualReadModal();
+  renderTimeline();
+}
+
+document.getElementById('btnAddManualRead')?.addEventListener('click', () => openManualReadModal());
+document.getElementById('btnCancelManualRead')?.addEventListener('click', closeManualReadModal);
+document.getElementById('btnSaveManualRead')?.addEventListener('click', saveManualRead);
+document.getElementById('btnDeleteManualRead')?.addEventListener('click', deleteManualRead);
+
+let _editingGoalId = null;
+
+function _updateGoalCountLabel() {
+  const metric = document.getElementById('goalMetric').value;
+  document.getElementById('goalCountLabel').textContent = metric === 'pages' ? '# of pages' : '# of books';
+}
+document.getElementById('goalMetric')?.addEventListener('change', _updateGoalCountLabel);
+
+function openGoalModal(goalId = null) {
+  _editingGoalId = goalId;
+  const g = goalId ? _readingGoals.find(x => x.id === goalId) : null;
+  document.getElementById('goalModalTitle').textContent = g ? 'Edit Reading Goal' : 'New Reading Goal';
+  document.getElementById('btnDeleteGoal').style.display = g ? '' : 'none';
+  document.getElementById('goalName').value = g?.name || '';
+  document.getElementById('goalCadence').value = g?.cadence || 'monthly';
+  document.getElementById('goalMetric').value = g?.metric || 'books';
+  document.getElementById('goalStartDate').value = ledgerDateStr(g ? _goalDate(g.startDate) : new Date());
+  document.getElementById('goalCount').value = g?.targetCount || 1;
+  _updateGoalCountLabel();
+
+  const note = document.getElementById('goalEndedNote');
+  const status = g ? goalStatus(g) : null;
+  if(status?.ended) {
+    const endInclusive = _goalDate(g.endDate); endInclusive.setDate(endInclusive.getDate() - 1);
+    const endLabel = endInclusive.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+    note.textContent = `Ended ${endLabel} — ${status.achieved ? 'completed ✓' : `only ${status.count} of ${status.target} reached`}. Change the start date or duration to reopen it.`;
+    note.style.display = '';
+  } else {
+    note.style.display = 'none';
+  }
+  document.getElementById('goalModal').classList.add('open');
+}
+
+function closeGoalModal() {
+  document.getElementById('goalModal').classList.remove('open');
+  _editingGoalId = null;
+}
+
+async function saveGoalFromModal() {
+  const cadence = document.getElementById('goalCadence').value;
+  const metric = document.getElementById('goalMetric').value;
+  const targetCount = Math.max(1, parseInt(document.getElementById('goalCount').value, 10) || 1);
+  const name = document.getElementById('goalName').value.trim();
+  const startRaw = document.getElementById('goalStartDate').value;
+  const startDate = startRaw ? new Date(startRaw + 'T00:00:00') : new Date();
+  if(_editingGoalId) await updateReadingGoal(_editingGoalId, cadence, targetCount, name, metric, startDate);
+  else await createReadingGoal(cadence, targetCount, name, metric, startDate);
+  closeGoalModal();
+  renderLedgerTab();
+  renderMobHome();
+}
+
+async function deleteGoalFromModal() {
+  if(!_editingGoalId) return;
+  if(!confirm("Delete this goal? Its list of books stays on Home — only the goal tracking is removed.")) return;
+  await deleteReadingGoal(_editingGoalId);
+  closeGoalModal();
+  renderLedgerTab();
+  renderMobHome();
+}
+
+document.getElementById('btnCancelGoal')?.addEventListener('click', closeGoalModal);
+document.getElementById('btnSaveGoal')?.addEventListener('click', saveGoalFromModal);
+document.getElementById('btnDeleteGoal')?.addEventListener('click', deleteGoalFromModal);
+
+// ── AUDIO SYSTEM ─────────────────────────────────────────────────────────────
+
+let _audioTracks = [];          // cached list from Firestore
+let _audioCurrentId = null;     // id of track currently loaded in player
+
+// ── helpers ──────────────────────────────────────────────────────────────────
+
+function fmtBytes(b) {
+  if (b < 1024) return b + ' B';
+  if (b < 1024 * 1024) return (b / 1024).toFixed(0) + ' KB';
+  return (b / (1024 * 1024)).toFixed(1) + ' MB';
+}
+
+function fmtAudioDate(ts) {
+  if (!ts) return '';
+  const d = ts.toDate ? ts.toDate() : new Date(ts);
+  return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+// ── load tracks from Firestore ────────────────────────────────────────────────
+
+async function loadAudioTracks() {
+  if (!currentUser) return;
+  const q = query(
+    collection(db, 'audioFiles'),
+    where('userId', '==', currentUser.uid),
+    orderBy('uploadedAt', 'desc')
+  );
+  const snap = await getDocs(q);
+  _audioTracks = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+}
+
+// Mirrors loadLibrary()'s public/shared/restricted queries for `books`, but
+// against `audioFiles` (field is `userId` there, not `ownerId`). Feeds
+// communityLib the same way books do, so publishing/sharing an audiobook
+// actually surfaces it to other users instead of only updating your own copy.
+async function loadCommunityAudioTracks() {
+  if (!currentUser) return [];
+  const pubQ = query(
+    collection(db, 'audioFiles'),
+    where('visibility', '==', 'public')
+  );
+  const sharedQ = query(
+    collection(db, 'audioFiles'),
+    where('allowedUsers', 'array-contains', currentUser.uid)
+  );
+  const restrictedPromise = (isAdmin || hasRestrictedAccess)
+    ? getDocs(query(collection(db, 'audioFiles'), where('visibility', '==', 'restricted')))
+    : Promise.resolve({ docs: [] });
+
+  const [pubSnap, sharedSnap, restrictedSnap] = await Promise.all([getDocs(pubQ), getDocs(sharedQ), restrictedPromise]);
+  const toBookLike = d => audioTrackToBookLike({ id: d.id, ...d.data() });
+  const pub = pubSnap.docs.map(toBookLike);
+  const shared = sharedSnap.docs.map(toBookLike).filter(b => b.ownerId !== currentUser.uid);
+  const restricted = restrictedSnap.docs.map(toBookLike).filter(b => b.ownerId !== currentUser.uid);
+  return [...pub, ...shared, ...restricted];
+}
+
+// ── surface audio tracks in the main library grid ──────────────────────────────
+// Audiobooks live in their own `audioFiles` collection (no title/author/cover
+// metadata — just a filename), so we wrap each track in a lightweight
+// book-shaped object that the existing grid/card/filter code can render
+// without changes, tagged with isAudio so the card gets a square tile and
+// clicks open the player instead of the reader.
+function audioTrackToBookLike(t) {
+  return {
+    id: t.id,
+    title: t.title || (t.name || 'Untitled').replace(/\.[^./]+$/, ''),
+    author: t.author || 'Audiobook',
+    category: t.category || 'Audiobooks',
+    language: t.language || '',
+    description: t.description || '',
+    series: t.series || null,
+    seriesIndex: t.seriesIndex ?? null,
+    tags: t.tags || [],
+    visibility: t.visibility || 'private',
+    ownerId: t.userId || currentUser?.uid,
+    createdAt: t.uploadedAt,
+    isAudio: true,
+    _audioTrack: t,
+  };
+}
+function mergeAudioIntoLibrary() {
+  library = library.filter(b => !b.isAudio);
+  library.push(..._audioTracks.map(audioTrackToBookLike));
+}
+
+// ── render the audio panel ────────────────────────────────────────────────────
+
+async function renderAudioPanel() {
+  const list = document.getElementById('audioTrackList');
+  if (!list) return;
+  list.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--muted);font-size:.85rem;">Loading…</div>';
+
+  try {
+    await loadAudioTracks();
+  } catch (e) {
+    list.innerHTML = `<div style="text-align:center;padding:2rem;color:var(--danger);font-size:.85rem;">Failed to load: ${e.message}</div>`;
+    return;
+  }
+
+  if (!_audioTracks.length) {
+    list.innerHTML = `<div style="text-align:center;padding:3rem 1rem;color:var(--muted);font-size:.85rem;line-height:1.6;">
+      No audio files yet.<br>Tap <strong>＋ Upload</strong> to add some.
+    </div>`;
+    return;
+  }
+
+  list.innerHTML = _audioTracks.map(t => `
+    <div class="audio-track-row${_audioCurrentId === t.id ? ' playing' : ''}"
+         data-audioid="${t.id}" id="audioRow_${t.id}">
+      <div class="audio-track-icon">${_audioCurrentId === t.id ? '🔊' : '▶️'}</div>
+      <div class="audio-track-meta">
+        <div class="audio-track-name">${esc(t.name)}</div>
+        <div class="audio-track-sub">${fmtBytes(t.size || 0)} · ${fmtAudioDate(t.uploadedAt)}</div>
+      </div>
+      <button class="audio-del-btn" data-audiodel="${t.id}" title="Delete">🗑</button>
+    </div>
+  `).join('');
+
+  // click track → play
+  list.querySelectorAll('.audio-track-row').forEach(row => {
+    row.addEventListener('click', e => {
+      if (e.target.closest('[data-audiodel]')) return; // handled below
+      const id = row.dataset.audioid;
+      const track = _audioTracks.find(t => t.id === id);
+      if (track) playAudioTrack(track);
+    });
+  });
+
+  // delete buttons
+  list.querySelectorAll('[data-audiodel]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const id = btn.dataset.audiodel;
+      if (!confirm('Delete this audio file?')) return;
+      await deleteAudioTrack(id);
+    });
+  });
+}
+
+// ── play a track ─────────────────────────────────────────────────────────────
+
+function playAudioTrack(track) {
+  const playerEl = document.getElementById('audioPlayerEl');
+  const playerDiv = document.getElementById('audioPersistentPlayer');
+  const label    = document.getElementById('audioNowPlayingLabel');
+  if (!playerEl || !playerDiv) return;
+
+  const isSameTrack = _audioCurrentId === track.id;
+  _audioCurrentId = track.id;
+
+  if (!isSameTrack) {
+    playerEl.src = track.downloadUrl;
+    playerEl.playbackRate = _audioSpeed;
+    playerEl.load();
+    playerEl.play().catch(() => {}); // autoplay may be blocked; native controls let user tap
+  } else if (playerEl.paused) {
+    playerEl.play().catch(() => {});
+  }
+
+  label.textContent = (track.name || '').replace(/\.[^./]+$/, '');
+  playerDiv.classList.add('open');
+
+  // update row highlights (audio tab list, if it's rendered)
+  document.querySelectorAll('.audio-track-row').forEach(r => {
+    const active = r.dataset.audioid === track.id;
+    r.classList.toggle('playing', active);
+    const icon = r.querySelector('.audio-track-icon');
+    if (icon) icon.textContent = active ? '🔊' : '▶️';
+  });
+}
+
+// ── full-screen player transport controls ──────────────────────────────────
+
+let _audioSpeed = 1;
+
+function fmtAudioTime(sec) {
+  if (!isFinite(sec) || sec < 0) sec = 0;
+  const m = Math.floor(sec / 60);
+  const s = Math.floor(sec % 60);
+  return `${m}:${String(s).padStart(2, '0')}`;
+}
+
+function stopAudioPlayback() {
+  const playerEl = document.getElementById('audioPlayerEl');
+  if (playerEl) { playerEl.pause(); playerEl.src = ''; playerEl.removeAttribute('src'); }
+  _audioCurrentId = null;
+
+  const playBtn   = document.getElementById('audioPlayPauseBtn');
+  const seek      = document.getElementById('audioSeek');
+  const curTimeEl = document.getElementById('audioCurTime');
+  const durTimeEl = document.getElementById('audioDurTime');
+  if (playBtn) playBtn.textContent = '▶️';
+  if (seek) { seek.value = 0; seek.max = 0; }
+  if (curTimeEl) curTimeEl.textContent = '0:00';
+  if (durTimeEl) durTimeEl.textContent = '0:00';
+
+  document.querySelectorAll('.audio-track-row').forEach(r => {
+    r.classList.remove('playing');
+    const icon = r.querySelector('.audio-track-icon');
+    if (icon) icon.textContent = '▶️';
+  });
+}
+
+(function initAudioPlayerControls() {
+  const playerEl   = document.getElementById('audioPlayerEl');
+  const playerDiv  = document.getElementById('audioPersistentPlayer');
+  const playBtn    = document.getElementById('audioPlayPauseBtn');
+  const backBtn    = document.getElementById('audioBackBtn');
+  const fwdBtn     = document.getElementById('audioFwdBtn');
+  const seek       = document.getElementById('audioSeek');
+  const curTimeEl  = document.getElementById('audioCurTime');
+  const durTimeEl  = document.getElementById('audioDurTime');
+  const speedWrap  = document.getElementById('audioSpeedWrap');
+  if (!playerEl || !playerDiv) return;
+
+  let seeking = false;
+
+  playBtn?.addEventListener('click', () => {
+    if (!playerEl.src) return;
+    if (playerEl.paused) playerEl.play().catch(() => {});
+    else playerEl.pause();
+  });
+
+  backBtn?.addEventListener('click', () => {
+    if (!playerEl.src) return;
+    playerEl.currentTime = Math.max(0, playerEl.currentTime - 10);
+  });
+
+  fwdBtn?.addEventListener('click', () => {
+    if (!playerEl.src) return;
+    playerEl.currentTime = Math.min(playerEl.duration || playerEl.currentTime, playerEl.currentTime + 10);
+  });
+
+  seek?.addEventListener('input', () => {
+    seeking = true;
+    curTimeEl.textContent = fmtAudioTime(Number(seek.value));
+  });
+  seek?.addEventListener('change', () => {
+    if (playerEl.src) playerEl.currentTime = Number(seek.value);
+    seeking = false;
+  });
+
+  speedWrap?.querySelectorAll('.audio-speed-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      _audioSpeed = Number(btn.dataset.speed);
+      playerEl.playbackRate = _audioSpeed;
+      speedWrap.querySelectorAll('.audio-speed-btn').forEach(b => b.classList.toggle('active', b === btn));
+    });
+  });
+
+  playerEl.addEventListener('play',  () => { playBtn.textContent = '⏸️'; });
+  playerEl.addEventListener('pause', () => { playBtn.textContent = '▶️'; });
+  playerEl.addEventListener('ended', () => { playBtn.textContent = '▶️'; });
+
+  playerEl.addEventListener('loadedmetadata', () => {
+    seek.max = Math.floor(playerEl.duration || 0);
+    durTimeEl.textContent = fmtAudioTime(playerEl.duration);
+  });
+
+  playerEl.addEventListener('timeupdate', () => {
+    if (seeking) return;
+    seek.value = Math.floor(playerEl.currentTime);
+    curTimeEl.textContent = fmtAudioTime(playerEl.currentTime);
+  });
+})();
+
+document.getElementById('audioPlayerCloseBtn')?.addEventListener('click', () => {
+  // Closing the full-screen player stops playback entirely (rather than
+  // minimizing it), so it doesn't keep running silently in the background.
+  stopAudioPlayback();
+  document.getElementById('audioPersistentPlayer')?.classList.remove('open');
+});
+
+// ── upload audio files ────────────────────────────────────────────────────────
+
+async function uploadAudioFiles(files) {
+  if (!currentUser || !files.length) return;
+  const list = document.getElementById('audioTrackList');
+
+  for (const file of files) {
+    const safeFilename = `${Date.now()}_${file.name.replace(/[^a-zA-Z0-9._\-]/g, '_')}`;
+    const storagePath = `audio/${currentUser.uid}/${safeFilename}`;
+    const fileRef = storageRef(storage, storagePath);
+
+    // Show a toast so the user knows something is happening
+    showToast(`Uploading ${file.name}…`);
+    try {
+      await uploadBytes(fileRef, file);
+      const downloadUrl = await getDownloadURL(fileRef);
+
+      await addDoc(collection(db, 'audioFiles'), {
+        userId: currentUser.uid,
+        name: file.name,
+        storagePath,
+        downloadUrl,
+        size: file.size,
+        visibility: 'private',
+        uploadedAt: serverTimestamp(),
+      });
+      showToast(`${file.name} uploaded ✓`);
+    } catch (e) {
+      showToast(`Upload failed: ${e.message}`);
+    }
+  }
+
+  await renderAudioPanel();
+  mergeAudioIntoLibrary();
+  renderAll();
+}
+
+// ── delete a track ────────────────────────────────────────────────────────────
+
+async function deleteAudioTrack(id) {
+  const track = _audioTracks.find(t => t.id === id);
+  if (!track) return;
+
+  try {
+    // Remove from Storage
+    const fileRef = storageRef(storage, track.storagePath);
+    await deleteObject(fileRef).catch(() => {}); // ignore "not found"
+
+    // Remove from Firestore
+    await deleteDoc(doc(db, 'audioFiles', id));
+
+    // Stop player if this was the current track
+    if (_audioCurrentId === id) {
+      stopAudioPlayback();
+      document.getElementById('audioPersistentPlayer')?.classList.remove('open');
+    }
+
+    _audioTracks = _audioTracks.filter(t => t.id !== id);
+    renderAudioPanel();
+    mergeAudioIntoLibrary();
+    renderAll();
+    showToast('Deleted ✓');
+  } catch (e) {
+    showToast('Delete failed: ' + e.message);
+  }
+}
+
+// ── wire file input ───────────────────────────────────────────────────────────
+
+document.getElementById('btnOpenAudioUpload')?.addEventListener('click', () => {
+  document.getElementById('audioFileInput')?.click();
+});
+
+document.getElementById('audioFileInput')?.addEventListener('change', e => {
+  const files = [...e.target.files];
+  e.target.value = '';           // reset so re-uploading same file works
+  if (files.length) uploadAudioFiles(files);
+});
 
 renderAll();
 </script>
