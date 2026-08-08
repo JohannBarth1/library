@@ -1731,15 +1731,31 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .audio-del-btn{background:none;border:none;color:var(--muted);font-size:.9rem;
   cursor:pointer;padding:.3rem .4rem;border-radius:4px;flex-shrink:0;}
 .audio-del-btn:hover{color:var(--danger);background:rgba(160,40,40,.08);}
-#audioPersistentPlayer{
-  position:sticky;bottom:0;background:var(--navy);border-top:2px solid var(--gold);
-  padding:.6rem 1rem;display:none;
+.audio-player-overlay{
+  display:none;position:fixed;inset:0;z-index:155;
+  flex-direction:column;align-items:center;justify-content:center;gap:1.5rem;
+  background:radial-gradient(circle at 50% 30%, #1e3a5c 0%, var(--navy) 70%);
+  padding:2rem;
 }
-#audioPersistentPlayer.visible{display:block;}
-#audioPersistentPlayer audio{width:100%;height:36px;}
-.audio-now-playing-label{font-size:.7rem;color:var(--gold);letter-spacing:.05em;
-  text-transform:uppercase;margin-bottom:.3rem;
-  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.audio-player-overlay.open{display:flex;}
+.audio-player-close{
+  position:absolute;top:calc(env(safe-area-inset-top,0px) + 1rem);right:1rem;
+  background:rgba(255,255,255,.1);border:none;color:#fff;
+  width:2.5rem;height:2.5rem;border-radius:50%;font-size:1.15rem;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+}
+.audio-player-close:hover{background:rgba(255,255,255,.18);}
+.audio-player-art{
+  width:min(58vw,240px);height:min(58vw,240px);border-radius:14px;
+  background:linear-gradient(145deg,var(--rust),#5c2f26);
+  display:flex;align-items:center;justify-content:center;font-size:4.5rem;
+  box-shadow:0 14px 36px rgba(0,0,0,.4);
+}
+.audio-now-playing-label{
+  font-family:'Playfair Display',serif;font-size:1.35rem;color:var(--gold);
+  text-align:center;max-width:90vw;line-height:1.4;
+}
+.audio-player-overlay audio{width:min(90vw,440px);height:40px;}
 
 /* Ledger popover (reader HUD tap + goal editor) — a bespoke bottom sheet,
    deliberately not reusing .mob-picker-scrim, so it doesn't read as "the
@@ -2058,11 +2074,6 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
           Loading…
         </div>
       </div>
-      <!-- Persistent player -->
-      <div id="audioPersistentPlayer">
-        <div class="audio-now-playing-label" id="audioNowPlayingLabel">Now Playing</div>
-        <audio id="audioPlayerEl" controls preload="none" style="width:100%;height:36px;"></audio>
-      </div>
     </div>
   </div>
 
@@ -2331,7 +2342,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
     <button class="mob-tab" id="mobNavLedger">
       <span class="tab-icon">🔥</span><span>Ledger</span>
     </button>
-    <button class="mob-tab" id="mobNavAudio">
+    <button class="mob-tab" id="mobNavAudio" style="display:none">
       <span class="tab-icon">🎵</span><span>Audio</span>
     </button>
     <button class="mob-tab" id="mobNavSettings">
@@ -2354,6 +2365,11 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
       <button class="up-visibility-btn is-public" id="uploadVisibilityAllBtn" data-visibility="public">🌐 Public</button>
     </div>
     <div class="upload-list" id="uploadList"></div>
+    <div style="text-align:center;padding:.4rem 0 0;">
+      <button type="button" id="btnOpenAudioUpload" style="background:none;border:none;color:var(--teal);font-size:.8rem;font-weight:700;cursor:pointer;font-family:'Lato',sans-serif;">
+        🎧 Uploading an audiobook instead?
+      </button>
+    </div>
     <div class="modal-actions">
       <button class="btn-cancel" id="btnCloseUpload">Close</button>
       <button class="btn-save" id="btnStartUpload" style="display:none">Start Upload</button>
@@ -2607,6 +2623,14 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
   </div>
 </div>
   </div>
+</div>
+
+<!-- Audiobook Player — full screen -->
+<div class="audio-player-overlay" id="audioPersistentPlayer">
+  <button class="audio-player-close" id="audioPlayerCloseBtn" title="Close">✕</button>
+  <div class="audio-player-art">🎧</div>
+  <div class="audio-now-playing-label" id="audioNowPlayingLabel">Now Playing</div>
+  <audio id="audioPlayerEl" controls preload="none"></audio>
 </div>
 
 <!-- EPUB Reader — PATCH 5: toolbar moved to bottom -->
@@ -3907,7 +3931,7 @@ function renderDetailActionRows(peekContainer, moreContainer, book, isMine){
     ${book.isAudio
       ? bigBtn('🎧', hasStarted ? 'Continue Listening' : 'Listen', 'read','#3d7a96','var(--gold)')
       : bigBtn('📖', hasStarted ? 'Continue Reading' : 'Read', 'read','#3d7a96','var(--gold)')}
-    ${bigBtn('🔲','Send to Kobo','sendtokobo','var(--teal)','var(--gold)')}
+    ${book.isAudio ? '' : bigBtn('🔲','Send to Kobo','sendtokobo','var(--teal)','var(--gold)')}
   </div>`;
 
   const hasCustomLists = _userLists.some(l => !l.system);
@@ -3982,7 +4006,7 @@ function renderDetailActionRows(peekContainer, moreContainer, book, isMine){
   const editOpts = [];
   if(canManage){
     editOpts.push({ icon:'✎', label:'Edit Details', action:'editmeta' });
-    editOpts.push({ icon:'📑', label:'Edit Contents', action:'chapters' });
+    if(!book.isAudio) editOpts.push({ icon:'📑', label:'Edit Contents', action:'chapters' });
   }
 
   // ── Recommend/Unrecommend — its own toggle, not tucked in a dropdown ────
@@ -4145,10 +4169,10 @@ function buildDrawerIconBar(book, isMine){
         <span style="font-size:1rem;line-height:1;">${book.isAudio ? '🎧' : '📖'}</span>
         <span>${book.isAudio ? (hasStarted ? 'Continue Listening' : 'Listen') : (hasStarted ? 'Continue Reading' : 'Read')}</span>
       </button>
-      <button class="btn-action btn-kobo" style="flex:1;justify-content:center;padding:.6rem 1rem;font-size:.83rem;border-radius:24px;gap:.4rem;" data-action="sendtokobo">
+      ${book.isAudio ? '' : `<button class="btn-action btn-kobo" style="flex:1;justify-content:center;padding:.6rem 1rem;font-size:.83rem;border-radius:24px;gap:.4rem;" data-action="sendtokobo">
         <span style="font-size:1rem;line-height:1;">🔲</span>
         <span>Send to Kobo</span>
-      </button>
+      </button>`}
     </div>
 
     <!-- Lists: Favourites quick-toggle + reading-stage segmented control -->
@@ -4193,9 +4217,11 @@ function buildDrawerIconBar(book, isMine){
           <span class="di-icon">🔗</span><span class="di-label">Share</span></button>`;
     }
     manageBtns += `<button class="drawer-icon-btn" data-action="editmeta">
-          <span class="di-icon">✎</span><span class="di-label">Edit</span></button>
-        <button class="drawer-icon-btn" data-action="chapters">
+          <span class="di-icon">✎</span><span class="di-label">Edit</span></button>`;
+    if(!book.isAudio){
+      manageBtns += `<button class="drawer-icon-btn" data-action="chapters">
           <span class="di-icon">📑</span><span class="di-label">Edit Contents</span></button>`;
+    }
     if(isMine){
       manageBtns += `<button class="drawer-icon-btn di-danger" data-action="delete">
           <span class="di-icon">✕</span><span class="di-label">Delete</span></button>`;
@@ -15938,21 +15964,34 @@ function playAudioTrack(track) {
   const label    = document.getElementById('audioNowPlayingLabel');
   if (!playerEl || !playerDiv) return;
 
+  const isSameTrack = _audioCurrentId === track.id;
   _audioCurrentId = track.id;
-  playerEl.src = track.downloadUrl;
-  playerEl.load();
-  playerEl.play().catch(() => {}); // autoplay may be blocked; native controls let user tap
 
-  label.textContent = track.name;
-  playerDiv.classList.add('visible');
+  if (!isSameTrack) {
+    playerEl.src = track.downloadUrl;
+    playerEl.load();
+    playerEl.play().catch(() => {}); // autoplay may be blocked; native controls let user tap
+  } else if (playerEl.paused) {
+    playerEl.play().catch(() => {});
+  }
 
-  // update row highlights
+  label.textContent = (track.name || '').replace(/\.[^./]+$/, '');
+  playerDiv.classList.add('open');
+
+  // update row highlights (audio tab list, if it's rendered)
   document.querySelectorAll('.audio-track-row').forEach(r => {
     const active = r.dataset.audioid === track.id;
     r.classList.toggle('playing', active);
-    r.querySelector('.audio-track-icon').textContent = active ? '🔊' : '▶️';
+    const icon = r.querySelector('.audio-track-icon');
+    if (icon) icon.textContent = active ? '🔊' : '▶️';
   });
 }
+
+document.getElementById('audioPlayerCloseBtn')?.addEventListener('click', () => {
+  // Closing the full-screen player doesn't stop playback — it just tucks
+  // the overlay away, the same way minimizing a music app keeps it running.
+  document.getElementById('audioPersistentPlayer')?.classList.remove('open');
+});
 
 // ── upload audio files ────────────────────────────────────────────────────────
 
@@ -16008,7 +16047,7 @@ async function deleteAudioTrack(id) {
     if (_audioCurrentId === id) {
       const playerEl = document.getElementById('audioPlayerEl');
       if (playerEl) { playerEl.pause(); playerEl.src = ''; }
-      document.getElementById('audioPersistentPlayer')?.classList.remove('visible');
+      document.getElementById('audioPersistentPlayer')?.classList.remove('open');
       _audioCurrentId = null;
     }
 
@@ -16023,6 +16062,10 @@ async function deleteAudioTrack(id) {
 }
 
 // ── wire file input ───────────────────────────────────────────────────────────
+
+document.getElementById('btnOpenAudioUpload')?.addEventListener('click', () => {
+  document.getElementById('audioFileInput')?.click();
+});
 
 document.getElementById('audioFileInput')?.addEventListener('change', e => {
   const files = [...e.target.files];
