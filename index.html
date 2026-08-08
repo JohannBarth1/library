@@ -3565,13 +3565,11 @@ function renderGrid(gridId){
 document.getElementById('deskBookGrid').addEventListener('click',e=>{
   const card=e.target.closest('.book-card[data-bookid]');if(!card)return;
   const id=card.dataset.bookid;
-  const book=library.find(x=>x.id===id);
-  if(book?.isAudio){
-    if(selectMode)return; // audio tracks aren't part of bulk book actions (delete/move/etc.)
-    playAudioTrack(book._audioTrack);
-    return;
+  if(selectMode){
+    const book=library.find(x=>x.id===id);
+    if(book?.isAudio)return; // audio tracks aren't part of bulk book actions (delete/move/etc.)
+    if(selectedIds.has(id)){selectedIds.delete(id);card.classList.remove('selected');}else{selectedIds.add(id);card.classList.add('selected');}updateBulkBar();return;
   }
-  if(selectMode){if(selectedIds.has(id)){selectedIds.delete(id);card.classList.remove('selected');}else{selectedIds.add(id);card.classList.add('selected');}updateBulkBar();return;}
   showBookById(id);
 });
 document.getElementById('deskSearch').addEventListener('input',e=>{
@@ -3806,8 +3804,12 @@ async function showBookById(id){
   if(coverSrc){img.src=coverSrc;img.style.display='block';ph.style.display='none';}
   else{img.style.display='none';ph.style.display='flex';}
 
-  // Cover read button
-  document.getElementById('drawerCoverReadBtn').onclick=()=>{closeDrawer();readCurrentBook();};
+  // Cover read/listen button
+  document.getElementById('drawerCoverReadBtn').onclick=()=>{
+    closeDrawer();
+    if(book.isAudio){ playAudioTrack(book._audioTrack); return; }
+    readCurrentBook();
+  };
 
   // Meta
   document.getElementById('drawerCat').textContent=book.category?`${catIcon(book.category)} ${book.category}`:'';
@@ -3891,15 +3893,20 @@ function renderDetailActionRows(peekContainer, moreContainer, book, isMine){
 
   // Same "already started?" check the Current Reads popup uses — a
   // reading_position bookmark with progress > 0 means the label should
-  // read "Continue Reading" instead of "Read".
+  // read "Continue Reading" instead of "Read". For audio, "started" just
+  // means this track is the one currently loaded in the persistent player.
   const readingPosBm = _myBookmarks.find(b => b.type === 'reading_position' && b.bookId === book.id);
-  const hasStarted = !!readingPosBm && (readingPosBm.progress || 0) > 0;
+  const hasStarted = book.isAudio
+    ? _audioCurrentId === book._audioTrack?.id
+    : !!readingPosBm && (readingPosBm.progress || 0) > 0;
 
   // ═══════════════════════════════════════════════════════════════════════
   // PEEK — visible the moment the sheet opens: primary actions + Lists
   // ═══════════════════════════════════════════════════════════════════════
   let peekHtml = `<div style="display:flex;gap:.5rem;margin-bottom:.7rem;flex-wrap:wrap;">
-    ${bigBtn('📖', hasStarted ? 'Continue Reading' : 'Read', 'read','#3d7a96','var(--gold)')}
+    ${book.isAudio
+      ? bigBtn('🎧', hasStarted ? 'Continue Listening' : 'Listen', 'read','#3d7a96','var(--gold)')
+      : bigBtn('📖', hasStarted ? 'Continue Reading' : 'Read', 'read','#3d7a96','var(--gold)')}
     ${bigBtn('🔲','Send to Kobo','sendtokobo','var(--teal)','var(--gold)')}
   </div>`;
 
@@ -4120,19 +4127,23 @@ function mobSheetSetExpanded(expanded){
 function buildDrawerIconBar(book, isMine){
   const bar = document.getElementById('drawerIconBar');
 
-  // Check if the user has started reading this book (same logic as mobile)
+  // Check if the user has started reading this book (same logic as mobile).
+  // For audio, "started" just means this track is the one currently loaded
+  // in the persistent player — there's no saved listening position yet.
   const readingPosBm = _myBookmarks.find(b => b.type === 'reading_position' && b.bookId === book.id);
-  const hasStarted = !!readingPosBm && (readingPosBm.progress || 0) > 0;
+  const hasStarted = book.isAudio
+    ? _audioCurrentId === book._audioTrack?.id
+    : !!readingPosBm && (readingPosBm.progress || 0) > 0;
 
   // Quick-list state
   const isFav = !!_userLists.find(l => l.id === 'favourites')?.bookIds?.includes(book.id);
 
   let html = `
-    <!-- Primary: Read / Continue Reading + Send to Kobo -->
+    <!-- Primary: Read/Listen (+ Continue variants) + Send to Kobo -->
     <div style="display:flex;gap:.5rem;padding:.65rem 1.5rem .5rem;border-bottom:1px solid var(--border);">
       <button class="btn-action btn-read" style="flex:1;justify-content:center;padding:.6rem 1rem;font-size:.83rem;border-radius:24px;gap:.4rem;" data-action="read">
-        <span style="font-size:1rem;line-height:1;">📖</span>
-        <span>${hasStarted ? 'Continue Reading' : 'Read'}</span>
+        <span style="font-size:1rem;line-height:1;">${book.isAudio ? '🎧' : '📖'}</span>
+        <span>${book.isAudio ? (hasStarted ? 'Continue Listening' : 'Listen') : (hasStarted ? 'Continue Reading' : 'Read')}</span>
       </button>
       <button class="btn-action btn-kobo" style="flex:1;justify-content:center;padding:.6rem 1rem;font-size:.83rem;border-radius:24px;gap:.4rem;" data-action="sendtokobo">
         <span style="font-size:1rem;line-height:1;">🔲</span>
@@ -4214,7 +4225,12 @@ function handleAction(e){
   runDetailAction(a);
 }
 function runDetailAction(a){
-  if(a==='read')         readCurrentBook();
+  if(a==='read'){
+    const book=[...library,...communityLib].find(b=>b.id===currentId);
+    if(book?.isAudio){ playAudioTrack(book._audioTrack); closeMobBookSheet(); closeDrawer(); return; }
+    readCurrentBook();
+    return;
+  }
   if(a==='download')     downloadCurrentBook();
   if(a==='share')        shareCurrentBook();
   if(a==='unpublish')    unpublishCurrentBook();
@@ -4514,7 +4530,7 @@ async function mob_showBook(id, opts={}){
 
   const coverEl = coverSrc ? img : ph;
   coverEl.style.cursor='pointer';
-  coverEl.onclick=()=>{ const b=[...library,...communityLib].find(x=>x.id===currentId); if(b&&(b.ownerId===currentUser?.uid||myCheckedOutIds.has(b.id))) readCurrentBook(); else showToast('Sign out this book to read it'); };
+  coverEl.onclick=()=>{ const b=[...library,...communityLib].find(x=>x.id===currentId); if(b?.isAudio){ playAudioTrack(b._audioTrack); return; } if(b&&(b.ownerId===currentUser?.uid||myCheckedOutIds.has(b.id))) readCurrentBook(); else showToast('Sign out this book to read it'); };
 
   document.getElementById('mobDetailCat').textContent=book.category?`${catIcon(book.category)} ${book.category}`:'';
   document.getElementById('mobDetailTitle').textContent=book.title||'';
@@ -4862,11 +4878,8 @@ document.getElementById('mobGridLibrary').addEventListener('click', e => {
   if(mobSelectMode) return; // let grid.onclick handle it in select mode
   const card = e.target.closest('.book-card[data-bookid]');
   if (!card) return;
-  const id = card.dataset.bookid;
-  const book = library.find(x => x.id === id);
-  if(book?.isAudio){ playAudioTrack(book._audioTrack); return; }
   mobPrevPanel = 'mobPanelLibrary';
-  mob_showBook(id);
+  mob_showBook(card.dataset.bookid);
 });
 
 // ── MOBILE LONG PRESS → MULTI SELECT ─────────────────────────────────────────
@@ -4922,7 +4935,6 @@ document.getElementById('mobGridLibrary').addEventListener('click', e => {
     updateMobBulkBar();
     return;
   }
-  if(book?.isAudio){ playAudioTrack(book._audioTrack); return; }
   mobPrevPanel = 'mobPanelLibrary';
   mob_showBook(id);
 });
