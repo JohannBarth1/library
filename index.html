@@ -1783,6 +1783,12 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .audio-player-btn-skip{width:3.4rem;height:3.4rem;}
 .audio-player-btn-skip .apb-icon{font-size:1.7rem;line-height:1;}
 .audio-player-btn-skip .apb-label{font-size:.6rem;font-weight:700;color:rgba(255,255,255,.75);}
+.audio-player-speed-wrap{display:flex;align-items:center;justify-content:center;gap:.4rem;flex-wrap:wrap;width:min(90vw,440px);}
+.audio-speed-btn{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.16);color:rgba(255,255,255,.75);
+  font-size:.72rem;font-weight:700;padding:.32rem .65rem;border-radius:20px;cursor:pointer;
+  transition:background .15s,border-color .15s,color .15s;-webkit-tap-highlight-color:transparent;}
+.audio-speed-btn:hover{background:rgba(255,255,255,.14);}
+.audio-speed-btn.active{background:var(--gold);border-color:var(--gold);color:var(--navy);}
 
 /* Ledger popover (reader HUD tap + goal editor) — a bespoke bottom sheet,
    deliberately not reusing .mob-picker-scrim, so it doesn't read as "the
@@ -2663,6 +2669,14 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
     <button class="audio-player-btn audio-player-btn-skip" id="audioFwdBtn" title="Forward 10 seconds">
       <span class="apb-icon">⟳</span><span class="apb-label">10</span>
     </button>
+  </div>
+
+  <div class="audio-player-speed-wrap" id="audioSpeedWrap">
+    <button class="audio-speed-btn" data-speed="0.75">0.75×</button>
+    <button class="audio-speed-btn active" data-speed="1">1×</button>
+    <button class="audio-speed-btn" data-speed="1.25">1.25×</button>
+    <button class="audio-speed-btn" data-speed="1.5">1.5×</button>
+    <button class="audio-speed-btn" data-speed="2">2×</button>
   </div>
 
   <audio id="audioPlayerEl" preload="none"></audio>
@@ -15851,6 +15865,7 @@ function playAudioTrack(track) {
 
   if (!isSameTrack) {
     playerEl.src = track.downloadUrl;
+    playerEl.playbackRate = _audioSpeed;
     playerEl.load();
     playerEl.play().catch(() => {}); // autoplay may be blocked; native controls let user tap
   } else if (playerEl.paused) {
@@ -15869,9 +15884,105 @@ function playAudioTrack(track) {
   });
 }
 
+// ── full-screen player transport controls ──────────────────────────────────
+
+let _audioSpeed = 1;
+
+function fmtAudioTime(sec) {
+  if (!isFinite(sec) || sec < 0) sec = 0;
+  const m = Math.floor(sec / 60);
+  const s = Math.floor(sec % 60);
+  return `${m}:${String(s).padStart(2, '0')}`;
+}
+
+function stopAudioPlayback() {
+  const playerEl = document.getElementById('audioPlayerEl');
+  if (playerEl) { playerEl.pause(); playerEl.src = ''; playerEl.removeAttribute('src'); }
+  _audioCurrentId = null;
+
+  const playBtn   = document.getElementById('audioPlayPauseBtn');
+  const seek      = document.getElementById('audioSeek');
+  const curTimeEl = document.getElementById('audioCurTime');
+  const durTimeEl = document.getElementById('audioDurTime');
+  if (playBtn) playBtn.textContent = '▶️';
+  if (seek) { seek.value = 0; seek.max = 0; }
+  if (curTimeEl) curTimeEl.textContent = '0:00';
+  if (durTimeEl) durTimeEl.textContent = '0:00';
+
+  document.querySelectorAll('.audio-track-row').forEach(r => {
+    r.classList.remove('playing');
+    const icon = r.querySelector('.audio-track-icon');
+    if (icon) icon.textContent = '▶️';
+  });
+}
+
+(function initAudioPlayerControls() {
+  const playerEl   = document.getElementById('audioPlayerEl');
+  const playerDiv  = document.getElementById('audioPersistentPlayer');
+  const playBtn    = document.getElementById('audioPlayPauseBtn');
+  const backBtn    = document.getElementById('audioBackBtn');
+  const fwdBtn     = document.getElementById('audioFwdBtn');
+  const seek       = document.getElementById('audioSeek');
+  const curTimeEl  = document.getElementById('audioCurTime');
+  const durTimeEl  = document.getElementById('audioDurTime');
+  const speedWrap  = document.getElementById('audioSpeedWrap');
+  if (!playerEl || !playerDiv) return;
+
+  let seeking = false;
+
+  playBtn?.addEventListener('click', () => {
+    if (!playerEl.src) return;
+    if (playerEl.paused) playerEl.play().catch(() => {});
+    else playerEl.pause();
+  });
+
+  backBtn?.addEventListener('click', () => {
+    if (!playerEl.src) return;
+    playerEl.currentTime = Math.max(0, playerEl.currentTime - 10);
+  });
+
+  fwdBtn?.addEventListener('click', () => {
+    if (!playerEl.src) return;
+    playerEl.currentTime = Math.min(playerEl.duration || playerEl.currentTime, playerEl.currentTime + 10);
+  });
+
+  seek?.addEventListener('input', () => {
+    seeking = true;
+    curTimeEl.textContent = fmtAudioTime(Number(seek.value));
+  });
+  seek?.addEventListener('change', () => {
+    if (playerEl.src) playerEl.currentTime = Number(seek.value);
+    seeking = false;
+  });
+
+  speedWrap?.querySelectorAll('.audio-speed-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      _audioSpeed = Number(btn.dataset.speed);
+      playerEl.playbackRate = _audioSpeed;
+      speedWrap.querySelectorAll('.audio-speed-btn').forEach(b => b.classList.toggle('active', b === btn));
+    });
+  });
+
+  playerEl.addEventListener('play',  () => { playBtn.textContent = '⏸️'; });
+  playerEl.addEventListener('pause', () => { playBtn.textContent = '▶️'; });
+  playerEl.addEventListener('ended', () => { playBtn.textContent = '▶️'; });
+
+  playerEl.addEventListener('loadedmetadata', () => {
+    seek.max = Math.floor(playerEl.duration || 0);
+    durTimeEl.textContent = fmtAudioTime(playerEl.duration);
+  });
+
+  playerEl.addEventListener('timeupdate', () => {
+    if (seeking) return;
+    seek.value = Math.floor(playerEl.currentTime);
+    curTimeEl.textContent = fmtAudioTime(playerEl.currentTime);
+  });
+})();
+
 document.getElementById('audioPlayerCloseBtn')?.addEventListener('click', () => {
-  // Closing the full-screen player doesn't stop playback — it just tucks
-  // the overlay away, the same way minimizing a music app keeps it running.
+  // Closing the full-screen player stops playback entirely (rather than
+  // minimizing it), so it doesn't keep running silently in the background.
+  stopAudioPlayback();
   document.getElementById('audioPersistentPlayer')?.classList.remove('open');
 });
 
@@ -15927,10 +16038,8 @@ async function deleteAudioTrack(id) {
 
     // Stop player if this was the current track
     if (_audioCurrentId === id) {
-      const playerEl = document.getElementById('audioPlayerEl');
-      if (playerEl) { playerEl.pause(); playerEl.src = ''; }
+      stopAudioPlayback();
       document.getElementById('audioPersistentPlayer')?.classList.remove('open');
-      _audioCurrentId = null;
     }
 
     _audioTracks = _audioTracks.filter(t => t.id !== id);
