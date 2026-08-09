@@ -1965,8 +1965,8 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
              same colors, same anchored-dropdown behavior, just its own ids/state
              so it filters the desktop grid instead of the mobile one. -->
         <div class="desk-filter-bar" id="deskFilterBar">
-          <button class="mfp mfp-cat" id="deskPillCat" aria-label="Filter by category">
-            <span id="deskPillCatLabel">Category</span>
+          <button class="mfp mfp-cat" id="deskPillCat" aria-label="Filter by genre">
+            <span id="deskPillCatLabel">Genre</span>
             <span class="mfp-caret">▾</span>
           </button>
           <button class="mfp mfp-tags" id="deskPillTags" aria-label="Filter by tags">
@@ -2042,8 +2042,8 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
       </div>
       <!-- Row 2: Colour-coded filter pills -->
       <div class="mob-filter-bar" id="mobFilterBar">
-        <button class="mfp mfp-cat" id="mfpCat" aria-label="Filter by category">
-          <span id="mfpCatLabel">Category</span>
+        <button class="mfp mfp-cat" id="mfpCat" aria-label="Filter by genre">
+          <span id="mfpCatLabel">Genre</span>
           <span class="mfp-caret">▾</span>
         </button>
         <button class="mfp mfp-tags" id="mfpTags" aria-label="Filter by tags">
@@ -2277,7 +2277,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
           <span class="settings-row-icon" style="background:var(--navy2);color:var(--gold)">🔑</span>
           <span class="settings-row-text">
             <span class="settings-row-title">Admin Panel</span>
-            <span class="settings-row-desc">Manage users, categories, tags & more</span>
+            <span class="settings-row-desc">Manage users, genres, tags & more</span>
           </span>
           <span class="settings-row-chevron">›</span>
         </button>
@@ -2365,7 +2365,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 <!-- Desktop settings popover -->
 <div id="deskSettings">
   <h3 style="font-family:'Playfair Display',serif;font-size:1rem;color:var(--navy2);margin-bottom:.9rem;padding-bottom:.4rem;border-bottom:1px solid var(--border)">⚙ Settings</h3>
-  <div style="font-size:.65rem;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:.4rem">Default category for uploads</div>
+  <div style="font-size:.65rem;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:.4rem">Default genre for uploads</div>
   <input type="text" id="defaultCatInput" placeholder="e.g. Fiction" style="width:100%;padding:.5rem .7rem;font-size:.88rem;font-family:'Lato',sans-serif;border:1px solid var(--border);border-radius:3px;background:var(--cream);color:var(--navy);outline:none;margin-bottom:.8rem"/>
   <button id="deskInstallBtn" style="display:none;width:100%;padding:.45rem;font-size:.78rem;font-family:'Lato',sans-serif;font-weight:700;border-radius:3px;cursor:pointer;border:1px solid var(--teal);color:var(--teal);background:var(--cream);margin-bottom:.5rem">📲 Install eLibrary</button>
   <p style="font-size:.72rem;color:var(--muted);line-height:1.5;margin-bottom:.8rem" id="deskInstallNote">Use your browser's "Add to Home Screen" or "Install" option.</p>
@@ -2376,8 +2376,8 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
     <div id="deskKoboSettings"></div>
   </div>
   <div style="margin-top:1rem;padding-top:.8rem;border-top:1px solid var(--border)">
-    <div style="font-family:'Playfair Display',serif;font-size:.9rem;color:var(--navy2);margin-bottom:.7rem">🏷 Categories &amp; Tags</div>
-    <button class="btn-save" style="width:100%;margin-bottom:.4rem;font-size:.72rem;padding:.45rem" id="deskManageCatsBtn">Manage Categories</button>
+    <div style="font-family:'Playfair Display',serif;font-size:.9rem;color:var(--navy2);margin-bottom:.7rem">🏷 Genres &amp; Tags</div>
+    <button class="btn-save" style="width:100%;margin-bottom:.4rem;font-size:.72rem;padding:.45rem" id="deskManageCatsBtn">Manage Genres</button>
     <button class="btn-save" style="width:100%;font-size:.72rem;padding:.45rem;background:var(--navy2)" id="deskManageTagsBtn">Manage Tags</button>
   </div>
 </div>
@@ -2467,7 +2467,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
       <div style="flex:1"><label>Book #</label><input type="number" id="metaSeriesIndex" placeholder="e.g. 2" step="0.1" min="0"/></div>
     </div>
     <datalist id="metaSeriesList"></datalist>
-    <div class="form-row"><label>Category</label><select id="metaCategory"></select></div>
+    <div class="form-row"><label>Genre</label><select id="metaCategory"></select></div>
     <div class="form-row"><label>Language</label><input type="text" id="metaLanguage" placeholder="e.g. en"/></div>
     <div class="form-row"><label>Description</label><textarea id="metaDesc" rows="4" style="width:100%;padding:.6rem .85rem;font-family:'Lato',sans-serif;font-size:.88rem;color:var(--navy);background:var(--cream);border:1px solid var(--border);border-radius:3px;outline:none;resize:vertical;line-height:1.5"></textarea></div>
     <div class="modal-actions">
@@ -2538,7 +2538,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
   <div class="modal" style="max-width:500px">
     <h3>Edit <span id="bulkEditCount">0</span> Books</h3>
     <p style="font-size:.78rem;color:var(--muted);margin-bottom:1rem;line-height:1.5">Leave any field blank to keep existing values.</p>
-    <div class="form-row"><label>Category</label><input type="text" id="bulkCat" placeholder="Leave blank to keep existing" list="bulkCatSuggestions"/><datalist id="bulkCatSuggestions"></datalist></div>
+    <div class="form-row"><label>Genre</label><input type="text" id="bulkCat" placeholder="Leave blank to keep existing" list="bulkCatSuggestions"/><datalist id="bulkCatSuggestions"></datalist></div>
     <div class="form-row"><label>Language</label><input type="text" id="bulkLang" placeholder="e.g. en — leave blank to keep existing"/></div>
     <div class="form-row"><label>Description</label><textarea id="bulkDesc" rows="3" style="width:100%;padding:.6rem .85rem;font-family:'Lato',sans-serif;font-size:.88rem;color:var(--navy);background:var(--cream);border:1px solid var(--border);border-radius:3px;outline:none;resize:vertical;line-height:1.5" placeholder="Leave blank to keep existing"></textarea></div>
     <div class="form-row"><label>Tags <span style="font-size:.65rem;color:var(--muted);font-weight:400">(comma-separated, added to existing)</span></label><input type="text" id="bulkTags" placeholder="e.g. Favourite, Classic"/></div>
@@ -2946,7 +2946,7 @@ const LEDGER_ACHIEVEMENTS_TIER1 = [
   { id: 'night-owl',    icon: '🦉', label: 'Night Owl',      desc: 'Read between midnight and 4am' },
   { id: 'early-bird',   icon: '🐦', label: 'Early Bird',     desc: 'Read before 6am' },
   { id: 'marathon',     icon: '🏃', label: 'Marathon',       desc: 'Read 100+ pages in one sitting' },
-  { id: 'explorer',     icon: '🧭', label: 'Genre Explorer', desc: 'Finish books in 3+ categories' },
+  { id: 'explorer',     icon: '🧭', label: 'Genre Explorer', desc: 'Finish books in 3+ genres' },
 ];
 // Revealed once 6 of the Tier 1 badges above are earned (see _ledgerTier2Visible).
 // The first three are deliberately "firsts" a reader has usually already done
@@ -3721,7 +3721,7 @@ document.getElementById('deskSearchClear').addEventListener('click',()=>{
 // the desktop grid instead of the mobile one.
 function updateDeskFilterPillLabels() {
   const catLabel = document.getElementById('deskPillCatLabel');
-  if (catLabel) catLabel.textContent = deskLibCat === 'All' ? 'Category' : deskLibCat;
+  if (catLabel) catLabel.textContent = deskLibCat === 'All' ? 'Genre' : deskLibCat;
   document.getElementById('deskPillCat')?.classList.toggle('mfp-active', deskLibCat !== 'All');
 
   const tagsLabel = document.getElementById('deskPillTagsLabel');
@@ -3751,7 +3751,7 @@ document.getElementById('deskPillCat').addEventListener('click', (e) => {
   ];
   openMobFilterPicker({
     anchor: e.currentTarget,
-    title: '📚 Category',
+    title: '📚 Genre',
     items,
     grid: true,
     isSelected: it => deskLibCat === it.id,
@@ -4074,7 +4074,7 @@ function renderDetailActionRows(peekContainer, moreContainer, book, isMine){
   // ═══════════════════════════════════════════════════════════════════════
   let html = `<div class="mob-taxonomy-card">
     <div style="display:flex;gap:.4rem;">
-      ${medBtn('📚','Category','category','var(--gold)','rgba(200,149,42,.4)')}
+      ${medBtn('📚','Genre','category','var(--gold)','rgba(200,149,42,.4)')}
       ${medBtn('🏷','Tags','tags','var(--teal)','var(--teal)')}
     </div>
   </div>`;
@@ -4326,7 +4326,7 @@ function buildDrawerIconBar(book, isMine){
     <div style="padding:.4rem 1.5rem .3rem;border-bottom:1px solid var(--border);">
       <div style="font-size:.58rem;letter-spacing:.15em;text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:.35rem;">Actions</div>
       <div style="display:flex;gap:.4rem;flex-wrap:wrap;">
-        <button class="drawer-icon-btn" data-action="category"><span class="di-icon">📚</span><span class="di-label">Category</span></button>
+        <button class="drawer-icon-btn" data-action="category"><span class="di-icon">📚</span><span class="di-label">Genre</span></button>
         <button class="drawer-icon-btn" data-action="tags"><span class="di-icon">🏷</span><span class="di-label">Tags</span></button>
         <button class="drawer-icon-btn" data-action="recommend">
           <span class="di-icon">${book.recommended?'☆':'⭐'}</span>
@@ -4834,9 +4834,9 @@ const MOB_SOURCE_OPTIONS = [
   { id:'shared',  label:'Shared with Me' },
 ];
 const FORMAT_OPTIONS = [
-  { id:'all',   label:'All',        icon:'📚' },
-  { id:'book',  label:'Books',      icon:'📖' },
-  { id:'audio', label:'Audiobooks', icon:'🎧' },
+  { id:'all',   label:'Format', icon:'📚' },
+  { id:'book',  label:'Ebook',  icon:'📖' },
+  { id:'audio', label:'Audio',  icon:'🎧' },
 ];
 
 function getAllMobTags() {
@@ -4849,7 +4849,7 @@ function getAllMobTags() {
 // current filter/sort values — called after render and after any change.
 function updateMobFilterPillLabels() {
   const catLabel = document.getElementById('mfpCatLabel');
-  if (catLabel) catLabel.textContent = mobLibCat === 'All' ? 'Category' : mobLibCat;
+  if (catLabel) catLabel.textContent = mobLibCat === 'All' ? 'Genre' : mobLibCat;
   document.getElementById('mfpCat')?.classList.toggle('mfp-active', mobLibCat !== 'All');
 
   const tagsLabel = document.getElementById('mfpTagsLabel');
@@ -4928,7 +4928,7 @@ document.getElementById('mfpCat').addEventListener('click', (e) => {
   ];
   openMobFilterPicker({
     anchor: e.currentTarget,
-    title: '📚 Category',
+    title: '📚 Genre',
     items,
     grid: true,
     isSelected: it => mobLibCat === it.id,
@@ -5197,7 +5197,7 @@ function updateMobBulkBar(){
       color:${color};white-space:nowrap">${label}</button>`;
 
   let html = `<span style="font-size:.78rem;font-weight:700;flex-shrink:0">${n} selected</span>`;
-  html += btn('📚 Category','category');
+  html += btn('📚 Genre','category');
   html += btn('🏷 Tags','tags');
   if(hasUnpublished) html += btn('⇧ Publish','publish');
   if(hasPublished)   html += btn('↓ Unpublish','unpublish');
@@ -5325,7 +5325,7 @@ function showMobBulkCategoryPicker(){
   scrim.innerHTML = `
     <div class="mob-picker-card">
       <div class="mob-picker-title">
-        <span>📚 Set Category for ${ids.length} book${ids.length!==1?'s':''}</span>
+        <span>📚 Set Genre for ${ids.length} book${ids.length!==1?'s':''}</span>
         <button class="mob-picker-close" id="mobBulkCatCloseBtn">✕</button>
       </div>
       <div id="mobBulkCatItems" class="mob-picker-grid">
@@ -5342,14 +5342,14 @@ function showMobBulkCategoryPicker(){
     item.addEventListener('click', async () => {
       const newCat = item.dataset.cat;
       scrim.remove();
-      showLoading('Updating category…');
+      showLoading('Updating genre…');
       try{
         for(const id of ids){
           await updateDoc(doc(db,'books',id),{category:newCat,updatedAt:serverTimestamp()});
           const book = library.find(b=>b.id===id); if(book) book.category=newCat;
         }
         hideLoading(); exitMobSelectMode(); renderAll();
-        showToast(`Category updated for ${ids.length} book${ids.length!==1?'s':''} ✓`);
+        showToast(`Genre updated for ${ids.length} book${ids.length!==1?'s':''} ✓`);
       }catch(e){ hideLoading(); showToast('Failed: '+e.message); }
     });
   });
@@ -11781,7 +11781,7 @@ document.getElementById('deskManageTagsBtn')?.addEventListener('click', () => {
   
 document.addEventListener('click',e=>{const s=document.getElementById('deskSettings');if(s.style.display!=='none'&&!s.contains(e.target)&&e.target.id!=='btnToggleSettings')s.style.display='none';});
 document.getElementById('defaultCatInput').value=localStorage.getItem('elib_default_cat')||'';
-document.getElementById('defaultCatInput').addEventListener('keydown',e=>{if(e.key==='Enter'){localStorage.setItem('elib_default_cat',e.target.value);showToast('Default category saved');}});
+document.getElementById('defaultCatInput').addEventListener('keydown',e=>{if(e.key==='Enter'){localStorage.setItem('elib_default_cat',e.target.value);showToast('Default genre saved');}});
 document.getElementById('btnClearCache').addEventListener('click',()=>{if(!confirm('Clear local cache?'))return;library=[];communityLib=[];currentId=null;deskLibCat='All';renderAll();closeDrawer();showToast('Cache cleared');});
 document.getElementById('deskInstallBtn').addEventListener('click',triggerInstall);
 document.getElementById('mobInstallBtn').addEventListener('click',triggerInstall);
@@ -13121,7 +13121,7 @@ async function checkAdminStatus() {
   overlay.className = 'modal-overlay open';
   overlay.innerHTML = `
     <div class="modal" style="max-width:500px;max-height:80vh;display:flex;flex-direction:column;overflow:hidden;">
-      <h3 style="margin-bottom:.8rem">${section === 'categories' ? '🏷 Manage Categories' : '🏷 Manage Tags'}</h3>
+      <h3 style="margin-bottom:.8rem">${section === 'categories' ? '🏷 Manage Genres' : '🏷 Manage Tags'}</h3>
       <div style="flex:1;overflow-y:auto;" id="adminSheetBody"></div>
       <div class="modal-actions" style="margin-top:.8rem">
         <button class="btn-cancel" onclick="this.closest('.modal-overlay').remove()">Close</button>
@@ -13727,7 +13727,7 @@ function showQuickCategoryModal() {
   scrim.innerHTML = `
     <div class="mob-picker-card">
       <div class="mob-picker-title">
-        <span>📚 Category</span>
+        <span>📚 Genre</span>
         <button class="mob-picker-close" id="quickCatCloseBtn">✕</button>
       </div>
       <div id="quickCatItems" class="mob-picker-grid">
@@ -13758,7 +13758,7 @@ function showQuickCategoryModal() {
         renderAll();
         if(window.innerWidth > 768) showBookById(currentId);
         else mob_showBook(currentId, { preserveState: true });
-        showToast('Category updated ✓');
+        showToast('Genre updated ✓');
       } catch(e) {
         hideLoading();
         showToast('Failed: ' + e.message);
@@ -14505,7 +14505,7 @@ async function adminLoadCategories() {
       ${cats.map((c, i) => `
         <div class="cat-admin-row" data-catidx="${i}">
           <input class="cat-admin-icon" data-cat-icon="${i}" value="${esc(catIcon(c))}"
-            maxlength="4" title="Emoji for this category"
+            maxlength="4" title="Emoji for this genre"
             style="width:2.1rem;text-align:center;padding:.25rem 0;font-size:.95rem;
                    border:1px solid var(--border);border-radius:6px;background:var(--cream);"/>
           <span class="cat-admin-name">${esc(c)}</span>
@@ -14515,7 +14515,7 @@ async function adminLoadCategories() {
         </div>`).join('')}
     </div>
     <div style="display:flex;gap:.4rem;margin-top:.7rem;">
-      <input id="adminCatNewInput" type="text" placeholder="New category…"
+      <input id="adminCatNewInput" type="text" placeholder="New genre…"
         class="filter-search" style="flex:1;font-size:.82rem;"/>
       <button class="btn-save" style="font-size:.72rem;padding:.4rem .8rem;"
         id="adminCatAddBtn">+ Add</button>
@@ -14552,7 +14552,7 @@ async function adminLoadCategories() {
       document.getElementById(`catEditSave_${idx}`).addEventListener('click', async () => {
         const newName = document.getElementById(`catEditInput_${idx}`).value.trim();
         if(!newName || newName === orig) { adminLoadCategories(); return; }
-        showLoading('Updating category…');
+        showLoading('Updating genre…');
         try {
           // Update config
           _categories[idx] = newName;
@@ -14589,8 +14589,8 @@ async function adminLoadCategories() {
     btn.addEventListener('click', async () => {
       const idx = parseInt(btn.dataset.catDelete);
       const name = _categories[idx];
-      if(!confirm(`Delete category "${name}"?\n\nBooks in this category will be moved to Uncategorised.`)) return;
-      showLoading('Deleting category…');
+      if(!confirm(`Delete genre "${name}"?\n\nBooks in this genre will be moved to Uncategorised.`)) return;
+      showLoading('Deleting genre…');
       try {
         _categories.splice(idx, 1);
         await setDoc(doc(db, 'config', 'categories'), { list: _categories });
@@ -14623,7 +14623,7 @@ async function adminLoadCategories() {
   const doAdd = async () => {
     const name = addInput.value.trim();
     if(!name) return;
-    if(_categories.includes(name)) { showToast('Category already exists'); return; }
+    if(_categories.includes(name)) { showToast('Genre already exists'); return; }
     _categories.push(name);
     _categories.sort();
     addInput.value = '';
@@ -14736,7 +14736,7 @@ async function adminLoadTags() {
               </div>
               ${(t.assignedCategories?.length || t.assignedBookIds?.length) ? `
                 <div style="font-size:.65rem;color:var(--muted);margin-top:1px">
-                  ${t.assignedCategories?.length ? `${t.assignedCategories.length} categor${t.assignedCategories.length!==1?'ies':'y'}` : ''}
+                  ${t.assignedCategories?.length ? `${t.assignedCategories.length} genre${t.assignedCategories.length!==1?'s':''}` : ''}
                   ${t.assignedCategories?.length && t.assignedBookIds?.length ? ' · ' : ''}
                   ${t.assignedBookIds?.length ? `${t.assignedBookIds.length} book${t.assignedBookIds.length!==1?'s':''}` : ''}
                 </div>` : ''}
@@ -14849,7 +14849,7 @@ function buildAdminSections() {
 
     <div class="admin-section">
       <div class="admin-section-header" data-admin-section="categories">
-        <span class="admin-section-title">🏷 Categories</span>
+        <span class="admin-section-title">🏷 Genres</span>
         <span class="admin-section-chevron">▾</span>
       </div>
       <div class="admin-section-body" id="adminCatBody">
@@ -15014,9 +15014,9 @@ function showBookmarkEditor(templateId) {
 
       <div style="font-size:.62rem;letter-spacing:.15em;text-transform:uppercase;
                   color:var(--muted);font-weight:700;margin:.8rem 0 .4rem">
-        Apply to books / categories</div>
+        Apply to books / genres</div>
 
-      <div class="form-row"><label>Categories
+      <div class="form-row"><label>Genres
         <span style="font-size:.65rem;font-weight:400;color:var(--muted)">
           (this bookmark replaces the default for all books in these shelves)</span></label>
         <div id="bmEdCatChips" style="display:flex;flex-wrap:wrap;gap:.3rem;
@@ -15024,14 +15024,14 @@ function showBookmarkEditor(templateId) {
         <select id="bmEdCatSelect" style="width:100%;padding:.5rem .7rem;
           font-family:'Lato',sans-serif;font-size:.85rem;border:1px solid var(--border);
           border-radius:3px;background:var(--cream);color:var(--navy)">
-          <option value="">— Add a category —</option>
+          <option value="">— Add a genre —</option>
           ${_categories.map(c => `<option value="${esc(c)}">${catIcon(c)} ${esc(c)}</option>`).join('')}
         </select>
       </div>
 
       <div class="form-row" style="margin-top:.5rem"><label>Specific books
         <span style="font-size:.65rem;font-weight:400;color:var(--muted)">
-          (overrides category assignment)</span></label>
+          (overrides genre assignment)</span></label>
         <div id="bmEdBookChips" style="display:flex;flex-wrap:wrap;gap:.3rem;
           margin-bottom:.4rem;min-height:24px;"></div>
         <input type="text" id="bmEdBookSearch" placeholder="Search for a book…" autocomplete="off"/>
