@@ -3208,28 +3208,45 @@ async function loadLibrary() {
     mergeAudioIntoLibrary();
     renderAll();
 
-    // Load public and shared in background without blocking UI
-    Promise.all([getDocs(pubQ), getDocs(sharedQ), restrictedPromise, loadCommunityAudioTracks()]).then(([pubSnap, sharedSnap, restrictedSnap, communityAudio]) => {
-      const pubBooks = pubSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-      const sharedBooks = sharedSnap.docs
-        .map(d => ({ id: d.id, ...d.data() }))
-        .filter(b => b.ownerId !== currentUser.uid);
-      const restrictedBooks = restrictedSnap.docs
-        .map(d => ({ id: d.id, ...d.data() }))
-        .filter(b => b.ownerId !== currentUser.uid);
-      communityLib = dedupe([...pubBooks, ...sharedBooks, ...restrictedBooks, ...communityAudio]);
-      renderAll();
-      renderMobHome();
-      renderDeskHome();
-    }).catch(e => {
-      console.warn('Background load failed:', e);
-      showToast('Could not load public library');
-    }).finally(() => {
-      // PATCH: mark the library "ready" once both waves have settled
-      // (success or failure), so findBookById() stops waiting on it.
-      _libraryReady = true;
-      _libraryReadyResolve();
-    });
+    // Load public and shared in background without blocking UI.
+    // Each of these queries can fail independently of the others (most
+    // commonly: the restricted-visibility query getting permission-denied
+    // for a user whose access-level grant hasn't been mirrored in the
+    // security rules yet). Promise.allSettled — rather than Promise.all —
+    // means one denied query no longer takes the whole public/shared library
+    // down with it; whatever did succeed still renders, and only the piece
+    // that failed is silently dropped (with a console warning to spot it).
+    Promise.allSettled([getDocs(pubQ), getDocs(sharedQ), restrictedPromise, loadCommunityAudioTracks()])
+      .then(([pubR, sharedR, restrictedR, audioR]) => {
+        const failed = [];
+        const pubBooks = pubR.status === 'fulfilled'
+          ? pubR.value.docs.map(d => ({ id: d.id, ...d.data() }))
+          : (failed.push('public books'), []);
+        const sharedBooks = sharedR.status === 'fulfilled'
+          ? sharedR.value.docs.map(d => ({ id: d.id, ...d.data() })).filter(b => b.ownerId !== currentUser.uid)
+          : (failed.push('shared books'), []);
+        const restrictedBooks = restrictedR.status === 'fulfilled'
+          ? restrictedR.value.docs.map(d => ({ id: d.id, ...d.data() })).filter(b => b.ownerId !== currentUser.uid)
+          : (failed.push('restricted books'), []);
+        const communityAudio = audioR.status === 'fulfilled' ? audioR.value : (failed.push('community audiobooks'), []);
+
+        if (failed.length) {
+          console.warn('Background load: partial failure —', failed.join(', '),
+            [pubR, sharedR, restrictedR, audioR].map(r => r.reason).filter(Boolean));
+          showToast(`Some content couldn't be loaded (${failed.join(', ')})`);
+        }
+
+        communityLib = dedupe([...pubBooks, ...sharedBooks, ...restrictedBooks, ...communityAudio]);
+        renderAll();
+        renderMobHome();
+        renderDeskHome();
+      })
+      .finally(() => {
+        // PATCH: mark the library "ready" once both waves have settled
+        // (success or failure), so findBookById() stops waiting on it.
+        _libraryReady = true;
+        _libraryReadyResolve();
+      });
 
   } catch (e) {
     showToast('Error loading library');
@@ -15891,11 +15908,17 @@ async function loadCommunityAudioTracks() {
     ? getDocs(query(collection(db, 'audioFiles'), where('visibility', '==', 'restricted')))
     : Promise.resolve({ docs: [] });
 
-  const [pubSnap, sharedSnap, restrictedSnap] = await Promise.all([getDocs(pubQ), getDocs(sharedQ), restrictedPromise]);
+  // allSettled, not all — a denied restricted query (e.g. rules not yet
+  // updated for a freshly-granted access level) shouldn't also swallow the
+  // public/shared audiobooks that would otherwise have loaded fine.
+  const [pubR, sharedR, restrictedR] = await Promise.allSettled([getDocs(pubQ), getDocs(sharedQ), restrictedPromise]);
   const toBookLike = d => audioTrackToBookLike({ id: d.id, ...d.data() });
-  const pub = pubSnap.docs.map(toBookLike);
-  const shared = sharedSnap.docs.map(toBookLike).filter(b => b.ownerId !== currentUser.uid);
-  const restricted = restrictedSnap.docs.map(toBookLike).filter(b => b.ownerId !== currentUser.uid);
+  if (pubR.status === 'rejected') console.warn('Public audiobooks failed to load:', pubR.reason);
+  if (sharedR.status === 'rejected') console.warn('Shared audiobooks failed to load:', sharedR.reason);
+  if (restrictedR.status === 'rejected') console.warn('Restricted audiobooks failed to load:', restrictedR.reason);
+  const pub = pubR.status === 'fulfilled' ? pubR.value.docs.map(toBookLike) : [];
+  const shared = sharedR.status === 'fulfilled' ? sharedR.value.docs.map(toBookLike).filter(b => b.ownerId !== currentUser.uid) : [];
+  const restricted = restrictedR.status === 'fulfilled' ? restrictedR.value.docs.map(toBookLike).filter(b => b.ownerId !== currentUser.uid) : [];
   return [...pub, ...shared, ...restricted];
 }
 
