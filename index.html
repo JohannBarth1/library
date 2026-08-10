@@ -2553,6 +2553,8 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
     <h3>Edit <span id="bulkEditCount">0</span> Books</h3>
     <p style="font-size:.78rem;color:var(--muted);margin-bottom:1rem;line-height:1.5">Leave any field blank to keep existing values.</p>
     <div class="form-row"><label>Genre</label><input type="text" id="bulkCat" placeholder="Leave blank to keep existing" list="bulkCatSuggestions"/><datalist id="bulkCatSuggestions"></datalist></div>
+    <div class="form-row"><label>Series</label><input type="text" id="bulkSeries" placeholder="Leave blank to keep existing"/></div>
+    <div class="form-row"><label>Series #</label><input type="number" step="0.1" id="bulkSeriesIndex" placeholder="Leave blank to keep existing"/></div>
     <div class="form-row"><label>Language</label><input type="text" id="bulkLang" placeholder="e.g. en — leave blank to keep existing"/></div>
     <div class="form-row"><label>Description</label><textarea id="bulkDesc" rows="3" style="width:100%;padding:.6rem .85rem;font-family:'Lato',sans-serif;font-size:.88rem;color:var(--navy);background:var(--cream);border:1px solid var(--border);border-radius:3px;outline:none;resize:vertical;line-height:1.5" placeholder="Leave blank to keep existing"></textarea></div>
     <div class="form-row"><label>Tags <span style="font-size:.65rem;color:var(--muted);font-weight:400">(comma-separated, added to existing)</span></label><input type="text" id="bulkTags" placeholder="e.g. Favourite, Classic"/></div>
@@ -3727,8 +3729,6 @@ document.getElementById('deskBookGrid').addEventListener('click',e=>{
   const card=e.target.closest('.book-card[data-bookid]');if(!card)return;
   const id=card.dataset.bookid;
   if(selectMode){
-    const book=library.find(x=>x.id===id);
-    if(book?.isAudio)return; // audio tracks aren't part of bulk book actions (delete/move/etc.)
     if(selectedIds.has(id)){selectedIds.delete(id);card.classList.remove('selected');}else{selectedIds.add(id);card.classList.add('selected');}updateBulkBar();return;
   }
   showBookById(id);
@@ -5154,8 +5154,6 @@ function startLongPress(bookId){
 document.getElementById('mobGridLibrary').addEventListener('touchstart', e => {
     const card = e.target.closest('.book-card[data-bookid]');
     if(!card) return;
-    const book = library.find(x => x.id === card.dataset.bookid);
-    if(book?.isAudio) return; // audio tracks don't join book multi-select/bulk actions
     startLongPress(card.dataset.bookid);
   }, {passive: false});
 
@@ -5171,9 +5169,7 @@ document.getElementById('mobGridLibrary').addEventListener('click', e => {
   const card = e.target.closest('.book-card[data-bookid]');
   if (!card) return;
   const id = card.dataset.bookid;
-  const book = library.find(x => x.id === id);
   if(mobSelectMode) {
-    if(book?.isAudio) return; // audio tracks aren't selectable for bulk book actions
     if(mobSelectedIds.has(id)){ mobSelectedIds.delete(id); }
     else { mobSelectedIds.add(id); }
     if(mobSelectedIds.size === 0){ exitMobSelectMode(); return; }
@@ -5214,9 +5210,9 @@ function renderMobLibrarySelectMode(){
     const coverSrc = getCoverSrc(b);
     const coverHtml = coverSrc
       ? `<img class="book-card-cover" src="${coverSrc}" alt="" loading="lazy"/>`
-      : `<div class="book-card-cover-ph"><div class="ph-icon">📖</div><div class="ph-title">${esc(b.title)}</div><div class="ph-author">${esc(b.author)}</div></div>`;
-    return `<div class="book-card ${isSelected?'selected':''}" data-bookid="${b.id}" style="user-select:none">
-      ${coverHtml}
+      : `<div class="book-card-cover-ph"><div class="ph-icon">${b.isAudio?'🎧':'📖'}</div><div class="ph-title">${esc(b.title)}</div><div class="ph-author">${esc(b.author)}</div></div>`;
+    return `<div class="book-card ${b.isAudio?'audio-tile':''} ${isSelected?'selected':''}" data-bookid="${b.id}" style="user-select:none">
+      <div style="position:relative">${coverHtml}${b.isAudio?'<span class="audio-badge">🎧 Audio</span>':''}</div>
       <div class="select-check" style="display:flex">${isSelected?'✓':''}</div>
       <div class="book-card-body">
         <div class="book-card-title">${esc(b.title)}</div>
@@ -5272,6 +5268,7 @@ function updateMobBulkBar(){
   let html = `<span style="font-size:.78rem;font-weight:700;flex-shrink:0">${n} selected</span>`;
   html += btn('📚 Genre','category');
   html += btn('🏷 Tags','tags');
+  html += btn('📖 Series','series');
   if(hasUnpublished) html += btn('⇧ Publish','publish');
   if(hasPublished)   html += btn('↓ Unpublish','unpublish');
   if(hasUnrecommended) html += btn('★ Rec','recommend');
@@ -5294,15 +5291,27 @@ async function handleMobBulkAction(action){
 
   if(action === 'tags'){ showMobBulkTagsPicker(); return; }
 
+  if(action === 'series'){ showMobBulkSeriesPicker(); return; }
+
   if(action === 'delete'){
     if(!confirm(`Delete ${mobSelectedIds.size} book${mobSelectedIds.size!==1?'s':''}?`)) return;
     showLoading('Deleting…');
     try{
       for(const id of mobSelectedIds){
-        await deleteDoc(doc(db,'books',id));
+        const book = library.find(b=>b.id===id);
+        if(book?.isAudio){
+          // Mirrors deleteAudioTrack(): Storage file first, then the Firestore doc.
+          const track = _audioTracks.find(t=>t.id===id);
+          if(track) await deleteObject(storageRef(storage, track.storagePath)).catch(()=>{});
+          await deleteDoc(doc(db,'audioFiles',id));
+          _audioTracks = _audioTracks.filter(t=>t.id!==id);
+        } else {
+          await deleteDoc(doc(db,'books',id));
+        }
         library = library.filter(b => b.id !== id);
         communityLib = communityLib.filter(b => b.id !== id);
       }
+      mergeAudioIntoLibrary();
       hideLoading(); exitMobSelectMode(); renderAll();
       showToast(`Deleted ✓`);
     }catch(e){ hideLoading(); showToast('Failed: '+e.message); }
@@ -5316,8 +5325,9 @@ async function handleMobBulkAction(action){
     try{
       for(const id of ids){
         const book = library.find(b=>b.id===id); if(!book) continue;
-        await updateDoc(doc(db,'books',id),{visibility:'public',updatedAt:serverTimestamp()});
+        await updateDoc(doc(db,book.isAudio?'audioFiles':'books',id),{visibility:'public',updatedAt:serverTimestamp()});
         book.visibility='public';
+        if(book.isAudio && book._audioTrack) book._audioTrack.visibility='public';
         if(!communityLib.find(b=>b.id===id)) communityLib.push(book);
       }
       if (currentUser && ledgerState.loaded) _ledgerUnlockAchievement('sharer', ids[0]);
@@ -5333,8 +5343,9 @@ async function handleMobBulkAction(action){
     try{
       for(const id of ids){
         const book = library.find(b=>b.id===id); if(!book) continue;
-        await updateDoc(doc(db,'books',id),{visibility:'private',updatedAt:serverTimestamp()});
+        await updateDoc(doc(db,book.isAudio?'audioFiles':'books',id),{visibility:'private',updatedAt:serverTimestamp()});
         book.visibility='private';
+        if(book.isAudio && book._audioTrack) book._audioTrack.visibility='private';
         communityLib = communityLib.filter(b=>b.id!==id);
       }
       hideLoading(); exitMobSelectMode(); renderAll(); showToast('Unpublished ✓');
@@ -5346,7 +5357,7 @@ async function handleMobBulkAction(action){
     const ids = [...mobSelectedIds].filter(id => { const b=library.find(x=>x.id===id); return b&&!b.recommended; });
     showLoading('Updating…');
     try{
-      for(const id of ids){ await updateDoc(doc(db,'books',id),{recommended:true,recommendedAt:serverTimestamp(),updatedAt:serverTimestamp()}); const b=library.find(x=>x.id===id); if(b){ b.recommended=true; b.recommendedAt=new Date(); } }
+      for(const id of ids){ const b=library.find(x=>x.id===id); if(!b)continue; await updateDoc(doc(db,b.isAudio?'audioFiles':'books',id),{recommended:true,recommendedAt:serverTimestamp(),updatedAt:serverTimestamp()}); b.recommended=true; b.recommendedAt=new Date(); }
       hideLoading(); exitMobSelectMode(); renderAll(); showToast('Marked recommended ✓');
     }catch(e){ hideLoading(); showToast('Failed: '+e.message); }
     return;
@@ -5356,30 +5367,41 @@ async function handleMobBulkAction(action){
     const ids = [...mobSelectedIds].filter(id => { const b=library.find(x=>x.id===id); return b&&b.recommended; });
     showLoading('Updating…');
     try{
-      for(const id of ids){ await updateDoc(doc(db,'books',id),{recommended:false,recommendedAt:null,updatedAt:serverTimestamp()}); const b=library.find(x=>x.id===id); if(b){ b.recommended=false; b.recommendedAt=null; } }
+      for(const id of ids){ const b=library.find(x=>x.id===id); if(!b)continue; await updateDoc(doc(db,b.isAudio?'audioFiles':'books',id),{recommended:false,recommendedAt:null,updatedAt:serverTimestamp()}); b.recommended=false; b.recommendedAt=null; }
       hideLoading(); exitMobSelectMode(); renderAll(); showToast('Unrecommended ✓');
     }catch(e){ hideLoading(); showToast('Failed: '+e.message); }
     return;
   }
 
   if(action === 'checkout'){
-    if(!confirm(`Sign out ${mobSelectedIds.size} book${mobSelectedIds.size!==1?'s':''}?`)) return;
+    // Sign-out/loan periods are an ebook-lending concept — audiobooks don't
+    // have that system, so they're skipped here rather than forced into it.
+    const ids = [...mobSelectedIds].filter(id => !library.find(b=>b.id===id)?.isAudio);
+    const skipped = mobSelectedIds.size - ids.length;
+    if(!ids.length){ showToast('Sign-out is not available for audiobooks'); return; }
+    if(!confirm(`Sign out ${ids.length} book${ids.length!==1?'s':''}?`)) return;
     showLoading('Signing out…');
     try{
       const due=new Date(); due.setDate(due.getDate()+14);
-      for(const id of mobSelectedIds){
+      for(const id of ids){
         const book=[...library,...communityLib].find(b=>b.id===id); if(!book) continue;
         await addDoc(collection(db,'checkouts'),{bookId:id,bookTitle:book.title,userId:currentUser.uid,userName:currentUser.displayName||currentUser.email,checkedOutAt:serverTimestamp(),dueDate:Timestamp.fromDate(due),returnedAt:null});
         myCheckedOutIds.add(id);
       }
-      hideLoading(); exitMobSelectMode(); showToast('Signed out ✓');
+      hideLoading(); exitMobSelectMode();
+      showToast(skipped ? `Signed out ✓ (${skipped} audiobook${skipped!==1?'s':''} skipped)` : 'Signed out ✓');
     }catch(e){ hideLoading(); showToast('Failed: '+e.message); }
     return;
   }
 
   if(action === 'kobo'){
+    // Kobo devices sync EPUBs only — audiobook playback isn't supported there.
+    const ids = [...mobSelectedIds].filter(id => !library.find(b=>b.id===id)?.isAudio);
+    const skipped = mobSelectedIds.size - ids.length;
+    if(!ids.length){ showToast('Kobo push is not available for audiobooks'); return; }
     await loadKoboDevices();
-    showKoboDevicePicker([...mobSelectedIds]);
+    showKoboDevicePicker(ids);
+    if(skipped) showToast(`${skipped} audiobook${skipped!==1?'s':''} skipped — not supported on Kobo`);
     exitMobSelectMode();
     return;
   }
@@ -5418,8 +5440,10 @@ function showMobBulkCategoryPicker(){
       showLoading('Updating genre…');
       try{
         for(const id of ids){
-          await updateDoc(doc(db,'books',id),{category:newCat,updatedAt:serverTimestamp()});
-          const book = library.find(b=>b.id===id); if(book) book.category=newCat;
+          const book = library.find(b=>b.id===id); if(!book) continue;
+          await updateDoc(doc(db,book.isAudio?'audioFiles':'books',id),{category:newCat,updatedAt:serverTimestamp()});
+          book.category=newCat;
+          if(book.isAudio && book._audioTrack) book._audioTrack.category=newCat;
         }
         hideLoading(); exitMobSelectMode(); renderAll();
         showToast(`Genre updated for ${ids.length} book${ids.length!==1?'s':''} ✓`);
@@ -5515,11 +5539,65 @@ function showMobBulkTagsPicker(){
       for(const id of ids){
         const book = library.find(b=>b.id===id); if(!book) continue;
         const tags = [...new Set([...(book.tags||[]), ...newTags])];
-        await updateDoc(doc(db,'books',id),{tags,updatedAt:serverTimestamp()});
+        await updateDoc(doc(db,book.isAudio?'audioFiles':'books',id),{tags,updatedAt:serverTimestamp()});
         book.tags = tags;
+        if(book.isAudio && book._audioTrack) book._audioTrack.tags = tags;
       }
       hideLoading(); exitMobSelectMode(); renderAll();
       showToast(`Tags added to ${ids.length} book${ids.length!==1?'s':''} ✓`);
+    }catch(e){ hideLoading(); showToast('Failed: '+e.message); }
+  });
+}
+
+// Bulk-set series (+ optional series index) for every book currently
+// selected in mobile multi-select. Unlike category, this sets/replaces the
+// series on each selected book rather than merging — mirrors how a single
+// book's series field works in Edit Details (one value, not a list).
+function showMobBulkSeriesPicker(){
+  const ids = [...mobSelectedIds].filter(id => library.some(b => b.id === id));
+  if(!ids.length){ showToast('No editable books selected'); return; }
+
+  const scrim = document.createElement('div');
+  scrim.className = 'mob-picker-scrim';
+  scrim.innerHTML = `
+    <div class="mob-picker-card">
+      <div class="mob-picker-title">
+        <span>📖 Set Series for ${ids.length} book${ids.length!==1?'s':''}</span>
+        <button class="mob-picker-close" id="mobBulkSeriesCloseBtn">✕</button>
+      </div>
+      <div style="padding:.9rem 1.2rem;display:flex;flex-direction:column;gap:.6rem">
+        <input id="mobBulkSeriesName" type="text" placeholder="Series name"
+          style="padding:.55rem .7rem;font-size:.9rem;font-family:'Lato',sans-serif;
+                 border:1px solid var(--border);border-radius:3px;background:var(--cream);color:var(--navy)"/>
+        <input id="mobBulkSeriesIndex" type="number" step="0.1" placeholder="Book number (optional)"
+          style="padding:.55rem .7rem;font-size:.9rem;font-family:'Lato',sans-serif;
+                 border:1px solid var(--border);border-radius:3px;background:var(--cream);color:var(--navy)"/>
+      </div>
+      <div style="padding:.5rem 1.2rem .8rem;">
+        <button class="mob-picker-newbtn" id="mobBulkSeriesApplyBtn">Set Series on ${ids.length} Book${ids.length!==1?'s':''}</button>
+      </div>
+    </div>`;
+  document.body.appendChild(scrim);
+
+  scrim.addEventListener('click', e => { if(e.target === scrim) scrim.remove(); });
+  scrim.querySelector('#mobBulkSeriesCloseBtn').addEventListener('click', () => scrim.remove());
+
+  scrim.querySelector('#mobBulkSeriesApplyBtn').addEventListener('click', async () => {
+    const series = scrim.querySelector('#mobBulkSeriesName').value.trim();
+    const seriesIndexRaw = scrim.querySelector('#mobBulkSeriesIndex').value.trim();
+    if(!series){ showToast('Enter a series name'); return; }
+    const seriesIndex = seriesIndexRaw === '' ? null : Number(seriesIndexRaw);
+    scrim.remove();
+    showLoading('Updating series…');
+    try{
+      for(const id of ids){
+        const book = library.find(b=>b.id===id); if(!book) continue;
+        await updateDoc(doc(db,book.isAudio?'audioFiles':'books',id),{series,seriesIndex,updatedAt:serverTimestamp()});
+        book.series = series; book.seriesIndex = seriesIndex;
+        if(book.isAudio && book._audioTrack){ book._audioTrack.series = series; book._audioTrack.seriesIndex = seriesIndex; }
+      }
+      hideLoading(); exitMobSelectMode(); renderAll();
+      showToast(`Series updated for ${ids.length} book${ids.length!==1?'s':''} ✓`);
     }catch(e){ hideLoading(); showToast('Failed: '+e.message); }
   });
 }
@@ -6028,6 +6106,14 @@ function bookCardHtml(b, isComm, showProgress=false){
         <div class="ph-author">${esc(b.author)}</div>
        </div>`;
 
+  // Progress bar is format-agnostic (see saveReadingProgress/saveAudioProgress)
+  // — computed once here so both the audio and book branches below can use it.
+  const prog = getReadingProgress(b.id);
+  const progBar = prog > 0
+    ? `<div class="book-card-progress">
+        <div class="book-card-progress-bar" style="width:${Math.round(prog*100)}%"></div>
+       </div>` : '';
+
   if(b.isAudio){
     return `<div class="book-card audio-tile" data-bookid="${b.id}">
       <div style="position:relative">
@@ -6038,6 +6124,7 @@ function bookCardHtml(b, isComm, showProgress=false){
         <div class="book-card-title">${esc(b.title)}</div>
         <div class="book-card-author">${esc(b.author)}</div>
       </div>
+      ${progBar}
     </div>`;
   }
 
@@ -6049,12 +6136,6 @@ function bookCardHtml(b, isComm, showProgress=false){
     ? `<div style="position:absolute;top:0;right:4px;z-index:3;
                    filter:drop-shadow(1px 2px 3px rgba(0,0,0,0.35))">
         ${renderBookmarkSVG(_bmTpl, 20, 32, 'card'+b.id, true)}
-       </div>` : '';
-
-  const prog = getReadingProgress(b.id);
-  const progBar = prog > 0
-    ? `<div class="book-card-progress">
-        <div class="book-card-progress-bar" style="width:${Math.round(prog*100)}%"></div>
        </div>` : '';
 
   return `<div class="book-card" data-bookid="${b.id}">
@@ -12159,7 +12240,7 @@ document.getElementById('bulkBtnEdit').addEventListener('click',()=>{
   const editableCount=[...selectedIds].filter(id=>library.some(b=>b.id===id)).length;
   if(!editableCount){showToast("None of the selected books are yours to edit");return;}
   document.getElementById('bulkEditCount').textContent=editableCount;
-  document.getElementById('bulkCat').value='';document.getElementById('bulkLang').value='';document.getElementById('bulkDesc').value='';document.getElementById('bulkTags').value='';document.getElementById('bulkSetRecommended').checked=false;document.getElementById('bulkUnsetRecommended').checked=false;
+  document.getElementById('bulkCat').value='';document.getElementById('bulkSeries').value='';document.getElementById('bulkSeriesIndex').value='';document.getElementById('bulkLang').value='';document.getElementById('bulkDesc').value='';document.getElementById('bulkTags').value='';document.getElementById('bulkSetRecommended').checked=false;document.getElementById('bulkUnsetRecommended').checked=false;
   const cats=[...new Set(library.map(b=>b.category).filter(Boolean))].sort();
   document.getElementById('bulkCatSuggestions').innerHTML=cats.map(c=>`<option value="${esc(c)}">`).join('');
   document.getElementById('bulkEditModal').classList.add('open');
@@ -12170,10 +12251,20 @@ document.getElementById('bulkBtnEdit').addEventListener('click',()=>{
   showLoading('Deleting…');
   try {
     for (const id of selectedIds) {
-      await deleteDoc(doc(db, 'books', id));
+      const book = library.find(b => b.id === id);
+      if(book?.isAudio){
+        // Mirrors deleteAudioTrack(): Storage file first, then the Firestore doc.
+        const track = _audioTracks.find(t => t.id === id);
+        if(track) await deleteObject(storageRef(storage, track.storagePath)).catch(()=>{});
+        await deleteDoc(doc(db, 'audioFiles', id));
+        _audioTracks = _audioTracks.filter(t => t.id !== id);
+      } else {
+        await deleteDoc(doc(db, 'books', id));
+      }
       library = library.filter(b => b.id !== id);
       communityLib = communityLib.filter(b => b.id !== id);
     }
+    mergeAudioIntoLibrary();
     const deletedCount = selectedIds.size;
     hideLoading();
     toggleSelectMode();
@@ -12186,6 +12277,8 @@ document.getElementById('bulkBtnEdit').addEventListener('click',()=>{
 });
 document.getElementById('btnSaveBulkEdit').addEventListener('click',async()=>{
   const cat=document.getElementById('bulkCat').value.trim();
+  const series=document.getElementById('bulkSeries').value.trim();
+  const seriesIndexRaw=document.getElementById('bulkSeriesIndex').value.trim();
   const lang=document.getElementById('bulkLang').value.trim();
   const desc=stripHtml(document.getElementById('bulkDesc').value.trim());
   const tagsRaw=document.getElementById('bulkTags').value.trim();
@@ -12194,6 +12287,8 @@ document.getElementById('btnSaveBulkEdit').addEventListener('click',async()=>{
   const unsetRec=document.getElementById('bulkUnsetRecommended').checked;
   const updates={updatedAt:serverTimestamp()};
   if(cat)updates.category=cat;if(lang)updates.language=lang;if(desc)updates.description=desc;
+  if(series)updates.series=series;
+  if(seriesIndexRaw!=='')updates.seriesIndex=Number(seriesIndexRaw);
   if(setRec)updates.recommended=true;if(unsetRec)updates.recommended=false;
   // Bulk edit only applies to books you own — e.g. while browsing the
   // Community shelf you can select books that aren't yours, and those would
@@ -12209,7 +12304,7 @@ document.getElementById('btnSaveBulkEdit').addEventListener('click',async()=>{
   document.getElementById('bulkEditModal').classList.remove('open');
   showLoading(`Updating ${ids.length} book${ids.length!==1?'s':''}…`);
   try{
-    for(const id of ids){const book=library.find(b=>b.id===id);if(!book)continue;const bookUpdates={...updates};if(newTags.length)bookUpdates.tags=[...new Set([...(book.tags||[]),...newTags])];await updateDoc(doc(db,'books',id),bookUpdates);Object.assign(book,bookUpdates);}
+    for(const id of ids){const book=library.find(b=>b.id===id);if(!book)continue;const bookUpdates={...updates};if(newTags.length)bookUpdates.tags=[...new Set([...(book.tags||[]),...newTags])];await updateDoc(doc(db,book.isAudio?'audioFiles':'books',id),bookUpdates);Object.assign(book,bookUpdates);if(book.isAudio&&book._audioTrack)Object.assign(book._audioTrack,bookUpdates);}
     hideLoading();toggleSelectMode();renderAll();
     showToast(skipped
       ? `${ids.length} book${ids.length!==1?'s':''} updated ✓ (${skipped} skipped — not yours)`
@@ -12228,11 +12323,12 @@ document.getElementById('bulkBtnPublish').addEventListener('click', async () => 
     for (const id of ids) {
       const book = library.find(b => b.id === id);
       if (!book) continue;
-      await updateDoc(doc(db, 'books', id), {
+      await updateDoc(doc(db, book.isAudio ? 'audioFiles' : 'books', id), {
         visibility: 'public',
         updatedAt: serverTimestamp()
       });
       book.visibility = 'public';
+      if (book.isAudio && book._audioTrack) book._audioTrack.visibility = 'public';
       if (!communityLib.find(b => b.id === id)) communityLib.push(book);
     }
     if (currentUser && ledgerState.loaded) _ledgerUnlockAchievement('sharer', ids[0]);
@@ -12258,11 +12354,12 @@ document.getElementById('bulkBtnUnpublish').addEventListener('click', async () =
     for (const id of ids) {
       const book = library.find(b => b.id === id);
       if (!book) continue;
-      await updateDoc(doc(db, 'books', id), {
+      await updateDoc(doc(db, book.isAudio ? 'audioFiles' : 'books', id), {
         visibility: 'private',
         updatedAt: serverTimestamp()
       });
       book.visibility = 'private';
+      if (book.isAudio && book._audioTrack) book._audioTrack.visibility = 'private';
       communityLib = communityLib.filter(b => b.id !== id);
     }
     hideLoading();
@@ -12276,22 +12373,29 @@ document.getElementById('bulkBtnUnpublish').addEventListener('click', async () =
 });
 
 document.getElementById('bulkBtnCheckout').addEventListener('click',async()=>{
-  if(!selectedIds.size)return;if(!confirm(`Sign out ${selectedIds.size} book${selectedIds.size!==1?'s':''}? Each gets a 2-week loan period.`))return;
+  if(!selectedIds.size)return;
+  // Sign-out/loan periods are an ebook-lending concept — audiobooks don't
+  // have that system, so they're skipped here rather than forced into it.
+  const ids=[...selectedIds].filter(id=>!library.find(b=>b.id===id)?.isAudio);
+  const skipped=selectedIds.size-ids.length;
+  if(!ids.length){showToast('Sign-out is not available for audiobooks');return;}
+  if(!confirm(`Sign out ${ids.length} book${ids.length!==1?'s':''}? Each gets a 2-week loan period.`))return;
   showLoading('Signing out…');
   try{
     const due=new Date();due.setDate(due.getDate()+14);
-    for(const id of selectedIds){const book=[...library,...communityLib].find(b=>b.id===id);if(!book)continue;await addDoc(collection(db,'checkouts'),{bookId:id,bookTitle:book.title,userId:currentUser.uid,userName:currentUser.displayName||currentUser.email,checkedOutAt:serverTimestamp(),dueDate:Timestamp.fromDate(due),returnedAt:null});myCheckedOutIds.add(id);}
-    hideLoading();toggleSelectMode();showToast(`${selectedIds.size} book${selectedIds.size!==1?'s':''} signed out ✓`);
+    for(const id of ids){const book=[...library,...communityLib].find(b=>b.id===id);if(!book)continue;await addDoc(collection(db,'checkouts'),{bookId:id,bookTitle:book.title,userId:currentUser.uid,userName:currentUser.displayName||currentUser.email,checkedOutAt:serverTimestamp(),dueDate:Timestamp.fromDate(due),returnedAt:null});myCheckedOutIds.add(id);}
+    hideLoading();toggleSelectMode();
+    showToast(skipped?`${ids.length} book${ids.length!==1?'s':''} signed out ✓ (${skipped} audiobook${skipped!==1?'s':''} skipped)`:`${ids.length} book${ids.length!==1?'s':''} signed out ✓`);
   }catch(e){hideLoading();showToast('Sign-out failed: '+e.message);}
 });
 document.getElementById('bulkBtnRec').addEventListener('click',async()=>{
   const ids=[...selectedIds].filter(id=>{const b=library.find(x=>x.id===id);return b&&!b.recommended;});if(!ids.length)return;showLoading('Updating…');
-  try{for(const id of ids){await updateDoc(doc(db,'books',id),{recommended:true,recommendedAt:serverTimestamp(),updatedAt:serverTimestamp()});const b=library.find(x=>x.id===id);if(b){b.recommended=true;b.recommendedAt=new Date();}}hideLoading();toggleSelectMode();renderAll();showToast(`${ids.length} marked recommended ✓`);}
+  try{for(const id of ids){const b=library.find(x=>x.id===id);if(!b)continue;await updateDoc(doc(db,b.isAudio?'audioFiles':'books',id),{recommended:true,recommendedAt:serverTimestamp(),updatedAt:serverTimestamp()});b.recommended=true;b.recommendedAt=new Date();}hideLoading();toggleSelectMode();renderAll();showToast(`${ids.length} marked recommended ✓`);}
   catch(e){hideLoading();showToast('Failed: '+e.message);}
 });
 document.getElementById('bulkBtnUnrec').addEventListener('click',async()=>{
   const ids=[...selectedIds].filter(id=>{const b=library.find(x=>x.id===id);return b&&b.recommended;});if(!ids.length)return;showLoading('Updating…');
-  try{for(const id of ids){await updateDoc(doc(db,'books',id),{recommended:false,recommendedAt:null,updatedAt:serverTimestamp()});const b=library.find(x=>x.id===id);if(b){b.recommended=false;b.recommendedAt=null;}}hideLoading();toggleSelectMode();renderAll();showToast(`${ids.length} unrecommended ✓`);}
+  try{for(const id of ids){const b=library.find(x=>x.id===id);if(!b)continue;await updateDoc(doc(db,b.isAudio?'audioFiles':'books',id),{recommended:false,recommendedAt:null,updatedAt:serverTimestamp()});b.recommended=false;b.recommendedAt=null;}hideLoading();toggleSelectMode();renderAll();showToast(`${ids.length} unrecommended ✓`);}
   catch(e){hideLoading();showToast('Failed: '+e.message);}
 });
 document.getElementById('bulkBtnCancel').addEventListener('click',toggleSelectMode);
@@ -13137,8 +13241,13 @@ function _showKoboSetupModal(device) {
   if (!btn) return;
   btn.addEventListener('click', async () => {
     if (!selectedIds.size) { showToast('Select books first'); return; }
+    // Kobo devices sync EPUBs only — audiobook playback isn't supported there.
+    const ids = [...selectedIds].filter(id => !library.find(b => b.id === id)?.isAudio);
+    const skipped = selectedIds.size - ids.length;
+    if (!ids.length) { showToast('Kobo push is not available for audiobooks'); return; }
     await loadKoboDevices();
-    showKoboDevicePicker([...selectedIds]);
+    showKoboDevicePicker(ids);
+    if (skipped) showToast(`${skipped} audiobook${skipped !== 1 ? 's' : ''} skipped — not supported on Kobo`);
   });
 })();
 
@@ -16061,6 +16170,112 @@ async function renderAudioPanel() {
   });
 }
 
+// ── reading-position (progress) for audio tracks ────────────────────────────
+// The book reader keeps a `user_bookmarks` doc per book (type:'reading_position',
+// keyed by bookId, with a 0–1 `progress` float) — see saveReadingProgress().
+// Every place that reads that data (Current Reads strip, mobile "Currently
+// Reading" shelf, getReadingProgress()) already just looks up bookId and
+// doesn't care whether it's a book or a track, so writing matching bookmark
+// docs here is all that's needed for audio to show up there automatically.
+// Stores positionSec/durationSec instead of chapterIdx/pageIdx (audio has no
+// chapters), but keeps the same `progress` field everything else relies on.
+let _audioProgressLastSavedAt = 0;
+
+async function saveAudioProgress(bookId, positionSec, durationSec, force = false){
+  if(!bookId || !isFinite(positionSec) || !isFinite(durationSec) || durationSec <= 0) return;
+
+  // Throttle to roughly once every 5s during playback (timeupdate fires far
+  // more often than that); pause/stop call this with force=true to flush
+  // immediately regardless of the throttle.
+  const now = Date.now();
+  if(!force && now - _audioProgressLastSavedAt < 5000) return;
+  _audioProgressLastSavedAt = now;
+
+  const progress = Math.min(1, Math.max(0, positionSec / durationSec));
+
+  // Keep localStorage as offline fallback, same key format books use.
+  localStorage.setItem(progressKey(bookId), JSON.stringify({
+    positionSec, durationSec, progress, ts: Date.now()
+  }));
+
+  // Update progress bars on any visible card for this track.
+  document.querySelectorAll(`.book-card[data-bookid="${bookId}"] .book-card-progress-bar`)
+    .forEach(el => { el.style.width = Math.round(progress*100) + '%'; });
+
+  if(!currentUser) return;
+
+  // Same cross-call guard saveReadingProgress uses, shared across both —
+  // book and audio bookIds live in different Firestore collections so they
+  // never collide as keys here.
+  if(_savingReadingProgress.has(bookId)) return;
+  _savingReadingProgress.add(bookId);
+
+  try {
+    const existing = getReadingPositionBookmark(bookId);
+    const data = {
+      userId: currentUser.uid,
+      bookId,
+      type: 'reading_position',
+      positionSec,
+      durationSec,
+      progress,
+      updatedAt: serverTimestamp(),
+    };
+    if(existing) {
+      await updateDoc(doc(db, 'user_bookmarks', existing.id), data);
+      Object.assign(existing, data);
+    } else {
+      const ref = await addDoc(collection(db, 'user_bookmarks'), {
+        ...data,
+        createdAt: serverTimestamp(),
+      });
+      _myBookmarks.push({ id: ref.id, ...data });
+    }
+  } catch(e) {
+    console.warn('saveAudioProgress Firestore:', e);
+  } finally {
+    _savingReadingProgress.delete(bookId);
+  }
+}
+
+// Reads back a saved audio position in seconds (Firestore first, localStorage
+// fallback), for seeking a track to where the person left off.
+function getAudioSavedPosition(bookId){
+  const bm = getReadingPositionBookmark(bookId);
+  if(bm && typeof bm.positionSec === 'number') return bm.positionSec;
+  try {
+    const v = localStorage.getItem(progressKey(bookId));
+    if(v){
+      const p = JSON.parse(v);
+      if(typeof p.positionSec === 'number') return p.positionSec;
+    }
+  } catch {}
+  return 0;
+}
+
+// Mirrors recordBookOpened() for audio tracks — adds the track to
+// "currently-reading" the first time it's played. No checkout/due-date step:
+// that's a physical-library concept that doesn't apply to audio.
+async function recordAudioOpened(track) {
+  if(!currentUser || !track) return;
+  try {
+    const crList = _userLists.find(l => l.id === 'currently-reading');
+    if(crList && !(crList.bookIds || []).includes(track.id)){
+      const bookIds = [...(crList.bookIds || []), track.id];
+      crList.bookIds = bookIds;
+      await setDoc(
+        doc(db, 'user_lists', currentUser.uid, 'lists', 'currently-reading'),
+        { bookIds, updatedAt: serverTimestamp() },
+        { merge: true }
+      );
+      renderMobHome();
+      renderDeskHome();
+    }
+  } catch(e) {
+    console.warn('recordAudioOpened:', e);
+  }
+}
+
 // ── play a track ─────────────────────────────────────────────────────────────
 
 function playAudioTrack(track) {
@@ -16076,7 +16291,20 @@ function playAudioTrack(track) {
     playerEl.src = track.downloadUrl;
     playerEl.playbackRate = _audioSpeed;
     playerEl.load();
+
+    // Resume from the saved position once metadata (and therefore duration/
+    // seekability) is available — the audio equivalent of the book reader
+    // reopening where you left off. {once:true} so this doesn't re-fire and
+    // re-seek on a later loadedmetadata (e.g. after the user scrubs).
+    const savedPos = getAudioSavedPosition(track.id);
+    if (savedPos > 0) {
+      playerEl.addEventListener('loadedmetadata', () => {
+        if (savedPos < (playerEl.duration || Infinity)) playerEl.currentTime = savedPos;
+      }, { once: true });
+    }
+
     playerEl.play().catch(() => {}); // autoplay may be blocked; native controls let user tap
+    recordAudioOpened(track);
   } else if (playerEl.paused) {
     playerEl.play().catch(() => {});
   }
@@ -16152,6 +16380,11 @@ function expandAudioPlayer() {
 
 function stopAudioPlayback() {
   const playerEl = document.getElementById('audioPlayerEl');
+  // Flush the position before it's reset below, so stopping (not just
+  // pausing) still remembers where playback was.
+  if (playerEl && _audioCurrentId && playerEl.currentTime > 0) {
+    saveAudioProgress(_audioCurrentId, playerEl.currentTime, playerEl.duration, true);
+  }
   if (playerEl) { playerEl.pause(); playerEl.src = ''; playerEl.removeAttribute('src'); }
   _audioCurrentId = null;
 
@@ -16230,7 +16463,13 @@ function stopAudioPlayback() {
   });
 
   playerEl.addEventListener('play',  () => { playBtn.textContent = '⏸️'; if (miniPlayBtn) miniPlayBtn.textContent = '⏸️'; });
-  playerEl.addEventListener('pause', () => { playBtn.textContent = '▶️'; if (miniPlayBtn) miniPlayBtn.textContent = '▶️'; });
+  playerEl.addEventListener('pause', () => {
+    playBtn.textContent = '▶️';
+    if (miniPlayBtn) miniPlayBtn.textContent = '▶️';
+    // Force-flush on pause (bypassing the timeupdate throttle) so a pause
+    // always saves the exact position, not just the last 5s-throttled tick.
+    if (_audioCurrentId) saveAudioProgress(_audioCurrentId, playerEl.currentTime, playerEl.duration, true);
+  });
   playerEl.addEventListener('ended', () => { playBtn.textContent = '▶️'; if (miniPlayBtn) miniPlayBtn.textContent = '▶️'; });
 
   playerEl.addEventListener('loadedmetadata', () => {
@@ -16243,6 +16482,7 @@ function stopAudioPlayback() {
     seek.value = Math.floor(playerEl.currentTime);
     curTimeEl.textContent = fmtAudioTime(playerEl.currentTime);
     if (miniSub) miniSub.textContent = `${fmtAudioTime(playerEl.currentTime)} / ${fmtAudioTime(playerEl.duration)}`;
+    if (_audioCurrentId) saveAudioProgress(_audioCurrentId, playerEl.currentTime, playerEl.duration);
   });
 
   // ── minimize / mini-bar ────────────────────────────────────────────────
