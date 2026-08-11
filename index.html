@@ -3673,10 +3673,14 @@ const YOUTUBE_CONVERT_ENDPOINT = 'https://convert-youtube-audio-310807052995.us-
 async function uploadOneYoutube(url, rowId, visibility){
   try{
     setUpP(rowId,10,'Sending to converter…');
+    const idToken = await currentUser.getIdToken();
     const res = await fetch(YOUTUBE_CONVERT_ENDPOINT, {
       method: 'POST',
-      headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({url, userId: currentUser.uid}),
+      headers: {
+        'Content-Type':'application/json',
+        'Authorization': `Bearer ${idToken}`,
+      },
+      body: JSON.stringify({url}),
     });
     if(!res.ok) throw new Error(`Converter returned ${res.status}`);
     setUpP(rowId,60,'Converting to MP3…');
