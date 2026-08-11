@@ -2130,13 +2130,12 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
                   align-items:center;justify-content:space-between;
                   border-bottom:1px solid var(--border);flex-shrink:0;">
         <div style="font-family:'Playfair Display',serif;font-size:1.3rem;color:var(--navy2);">Audio</div>
-        <label id="audioUploadLabel" style="display:flex;align-items:center;gap:.4rem;
+        <button type="button" id="audioUploadLabel" style="display:flex;align-items:center;gap:.4rem;
           background:var(--teal);color:var(--gold);border:none;border-radius:20px;
           padding:.35rem .85rem;font-size:.78rem;font-weight:700;cursor:pointer;
           font-family:'Lato',sans-serif;letter-spacing:.04em;">
           ＋ Upload
-          <input type="file" id="audioFileInput" accept="audio/*" multiple style="display:none"/>
-        </label>
+        </button>
       </div>
       <!-- Track list -->
       <div style="flex:1;overflow-y:auto;padding:.8rem 1rem 0;" id="audioTrackList">
@@ -2425,22 +2424,23 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 <!-- Modals -->
 <div class="modal-overlay" id="uploadModal">
   <div class="modal upload-modal-wide">
-    <h3>Upload EPUB Files</h3>
+    <h3>Add to Your Library</h3>
     <div class="drop-zone" id="dropZone">
       <div class="dz-icon">📤</div>
-      <p><strong>Click to browse</strong> or drag &amp; drop EPUB files here</p>
-      <p style="font-size:.78rem;margin-top:.3rem">Supports multiple files at once</p>
+      <p><strong>Click to browse</strong> or drag &amp; drop files here</p>
+      <p style="font-size:.78rem;margin-top:.3rem">EPUB or audio files — we'll figure out which is which. Multiple files at once are fine.</p>
+    </div>
+    <div class="upload-yt-row" style="display:flex;gap:.5rem;align-items:center;margin-top:.7rem;">
+      <input type="url" id="youtubeUrlInput" placeholder="…or paste a YouTube link to add as an audiobook"
+        style="flex:1;padding:.5rem .7rem;border:1px solid var(--border);border-radius:6px;
+               font-family:'Lato',sans-serif;font-size:.85rem;background:var(--paper,#fff);color:inherit;">
+      <button type="button" class="btn-save" id="btnAddYoutube" style="padding:.5rem .9rem;white-space:nowrap;">＋ Add</button>
     </div>
     <div class="upload-select-all" id="uploadSelectAll" style="display:none">
       <span>Set visibility for all</span>
       <button class="up-visibility-btn is-public" id="uploadVisibilityAllBtn" data-visibility="public">🌐 Public</button>
     </div>
     <div class="upload-list" id="uploadList"></div>
-    <div style="text-align:center;padding:.4rem 0 0;">
-      <button type="button" id="btnOpenAudioUpload" style="background:none;border:none;color:var(--teal);font-size:.8rem;font-weight:700;cursor:pointer;font-family:'Lato',sans-serif;">
-        🎧 Uploading an audiobook instead?
-      </button>
-    </div>
     <div class="modal-actions">
       <button class="btn-cancel" id="btnCloseUpload">Close</button>
       <button class="btn-save" id="btnStartUpload" style="display:none">Start Upload</button>
@@ -2869,7 +2869,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 </div>
 
 <div class="toast" id="toast"></div>
-<input type="file" id="epubFileInput" accept=".epub" multiple style="display:none"/>
+<input type="file" id="epubFileInput" multiple style="display:none"/>
 
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
@@ -3432,6 +3432,8 @@ function showUploadModal(){
   const startBtn=document.getElementById('btnStartUpload');
   startBtn.style.display='none'; startBtn.disabled=false; startBtn.textContent='Start Upload';
   document.getElementById('dropZone').classList.remove('disabled');
+  const ytInput=document.getElementById('youtubeUrlInput');
+  if(ytInput) ytInput.value='';
   _setUploadVisBtn(document.getElementById('uploadVisibilityAllBtn'), 'public');
   _uploadQueue=[];
   document.getElementById('uploadModal').classList.add('open');
@@ -3440,22 +3442,65 @@ function closeUploadModal(){document.getElementById('uploadModal').classList.rem
 document.getElementById('dropZone').addEventListener('click',()=>document.getElementById('epubFileInput').click());
 document.getElementById('dropZone').addEventListener('dragover',e=>{e.preventDefault();e.currentTarget.classList.add('drag-over');});
 document.getElementById('dropZone').addEventListener('dragleave',e=>e.currentTarget.classList.remove('drag-over'));
-document.getElementById('dropZone').addEventListener('drop',e=>{e.preventDefault();e.currentTarget.classList.remove('drag-over');const files=[...e.dataTransfer.files].filter(f=>f.name.toLowerCase().endsWith('.epub'));if(!files.length){showToast('Please drop EPUB files only');return;}stageUploadFiles(files);});
+document.getElementById('dropZone').addEventListener('drop',e=>{e.preventDefault();e.currentTarget.classList.remove('drag-over');stageUploadFiles([...e.dataTransfer.files]);});
 document.getElementById('epubFileInput').addEventListener('change',e=>{const files=[...e.target.files];e.target.value='';stageUploadFiles(files);});
 document.getElementById('btnCloseUpload').addEventListener('click',closeUploadModal);
+
+// Sniffs a dropped/selected file to decide which pipeline it belongs to.
+// Any file type is accepted at the picker/drop-zone level now — this is
+// what actually tells an ebook from an audiobook apart, so the person never
+// has to pick a mode up front.
+const AUDIO_FILE_EXTENSIONS = ['.mp3','.m4a','.m4b','.aac','.wav','.ogg','.oga','.flac','.webm'];
+function detectUploadKind(file){
+  const name = (file.name || '').toLowerCase();
+  if (name.endsWith('.epub') || file.type === 'application/epub+zip') return 'epub';
+  if ((file.type || '').startsWith('audio/') || AUDIO_FILE_EXTENSIONS.some(ext => name.endsWith(ext))) return 'audio';
+  return null;
+}
+
+// Basic YouTube URL recognition (watch, shorts, youtu.be short links).
+function isYoutubeUrl(url){
+  return /^https?:\/\/(www\.|m\.)?(youtube\.com\/(watch\?.*v=|shorts\/)|youtu\.be\/)/i.test((url||'').trim());
+}
 
 // Files are only staged here — nothing touches Storage/Firestore until the
 // person presses "Start Upload" below, so the Public/Private choice can
 // never be raced by an upload that's already finished by the time they get
-// to it.
+// to it. Unsupported file types are silently skipped (with a toast) rather
+// than blocking the whole batch.
 function stageUploadFiles(files){
-  files.forEach(file=>_uploadQueue.push({file, rowId: renderUploadRow(file), visibility:'public'}));
+  const skipped = [];
+  files.forEach(file => {
+    const kind = detectUploadKind(file);
+    if(!kind){ skipped.push(file.name); return; }
+    _uploadQueue.push({kind, file, rowId: renderUploadRow(file.name, kind), visibility:'public'});
+  });
+  if(skipped.length){
+    showToast(`Skipped ${skipped.length} unsupported file${skipped.length>1?'s':''} — only EPUB and audio files are supported`);
+  }
   document.getElementById('uploadSelectAll').style.display = _uploadQueue.length>1 ? 'flex' : 'none';
   document.getElementById('btnStartUpload').style.display = _uploadQueue.length ? 'inline-block' : 'none';
 }
-function renderUploadRow(file){
+
+document.getElementById('btnAddYoutube')?.addEventListener('click', addYoutubeToQueue);
+document.getElementById('youtubeUrlInput')?.addEventListener('keydown', e => {
+  if(e.key === 'Enter'){ e.preventDefault(); addYoutubeToQueue(); }
+});
+function addYoutubeToQueue(){
+  const input = document.getElementById('youtubeUrlInput');
+  const url = (input?.value || '').trim();
+  if(!url) return;
+  if(!isYoutubeUrl(url)){ showToast("That doesn't look like a YouTube link"); return; }
+  _uploadQueue.push({kind:'youtube', url, rowId: renderUploadRow(url, 'youtube'), visibility:'public'});
+  input.value = '';
+  document.getElementById('uploadSelectAll').style.display = _uploadQueue.length>1 ? 'flex' : 'none';
+  document.getElementById('btnStartUpload').style.display = _uploadQueue.length ? 'inline-block' : 'none';
+}
+
+function renderUploadRow(label, kind){
   const rowId='up_'+Date.now()+Math.random().toString(36).slice(2);
-  document.getElementById('uploadList').insertAdjacentHTML('beforeend',`<div class="upload-progress" id="${rowId}" data-status="staged"><span class="up-icon" id="${rowId}_icon">⏳</span><div style="flex:1;min-width:0"><div class="up-name">${esc(file.name)}</div><div class="progress-bar-wrap"><div class="progress-bar" id="${rowId}_bar" style="width:0%"></div></div></div><button class="up-visibility-btn is-public" id="${rowId}_pub" data-visibility="public">🌐 Public</button><button class="up-remove-btn" id="${rowId}_remove" title="Remove">✕</button><span class="up-status" id="${rowId}_st" style="display:none">Waiting…</span></div>`);
+  const kindIcon = kind === 'epub' ? '📖' : kind === 'audio' ? '🎧' : '▶️';
+  document.getElementById('uploadList').insertAdjacentHTML('beforeend',`<div class="upload-progress" id="${rowId}" data-status="staged"><span class="up-icon" id="${rowId}_icon">⏳</span><div style="flex:1;min-width:0"><div class="up-name">${kindIcon} ${esc(label)}</div><div class="progress-bar-wrap"><div class="progress-bar" id="${rowId}_bar" style="width:0%"></div></div></div><button class="up-visibility-btn is-public" id="${rowId}_pub" data-visibility="public">🌐 Public</button><button class="up-remove-btn" id="${rowId}_remove" title="Remove">✕</button><span class="up-status" id="${rowId}_st" style="display:none">Waiting…</span></div>`);
   document.getElementById(rowId+'_pub').addEventListener('click', () => {
     const btn = document.getElementById(rowId+'_pub');
     setRowVisibility(rowId, _cycleUploadVisibility(btn.dataset.visibility));
@@ -3489,6 +3534,7 @@ async function startQueuedUploads(){
   document.getElementById('uploadSelectAll').style.display = 'none';
 
   const queue = [..._uploadQueue];
+  let hadAudio = false;
   for(const item of queue){
     // Lock this row's controls the instant its own upload begins — the
     // visibility choice is already captured in `item.visibility`, so
@@ -3498,10 +3544,19 @@ async function startQueuedUploads(){
     document.getElementById(item.rowId+'_remove')?.remove();
     const stEl = document.getElementById(item.rowId+'_st');
     if(stEl) stEl.style.display = 'inline';
-    await uploadOneEpub(item.file, item.rowId, item.visibility);
+    if(item.kind === 'epub'){
+      await uploadOneEpub(item.file, item.rowId, item.visibility);
+    } else if(item.kind === 'audio'){
+      hadAudio = true;
+      await uploadOneAudioFile(item.file, item.rowId, item.visibility);
+    } else if(item.kind === 'youtube'){
+      hadAudio = true;
+      await uploadOneYoutube(item.url, item.rowId, item.visibility);
+    }
   }
   _uploadQueue = [];
   await loadLibrary();
+  if(hadAudio){ await renderAudioPanel(); mergeAudioIntoLibrary(); renderAll(); }
   startBtn.textContent = 'Done ✓';
   setTimeout(() => { startBtn.style.display = 'none'; }, 1500);
 }
@@ -3574,6 +3629,102 @@ setUpP(rowId,70,'Saving…');
   }
 }
 function setUpP(rowId,pct,status){const bar=document.getElementById(rowId+'_bar'),st=document.getElementById(rowId+'_st');if(bar)bar.style.width=pct+'%';if(st)st.textContent=status;}
+
+// Single-file audio upload for the unified queue — writes the same
+// Storage/Firestore shape audio uploads always have, but reports progress
+// into its own row and takes the visibility the person picked instead of
+// always defaulting to private.
+async function uploadOneAudioFile(file, rowId, visibility){
+  try{
+    setUpP(rowId,20,'Uploading…');
+    const safeFilename = `${Date.now()}_${file.name.replace(/[^a-zA-Z0-9._\-]/g,'_')}`;
+    const storagePath = `audio/${currentUser.uid}/${safeFilename}`;
+    const fileRef = storageRef(storage, storagePath);
+    await uploadBytes(fileRef, file);
+    setUpP(rowId,80,'Saving…');
+    const downloadUrl = await getDownloadURL(fileRef);
+    const newDocRef = await addDoc(collection(db,'audioFiles'),{
+      userId: currentUser.uid,
+      name: file.name,
+      storagePath,
+      downloadUrl,
+      size: file.size,
+      visibility,
+      uploadedAt: serverTimestamp(),
+    });
+    if (visibility !== 'private' && currentUser && ledgerState.loaded) _ledgerUnlockAchievement('sharer', newDocRef.id);
+    setUpP(rowId,100, `✓ Uploaded — ${UPLOAD_VIS_LABEL[visibility].replace(/^\S+\s/, '')}`);
+    document.getElementById(rowId)?.classList.add('done');
+    document.getElementById(rowId)?.setAttribute('data-status','done');
+    const icon=document.getElementById(rowId+'_icon'); if(icon) icon.textContent='✅';
+  }catch(e){
+    console.error(e);
+    setUpP(rowId,100,'✗ Failed');
+    document.getElementById(rowId)?.classList.add('error');
+    document.getElementById(rowId)?.setAttribute('data-status','error');
+    const icon=document.getElementById(rowId+'_icon'); if(icon) icon.textContent='⚠️';
+    showToast('Upload failed: '+e.message);
+  }
+}
+
+// Turns a pasted YouTube link into an audiobook entry. The actual
+// download-and-transcode-to-mp3 step can't happen in the browser (no
+// YouTube-stream access or audio encoder available client-side, and
+// fetching YouTube's media URLs directly hits CORS/ToS walls either way),
+// so this hands the URL to a backend endpoint and expects it to do the
+// work and hand back a file already sitting in Storage.
+//
+// YOUTUBE_CONVERT_ENDPOINT needs to point at a server you deploy (a Cloud
+// Function is the natural fit here, e.g. using yt-dlp + ffmpeg) that:
+//   1. accepts POST { url, userId }
+//   2. downloads the audio, transcodes it to mp3
+//   3. uploads the mp3 to Storage under audio/{userId}/...
+//   4. returns JSON: { storagePath, downloadUrl, title, durationSec, size }
+// Until that endpoint exists this will fail with a network/404 error,
+// which the row below will surface rather than silently pretending it
+// worked.
+const YOUTUBE_CONVERT_ENDPOINT = 'https://YOUR-CLOUD-FUNCTION-URL/convertYoutubeAudio';
+
+async function uploadOneYoutube(url, rowId, visibility){
+  try{
+    setUpP(rowId,10,'Sending to converter…');
+    const res = await fetch(YOUTUBE_CONVERT_ENDPOINT, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({url, userId: currentUser.uid}),
+    });
+    if(!res.ok) throw new Error(`Converter returned ${res.status}`);
+    setUpP(rowId,60,'Converting to MP3…');
+    const result = await res.json();
+    if(!result.downloadUrl || !result.storagePath) throw new Error('Converter did not return a file');
+
+    setUpP(rowId,90,'Saving…');
+    const newDocRef = await addDoc(collection(db,'audioFiles'),{
+      userId: currentUser.uid,
+      name: (result.title || 'YouTube audio') + '.mp3',
+      title: result.title || null,
+      sourceUrl: url,
+      storagePath: result.storagePath,
+      downloadUrl: result.downloadUrl,
+      size: result.size || 0,
+      durationSec: result.durationSec || null,
+      visibility,
+      uploadedAt: serverTimestamp(),
+    });
+    if (visibility !== 'private' && currentUser && ledgerState.loaded) _ledgerUnlockAchievement('sharer', newDocRef.id);
+    setUpP(rowId,100, `✓ Converted — ${UPLOAD_VIS_LABEL[visibility].replace(/^\S+\s/, '')}`);
+    document.getElementById(rowId)?.classList.add('done');
+    document.getElementById(rowId)?.setAttribute('data-status','done');
+    const icon=document.getElementById(rowId+'_icon'); if(icon) icon.textContent='✅';
+  }catch(e){
+    console.error(e);
+    setUpP(rowId,100,'✗ Failed: '+e.message);
+    document.getElementById(rowId)?.classList.add('error');
+    document.getElementById(rowId)?.setAttribute('data-status','error');
+    const icon=document.getElementById(rowId+'_icon'); if(icon) icon.textContent='⚠️';
+    showToast('YouTube conversion failed: '+e.message);
+  }
+}
 
 // ── DOWNLOAD ──────────────────────────────────────────────────────────────────
 async function downloadCurrentBook(){
@@ -3699,7 +3850,7 @@ function renderGrid(gridId){
   if(!books.length){
     const isEmpty=activeBooks().length===0;
     const canUpload=deskLibFilter==='all'||deskLibFilter==='private';
-    grid.innerHTML=`<div style="grid-column:1/-1;padding:3rem 1rem;text-align:center;color:var(--muted)"><div style="font-size:2.5rem;opacity:.25;margin-bottom:.8rem">📚</div><div style="font-family:'Playfair Display',serif;font-size:1.1rem;color:var(--navy2);margin-bottom:.4rem">${isEmpty?'Your library is empty':'No books match'}</div><div style="font-size:.85rem">${isEmpty?'Upload an EPUB to get started':'Try a different search or filter'}</div>${isEmpty&&canUpload?`<div style="margin-top:1rem"><button class="hbtn hbtn-upload" onclick="document.getElementById('uploadModal').classList.add('open')">📤 Upload EPUB</button></div>`:''}</div>`;
+    grid.innerHTML=`<div style="grid-column:1/-1;padding:3rem 1rem;text-align:center;color:var(--muted)"><div style="font-size:2.5rem;opacity:.25;margin-bottom:.8rem">📚</div><div style="font-family:'Playfair Display',serif;font-size:1.1rem;color:var(--navy2);margin-bottom:.4rem">${isEmpty?'Your library is empty':'No books match'}</div><div style="font-size:.85rem">${isEmpty?'Upload a book or audiobook to get started':'Try a different search or filter'}</div>${isEmpty&&canUpload?`<div style="margin-top:1rem"><button class="hbtn hbtn-upload" onclick="document.getElementById('uploadModal').classList.add('open')">📤 Upload</button></div>`:''}</div>`;
     return;
   }
   reconcileGrid(grid, books, b => b.id, b => {
@@ -16512,42 +16663,9 @@ document.getElementById('audioPlayerCloseBtn')?.addEventListener('click', () => 
   document.getElementById('audioPersistentPlayer')?.classList.remove('open');
 });
 
-// ── upload audio files ────────────────────────────────────────────────────────
-
-async function uploadAudioFiles(files) {
-  if (!currentUser || !files.length) return;
-  const list = document.getElementById('audioTrackList');
-
-  for (const file of files) {
-    const safeFilename = `${Date.now()}_${file.name.replace(/[^a-zA-Z0-9._\-]/g, '_')}`;
-    const storagePath = `audio/${currentUser.uid}/${safeFilename}`;
-    const fileRef = storageRef(storage, storagePath);
-
-    // Show a toast so the user knows something is happening
-    showToast(`Uploading ${file.name}…`);
-    try {
-      await uploadBytes(fileRef, file);
-      const downloadUrl = await getDownloadURL(fileRef);
-
-      await addDoc(collection(db, 'audioFiles'), {
-        userId: currentUser.uid,
-        name: file.name,
-        storagePath,
-        downloadUrl,
-        size: file.size,
-        visibility: 'private',
-        uploadedAt: serverTimestamp(),
-      });
-      showToast(`${file.name} uploaded ✓`);
-    } catch (e) {
-      showToast(`Upload failed: ${e.message}`);
-    }
-  }
-
-  await renderAudioPanel();
-  mergeAudioIntoLibrary();
-  renderAll();
-}
+// Audio uploads (from either the drop-zone or the Audio panel's "+ Upload"
+// button) now go through the unified queue — see uploadOneAudioFile() and
+// startQueuedUploads() near the EPUB upload code.
 
 // ── delete a track ────────────────────────────────────────────────────────────
 
@@ -16579,17 +16697,11 @@ async function deleteAudioTrack(id) {
   }
 }
 
-// ── wire file input ───────────────────────────────────────────────────────────
+// ── wire audio-panel "+ Upload" button ──────────────────────────────────────
+// Routes into the same unified upload modal used everywhere else (file-type
+// auto-detection + YouTube link), instead of the old audio-only file input.
 
-document.getElementById('btnOpenAudioUpload')?.addEventListener('click', () => {
-  document.getElementById('audioFileInput')?.click();
-});
-
-document.getElementById('audioFileInput')?.addEventListener('change', e => {
-  const files = [...e.target.files];
-  e.target.value = '';           // reset so re-uploading same file works
-  if (files.length) uploadAudioFiles(files);
-});
+document.getElementById('audioUploadLabel')?.addEventListener('click', showUploadModal);
 
 renderAll();
 </script>
