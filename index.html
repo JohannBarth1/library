@@ -3667,23 +3667,8 @@ async function uploadOneAudioFile(file, rowId, visibility){
   }
 }
 
-// Turns a pasted YouTube link into an audiobook entry. The actual
-// download-and-transcode-to-mp3 step can't happen in the browser (no
-// YouTube-stream access or audio encoder available client-side, and
-// fetching YouTube's media URLs directly hits CORS/ToS walls either way),
-// so this hands the URL to a backend endpoint and expects it to do the
-// work and hand back a file already sitting in Storage.
-//
-// YOUTUBE_CONVERT_ENDPOINT needs to point at a server you deploy (a Cloud
-// Function is the natural fit here, e.g. using yt-dlp + ffmpeg) that:
-//   1. accepts POST { url, userId }
-//   2. downloads the audio, transcodes it to mp3
-//   3. uploads the mp3 to Storage under audio/{userId}/...
-//   4. returns JSON: { storagePath, downloadUrl, title, durationSec, size }
-// Until that endpoint exists this will fail with a network/404 error,
-// which the row below will surface rather than silently pretending it
-// worked.
-const YOUTUBE_CONVERT_ENDPOINT = 'https://YOUR-CLOUD-FUNCTION-URL/convertYoutubeAudio';
+// Turns a pasted YouTube link into an audiobook entry.
+const YOUTUBE_CONVERT_ENDPOINT = 'https://convert-youtube-audio-310807052995.us-central1.run.app/convertYoutubeAudio';
 
 async function uploadOneYoutube(url, rowId, visibility){
   try{
