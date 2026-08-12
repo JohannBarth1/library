@@ -3128,6 +3128,35 @@ onAuthStateChanged(auth, async user => {
     updateNotifBadge();
   }
 });
+
+// ── Resume/reconnect resilience ──────────────────────────────────────────
+// Root cause of "app sits backgrounded a while, then shows no books when
+// reopened": mobile browsers/PWAs commonly throttle or drop network access
+// for a backgrounded tab, and can even discard the in-memory JS state
+// entirely under memory pressure. Either way, nothing previously re-ran the
+// initial load on return — a query that failed (or a fresh reload whose
+// very first load attempt raced a not-yet-reconnected network) just left
+// `library`/`_userLists` empty with no retry, so the Home/Library views
+// rendered their normal "nothing here" empty state forever, indistinguishable
+// from an actually-empty account. Re-check and retry whenever we get a
+// signal that connectivity or visibility just came back.
+let _lastHiddenAt = null;
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden') {
+    _lastHiddenAt = Date.now();
+    return;
+  }
+  if (document.visibilityState !== 'visible' || !currentUser) return;
+  const awayMs = _lastHiddenAt ? Date.now() - _lastHiddenAt : 0;
+  if (awayMs < 15000) return; // brief switch-away — state is almost certainly still fine
+  if (!library.length) loadLibrary();
+  if (!_userLists.length) loadUserLists().then(() => { renderMobHome(); renderDeskSidebar(); });
+});
+window.addEventListener('online', () => {
+  if (!currentUser) return;
+  if (!library.length) loadLibrary();
+  if (!_userLists.length) loadUserLists().then(() => { renderMobHome(); renderDeskSidebar(); });
+});
 document.getElementById('btnGoogleSignIn').addEventListener('click',()=>signInWithPopup(auth,gprovider).catch(e=>showToast('Sign-in failed: '+e.message)));
 document.getElementById('btnSignOut').addEventListener('click',doSignOut);
 function doSignOut(){if(!confirm('Sign out?'))return;signOut(auth);}
@@ -5821,10 +5850,10 @@ function shelfSection(id, label, icon, color, books, opts={}) {
           flex-shrink:0;width:64px;cursor:pointer;position:relative;">
           ${src
             ? `<img src="${src}" loading="lazy" style="
-                width:64px;height:96px;object-fit:cover;border-radius:2px 4px 4px 2px;
+                width:64px;height:96px;object-fit:cover;border-radius:3px 9px 9px 3px;
                 display:block;box-shadow:2px 3px 8px rgba(0,0,0,.3);"/>`
             : `<div style="width:64px;height:96px;background:linear-gradient(145deg,var(--navy2),#2a3d5a);
-                border-radius:2px 4px 4px 2px;box-shadow:2px 3px 8px rgba(0,0,0,.3);
+                border-radius:3px 9px 9px 3px;box-shadow:2px 3px 8px rgba(0,0,0,.3);
                 display:flex;align-items:center;justify-content:center;
                 font-size:.55rem;color:rgba(200,180,140,0.8);text-align:center;padding:4px;
                 line-height:1.2;">${esc(b.title)}</div>`
@@ -5933,12 +5962,12 @@ function bookmarksSection() {
       const coverHtml = src
         ? `<img src="${src}" loading="lazy" style="
             width:${COVER_W}px;height:${COVER_H}px;object-fit:cover;
-            display:block;border-radius:2px 5px 5px 2px;
+            display:block;border-radius:3px 10px 10px 3px;
             box-shadow:2px 4px 12px rgba(0,0,0,.35);"/>`
         : `<div style="
             width:${COVER_W}px;height:${COVER_H}px;
             background:linear-gradient(145deg,var(--navy2),#2a3d5a);
-            border-radius:2px 5px 5px 2px;
+            border-radius:3px 10px 10px 3px;
             box-shadow:2px 4px 12px rgba(0,0,0,.35);
             display:flex;align-items:center;justify-content:center;
             font-size:.55rem;color:rgba(200,180,140,0.8);
@@ -5949,7 +5978,7 @@ function bookmarksSection() {
       const progBar = isReadingPos && progress > 0
         ? `<div style="
             position:absolute;bottom:0;left:0;right:0;height:3px;
-            background:rgba(0,0,0,.25);border-radius:0 0 5px 5px;overflow:hidden;">
+            background:rgba(0,0,0,.25);border-radius:0 0 10px 10px;overflow:hidden;">
             <div style="height:3px;width:${Math.round(progress*100)}%;
               background:var(--gold);"></div>
           </div>`
@@ -6009,11 +6038,11 @@ function recommendedSection(books) {
         ? `<img src="${src}" loading="lazy" style="
               width:100%;aspect-ratio:2/3;
               object-fit:cover;display:block;
-              border-radius:4px;"/>`
+              border-radius:3px 9px 9px 3px;"/>`
         : `<div style="
               width:100%;aspect-ratio:2/3;
               background:linear-gradient(160deg,#2a3d5a,var(--navy2));
-              border-radius:4px;
+              border-radius:3px 9px 9px 3px;
               display:flex;align-items:center;justify-content:center;
               padding:8px;text-align:center;">
               <span style="font-size:.55rem;color:rgba(200,180,140,.85);
@@ -6024,7 +6053,7 @@ function recommendedSection(books) {
         cursor:pointer;
         box-shadow:0 4px 16px rgba(200,149,42,.18),
                    0 1px 4px rgba(200,149,42,.12);
-        border-radius:4px;
+        border-radius:3px 9px 9px 3px;
         transition:transform .15s,box-shadow .15s;">
         ${coverContent}
       </div>`;
@@ -7176,13 +7205,23 @@ function ledgerRecordPage(bookId, chapterIdx, pageIdx) {
   if (key <= prevHigh) return; // re-reading covered ground, or paging backward
   const delta = Math.min(key - prevHigh, 5);
   _ledgerHighWater[bookId] = key;
+  _ledgerAwardPages(delta);
+}
+
+// ── Shared point-award machinery ─────────────────────────────────────────
+// Used by both ledgerRecordPage() (manual/TTS page turns) and
+// ledgerRecordAudioListening() (audiobook playback) so "a page" means the
+// same thing — and earns the same achievements/streak credit — regardless
+// of whether it came from reading or listening.
+function _ledgerAwardPages(delta) {
+  if (!currentUser || !ledgerState.loaded || !delta || delta <= 0) return;
 
   _ledgerRolloverDayIfNeeded();
 
-  ledgerToday.pagesRead   += delta;
+  ledgerToday.pagesRead    += delta;
   ledgerToday.pointsEarned += delta;
-  ledgerState.totalPoints += delta;
-  _ledgerSessionPages     += delta;
+  ledgerState.totalPoints  += delta;
+  _ledgerSessionPages      += delta;
 
   _ledgerCheckTimeOfDayAchievements();
   if (_ledgerSessionPages >= 100) _ledgerUnlockAchievement('marathon');
@@ -7199,6 +7238,34 @@ function ledgerRecordPage(bookId, chapterIdx, pageIdx) {
 
   updateReaderLedgerPill();
   _ledgerScheduleFlush();
+}
+
+// ── Audiobook listening → page credit ────────────────────────────────────
+// 1 minute of listened audio content counts as 1 "page" toward the daily
+// goal/streak, on the same ledger as manual reading. Tracked per-track by
+// how far playback has advanced (a high-water mark, like ledgerRecordPage's
+// chapter/page key), so rewinding/re-listening never re-earns credit and a
+// single forward seek can't be farmed for a windfall (each tick is capped).
+let _ledgerAudioHighWater   = {}; // { trackId: furthest currentTime reached this session (seconds) }
+let _ledgerAudioAccumSecs   = {}; // { trackId: leftover listened seconds not yet converted to a page }
+const LEDGER_SECS_PER_PAGE  = 60; // 1 minute of listening ≈ 1 page
+
+function ledgerRecordAudioListening(trackId, currentTime) {
+  if (!currentUser || !ledgerState.loaded || !trackId || !isFinite(currentTime)) return;
+  const prevHigh = _ledgerAudioHighWater[trackId] ?? currentTime;
+  const rawDelta = currentTime - prevHigh;
+  _ledgerAudioHighWater[trackId] = currentTime;
+  if (rawDelta <= 0) return; // rewound, or re-listening covered ground
+
+  // Cap each tick's contribution (timeupdate fires every ~250ms-1s of
+  // playback) so jumping forward via seek/skip can't be farmed for pages.
+  const cappedDelta = Math.min(rawDelta, 15);
+  _ledgerAudioAccumSecs[trackId] = (_ledgerAudioAccumSecs[trackId] || 0) + cappedDelta;
+
+  const wholePages = Math.floor(_ledgerAudioAccumSecs[trackId] / LEDGER_SECS_PER_PAGE);
+  if (wholePages <= 0) return;
+  _ledgerAudioAccumSecs[trackId] -= wholePages * LEDGER_SECS_PER_PAGE;
+  _ledgerAwardPages(wholePages);
 }
 
 function _ledgerRolloverDayIfNeeded() {
@@ -16662,7 +16729,10 @@ function stopAudioPlayback() {
     seek.value = Math.floor(playerEl.currentTime);
     curTimeEl.textContent = fmtAudioTime(playerEl.currentTime);
     if (miniSub) miniSub.textContent = `${fmtAudioTime(playerEl.currentTime)} / ${fmtAudioTime(playerEl.duration)}`;
-    if (_audioCurrentId) saveAudioProgress(_audioCurrentId, playerEl.currentTime, playerEl.duration);
+    if (_audioCurrentId) {
+      saveAudioProgress(_audioCurrentId, playerEl.currentTime, playerEl.duration);
+      ledgerRecordAudioListening(_audioCurrentId, playerEl.currentTime);
+    }
   });
 
   // ── minimize / mini-bar ────────────────────────────────────────────────
