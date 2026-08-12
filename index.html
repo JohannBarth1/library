@@ -12237,9 +12237,9 @@ document.getElementById('tagsInput').addEventListener('keydown',async e=>{
   if(e.key!=='Enter')return;const tag=e.target.value.trim();if(!tag)return;e.target.value='';
   const book=library.find(b=>b.id===currentId);if(!book)return;
   const tags=[...new Set([...(book.tags||[]),tag])];book.tags=tags;
-  await updateDoc(doc(db,'books',currentId),{tags,updatedAt:serverTimestamp()});renderTagsModal();
+  await updateDoc(doc(db,book.isAudio?'audioFiles':'books',currentId),{tags,updatedAt:serverTimestamp()});renderTagsModal();
 });
-async function removeTag(tag){const book=library.find(b=>b.id===currentId);if(!book)return;const tags=(book.tags||[]).filter(t=>t!==tag);book.tags=tags;await updateDoc(doc(db,'books',currentId),{tags,updatedAt:serverTimestamp()});renderTagsModal();}
+async function removeTag(tag){const book=library.find(b=>b.id===currentId);if(!book)return;const tags=(book.tags||[]).filter(t=>t!==tag);book.tags=tags;await updateDoc(doc(db,book.isAudio?'audioFiles':'books',currentId),{tags,updatedAt:serverTimestamp()});renderTagsModal();}
 function renderTagsModal(){
   const book=library.find(b=>b.id===currentId);if(!book)return;
   const current=book.tags||[];
@@ -12247,7 +12247,7 @@ function renderTagsModal(){
   document.getElementById('tagsCurrentWrap').querySelectorAll('.tag-pill-remove').forEach(el=>el.addEventListener('click',()=>removeTag(el.dataset.tag)));
   const allT=getAllTags().filter(t=>!current.includes(t));
   document.getElementById('tagsAllWrap').innerHTML=allT.length?allT.map(t=>`<span class="tag-pill" data-quicktag="${esc(t)}">${esc(t)}</span>`).join(''):'<span style="font-size:.75rem;color:var(--muted)">No other tags yet</span>';
-  document.getElementById('tagsAllWrap').querySelectorAll('[data-quicktag]').forEach(el=>el.addEventListener('click',async()=>{const book=library.find(b=>b.id===currentId);if(!book)return;const tags=[...new Set([...(book.tags||[]),el.dataset.quicktag])];book.tags=tags;await updateDoc(doc(db,'books',currentId),{tags,updatedAt:serverTimestamp()});renderTagsModal();}));
+  document.getElementById('tagsAllWrap').querySelectorAll('[data-quicktag]').forEach(el=>el.addEventListener('click',async()=>{const book=library.find(b=>b.id===currentId);if(!book)return;const tags=[...new Set([...(book.tags||[]),el.dataset.quicktag])];book.tags=tags;await updateDoc(doc(db,book.isAudio?'audioFiles':'books',currentId),{tags,updatedAt:serverTimestamp()});renderTagsModal();}));
 }
 
 // ── RECOMMENDED ───────────────────────────────────────────────────────────────
