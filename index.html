@@ -368,7 +368,6 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .book-card.audio-tile .book-card-cover,
 .book-card.audio-tile .book-card-cover-ph{aspect-ratio:1/1;}
 .book-card.audio-tile .book-card-cover-ph{background:linear-gradient(145deg,var(--rust,#8a4a3a),#5c2f26);}
-.book-card.audio-tile .audio-badge{position:absolute;top:.4rem;left:.4rem;background:rgba(15,26,46,.65);color:#fff;font-size:.65rem;padding:2px 5px;border-radius:2px;line-height:1;}
 .book-card-body{
   padding:.45rem .5rem .5rem;
   background:var(--warm-white);
@@ -3896,7 +3895,7 @@ function renderGrid(gridId){
     const isSelected=selectedIds.has(b.id);
     if(b.isAudio){
       const coverHtml=coverSrc?`<img class="book-card-cover" src="${coverSrc}" alt="" loading="lazy"/>`:`<div class="book-card-cover-ph"><div class="ph-icon">🎧</div><div class="ph-title">${esc(b.title)}</div><div class="ph-author">${esc(b.author)}</div></div>`;
-      return `<div class="book-card audio-tile ${isSelected?'selected':''}" data-bookid="${b.id}"><div style="position:relative">${coverHtml}<span class="audio-badge">🎧 Audio</span></div><div class="select-check">✓</div>
+      return `<div class="book-card audio-tile ${isSelected?'selected':''}" data-bookid="${b.id}"><div style="position:relative">${coverHtml}</div><div class="select-check">✓</div>
       <div class="book-card-body"><div class="book-card-title">${esc(b.title)}</div>
       <div class="book-card-author">${esc(b.author)}</div></div></div>`;
     }
@@ -5421,7 +5420,7 @@ function renderMobLibrarySelectMode(){
       ? `<img class="book-card-cover" src="${coverSrc}" alt="" loading="lazy"/>`
       : `<div class="book-card-cover-ph"><div class="ph-icon">${b.isAudio?'🎧':'📖'}</div><div class="ph-title">${esc(b.title)}</div><div class="ph-author">${esc(b.author)}</div></div>`;
     return `<div class="book-card ${b.isAudio?'audio-tile':''} ${isSelected?'selected':''}" data-bookid="${b.id}" style="user-select:none">
-      <div style="position:relative">${coverHtml}${b.isAudio?'<span class="audio-badge">🎧 Audio</span>':''}</div>
+      <div style="position:relative">${coverHtml}</div>
       <div class="select-check" style="display:flex">${isSelected?'✓':''}</div>
       <div class="book-card-body">
         <div class="book-card-title">${esc(b.title)}</div>
@@ -6004,8 +6003,9 @@ function bookmarksSection() {
             pointer-events:none;">
             ${renderBookmarkSVG(tpl, RIB_W, RIB_H, 'home'+ub.id, false, true)}
           </div>
-          <!-- Cover in front of ribbon -->
-          <div style="position:absolute;bottom:0;left:0;z-index:2;">
+          <!-- Cover in front of ribbon, top-aligned so audio (square) and
+               epub (portrait) covers share the same top edge -->
+          <div style="position:absolute;top:${RIB_VIS}px;left:0;z-index:2;">
             ${coverHtml}
             ${progBar}
           </div>
@@ -6085,6 +6085,7 @@ function recommendedSection(books) {
       <div style="
         display:grid;
         grid-template-columns:repeat(auto-fill,minmax(80px,1fr));
+        align-items:start;
         gap:.65rem;">
         ${tileHtml}
       </div>
@@ -6329,7 +6330,6 @@ function bookCardHtml(b, isComm, showProgress=false){
     return `<div class="book-card audio-tile" data-bookid="${b.id}">
       <div style="position:relative">
         ${coverHtml}
-        <span class="audio-badge">🎧 Audio</span>
       </div>
       <div class="book-card-body">
         <div class="book-card-title">${esc(b.title)}</div>
