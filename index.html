@@ -243,11 +243,11 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .sb-cr-strip{display:flex;gap:7px;padding:.1rem 0 .5rem;overflow-x:auto;scrollbar-width:none;}
 .sb-cr-strip::-webkit-scrollbar{display:none;}
 .sb-cr-cover{position:relative;flex-shrink:0;width:58px;cursor:pointer;border-radius:4px;overflow:visible;}
-.sb-cr-cover img,.sb-cr-cover .ph{width:58px;height:87px;object-fit:cover;display:block;border-radius:4px;box-shadow:0 0 8px rgba(200,149,42,.35);}
+.sb-cr-cover img,.sb-cr-cover .ph{width:58px;height:87px;object-fit:cover;display:block;border-radius:4px;box-shadow:2px 3px 8px rgba(0,0,0,.35);}
 .sb-cr-cover .ph{background:linear-gradient(145deg,var(--navy2),#2a3d5a);display:flex;align-items:center;justify-content:center;font-size:.45rem;color:rgba(200,180,140,.8);text-align:center;padding:3px;line-height:1.3;}
 .sb-cr-prog{position:absolute;bottom:0;left:0;right:0;height:3px;background:rgba(0,0,0,.3);border-radius:0 0 4px 4px;overflow:hidden;}
 .sb-cr-prog-fill{height:3px;background:var(--gold);}
-.sb-cr-ribbon{position:absolute;top:-4px;right:5px;filter:drop-shadow(0 0 3px rgba(200,149,42,.4));pointer-events:none;}
+.sb-cr-ribbon{position:absolute;top:-4px;right:5px;filter:drop-shadow(1px 2px 3px rgba(0,0,0,.45));pointer-events:none;}
 .sb-cr-empty{font-size:.75rem;color:var(--muted);font-style:italic;padding:.25rem 0 .4rem;}
 
 /* ── My Lists nav ── */
@@ -993,29 +993,12 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .mob-back-btn{background:none;border:none;font-size:.78rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--teal);cursor:pointer;-webkit-tap-highlight-color:transparent;display:flex;align-items:center;gap:.3rem;padding:0;}
 .mob-sheet-close-btn{margin-left:auto;background:none;border:none;font-size:1.2rem;font-weight:400;color:var(--muted);cursor:pointer;-webkit-tap-highlight-color:transparent;display:flex;align-items:center;line-height:1;padding:0;}
 .mob-detail-scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:1rem 1rem calc(var(--mob-nav-h) + var(--sab) + 1.5rem);overscroll-behavior-y:contain;}
-.mob-detail-top{margin:-1rem -1rem 1rem;}
-.mob-detail-hero{position:relative;overflow:hidden;min-height:250px;display:flex;align-items:flex-end;}
-.mob-detail-hero .mob-detail-cover,
-.mob-detail-hero .mob-detail-cover-ph{
-  position:absolute;inset:0;width:100%!important;height:100%!important;
-  aspect-ratio:auto!important;object-fit:cover;border-radius:0;border:none;flex-shrink:0;}
-.mob-detail-hero .mob-detail-cover-ph{
-  font-size:3.5rem;display:flex;align-items:center;justify-content:center;
-  background:linear-gradient(145deg,var(--navy2),#2a3d5a);}
-.mob-detail-hero-fade{position:absolute;inset:0;
-  background:linear-gradient(to bottom,
-    rgba(15,26,46,0.22) 0%,
-    rgba(15,26,46,0.04) 28%,
-    transparent 45%,
-    rgba(250,247,242,0.35) 65%,
-    rgba(250,247,242,0.82) 82%,
-    var(--warm-white) 100%
-  );
-  pointer-events:none;}
+.mob-detail-top{display:flex;gap:.9rem;margin-bottom:1rem;}
+.mob-detail-cover{width:85px;height:125px;object-fit:cover;border-radius:3px;border:1px solid var(--border);flex-shrink:0;}
+.mob-detail-cover-ph{width:85px;height:125px;background:linear-gradient(145deg,var(--navy2),#2a3d5a);border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:2rem;flex-shrink:0;}
 .mob-detail-cover.is-square,.mob-detail-cover-ph.is-square{aspect-ratio:1/1;height:auto;}
-.mob-detail-hero-text{position:relative;z-index:1;width:100%;padding:0 1.1rem 1.1rem;min-width:0;}
-.mob-detail-hero .mob-detail-title{font-size:1.2rem;line-height:1.25;}
-.mob-detail-hero .mob-detail-cat{letter-spacing:.22em;}
+.mob-detail-cover-wrap{position:relative;flex-shrink:0;}
+.mob-detail-text{flex:1;min-width:0;}
 .mob-detail-cat{font-size:.6rem;letter-spacing:.2em;text-transform:uppercase;color:var(--teal);font-weight:700;margin-bottom:.2rem;}
 .mob-detail-title{font-family:'Playfair Display',serif;font-size:1rem;line-height:1.2;margin-bottom:.2rem;}
 .mob-detail-author{font-size:.8rem;color:var(--muted);font-style:italic;margin-bottom:.5rem;}
@@ -1026,8 +1009,9 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .mob-list-section-label{font-size:.6rem;letter-spacing:.15em;text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:.4rem;}
 .mob-list-row{display:flex;flex-wrap:wrap;gap:.4rem;}
 .mob-list-quickbtn{display:flex;align-items:center;gap:.35rem;padding:.42rem .75rem;border-radius:18px;border:1.5px solid var(--border);background:var(--warm-white);color:var(--navy2);font-size:.72rem;font-weight:700;cursor:pointer;white-space:nowrap;transition:background .15s,border-color .15s,color .15s;}
-/* Favourite heart anchored to the top-right corner of the hero backdrop. */
-.mob-cover-fav-btn{position:absolute;top:.7rem;right:.7rem;z-index:2;width:30px;height:30px;border-radius:50%;
+/* Favourite heart anchored to the corner of the book cover, instead of a
+   labelled pill competing with Lists row for space. */
+.mob-cover-fav-btn{position:absolute;top:-8px;right:-8px;width:30px;height:30px;border-radius:50%;
   background:var(--warm-white);border:1.5px solid var(--border);display:flex;align-items:center;
   justify-content:center;padding:0;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,.18);
   transition:background .15s,border-color .15s,transform .08s;-webkit-tap-highlight-color:transparent;}
@@ -1185,7 +1169,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .chapter-mgr-info{font-size:.72rem;color:var(--muted);padding:.5rem .75rem;border-top:1px solid var(--border);background:var(--panel);border-radius:0 0 10px 10px;}
 .chapter-mgr-save-note{font-size:.75rem;color:var(--muted);line-height:1.5;margin-bottom:.8rem;}
 .chapter-mgr-cover-row{display:flex;align-items:center;gap:.9rem;padding:.7rem;margin-bottom:.8rem;background:var(--panel);border:1px solid var(--border);border-radius:10px;}
-.chapter-mgr-cover-thumb{width:52px;height:74px;object-fit:cover;border-radius:4px;background:var(--border);flex-shrink:0;box-shadow:0 0 8px rgba(200,149,42,.35);}
+.chapter-mgr-cover-thumb{width:52px;height:74px;object-fit:cover;border-radius:4px;background:var(--border);flex-shrink:0;box-shadow:0 2px 6px rgba(15,26,46,.2);}
 .chapter-mgr-cover-replace-btn{display:inline-block;font-size:.75rem;font-weight:700;color:var(--teal);border:1px solid var(--teal);border-radius:20px;padding:.35rem .9rem;cursor:pointer;transition:all .15s;}
 .chapter-mgr-cover-replace-btn:hover{background:var(--teal-light);}
 .chapter-mgr-cover-status{font-size:.7rem;color:var(--muted);margin-top:.4rem;min-height:1em;}
@@ -5856,7 +5840,7 @@ function shelfSection(id, label, icon, color, books, opts={}) {
           ? getDisplayBookmarkTemplate(b.id) : null;
         const ribbonHtml = bmTpl
           ? `<div style="position:absolute;top:0;right:0;z-index:3;
-                         filter:drop-shadow(0 0 3px rgba(200,149,42,.4))">
+                         filter:drop-shadow(1px 2px 3px rgba(0,0,0,0.5))">
               ${renderBookmarkSVG(bmTpl, 20, 32, 'shelf'+b.id, true)}
              </div>`
           : '';
@@ -5866,9 +5850,9 @@ function shelfSection(id, label, icon, color, books, opts={}) {
           ${src
             ? `<img src="${src}" loading="lazy" style="
                 width:64px;height:${b.isAudio?'64':'96'}px;object-fit:cover;border-radius:4px;
-                display:block;box-shadow:0 0 8px rgba(200,149,42,.35);"/>`
+                display:block;box-shadow:2px 3px 8px rgba(0,0,0,.3);"/>`
             : `<div style="width:64px;height:${b.isAudio?'64':'96'}px;background:linear-gradient(145deg,var(--navy2),#2a3d5a);
-                border-radius:4px;box-shadow:0 0 8px rgba(200,149,42,.35);
+                border-radius:4px;box-shadow:2px 3px 8px rgba(0,0,0,.3);
                 display:flex;align-items:center;justify-content:center;
                 font-size:.55rem;color:rgba(200,180,140,0.8);text-align:center;padding:4px;
                 line-height:1.2;">${esc(b.title)}</div>`
@@ -5979,12 +5963,12 @@ function bookmarksSection() {
         ? `<img src="${src}" loading="lazy" style="
             width:${COVER_W}px;height:${coverH}px;object-fit:cover;
             display:block;border-radius:4px;
-            box-shadow:0 0 8px rgba(200,149,42,.35);"/>`
+            box-shadow:1px 3px 8px rgba(200,149,42,.22);"/>`
         : `<div style="
             width:${COVER_W}px;height:${coverH}px;
             background:linear-gradient(145deg,var(--navy2),#2a3d5a);
             border-radius:4px;
-            box-shadow:0 0 8px rgba(200,149,42,.35);
+            box-shadow:1px 3px 8px rgba(200,149,42,.22);
             display:flex;align-items:center;justify-content:center;
             font-size:.55rem;color:rgba(200,180,140,0.8);
             text-align:center;padding:6px;line-height:1.3;">
@@ -6015,7 +5999,7 @@ function bookmarksSection() {
             top:0;
             right:${RIB_RIGHT}px;
             z-index:1;
-            filter:drop-shadow(0 0 3px rgba(200,149,42,.4));
+            filter:drop-shadow(1px 2px 4px rgba(0,0,0,.4));
             pointer-events:none;">
             ${renderBookmarkSVG(tpl, RIB_W, RIB_H, 'home'+ub.id, false, true)}
           </div>
@@ -6069,7 +6053,8 @@ function recommendedSection(books) {
 
       return `<div class="home-shelf-book" data-bookid="${b.id}" style="
         cursor:pointer;
-        box-shadow:0 0 8px rgba(200,149,42,.35);
+        box-shadow:0 4px 16px rgba(200,149,42,.18),
+                   0 1px 4px rgba(200,149,42,.12);
         border-radius:4px;
         transition:transform .15s,box-shadow .15s;">
         ${coverContent}
@@ -6179,11 +6164,11 @@ function recommendedSection(books) {
             const bmTpl = (_bookmarkTemplates.length && _myBookmarks !== undefined)
               ? getDisplayBookmarkTemplate(b.id) : null;
             const ribbonHtml = bmTpl
-              ? `<div style="position:absolute;top:0;right:0;z-index:3;filter:drop-shadow(0 0 3px rgba(200,149,42,.4))">${renderBookmarkSVG(bmTpl, 20, 32, 'gshelf'+b.id, true)}</div>`
+              ? `<div style="position:absolute;top:0;right:0;z-index:3;filter:drop-shadow(1px 2px 3px rgba(0,0,0,0.5))">${renderBookmarkSVG(bmTpl, 20, 32, 'gshelf'+b.id, true)}</div>`
               : '';
             return `<div class="home-shelf-book" data-bookid="${b.id}" style="flex-shrink:0;width:64px;cursor:pointer;position:relative;">
-              ${src ? `<img src="${src}" loading="lazy" style="width:64px;height:96px;object-fit:cover;border-radius:4px;display:block;box-shadow:0 0 8px rgba(200,149,42,.35);"/>`
-                    : `<div style="width:64px;height:96px;background:linear-gradient(145deg,var(--navy2),#2a3d5a);border-radius:4px;box-shadow:0 0 8px rgba(200,149,42,.35);display:flex;align-items:center;justify-content:center;font-size:.55rem;color:rgba(200,180,140,0.8);text-align:center;padding:4px;line-height:1.2;">${esc(b.title)}</div>`}
+              ${src ? `<img src="${src}" loading="lazy" style="width:64px;height:96px;object-fit:cover;border-radius:4px;display:block;box-shadow:2px 3px 8px rgba(0,0,0,.3);"/>`
+                    : `<div style="width:64px;height:96px;background:linear-gradient(145deg,var(--navy2),#2a3d5a);border-radius:4px;box-shadow:2px 3px 8px rgba(0,0,0,.3);display:flex;align-items:center;justify-content:center;font-size:.55rem;color:rgba(200,180,140,0.8);text-align:center;padding:4px;line-height:1.2;">${esc(b.title)}</div>`}
               ${ribbonHtml}
             </div>`;
           }).join('')
@@ -6360,7 +6345,7 @@ function bookCardHtml(b, isComm, showProgress=false){
     ? getDisplayBookmarkTemplate(b.id) : null;
   const ribbonHtml = _bmTpl
     ? `<div style="position:absolute;top:0;right:4px;z-index:3;
-                   filter:drop-shadow(0 0 3px rgba(200,149,42,.4))">
+                   filter:drop-shadow(1px 2px 3px rgba(0,0,0,0.35))">
         ${renderBookmarkSVG(_bmTpl, 20, 32, 'card'+b.id, true)}
        </div>` : '';
 
@@ -7770,7 +7755,7 @@ async function renderLedgerTab() {
                 const book = allBooks.find(b => b.id === id) || { id };
                 const src = getCoverSrc(book);
                 return src
-                  ? `<img src="${src}" style="width:28px;height:40px;object-fit:cover;border-radius:2px;box-shadow:0 0 8px rgba(200,149,42,.35);flex-shrink:0;${ended ? 'filter:grayscale(.5);' : ''}"/>`
+                  ? `<img src="${src}" style="width:28px;height:40px;object-fit:cover;border-radius:2px;box-shadow:0 1px 4px rgba(0,0,0,.22);flex-shrink:0;${ended ? 'filter:grayscale(.5);' : ''}"/>`
                   : `<div style="width:28px;height:40px;background:linear-gradient(145deg,var(--navy2),#2a3d5a);border-radius:2px;flex-shrink:0;"></div>`;
               }).join('');
               extraCount = periodBookIds.length > 5 ? periodBookIds.length - 5 : 0;
@@ -8336,9 +8321,9 @@ function _relatedBookRow(books) {
         const coverH = b.isAudio ? 64 : 96;
         const coverHtml = src
           ? `<img src="${src}" loading="lazy" style="width:64px;height:${coverH}px;object-fit:cover;
-              border-radius:4px;display:block;box-shadow:0 0 8px rgba(200,149,42,.35);"/>`
+              border-radius:4px;display:block;box-shadow:2px 3px 8px rgba(0,0,0,.3);"/>`
           : `<div style="width:64px;height:${coverH}px;background:linear-gradient(145deg,var(--navy2),#2a3d5a);
-              border-radius:4px;box-shadow:0 0 8px rgba(200,149,42,.35);
+              border-radius:4px;box-shadow:2px 3px 8px rgba(0,0,0,.3);
               display:flex;align-items:center;justify-content:center;font-size:.55rem;
               color:rgba(200,180,140,0.8);text-align:center;padding:4px;line-height:1.2;">${esc(b.title)}</div>`;
         const subLabel = b.seriesIndex!=null && b.seriesIndex!=='' ? `#${b.seriesIndex}` : '';
@@ -15923,7 +15908,7 @@ function renderTimelineHero(books, finishedThisYear, inProgress, pagesRead) {
         const src = getCoverSrc(b);
         const bmTpl = getDisplayBookmarkTemplate(b.id);
         const ribbon = bmTpl ? `<div style="position:absolute;top:-4px;right:6px;z-index:2;
-              filter:drop-shadow(0 0 3px rgba(200,149,42,.4))">
+              filter:drop-shadow(1px 2px 3px rgba(0,0,0,.4))">
               ${renderBookmarkSVG(bmTpl, 16, 26, 'tlhero' + b.id, true)}</div>` : '';
         return `<div data-timeline-bookid="${b.id}" style="
           position:absolute; left:50%; top:0;
@@ -15931,9 +15916,9 @@ function renderTimelineHero(books, finishedThisYear, inProgress, pagesRead) {
           z-index:${pos.z}; cursor:pointer;">
           ${src
             ? `<img src="${src}" style="width:72px;height:106px;object-fit:cover;border-radius:4px;
-                box-shadow:0 0 8px rgba(200,149,42,.35);display:block;"/>`
+                box-shadow:0 6px 18px rgba(0,0,0,.4);display:block;"/>`
             : `<div style="width:72px;height:106px;background:linear-gradient(145deg,#2a3d5a,#1a2840);
-                border-radius:4px;box-shadow:0 0 8px rgba(200,149,42,.35);display:flex;align-items:center;
+                border-radius:4px;box-shadow:0 6px 18px rgba(0,0,0,.4);display:flex;align-items:center;
                 justify-content:center;padding:6px;text-align:center;">
                 <span style="font-size:.55rem;color:rgba(200,180,140,.8);line-height:1.3">${esc(b.title)}</span>
               </div>`}
@@ -16129,12 +16114,12 @@ function renderTimelineCard(e) {
 
   const coverHtml = src
     ? `<img src="${src}" style="width:44px;height:64px;object-fit:cover;border-radius:2px;
-        box-shadow:0 0 8px rgba(200,149,42,.35);flex-shrink:0;"/>`
+        box-shadow:0 2px 8px rgba(0,0,0,.2);flex-shrink:0;"/>`
     : `<div style="width:44px;height:64px;background:linear-gradient(145deg,var(--navy2),#2a3d5a);
         border-radius:2px;flex-shrink:0;"></div>`;
 
   const ribbon = bmTpl
-    ? `<div style="position:absolute;top:-3px;right:-2px;filter:drop-shadow(0 0 3px rgba(200,149,42,.4))">
+    ? `<div style="position:absolute;top:-3px;right:-2px;filter:drop-shadow(1px 1px 2px rgba(0,0,0,.35))">
         ${renderBookmarkSVG(bmTpl, 12, 20, 'tlc' + b.id + e.type, true)}</div>` : '';
 
   return `<div data-timeline-bookid="${b.id}" style="display:flex;gap:.7rem;align-items:center;
