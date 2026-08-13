@@ -5962,13 +5962,13 @@ function bookmarksSection() {
       const coverHtml = src
         ? `<img src="${src}" loading="lazy" style="
             width:${COVER_W}px;height:${coverH}px;object-fit:cover;
-            display:block;border-radius:2px 5px 5px 2px;
-            box-shadow:2px 4px 12px rgba(0,0,0,.35);"/>`
+            display:block;border-radius:4px;
+            box-shadow:1px 3px 8px rgba(200,149,42,.22);"/>`
         : `<div style="
             width:${COVER_W}px;height:${coverH}px;
             background:linear-gradient(145deg,var(--navy2),#2a3d5a);
-            border-radius:2px 5px 5px 2px;
-            box-shadow:2px 4px 12px rgba(0,0,0,.35);
+            border-radius:4px;
+            box-shadow:1px 3px 8px rgba(200,149,42,.22);
             display:flex;align-items:center;justify-content:center;
             font-size:.55rem;color:rgba(200,180,140,0.8);
             text-align:center;padding:6px;line-height:1.3;">
@@ -5978,7 +5978,7 @@ function bookmarksSection() {
       const progBar = isReadingPos && progress > 0
         ? `<div style="
             position:absolute;bottom:0;left:0;right:0;height:3px;
-            background:rgba(0,0,0,.25);border-radius:0 0 5px 5px;overflow:hidden;">
+            background:rgba(0,0,0,.25);border-radius:0 0 4px 4px;overflow:hidden;">
             <div style="height:3px;width:${Math.round(progress*100)}%;
               background:var(--gold);"></div>
           </div>`
@@ -8318,10 +8318,11 @@ function _relatedBookRow(books) {
       -webkit-overflow-scrolling:touch;scrollbar-width:none;">
       ${books.map(b => {
         const src = getCoverSrc(b);
+        const coverH = b.isAudio ? 64 : 96;
         const coverHtml = src
-          ? `<img src="${src}" loading="lazy" style="width:64px;height:96px;object-fit:cover;
+          ? `<img src="${src}" loading="lazy" style="width:64px;height:${coverH}px;object-fit:cover;
               border-radius:2px 4px 4px 2px;display:block;box-shadow:2px 3px 8px rgba(0,0,0,.3);"/>`
-          : `<div style="width:64px;height:96px;background:linear-gradient(145deg,var(--navy2),#2a3d5a);
+          : `<div style="width:64px;height:${coverH}px;background:linear-gradient(145deg,var(--navy2),#2a3d5a);
               border-radius:2px 4px 4px 2px;box-shadow:2px 3px 8px rgba(0,0,0,.3);
               display:flex;align-items:center;justify-content:center;font-size:.55rem;
               color:rgba(200,180,140,0.8);text-align:center;padding:4px;line-height:1.2;">${esc(b.title)}</div>`;
