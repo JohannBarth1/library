@@ -1007,15 +1007,16 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
     rgba(15,26,46,0.22) 0%,
     rgba(15,26,46,0.04) 28%,
     transparent 45%,
-    rgba(250,247,242,0.35) 65%,
-    rgba(250,247,242,0.82) 82%,
+    rgba(250,247,242,0.5) 62%,
+    rgba(250,247,242,0.93) 78%,
     var(--warm-white) 100%
   );
   pointer-events:none;}
 .mob-detail-cover.is-square,.mob-detail-cover-ph.is-square{aspect-ratio:1/1;height:auto;}
 .mob-detail-hero-text{position:relative;z-index:1;width:100%;padding:0 1.1rem 1.1rem;min-width:0;}
-.mob-detail-hero .mob-detail-title{font-size:1.2rem;line-height:1.25;}
-.mob-detail-hero .mob-detail-cat{letter-spacing:.22em;}
+.mob-detail-hero .mob-detail-title{font-size:1.2rem;line-height:1.25;text-shadow:0 1px 6px rgba(250,247,242,0.9),0 2px 12px rgba(250,247,242,0.7);}
+.mob-detail-hero .mob-detail-author{text-shadow:0 1px 4px rgba(250,247,242,0.85);}
+.mob-detail-hero .mob-detail-cat{letter-spacing:.22em;text-shadow:0 1px 4px rgba(250,247,242,0.85);}
 .mob-detail-cat{font-size:.6rem;letter-spacing:.2em;text-transform:uppercase;color:var(--teal);font-weight:700;margin-bottom:.2rem;}
 .mob-detail-title{font-family:'Playfair Display',serif;font-size:1rem;line-height:1.2;margin-bottom:.2rem;}
 .mob-detail-author{font-size:.8rem;color:var(--muted);font-style:italic;margin-bottom:.5rem;}
@@ -4969,9 +4970,15 @@ async function mob_showBook(id, opts={}){
 
   const img=document.getElementById('mobDetailCoverImg');
   const ph=document.getElementById('mobDetailCoverPh');
+  // Always reset to placeholder immediately so the previous book's cover
+  // never lingers while the new one is still loading.
+  img.style.display='none'; img.src=''; ph.style.display='flex';
   const coverSrc=getCoverSrc(book);
-  if(coverSrc){img.src=coverSrc;img.style.display='block';ph.style.display='none';}
-  else{img.style.display='none';ph.style.display='flex';}
+  if(coverSrc){
+    img.onload=()=>{img.style.display='block';ph.style.display='none';};
+    img.onerror=()=>{img.style.display='none';ph.style.display='flex';};
+    img.src=coverSrc;
+  }
   img.classList.toggle('is-square',!!book.isAudio);
   ph.classList.toggle('is-square',!!book.isAudio);
 
