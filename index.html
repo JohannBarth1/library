@@ -1013,7 +1013,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
   );
   pointer-events:none;}
 .mob-detail-cover.is-square,.mob-detail-cover-ph.is-square{aspect-ratio:1/1;height:auto;}
-.mob-detail-hero-text{position:relative;z-index:1;width:100%;padding:0 1.1rem 1.1rem;min-width:0;}
+.mob-detail-hero-text{position:relative;z-index:1;width:100%;padding:0 1.1rem 0.35rem;min-width:0;}
 .mob-detail-hero .mob-detail-title{font-size:1.2rem;line-height:1.25;text-shadow:0 1px 6px rgba(250,247,242,0.9),0 2px 12px rgba(250,247,242,0.7);}
 .mob-detail-hero .mob-detail-author{text-shadow:0 1px 4px rgba(250,247,242,0.85);}
 .mob-detail-hero .mob-detail-cat{letter-spacing:.22em;text-shadow:0 1px 4px rgba(250,247,242,0.85);}
@@ -2183,9 +2183,6 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
   <!-- ── BOOK DETAIL PANEL ── -->
   <div class="mob-book-sheet-scrim" id="mobBookSheetScrim"></div>
   <div class="mob-sheet" id="mobPanelDetail">
-    <div class="mob-detail-header">
-      <button class="mob-sheet-close-btn" id="btnMobBack">✕</button>
-    </div>
     <div class="mob-detail-scroll" id="mobDetailScroll">
       <div class="mob-detail-top mob-detail-hero">
         <img class="mob-detail-cover" id="mobDetailCoverImg" src="" style="display:none"/>
@@ -5039,7 +5036,7 @@ function closeMobBookSheet(){
   mobSheetSetExpanded(false);
 }
 
-document.getElementById('btnMobBack').addEventListener('click', closeMobBookSheet);
+document.getElementById('btnMobBack')?.addEventListener('click', closeMobBookSheet);
 document.getElementById('mobCoverFavBtn').addEventListener('click', (e) => handleQuickListToggle(e.currentTarget));
 document.getElementById('mobBookSheetScrim').addEventListener('click', closeMobBookSheet);
 function mob_showPanel(id){document.querySelectorAll('.mob-panel').forEach(p=>p.classList.remove('active'));document.getElementById(id)?.classList.add('active');}
