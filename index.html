@@ -9437,6 +9437,7 @@ function setReaderSelectMode(on) {
     _removeHighlightPopup();
     _sentenceSelAnchor = null;
     _sentenceRangesDoc = null;
+    _activeSentenceHighlightId = null;
   }
 }
 
@@ -9486,6 +9487,7 @@ function setReaderLookupMode(on) {
 let _sentenceRanges = [];
 let _sentenceRangesDoc = null;
 let _sentenceSelAnchor = null;
+let _activeSentenceHighlightId = null; // id of the highlight the current sentence-tap selection is saving to/extending
 
 function _buildSentenceRanges(doc) {
   const nodes = _chapterTextNodes(doc);
@@ -9675,7 +9677,13 @@ function _clearSentenceSelectionMarks(doc) {
   doc.normalize?.();
 }
 
-function _handleSentenceTap(doc, clientX, clientY) {
+// Tap a sentence → it's highlighted yellow immediately, no colour choice
+// required. Tap further along to extend that same highlight to the new
+// sentence (patched in place via updateHighlightOffsets, not deleted and
+// recreated). Tap the sentence you started on again to undo it. The
+// recolor/delete/share popup shown after each tap is entirely optional —
+// it lets you change the colour afterward, but never gates the highlight.
+async function _handleSentenceTap(doc, clientX, clientY) {
   const iframeRect = _readerIframe?.getBoundingClientRect();
   if (!iframeRect) return;
   const x = clientX - iframeRect.left, y = clientY - iframeRect.top;
@@ -9684,28 +9692,64 @@ function _handleSentenceTap(doc, clientX, clientY) {
     _sentenceRanges = _buildSentenceRanges(doc);
     _sentenceRangesDoc = doc;
     _sentenceSelAnchor = null;
+    _activeSentenceHighlightId = null;
   }
   const off = _pointToOffset(doc, x, y);
   if (off == null) return;
   const idx = _sentenceRanges.findIndex(r => off >= r.start && off < r.end);
   if (idx === -1) return;
 
-  _clearSentenceSelectionMarks(doc);
-
-  if (_sentenceSelAnchor === null) {
-    _sentenceSelAnchor = idx;
-  } else if (idx === _sentenceSelAnchor) {
+  // Tapping the sentence the selection started on again undoes the
+  // highlight it created and exits selection.
+  if (_sentenceSelAnchor !== null && idx === _sentenceSelAnchor) {
+    const id = _activeSentenceHighlightId;
+    if (id) {
+      await deleteHighlight(id);
+      doc.querySelectorAll(`mark[data-highlightid="${id}"]`).forEach(m => m.replaceWith(...m.childNodes));
+      doc.normalize?.();
+      if (_lastCreatedHighlight?.id === id) _lastCreatedHighlight = null;
+      renderReaderBookmarkList();
+    }
+    _activeSentenceHighlightId = null;
     _sentenceSelAnchor = null;
     _removeHighlightPopup();
     return;
   }
 
+  const isExtending = _sentenceSelAnchor !== null && !!_activeSentenceHighlightId;
+  if (_sentenceSelAnchor === null) _sentenceSelAnchor = idx;
+
   const lo = Math.min(_sentenceSelAnchor, idx), hi = Math.max(_sentenceSelAnchor, idx);
   const start = _sentenceRanges[lo].start, end = _sentenceRanges[hi].end;
-
-  _wrapOffsetsInMarks(doc, start, end, { id: '__sentencesel', bg: 'rgba(74,144,226,.4)' });
   const range = _offsetsToRange(doc, start, end);
-  if (range) _showHighlightPopup(doc, range);
+  if (!range) return;
+  const text = range.toString();
+  if (!text.trim()) return;
+
+  if (isExtending) {
+    // Patch the highlight already saved for this selection in place —
+    // one write, and no delete/recreate flicker.
+    const id = _activeSentenceHighlightId;
+    await updateHighlightOffsets(id, start, end, text);
+    doc.querySelectorAll(`mark[data-highlightid="${id}"]`).forEach(m => m.replaceWith(...m.childNodes));
+    doc.normalize?.();
+    const existing = _currentBookHighlights.find(h => h.id === id);
+    _wrapOffsetsInMarks(doc, start, end, { id, bg: HIGHLIGHT_COLORS[existing?.color] || HIGHLIGHT_COLORS.yellow });
+    _lastCreatedHighlight = { id, text };
+  } else {
+    // First tap of a new selection: save it as a yellow highlight right
+    // away — the popup that follows is only for changing colour/sharing.
+    const id = await saveHighlight(start, end, 'yellow', text);
+    if (!id) { _sentenceSelAnchor = null; return; }
+    _activeSentenceHighlightId = id;
+    _wrapOffsetsInMarks(doc, start, end, { id, bg: HIGHLIGHT_COLORS.yellow });
+    _lastCreatedHighlight = { id, text };
+    if (navigator.vibrate) navigator.vibrate(15);
+  }
+
+  renderReaderBookmarkList();
+  const popupRange = _offsetsToRange(doc, start, end);
+  if (popupRange) _showHighlightPopup(doc, popupRange, _activeSentenceHighlightId);
 }
 
 function _closeReaderPanelsIfOpen() {
