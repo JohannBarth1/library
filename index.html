@@ -10059,25 +10059,25 @@ function _playTearTransition(onSnap) {
   const w = content.offsetWidth;
   const h = content.offsetHeight;
 
-  // ── Jagged tear line ──────────────────────────────────────────────────
-  const segs = Math.ceil(h / 11);
+  // ── Jagged tear line — finer segments, deeper spikes ──────────────────
+  const segs = Math.ceil(h / 7);          // more segments → finer texture
   const baseTearX = w * (0.44 + Math.random() * 0.12);
-  const pts = [{ x: baseTearX + (Math.random() - 0.5) * 6, y: 0 }];
+  const pts = [{ x: baseTearX + (Math.random() - 0.5) * 8, y: 0 }];
 
   for (let i = 1; i < segs; i++) {
-    const y     = (i / segs) * h;
-    const prev  = pts[pts.length - 1];
-    const jag   = (Math.random() - 0.5) * 22;
-    const spike = Math.random() < 0.18 ? (Math.random() - 0.5) * 38 : 0;
-    pts.push({ x: Math.max(w * 0.15, Math.min(w * 0.85, prev.x + jag + spike)), y });
+    const y    = (i / segs) * h;
+    const prev = pts[pts.length - 1];
+    const jag  = (Math.random() - 0.5) * 36;                              // wider lateral wander
+    const spike = Math.random() < 0.28 ? (Math.random() - 0.5) * 55 : 0; // deeper occasional spikes
+    pts.push({ x: Math.max(w * 0.12, Math.min(w * 0.88, prev.x + jag + spike)), y });
   }
-  pts.push({ x: baseTearX + (Math.random() - 0.5) * 6, y: h });
+  pts.push({ x: baseTearX + (Math.random() - 0.5) * 8, y: h });
 
   const pStr     = pts.map(p => `${p.x.toFixed(1)}px ${p.y.toFixed(1)}px`).join(',');
   const leftClip  = `polygon(0px 0px,${pStr},0px ${h}px)`;
   const rightClip = `polygon(${pStr},${w}px ${h}px,${w}px 0px)`;
 
-  // ── SVG fibrous-edge filter ────────────────────────────────────────────
+  // ── SVG filter — directional fibre texture, stronger displacement ──────
   const filterId = `tf_${Math.random().toString(36).slice(2, 8)}`;
   const svgNS = 'http://www.w3.org/2000/svg';
   const svg   = document.createElementNS(svgNS, 'svg');
@@ -10086,17 +10086,17 @@ function _playTearTransition(onSnap) {
   const defs = document.createElementNS(svgNS, 'defs');
   const filt = document.createElementNS(svgNS, 'filter');
   filt.setAttribute('id', filterId);
-  filt.setAttribute('x', '-10%');   filt.setAttribute('y', '-5%');
-  filt.setAttribute('width', '120%'); filt.setAttribute('height', '110%');
+  filt.setAttribute('x', '-15%'); filt.setAttribute('y', '-5%');
+  filt.setAttribute('width', '130%'); filt.setAttribute('height', '110%');
   const turb = document.createElementNS(svgNS, 'feTurbulence');
   turb.setAttribute('type', 'fractalNoise');
-  turb.setAttribute('baseFrequency', '0.035 0.12');
-  turb.setAttribute('numOctaves', '4');
+  turb.setAttribute('baseFrequency', '0.02 0.18');  // more vertical-fibre bias
+  turb.setAttribute('numOctaves', '5');
   turb.setAttribute('seed', String(Math.floor(Math.random() * 100)));
   turb.setAttribute('result', 'noise');
   const disp = document.createElementNS(svgNS, 'feDisplacementMap');
   disp.setAttribute('in', 'SourceGraphic'); disp.setAttribute('in2', 'noise');
-  disp.setAttribute('scale', '5');
+  disp.setAttribute('scale', '10');   // stronger fibre distortion at the edge
   disp.setAttribute('xChannelSelector', 'R'); disp.setAttribute('yChannelSelector', 'G');
   filt.appendChild(turb); filt.appendChild(disp);
   defs.appendChild(filt); svg.appendChild(defs);
@@ -10112,44 +10112,51 @@ function _playTearTransition(onSnap) {
   };
 
   const left  = mkPiece(leftClip,
-    'drop-shadow(3px 0px 6px rgba(60,35,10,0.42))',
-    'linear-gradient(to right, #ede0c4 74%, #d8c9a8 100%)');
+    'drop-shadow(5px 0px 9px rgba(60,35,10,0.6))',
+    'linear-gradient(to right, #ede0c4 65%, #c8b48a 100%)');
   const right = mkPiece(rightClip,
-    'drop-shadow(-1px 2px 4px rgba(60,35,10,0.18))',
-    'linear-gradient(to left, #ede0c4 80%, #d8c9a8 100%)');
+    'drop-shadow(-2px 4px 6px rgba(60,35,10,0.25))',
+    'linear-gradient(to left, #ede0c4 70%, #c8b48a 100%)');
 
   ov.appendChild(svg);
   ov.appendChild(left);
   ov.appendChild(right);
   content.appendChild(ov);
 
-  // Snap iframe to new page (hidden under overlay)
   onSnap();
 
-  // ── Animate — pre-tear shudder then sweep ──────────────────────────────
-  const ms = 580;
+  // ── Animate: rapid multi-oscillation shudder then violent tear ──────────
+  const ms = 640;
 
-  // Left: resist briefly then tear away left-down
+  // Left: 6 rapid micro-trembles simulating paper resistance → tears up-left
   left.animate([
-    { transform: 'translate(0,0) rotate(0deg)',                         opacity: 1,    offset: 0    },
-    { transform: 'translate(-2px,0px) rotate(-0.3deg)',                 opacity: 1,    offset: 0.03 },
-    { transform: 'translate(1px,0px) rotate(0.2deg)',                   opacity: 1,    offset: 0.06 },
-    { transform: 'translate(-2px,1px) rotate(-0.4deg)',                 opacity: 1,    offset: 0.10 },
-    { transform: `translate(-${w*0.42}px,${h*0.10}px) rotate(-9deg)`,  opacity: 0.85, offset: 0.58 },
-    { transform: `translate(-${w*1.05}px,${h*0.30}px) rotate(-17deg)`, opacity: 0,    offset: 1    },
-  ], { duration: ms, easing: 'cubic-bezier(0.45,0,0.85,0.55)', fill: 'forwards' });
+    { transform: 'translate(0,0) rotate(0deg)',                           opacity: 1,    offset: 0    },
+    { transform: 'translate(-3px,-1px) rotate(-0.5deg)',                  opacity: 1,    offset: 0.04 },
+    { transform: 'translate(2px, 1px) rotate( 0.4deg)',                   opacity: 1,    offset: 0.08 },
+    { transform: 'translate(-3px,-1px) rotate(-0.5deg)',                  opacity: 1,    offset: 0.12 },
+    { transform: 'translate( 2px, 0px) rotate( 0.3deg)',                  opacity: 1,    offset: 0.16 },
+    { transform: 'translate(-2px,-1px) rotate(-0.4deg)',                  opacity: 1,    offset: 0.20 },
+    { transform: 'translate( 1px, 0px) rotate( 0.2deg)',                  opacity: 1,    offset: 0.24 },
+    { transform: 'translate(0,0) rotate(0deg)',                           opacity: 1,    offset: 0.27 },
+    { transform: `translate(-${w*0.32}px,${h*0.05}px) rotate(-12deg)`,   opacity: 0.88, offset: 0.62 },
+    { transform: `translate(-${w*1.12}px,${h*0.22}px) rotate(-26deg)`,   opacity: 0,    offset: 1    },
+  ], { duration: ms, easing: 'cubic-bezier(0.42,0,0.88,0.5)', fill: 'forwards' });
 
-  // Right: opposite-phase resist then drift down-right
+  // Right: opposite-phase trembles → curls down-right with more rotation
   right.animate([
-    { transform: 'translate(0,0) rotate(0deg)',                        opacity: 1,    offset: 0    },
-    { transform: 'translate(2px,0px) rotate(0.3deg)',                  opacity: 1,    offset: 0.03 },
-    { transform: 'translate(-1px,0px) rotate(-0.2deg)',                opacity: 1,    offset: 0.06 },
-    { transform: 'translate(2px,0px) rotate(0.4deg)',                  opacity: 1,    offset: 0.10 },
-    { transform: `translate(${w*0.07}px,${h*0.09}px) rotate(3.5deg)`, opacity: 0.88, offset: 0.45 },
-    { transform: `translate(${w*0.32}px,${h*0.52}px) rotate(9deg)`,   opacity: 0,    offset: 1    },
-  ], { duration: ms + 70, delay: 50, easing: 'ease-in', fill: 'forwards' });
+    { transform: 'translate(0,0) rotate(0deg)',                           opacity: 1,    offset: 0    },
+    { transform: 'translate( 3px, 1px) rotate( 0.5deg)',                  opacity: 1,    offset: 0.04 },
+    { transform: 'translate(-2px,-1px) rotate(-0.4deg)',                  opacity: 1,    offset: 0.08 },
+    { transform: 'translate( 3px, 1px) rotate( 0.5deg)',                  opacity: 1,    offset: 0.12 },
+    { transform: 'translate(-2px, 0px) rotate(-0.3deg)',                  opacity: 1,    offset: 0.16 },
+    { transform: 'translate( 2px, 1px) rotate( 0.4deg)',                  opacity: 1,    offset: 0.20 },
+    { transform: 'translate(-1px, 0px) rotate(-0.2deg)',                  opacity: 1,    offset: 0.24 },
+    { transform: 'translate(0,0) rotate(0deg)',                           opacity: 1,    offset: 0.27 },
+    { transform: `translate(${w*0.07}px,${h*0.13}px) rotate(6deg)`,      opacity: 0.88, offset: 0.50 },
+    { transform: `translate(${w*0.40}px,${h*0.58}px) rotate(15deg)`,     opacity: 0,    offset: 1    },
+  ], { duration: ms + 80, delay: 40, easing: 'ease-in', fill: 'forwards' });
 
-  setTimeout(() => ov.remove(), ms + 70 + 50 + 60);
+  setTimeout(() => ov.remove(), ms + 80 + 40 + 60);
 }
   
 function _scrollIframeTo(pageIdx, animate) {
