@@ -14007,6 +14007,23 @@ document.getElementById('adminCheckoutsFilter')?.addEventListener('click', funct
 });
 
 // ── KOBO DEVICES ──────────────────────────────────────────────────────────────
+// Both this section and Users below need the full `users` collection (this
+// one to resolve owner names; Users to render the list itself). The very
+// first `getDocs` against a given collection in a session has been seen to
+// fail right after sign-in (auth token/channel still settling) — wrapping
+// that fetch with one retry here means whichever admin section happens to
+// be opened first "pays" for that automatically, instead of it looking like
+// the Users section specifically is broken depending on click order.
+async function _adminFetchAllUsers() {
+  try {
+    return await getDocs(collection(db, 'users'));
+  } catch(e) {
+    console.warn('users fetch failed, retrying once:', e);
+    await new Promise(r => setTimeout(r, 400));
+    return await getDocs(collection(db, 'users'));
+  }
+}
+
 async function adminLoadKoboDevices() {
   const el = document.getElementById('adminKoboList');
   el.innerHTML = '<div style="color:var(--muted);font-size:.85rem">Loading…</div>';
@@ -14018,7 +14035,7 @@ async function adminLoadKoboDevices() {
       return;
     }
     // Load user names
-    const userSnap = await getDocs(collection(db, 'users'));
+    const userSnap = await _adminFetchAllUsers();
     const userMap = {};
     userSnap.docs.forEach(d => { userMap[d.id] = d.data().displayName || d.data().email || d.id; });
 
@@ -15612,7 +15629,10 @@ function buildAdminSections() {
   const scroll = panel.querySelector('.mob-settings-scroll');
   if(!scroll) return;
 
-  scroll.innerHTML = `<h2>🔑 Admin</h2>
+  scroll.innerHTML = `<div class="settings-header">
+      <div class="settings-header-title">🔑 Admin</div>
+      <div class="settings-header-sub">Manage users, genres, tags &amp; more</div>
+    </div>
 
     <div class="admin-section">
       <div class="admin-section-header" data-admin-section="checkouts">
