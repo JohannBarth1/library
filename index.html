@@ -9132,8 +9132,26 @@ async function updateHighlightColor(id, color) {
   } catch(e) { console.warn('updateHighlightColor:', e); }
 }
 
-// ── Selection → floating color-picker popup ─────────────────────────────
+// Patches an existing highlight's span in place (one write) rather than
+// deleting and recreating it — used when extending a sentence-tap
+// selection to a further sentence.
+async function updateHighlightOffsets(id, startOffset, endOffset, text) {
+  try {
+    const clippedText = (text || '').slice(0, 2000);
+    await updateDoc(doc(db, 'highlights', id), { startOffset, endOffset, text: clippedText });
+    const h = _currentBookHighlights.find(x => x.id === id);
+    if(h) { h.startOffset = startOffset; h.endOffset = endOffset; h.text = clippedText; }
+  } catch(e) { console.warn('updateHighlightOffsets:', e); }
+}
+
+// ── Selection → instant highlight (default yellow) + recolor/delete/share
+// popup ───────────────────────────────────────────────────────────────
+// A selection USED to only show a colour-swatch popup, and nothing was
+// actually saved until you tapped a swatch. Now the selection is saved as
+// a yellow highlight the moment it's made — the popup that follows is for
+// changing the colour or deleting/sharing afterward, entirely optional.
 let _highlightPopup = null;
+let _lastCreatedHighlight = null; // { id, text } — feeds the always-on Share button in highlight mode
 
 function _removeHighlightPopup() {
   _highlightPopup?.remove();
@@ -9147,17 +9165,71 @@ function _colorSwatchesHtml() {
   ).join('');
 }
 
+// Shares highlighted text via the native share sheet where available,
+// falling back to copying it to the clipboard.
+async function _shareHighlight(text) {
+  if (!text || !text.trim()) { showToast('Nothing to share yet'); return; }
+  const book = [...(typeof library !== 'undefined' ? library : []), ...(typeof communityLib !== 'undefined' ? communityLib : [])]
+    .find(b => b.id === readerBookId);
+  const attribution = [book?.title, book?.author].filter(Boolean).join(' — ');
+  const shareText = attribution ? `"${text.trim()}"\n\n— ${attribution}` : `"${text.trim()}"`;
+
+  if (navigator.share) {
+    try {
+      await navigator.share({ text: shareText, title: book?.title || 'A highlight' });
+      return;
+    } catch(e) {
+      if (e?.name === 'AbortError') return; // user cancelled the share sheet — not an error
+    }
+  }
+  try {
+    await navigator.clipboard.writeText(shareText);
+    showToast('Highlight copied to clipboard');
+  } catch(e) {
+    showToast('Could not share this highlight');
+  }
+}
+
 function _attachHighlightSelectionUI(doc) {
+  // selectionchange still clears a stale popup once the selection is
+  // dismissed/collapsed — but no longer creates anything, since by the
+  // time the popup exists the highlight is already saved.
   doc.addEventListener('selectionchange', () => {
     const sel = doc.getSelection ? doc.getSelection() : doc.defaultView?.getSelection();
-    if(!sel || sel.isCollapsed || !sel.rangeCount) { _removeHighlightPopup(); return; }
+    if (!sel || sel.isCollapsed || !sel.rangeCount || !sel.toString().trim()) _removeHighlightPopup();
+  });
+  // mouseup (selection finished, not mid-drag) is what actually commits
+  // the highlight — using selectionchange for this would auto-save on
+  // every intermediate change while the mouse is still being dragged.
+  doc.addEventListener('mouseup', () => {
+    const sel = doc.getSelection ? doc.getSelection() : doc.defaultView?.getSelection();
+    if (!sel || sel.isCollapsed || !sel.rangeCount) return;
     const range = sel.getRangeAt(0);
-    if(!range.toString().trim()) { _removeHighlightPopup(); return; }
-    _showHighlightPopup(doc, range);
+    if (!range.toString().trim()) return;
+    _commitHighlightFromRange(doc, range);
   });
 }
 
-function _showHighlightPopup(doc, range) {
+// Saves the given range as a yellow highlight right away, renders it, and
+// opens the (optional) recolor/delete/share popup over it.
+async function _commitHighlightFromRange(doc, range) {
+  const offsets = _rangeToOffsets(doc, range);
+  const text = range.toString();
+  (doc.getSelection ? doc.getSelection() : doc.defaultView?.getSelection())?.removeAllRanges();
+  if (!offsets || !text.trim()) return;
+  const id = await saveHighlight(offsets.startOffset, offsets.endOffset, 'yellow', text);
+  if (!id) return;
+  applyHighlightsToChapter(doc);
+  renderReaderBookmarkList();
+  if (navigator.vibrate) navigator.vibrate(15);
+  _lastCreatedHighlight = { id, text };
+  // The Range's boundary points are live and track the DOM through the
+  // splitText() calls applyHighlightsToChapter just made, so it's still
+  // valid to use directly for positioning the popup.
+  _showHighlightPopup(doc, range, id);
+}
+
+function _showHighlightPopup(doc, range, highlightId) {
   _removeHighlightPopup();
   if(!_readerIframe) return;
 
@@ -9169,36 +9241,50 @@ function _showHighlightPopup(doc, range) {
   popup.id = 'readerHighlightPopup';
   popup.style.cssText = `
     position:absolute; z-index:200;
-    left:${Math.max(8, iframeRect.left + rect.left + rect.width / 2 - 58)}px;
+    left:${Math.max(8, iframeRect.left + rect.left + rect.width / 2 - 78)}px;
     top:${Math.max(8, iframeRect.top + rect.top - 42)}px;
     display:flex; align-items:center; gap:.45rem;
     background:#222; border-radius:8px; padding:.4rem .55rem;
     box-shadow:0 4px 14px rgba(0,0,0,.3);
   `;
-  popup.innerHTML = _colorSwatchesHtml();
+  popup.innerHTML = _colorSwatchesHtml() +
+    `<span style="width:1px;height:18px;background:rgba(255,255,255,.25);margin:0 .1rem;"></span>
+     <button data-hlshare title="Share" style="background:none;border:none;color:#fff;
+       font-size:.9rem;line-height:1;cursor:pointer;padding:0 .2rem;">📤</button>
+     <button data-hldelete title="Delete" style="background:none;border:none;color:#fff;
+       font-size:1rem;line-height:1;cursor:pointer;padding:0 .2rem;">✕</button>`;
   document.body.appendChild(popup);
   _highlightPopup = popup;
 
   popup.querySelectorAll('[data-hlcolor]').forEach(btn => {
-    // mousedown so this fires before the selectionchange caused by the
-    // click itself would otherwise clear things out from under us
+    // mousedown so this fires before the selectionchange/blur the click
+    // itself would otherwise trigger
     btn.addEventListener('mousedown', async e => {
       e.preventDefault();
       const color = btn.dataset.hlcolor;
-      const offsets = _rangeToOffsets(doc, range);
-      const text = range.toString();
-      (doc.getSelection ? doc.getSelection() : doc.defaultView?.getSelection())?.removeAllRanges();
-      _removeHighlightPopup();
-      setReaderSelectMode(false);
-      if(!offsets) return;
-      const id = await saveHighlight(offsets.startOffset, offsets.endOffset, color, text);
-      if(id) applyHighlightsToChapter(doc);
+      await updateHighlightColor(highlightId, color);
+      doc.querySelectorAll(`mark[data-highlightid="${highlightId}"]`).forEach(m => m.style.background = HIGHLIGHT_COLORS[color]);
       renderReaderBookmarkList();
     });
   });
+  popup.querySelector('[data-hlshare]').addEventListener('mousedown', e => {
+    e.preventDefault();
+    const h = _currentBookHighlights.find(x => x.id === highlightId);
+    _shareHighlight(h?.text || range.toString());
+  });
+  popup.querySelector('[data-hldelete]').addEventListener('mousedown', async e => {
+    e.preventDefault();
+    await deleteHighlight(highlightId);
+    doc.querySelectorAll(`mark[data-highlightid="${highlightId}"]`).forEach(m => m.replaceWith(...m.childNodes));
+    doc.normalize?.();
+    _removeHighlightPopup();
+    if (_lastCreatedHighlight?.id === highlightId) _lastCreatedHighlight = null;
+    if (_activeSentenceHighlightId === highlightId) { _activeSentenceHighlightId = null; _sentenceSelAnchor = null; }
+    renderReaderBookmarkList();
+  });
 }
 
-// ── Tap-on-existing-highlight → change color / delete ───────────────────
+// ── Tap-on-existing-highlight → change color / delete / share ───────────
 function openHighlightMenu(markEl, clientX, clientY) {
   _removeHighlightPopup();
   const id = markEl.dataset.highlightid;
@@ -9207,14 +9293,17 @@ function openHighlightMenu(markEl, clientX, clientY) {
   popup.id = 'readerHighlightPopup';
   popup.style.cssText = `
     position:absolute; z-index:200;
-    left:${Math.max(8, clientX - 68)}px;
+    left:${Math.max(8, clientX - 88)}px;
     top:${Math.max(8, clientY - 50)}px;
     display:flex; align-items:center; gap:.45rem;
     background:#222; border-radius:8px; padding:.4rem .55rem;
     box-shadow:0 4px 14px rgba(0,0,0,.3);
   `;
   popup.innerHTML = _colorSwatchesHtml() +
-    `<button data-hldelete style="background:none;border:none;color:#fff;
+    `<span style="width:1px;height:18px;background:rgba(255,255,255,.25);margin:0 .1rem;"></span>
+     <button data-hlshare title="Share" style="background:none;border:none;color:#fff;
+       font-size:.9rem;line-height:1;cursor:pointer;padding:0 .2rem;">📤</button>
+     <button data-hldelete title="Delete" style="background:none;border:none;color:#fff;
        font-size:1rem;line-height:1;cursor:pointer;padding:0 .2rem;">✕</button>`;
   document.body.appendChild(popup);
   _highlightPopup = popup;
@@ -9228,10 +9317,15 @@ function openHighlightMenu(markEl, clientX, clientY) {
       renderReaderBookmarkList();
     });
   });
+  popup.querySelector('[data-hlshare]').addEventListener('click', () => {
+    const h = _currentBookHighlights.find(x => x.id === id);
+    _shareHighlight(h?.text || markEl.textContent || '');
+  });
   popup.querySelector('[data-hldelete]').addEventListener('click', async () => {
     await deleteHighlight(id);
     markEl.replaceWith(...markEl.childNodes);
     _removeHighlightPopup();
+    if (_lastCreatedHighlight?.id === id) _lastCreatedHighlight = null;
     renderReaderBookmarkList();
   });
 }
@@ -9241,16 +9335,39 @@ function openHighlightMenu(markEl, clientX, clientY) {
 function _showSelectBadge() {
   document.getElementById('readerSelectBadge')?.remove();
   const content = document.getElementById('readerContent');
+
+  const wrap = document.createElement('div');
+  wrap.id = 'readerSelectBadge';
+  wrap.style.cssText = `position:absolute;top:8px;left:50%;transform:translateX(-50%);
+    display:flex;align-items:center;gap:.4em;z-index:10;`;
+
   const b = document.createElement('button');
-  b.id = 'readerSelectBadge';
   b.innerHTML = '<span style="font-size:.85em;line-height:1">✕</span><span>Highlight Mode</span>';
-  b.style.cssText = `position:absolute;top:8px;left:50%;transform:translateX(-50%);
-    display:flex;align-items:center;gap:.35em;
+  b.style.cssText = `display:flex;align-items:center;gap:.35em;
     background:rgba(42,124,138,.94);color:#fff;font-size:.68rem;font-weight:700;
-    letter-spacing:.05em;padding:6px 16px;border-radius:20px;border:none;z-index:10;
+    letter-spacing:.05em;padding:6px 16px;border-radius:20px;border:none;
     cursor:pointer;white-space:nowrap;-webkit-tap-highlight-color:transparent;`;
   b.addEventListener('click', () => setReaderSelectMode(false));
-  content.appendChild(b);
+
+  // Always-visible share button while in highlight mode, so the most
+  // recent highlight can be sent off right away without having to dig
+  // through the bookmarks/highlights list afterward.
+  const share = document.createElement('button');
+  share.id = 'readerSelectShareBtn';
+  share.title = 'Share highlight';
+  share.textContent = '📤';
+  share.style.cssText = `display:flex;align-items:center;justify-content:center;
+    width:30px;height:30px;flex-shrink:0;background:rgba(42,124,138,.94);color:#fff;
+    font-size:.82rem;border-radius:50%;border:none;cursor:pointer;
+    -webkit-tap-highlight-color:transparent;`;
+  share.addEventListener('click', () => {
+    if (!_lastCreatedHighlight) { showToast('Highlight some text first'); return; }
+    _shareHighlight(_lastCreatedHighlight.text);
+  });
+
+  wrap.appendChild(b);
+  wrap.appendChild(share);
+  content.appendChild(wrap);
 }
 function _hideSelectBadge() { document.getElementById('readerSelectBadge')?.remove(); }
 
@@ -9258,10 +9375,13 @@ function _hideSelectBadge() { document.getElementById('readerSelectBadge')?.remo
 // not firing `selectionchange` reliably — or at all — for a Selection that
 // lives inside an iframe's document. Polling sidesteps that entirely: we
 // just check the live selection a few times a second while select mode is
-// on, so the highlight-color popup shows up regardless of which events the
-// browser does or doesn't fire.
+// on. A selection only commits once it's been the same for two polls in a
+// row (~500ms) — i.e. the user has actually stopped moving the selection
+// handles — so dragging to extend a selection doesn't fire off a new saved
+// highlight on every intermediate position.
 let _selectPollTimer = null;
 let _lastSelText = '';
+let _pendingSelText = '';
 function _startSelectPoll(doc) {
   _stopSelectPoll();
   if (!doc) return;
@@ -9272,13 +9392,18 @@ function _startSelectPoll(doc) {
     catch(e) { return; }
     if (sel && !sel.isCollapsed && sel.rangeCount && sel.toString().trim()) {
       const text = sel.toString();
-      if (text !== _lastSelText) {
+      if (text === _lastSelText) return; // already committed, nothing changed
+      if (text === _pendingSelText) {
+        // Same as last poll — the selection has settled, commit it.
         _lastSelText = text;
-        try { _showHighlightPopup(doc, sel.getRangeAt(0)); } catch(e) {}
+        _pendingSelText = '';
+        try { _commitHighlightFromRange(doc, sel.getRangeAt(0)); } catch(e) {}
+      } else {
+        _pendingSelText = text;
       }
-    } else if (_lastSelText) {
+    } else if (_lastSelText || _pendingSelText) {
       _lastSelText = '';
-      _removeHighlightPopup();
+      _pendingSelText = '';
     }
   }, 250);
 }
@@ -9286,6 +9411,7 @@ function _stopSelectPoll() {
   clearInterval(_selectPollTimer);
   _selectPollTimer = null;
   _lastSelText = '';
+  _pendingSelText = '';
 }
 
 function setReaderSelectMode(on) {
@@ -9296,6 +9422,7 @@ function setReaderSelectMode(on) {
   const isTouchDevice = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
 
   if (on) {
+    _lastCreatedHighlight = null; // fresh session — share button starts disabled until something's highlighted
     _showSelectBadge();
     if (navigator.vibrate) navigator.vibrate(20);
     if (isTouchDevice) _startSelectPoll(_readerIframe?.contentDocument);
@@ -9365,7 +9492,14 @@ function _buildSentenceRanges(doc) {
   let full = '';
   for (const n of nodes) full += n.textContent;
   const ranges = [];
-  const re = /[^.!?]*[.!?]+(?=\s|$)|[^.!?]+$/g;
+  // Sentence terminators are . ! ? and the single-glyph ellipsis (…).
+  // After the terminator, absorb any closing quotes/brackets (straight or
+  // curly, single or double, plus common CJK/guillemet closers) before
+  // requiring whitespace/end — otherwise `He said, "Stop!" then left.`
+  // never matches a boundary right after `!"` (the quote sits between the
+  // punctuation and the space), so the regex overran straight into the
+  // next sentence. Unicode escapes need the 'u' flag.
+  const re = /[^.!?\u2026]*[.!?\u2026]+["'\u2018\u2019\u201c\u201d)\]»›〉》』」]*(?=\s|$)|[^.!?\u2026]+$/gu;
   let m;
   while ((m = re.exec(full)) !== null) {
     if (!m[0].trim()) continue;
@@ -10052,113 +10186,248 @@ setTimeout(() => {
   requestAnimationFrame(frame);
 }
   
+// Perf note: the old version ran an SVG feTurbulence + feDisplacementMap
+// filter (plus a chained drop-shadow) across two full-page layers for the
+// whole animation. Turbulence/displacement filters are notoriously
+// expensive to rasterize — many browsers drop out of GPU compositing
+// entirely once one is present, so every frame was a full-page software
+// re-render on top of a WAAPI transform animation, which is why this was
+// "heavy/not at all" on weaker devices. None of that texture is needed to
+// read as paper tearing: a jagged clip-path plus a thin lighter "fibre"
+// sliver right at the torn edge (cheap: just a second, independently
+// jittered clip-path with a pale gradient, no filter at all) sells the
+// same idea for a fraction of the cost.
 function _playTearTransition(onSnap) {
   const content = document.getElementById('readerContent');
   if (!content) { onSnap(); return; }
+  if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) { onSnap(); return; }
 
   const w = content.offsetWidth;
   const h = content.offsetHeight;
 
-  // ── Jagged tear line — finer segments, deeper spikes ──────────────────
-  const segs = Math.ceil(h / 7);          // more segments → finer texture
+  // ── Jagged tear line — capped segment count so very tall viewports
+  // don't blow up the point/polygon size on weaker devices ───────────────
+  const segs = Math.min(70, Math.max(24, Math.ceil(h / 12)));
   const baseTearX = w * (0.44 + Math.random() * 0.12);
-  const pts = [{ x: baseTearX + (Math.random() - 0.5) * 8, y: 0 }];
+  const jitter = () => (Math.random() - 0.5) * 8;
+  const pts = [{ x: baseTearX + jitter(), y: 0 }];
 
   for (let i = 1; i < segs; i++) {
     const y    = (i / segs) * h;
     const prev = pts[pts.length - 1];
-    const jag  = (Math.random() - 0.5) * 36;                              // wider lateral wander
-    const spike = Math.random() < 0.28 ? (Math.random() - 0.5) * 55 : 0; // deeper occasional spikes
+    const jag  = (Math.random() - 0.5) * 34;
+    const spike = Math.random() < 0.25 ? (Math.random() - 0.5) * 50 : 0;
     pts.push({ x: Math.max(w * 0.12, Math.min(w * 0.88, prev.x + jag + spike)), y });
   }
-  pts.push({ x: baseTearX + (Math.random() - 0.5) * 8, y: h });
+  pts.push({ x: baseTearX + jitter(), y: h });
 
-  const pStr     = pts.map(p => `${p.x.toFixed(1)}px ${p.y.toFixed(1)}px`).join(',');
-  const leftClip  = `polygon(0px 0px,${pStr},0px ${h}px)`;
-  const rightClip = `polygon(${pStr},${w}px ${h}px,${w}px 0px)`;
+  // A second, independently-jittered line running just a few px to either
+  // side of the main tear — the sliver of paper between the two lines is
+  // the pale "torn fibre" edge, drawn as flat fills (no filter).
+  const fibreW = 5;
+  const fibrePts = pts.map(p => ({ x: p.x + (Math.random() - 0.5) * fibreW * 2, y: p.y }));
 
-  // ── SVG filter — directional fibre texture, stronger displacement ──────
-  const filterId = `tf_${Math.random().toString(36).slice(2, 8)}`;
-  const svgNS = 'http://www.w3.org/2000/svg';
-  const svg   = document.createElementNS(svgNS, 'svg');
-  svg.setAttribute('width', '0'); svg.setAttribute('height', '0');
-  svg.style.cssText = 'position:absolute;overflow:visible;';
-  const defs = document.createElementNS(svgNS, 'defs');
-  const filt = document.createElementNS(svgNS, 'filter');
-  filt.setAttribute('id', filterId);
-  filt.setAttribute('x', '-15%'); filt.setAttribute('y', '-5%');
-  filt.setAttribute('width', '130%'); filt.setAttribute('height', '110%');
-  const turb = document.createElementNS(svgNS, 'feTurbulence');
-  turb.setAttribute('type', 'fractalNoise');
-  turb.setAttribute('baseFrequency', '0.02 0.18');  // more vertical-fibre bias
-  turb.setAttribute('numOctaves', '5');
-  turb.setAttribute('seed', String(Math.floor(Math.random() * 100)));
-  turb.setAttribute('result', 'noise');
-  const disp = document.createElementNS(svgNS, 'feDisplacementMap');
-  disp.setAttribute('in', 'SourceGraphic'); disp.setAttribute('in2', 'noise');
-  disp.setAttribute('scale', '10');   // stronger fibre distortion at the edge
-  disp.setAttribute('xChannelSelector', 'R'); disp.setAttribute('yChannelSelector', 'G');
-  filt.appendChild(turb); filt.appendChild(disp);
-  defs.appendChild(filt); svg.appendChild(defs);
+  const toStr = arr => arr.map(p => `${p.x.toFixed(1)}px ${p.y.toFixed(1)}px`).join(',');
+  const pStr  = toStr(pts);
+  const fStr  = toStr(fibrePts);
+
+  const leftClip   = `polygon(0px 0px,${pStr},0px ${h}px)`;
+  const rightClip  = `polygon(${pStr},${w}px ${h}px,${w}px 0px)`;
+  // Thin fibre slivers hug each side of the tear line, one on the left
+  // piece's edge and one on the right piece's edge.
+  const leftFibreClip  = `polygon(${toStr(pts.map((p,i)=>({x:Math.min(p.x,fibrePts[i].x)-3,y:p.y})))},${toStr([...fibrePts].reverse().map((p,i)=>({x:p.x,y:p.y})))})`;
+  const rightFibreClip = `polygon(${fStr},${toStr([...pts].reverse().map(p=>({x:p.x+3,y:p.y})))})`;
+
+  // Pivot near the tear line itself (not the piece's own box center) so
+  // the motion reads as ripping away from a fixed point — like tearing a
+  // sheet off a pad — rather than the two halves just sliding apart.
+  // Origin is a % of the *whole* container (clip-path doesn't shrink the
+  // box), so it has to be computed from where the tear line actually is.
+  const originXPct = (Math.max(0, Math.min(100, baseTearX / w * 100))).toFixed(1) + '%';
 
   // ── Overlay ────────────────────────────────────────────────────────────
   const ov = document.createElement('div');
   ov.style.cssText = 'position:absolute;inset:0;z-index:20;pointer-events:none;overflow:hidden;';
 
-  const mkPiece = (clip, shadow, grad) => {
+  const mkPiece = (clip, boxShadow, grad) => {
     const d = document.createElement('div');
-    d.style.cssText = `position:absolute;inset:0;background:${grad};clip-path:${clip};will-change:transform,opacity;filter:url(#${filterId}) ${shadow};`;
+    d.style.cssText = `position:absolute;inset:0;background:${grad};clip-path:${clip};
+      will-change:transform,opacity;transform-origin:${originXPct} 8%;box-shadow:${boxShadow};`;
     return d;
   };
 
   const left  = mkPiece(leftClip,
-    'drop-shadow(5px 0px 9px rgba(60,35,10,0.6))',
+    '6px 0 14px rgba(60,35,10,.35)',
     'linear-gradient(to right, #ede0c4 65%, #c8b48a 100%)');
   const right = mkPiece(rightClip,
-    'drop-shadow(-2px 4px 6px rgba(60,35,10,0.25))',
+    '-4px 4px 10px rgba(60,35,10,.22)',
     'linear-gradient(to left, #ede0c4 70%, #c8b48a 100%)');
 
-  ov.appendChild(svg);
+  const leftFibre  = document.createElement('div');
+  leftFibre.style.cssText = `position:absolute;inset:0;clip-path:${leftFibreClip};
+    background:linear-gradient(90deg, rgba(255,250,235,.95), rgba(255,250,235,.15));
+    will-change:transform,opacity;transform-origin:${originXPct} 8%;`;
+  const rightFibre = document.createElement('div');
+  rightFibre.style.cssText = `position:absolute;inset:0;clip-path:${rightFibreClip};
+    background:linear-gradient(270deg, rgba(255,250,235,.95), rgba(255,250,235,.15));
+    will-change:transform,opacity;transform-origin:${originXPct} 8%;`;
+
   ov.appendChild(left);
   ov.appendChild(right);
+  ov.appendChild(leftFibre);
+  ov.appendChild(rightFibre);
   content.appendChild(ov);
 
   onSnap();
 
-  // ── Animate: rapid multi-oscillation shudder then violent tear ──────────
-  const ms = 640;
+  // ── Animate: a couple of short trembles (paper resisting), then the
+  // rip — pivoting from the torn edge so the motion reads as ripping
+  // away rather than sliding apart. Shorter than before (480ms vs 640ms)
+  // since fewer frames need to be heavy for this to still feel violent. ──
+  const ms = 480;
+  const tremble = [
+    { transform: 'rotate(0deg)',      offset: 0    },
+    { transform: 'rotate(-0.6deg)',   offset: 0.06 },
+    { transform: 'rotate(0.5deg)',    offset: 0.12 },
+    { transform: 'rotate(-0.4deg)',   offset: 0.18 },
+    { transform: 'rotate(0deg)',      offset: 0.24 },
+  ];
 
-  // Left: 6 rapid micro-trembles simulating paper resistance → tears up-left
-  left.animate([
-    { transform: 'translate(0,0) rotate(0deg)',                           opacity: 1,    offset: 0    },
-    { transform: 'translate(-3px,-1px) rotate(-0.5deg)',                  opacity: 1,    offset: 0.04 },
-    { transform: 'translate(2px, 1px) rotate( 0.4deg)',                   opacity: 1,    offset: 0.08 },
-    { transform: 'translate(-3px,-1px) rotate(-0.5deg)',                  opacity: 1,    offset: 0.12 },
-    { transform: 'translate( 2px, 0px) rotate( 0.3deg)',                  opacity: 1,    offset: 0.16 },
-    { transform: 'translate(-2px,-1px) rotate(-0.4deg)',                  opacity: 1,    offset: 0.20 },
-    { transform: 'translate( 1px, 0px) rotate( 0.2deg)',                  opacity: 1,    offset: 0.24 },
-    { transform: 'translate(0,0) rotate(0deg)',                           opacity: 1,    offset: 0.27 },
-    { transform: `translate(-${w*0.32}px,${h*0.05}px) rotate(-12deg)`,   opacity: 0.88, offset: 0.62 },
-    { transform: `translate(-${w*1.12}px,${h*0.22}px) rotate(-26deg)`,   opacity: 0,    offset: 1    },
+  const leftKeyframes = [
+    ...tremble.map(k => ({ ...k, opacity: 1 })),
+    { transform: `rotate(-14deg) translate(-${w*0.30}px, ${h*0.04}px)`, opacity: 0.85, offset: 0.6 },
+    { transform: `rotate(-30deg) translate(-${w*1.1}px, ${h*0.2}px)`,   opacity: 0,    offset: 1   },
+  ];
+  const rightKeyframes = [
+    ...tremble.map(k => ({ transform: k.transform.replace('-', '+').replace('+0deg','0deg'), opacity: 1, offset: k.offset })),
+    { transform: `rotate(8deg) translate(${w*0.08}px, ${h*0.12}px)`,  opacity: 0.85, offset: 0.48 },
+    { transform: `rotate(18deg) translate(${w*0.42}px, ${h*0.55}px)`, opacity: 0,    offset: 1    },
+  ];
+
+  left.animate(leftKeyframes,  { duration: ms, easing: 'cubic-bezier(0.42,0,0.88,0.5)', fill: 'forwards' });
+  right.animate(rightKeyframes, { duration: ms + 60, delay: 30, easing: 'ease-in', fill: 'forwards' });
+  // Fibre slivers flash bright at the moment of tearing, then get carried
+  // away with their piece — this is the main visual cue that reads as
+  // "tearing" rather than "splitting".
+  leftFibre.animate([
+    { transform: 'rotate(0deg) scale(1)', opacity: 0,   offset: 0 },
+    { transform: 'rotate(0deg) scale(1.15)', opacity: 1, offset: 0.22 },
+    ...leftKeyframes.slice(-2),
   ], { duration: ms, easing: 'cubic-bezier(0.42,0,0.88,0.5)', fill: 'forwards' });
+  rightFibre.animate([
+    { transform: 'rotate(0deg) scale(1)', opacity: 0,   offset: 0 },
+    { transform: 'rotate(0deg) scale(1.15)', opacity: 1, offset: 0.2 },
+    ...rightKeyframes.slice(-2),
+  ], { duration: ms + 60, delay: 30, easing: 'ease-in', fill: 'forwards' });
 
-  // Right: opposite-phase trembles → curls down-right with more rotation
-  right.animate([
-    { transform: 'translate(0,0) rotate(0deg)',                           opacity: 1,    offset: 0    },
-    { transform: 'translate( 3px, 1px) rotate( 0.5deg)',                  opacity: 1,    offset: 0.04 },
-    { transform: 'translate(-2px,-1px) rotate(-0.4deg)',                  opacity: 1,    offset: 0.08 },
-    { transform: 'translate( 3px, 1px) rotate( 0.5deg)',                  opacity: 1,    offset: 0.12 },
-    { transform: 'translate(-2px, 0px) rotate(-0.3deg)',                  opacity: 1,    offset: 0.16 },
-    { transform: 'translate( 2px, 1px) rotate( 0.4deg)',                  opacity: 1,    offset: 0.20 },
-    { transform: 'translate(-1px, 0px) rotate(-0.2deg)',                  opacity: 1,    offset: 0.24 },
-    { transform: 'translate(0,0) rotate(0deg)',                           opacity: 1,    offset: 0.27 },
-    { transform: `translate(${w*0.07}px,${h*0.13}px) rotate(6deg)`,      opacity: 0.88, offset: 0.50 },
-    { transform: `translate(${w*0.40}px,${h*0.58}px) rotate(15deg)`,     opacity: 0,    offset: 1    },
-  ], { duration: ms + 80, delay: 40, easing: 'ease-in', fill: 'forwards' });
-
-  setTimeout(() => ov.remove(), ms + 80 + 40 + 60);
+  setTimeout(() => ov.remove(), ms + 60 + 30 + 60);
 }
-  
+
+// "Scroll" transition — the page rolls up and away like a real scroll or
+// window blind, instead of the old version which just reused the same
+// translateX slide with a longer, linear-eased duration.
+//
+// We can't screenshot the iframe's rendered pixels (no html2canvas here,
+// and doing that properly would be its own heavy cost), so — like the
+// gravity transition already does — we reproduce the visible text onto a
+// canvas once, then animate that single canvas with cheap, GPU-friendly
+// transforms (scaleY + translateY) instead of redrawing every frame. The
+// real document snaps to the new page immediately underneath, hidden by
+// the overlay until it's rolled away.
+function _playScrollTransition(onSnap, direction) {
+  const content = document.getElementById('readerContent');
+  if (!content || !_readerIframe) { onSnap(); return; }
+  const doc = _readerIframe.contentDocument || _readerIframe.contentWindow?.document;
+  if (!doc || !doc.body) { onSnap(); return; }
+  if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) { onSnap(); return; }
+
+  const w = content.offsetWidth;
+  const h = content.offsetHeight;
+
+  const words = [];
+  const range = doc.createRange();
+  const walker = doc.createTreeWalker(doc.body, NodeFilter.SHOW_TEXT, {
+    acceptNode(node) {
+      const tag = node.parentElement?.tagName?.toLowerCase();
+      if (['script','style','noscript'].includes(tag)) return NodeFilter.FILTER_REJECT;
+      return NodeFilter.FILTER_ACCEPT;
+    }
+  });
+  let node;
+  outer:
+  while ((node = walker.nextNode())) {
+    const text = node.textContent;
+    if (!text.trim()) continue;
+    const cs = getComputedStyle(node.parentElement);
+    for (const m of text.matchAll(/\S+/g)) {
+      range.setStart(node, m.index);
+      range.setEnd(node, m.index + m[0].length);
+      const r = range.getBoundingClientRect();
+      if (r.width > 0 && r.height > 0 && r.right > 0 && r.left < w && r.bottom > 0 && r.top < h) {
+        words.push({
+          text: m[0], x: r.left, y: r.bottom - 1,
+          fontSize: Math.max(8, Math.round(parseFloat(cs.fontSize))),
+          color: cs.color,
+          bold: parseInt(cs.fontWeight, 10) >= 600,
+          italic: cs.fontStyle === 'italic',
+        });
+      }
+      if (words.length >= 700) break outer;
+    }
+  }
+
+  if (!words.length) { onSnap(); return; }
+
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const canvas = document.createElement('canvas');
+  canvas.width  = Math.round(w * dpr);
+  canvas.height = Math.round(h * dpr);
+  canvas.style.cssText = `position:absolute;left:0;top:0;width:${w}px;height:${h}px;
+    z-index:20;pointer-events:none;will-change:transform,opacity;`;
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  ctx.fillStyle = getComputedStyle(doc.body).backgroundColor || '#fdf6e3';
+  ctx.fillRect(0, 0, w, h);
+  const font = `'Lato', Georgia, serif`;
+  for (const wd of words) {
+    ctx.font = `${wd.italic ? 'italic ' : ''}${wd.bold ? '700' : '400'} ${wd.fontSize}px ${font}`;
+    ctx.fillStyle = wd.color;
+    ctx.fillText(wd.text, wd.x, wd.y);
+  }
+
+  // Shading band simulating the shadowed underside of the rolled paper,
+  // travelling along with the roll.
+  const band = document.createElement('div');
+  band.style.cssText = `position:absolute;left:0;right:0;height:22px;z-index:21;pointer-events:none;
+    background:linear-gradient(to bottom, rgba(0,0,0,.4), rgba(0,0,0,0));will-change:transform,opacity;`;
+
+  content.appendChild(canvas);
+  content.appendChild(band);
+
+  onSnap();
+
+  const ms = 420;
+  const fwd = direction !== -1; // forward = rolls up and away; back = rolls down and away
+  canvas.style.transformOrigin = fwd ? '50% 0%' : '50% 100%';
+  band.style.top = fwd ? '0' : 'auto';
+  band.style.bottom = fwd ? 'auto' : '0';
+  if (!fwd) band.style.background = 'linear-gradient(to top, rgba(0,0,0,.4), rgba(0,0,0,0))';
+
+  canvas.animate([
+    { transform: 'scaleY(1)',    opacity: 1, offset: 0    },
+    { transform: 'scaleY(0.82)', opacity: 1, offset: 0.18 },
+    { transform: 'scaleY(0.03)', opacity: 0, offset: 1    },
+  ], { duration: ms, easing: 'cubic-bezier(.55,0,.85,.35)', fill: 'forwards' });
+
+  band.animate([
+    { transform: 'translateY(0)', opacity: 0 },
+    { transform: 'translateY(0)', opacity: 1, offset: 0.06 },
+    { transform: `translateY(${fwd ? h : -h}px)`, opacity: 0, offset: 1 },
+  ], { duration: ms, easing: 'linear', fill: 'forwards' });
+
+  setTimeout(() => { canvas.remove(); band.remove(); }, ms + 40);
+}
+
 function _scrollIframeTo(pageIdx, animate) {
   if(!_readerIframe) return;
   const doc = _readerIframe.contentDocument || _readerIframe.contentWindow?.document;
@@ -10170,7 +10439,6 @@ function _scrollIframeTo(pageIdx, animate) {
     const TRANSITION_STYLES = {
       bounce: { duration: '0.32s', easing: 'cubic-bezier(0.34, 1.56, 0.64, 1)' },
       slide:  { duration: '0.22s', easing: 'cubic-bezier(0.4, 0, 0.2, 1)' },
-      scroll: { duration: '0.38s', easing: 'linear' },
     };
     const t = TRANSITION_STYLES[readerTransition] || TRANSITION_STYLES.slide;
     doc.body.style.transition = `transform ${t.duration} ${t.easing}`;
@@ -10206,6 +10474,15 @@ function goToPage(page, opts = {}) {
     updatePaginationUI();
     if (readerBookId) saveReadingProgress(readerBookId, readerChapter, readerPage, readerSpine.length);
     _playGravityTransition(() => _scrollIframeTo(page, false));
+    return;
+  }
+
+  if (shouldAnimate && readerTransition === 'scroll') {
+    const direction = page < readerPage ? -1 : 1;
+    readerPage = page;
+    updatePaginationUI();
+    if (readerBookId) saveReadingProgress(readerBookId, readerChapter, readerPage, readerSpine.length);
+    _playScrollTransition(() => _scrollIframeTo(page, false), direction);
     return;
   }
 
