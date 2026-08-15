@@ -1567,7 +1567,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
   .book-drawer{display:none;}
   .mob-nav{display:block;}
   .audio-mini-bar{left:.6rem;right:.6rem;width:auto;max-width:none;
-    bottom:calc(var(--mob-nav-h) + var(--sab) + .6rem);}
+    bottom:calc(var(--mob-nav-h) + var(--sab) + 1rem);}
   .mob-panels{display:flex;}
   .hbtn-upload{display:none;}
   .btnToggleSettingsDesk{display:none;}
@@ -2926,7 +2926,7 @@ let mobLibFilter = 'all';
 let mobLibCat    = 'All';
 let mobLibFormat = 'all';   // 'all' | 'book' | 'audio' — format filter, mobile Library
 let mobLibSearch = '';
-let mobLibSort   = 'recent';
+let mobLibSort   = 'series-recent';
 let mobPrevPanel = 'mobPanelLibrary';
 let currentUser=null,library=[],allUsers=[],userRatings={},currentId=null,communityLib = [];
 // Kick off loading any offline-cached covers immediately — Cache Storage isn't
@@ -2936,7 +2936,7 @@ let _coverCachePrimed = primeCoverCache();
 // Desktop Library filter state — mirrors mobile's mfp pill state exactly
 // (mobLibFilter/mobLibCat/mobActiveTags/mobLibSort below), just its own copy
 // so each surface renders and filters independently.
-let deskLibFilter='all',deskLibCat='All',deskLibSort='recent',searchQ='';
+let deskLibFilter='all',deskLibCat='All',deskLibSort='series-recent',searchQ='';
 let deskLibFormat='all';         // 'all' | 'book' | 'audio' — format filter, desktop Library
 let deskActiveTags = new Set();   // tag-filter picker selections, desktop Library
 let mobActiveTags = new Set();    // tag-filter picker selections, mobile Library
@@ -3835,8 +3835,32 @@ function filteredBooks(){
   return sortBooks(books,deskLibSort);
 }
 function sortBooks(books,sort){
-  if(!sort)sort='recent';
+  if(!sort)sort='series-recent';
   const copy=[...books];
+  if(sort==='series-recent'){
+    // For each group (a series, or a standalone book), find the most recent
+    // createdAt across all its members so that newly-added books/series float
+    // to the top while the books *inside* a series stay in series order.
+    const groupTime={};
+    copy.forEach(b=>{
+      const gk=b.series?b.series.toLowerCase().trim():'\x00'+b.id;
+      const t=b.createdAt?.seconds??0;
+      if(!(gk in groupTime)||t>groupTime[gk])groupTime[gk]=t;
+    });
+    copy.sort((a,b)=>{
+      const gkA=a.series?a.series.toLowerCase().trim():'\x00'+a.id;
+      const gkB=b.series?b.series.toLowerCase().trim():'\x00'+b.id;
+      // Primary: most recently touched group first
+      const rd=(groupTime[gkB]||0)-(groupTime[gkA]||0);
+      if(rd!==0)return rd;
+      // Same group → sort by series index, then title
+      if(a.series&&b.series){
+        const ia=a.seriesIndex??Infinity,ib=b.seriesIndex??Infinity;
+        if(ia!==ib)return ia-ib;
+      }
+      return(a.title||'').localeCompare(b.title||'');
+    });
+  }
   if(sort==='title')copy.sort((a,b)=>{
     // Group series together: sort primarily by series name (falling back to
     // the book's own title for standalone books), so a series' books land
@@ -5122,6 +5146,7 @@ document.getElementById('mobLibSortBtns').addEventListener('click', e => {
 // a book, Other Lists, etc.) so the interaction language is consistent —
 // single column on narrow screens, two when there's room, via .mob-picker-grid.
 const MOB_SORT_OPTIONS   = [
+  { id:'series-recent', label:'Series', icon:'📚' },
   { id:'recent', label:'Recent', icon:'🕒' },
   { id:'title',  label:'Title',  icon:'🔤' },
   { id:'author', label:'Author', icon:'✍️' },
@@ -16782,6 +16807,89 @@ document.getElementById('audioPlayerCloseBtn')?.addEventListener('click', () => 
   stopAudioPlayback();
   document.getElementById('audioPersistentPlayer')?.classList.remove('open');
 });
+
+// ── Draggable mini-bar ─────────────────────────────────────────────────────
+// Users can drag the mini-bar anywhere on screen; position is saved so it
+// persists across sessions.  A drag of < 8px is treated as a tap so the
+// expand-on-click behaviour still works normally.
+(function initMiniBarDrag() {
+  const bar = document.getElementById('audioMiniBar');
+  if (!bar) return;
+
+  const THRESHOLD = 8;
+  let sx, sy, origL, origB, dragging = false, moved = false;
+
+  // Restore last saved position, clamping to current viewport size.
+  try {
+    const pos = JSON.parse(localStorage.getItem('_miniBarPos') || 'null');
+    if (pos) {
+      const W = window.innerWidth, H = window.innerHeight;
+      // bottom: clamp so bar is fully on-screen
+      const b = Math.max(0, Math.min(H - 60, parseFloat(pos.b) || 0));
+      bar.style.bottom = b + 'px';
+      if (pos.r && pos.r !== 'auto') {
+        bar.style.right = Math.max(0, parseFloat(pos.r)) + 'px';
+        bar.style.left = 'auto';
+      } else if (pos.l && pos.l !== 'auto') {
+        bar.style.left = Math.max(0, Math.min(W - 80, parseFloat(pos.l))) + 'px';
+        bar.style.right = 'auto';
+      }
+    }
+  } catch(e) {}
+
+  bar.addEventListener('pointerdown', e => {
+    if (e.target.closest('.audio-mini-bar-btn')) return;
+    bar.setPointerCapture(e.pointerId);
+    const rect = bar.getBoundingClientRect();
+    sx = e.clientX; sy = e.clientY;
+    origL = rect.left;
+    origB = window.innerHeight - rect.bottom;
+    dragging = true; moved = false;
+    bar.style.transition = 'none';
+  });
+
+  bar.addEventListener('pointermove', e => {
+    if (!dragging) return;
+    const dx = e.clientX - sx, dy = e.clientY - sy;
+    if (!moved && (Math.abs(dx) > THRESHOLD || Math.abs(dy) > THRESHOLD)) {
+      moved = true;
+      // Switch from right-anchored to left-anchored so we can move freely
+      bar.style.left = origL + 'px';
+      bar.style.right = 'auto';
+      bar.style.bottom = origB + 'px';
+    }
+    if (!moved) return;
+    const W = window.innerWidth, H = window.innerHeight;
+    bar.style.left  = Math.max(0, Math.min(W - bar.offsetWidth,  origL + dx)) + 'px';
+    bar.style.bottom = Math.max(0, Math.min(H - bar.offsetHeight, origB - dy)) + 'px';
+  });
+
+  const endDrag = () => {
+    if (!dragging) return;
+    dragging = false;
+    bar.style.transition = '';
+    if (!moved) return;
+    // Snap to nearest horizontal edge for a cleaner look
+    const rect = bar.getBoundingClientRect();
+    let l = 'auto', r = 'auto';
+    if (rect.left + rect.width / 2 > window.innerWidth / 2) {
+      r = (window.innerWidth - rect.right) + 'px';
+      bar.style.right = r; bar.style.left = 'auto';
+    } else {
+      l = bar.style.left;
+      bar.style.right = 'auto';
+    }
+    try { localStorage.setItem('_miniBarPos', JSON.stringify({ l, r, b: bar.style.bottom })); } catch(e) {}
+  };
+  bar.addEventListener('pointerup',     endDrag);
+  bar.addEventListener('pointercancel', endDrag);
+
+  // Capture-phase click handler: swallow the event if the pointer just moved
+  // so dragging doesn't accidentally re-open the full player.
+  bar.addEventListener('click', e => {
+    if (moved) { e.stopImmediatePropagation(); moved = false; }
+  }, true);
+})();
 
 // Audio uploads (from either the drop-zone or the Audio panel's "+ Upload"
 // button) now go through the unified queue — see uploadOneAudioFile() and
