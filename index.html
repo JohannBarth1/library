@@ -3933,7 +3933,7 @@ function renderGrid(gridId){
     if(b.isAudio){
       const coverHtml=coverSrc?`<img class="book-card-cover" src="${coverSrc}" alt="" loading="lazy"/>`:`<div class="book-card-cover-ph"><div class="ph-icon">🎧</div><div class="ph-title">${esc(b.title)}</div><div class="ph-author">${esc(b.author)}</div></div>`;
       return `<div class="book-card audio-tile ${isSelected?'selected':''}" data-bookid="${b.id}"><div style="position:relative">${coverHtml}</div><div class="select-check">✓</div>
-      <div class="book-card-body"><div class="book-card-title">${esc(b.title)}</div>
+      <div class="book-card-body"><div class="book-card-title">${esc(_seriesTilePrefix(b)+b.title)}</div>
       <div class="book-card-author">${esc(b.author)}</div></div></div>`;
     }
     const isComm=communityLib.some(x=>x.id===b.id);
@@ -3943,7 +3943,7 @@ function renderGrid(gridId){
     // PATCH 4: hide "Shared" badge when browsing the public/community shelf
     const isMyPublicBook=b.ownerId===currentUser?.uid&&b.visibility==='public';
     return `<div class="book-card ${isSelected?'selected':''}" data-bookid="${b.id}">${coverHtml}<div class="select-check">✓</div>${isMyPublicBook?'<span class="community-badge">Public</span>':''}
-    <div class="book-card-body"><div class="book-card-title">${esc(b.title)}</div>
+    <div class="book-card-body"><div class="book-card-title">${esc(_seriesTilePrefix(b)+b.title)}</div>
     <div class="book-card-author">${esc(b.author)}</div>
     ${isComm&&b.ownerId!==currentUser?.uid&&b.allowedUsers?.includes(currentUser?.uid)?`<div class="book-card-shared-by">Shared by ${esc(b.ownerName||'')}</div>`:''}
     ${isComm?`<div class="book-card-stars">${starsHtml}</div>`:''}</div></div>`;
@@ -4258,9 +4258,9 @@ async function showBookById(id){
   if(book.recommended)badges+=`<span class="dbadge" style="background:#fff8ec;color:var(--gold)">⭐ Pick</span>`;
   document.getElementById('drawerBadges').innerHTML=badges;
 
-  // Stars
-  if(isComm)renderStars('deskStars','deskRatingCount',id,true);
-  else document.getElementById('deskStarRating').style.display='none';
+  // Stars — hidden for now (kept in place so it's a one-line revert):
+  // was `if(isComm)renderStars('deskStars','deskRatingCount',id,true); else ...`
+  document.getElementById('deskStarRating').style.display='none';
 
   // Icon toolbar
   buildDrawerIconBar(book, isMine);
@@ -5028,8 +5028,9 @@ async function mob_showBook(id, opts={}){
 
   renderDetailActionRows(document.getElementById('mobDetailActions'), document.getElementById('mobDetailMoreActions'), book, isMine);
 
-  if(isComm)renderStars('mobStars','mobRatingCount',id,true);
-  else document.getElementById('mobStarRating').style.display='none';
+  // Stars — hidden for now (kept in place so it's a one-line revert):
+  // was `if(isComm)renderStars('mobStars','mobRatingCount',id,true); else ...`
+  document.getElementById('mobStarRating').style.display='none';
 
   renderBookHighlightsSummary(document.getElementById('mobDetailHighlights'), id);
   renderRelatedBooks(document.getElementById('mobDetailRelated'), book);
@@ -5467,7 +5468,7 @@ function renderMobLibrarySelectMode(){
       <div style="position:relative">${coverHtml}</div>
       <div class="select-check" style="display:flex">${isSelected?'✓':''}</div>
       <div class="book-card-body">
-        <div class="book-card-title">${esc(b.title)}</div>
+        <div class="book-card-title">${esc(_seriesTilePrefix(b)+b.title)}</div>
         <div class="book-card-author">${esc(b.author)}</div>
       </div>
     </div>`;
@@ -6375,7 +6376,7 @@ function bookCardHtml(b, isComm, showProgress=false){
         ${coverHtml}
       </div>
       <div class="book-card-body">
-        <div class="book-card-title">${esc(b.title)}</div>
+        <div class="book-card-title">${esc(_seriesTilePrefix(b)+b.title)}</div>
         <div class="book-card-author">${esc(b.author)}</div>
       </div>
       ${progBar}
@@ -6400,7 +6401,7 @@ function bookCardHtml(b, isComm, showProgress=false){
       ${ribbonHtml}
     </div>
     <div class="book-card-body">
-      <div class="book-card-title">${esc(b.title)}</div>
+      <div class="book-card-title">${esc(_seriesTilePrefix(b)+b.title)}</div>
       <div class="book-card-author">${esc(b.author)}</div>
     </div>
     ${progBar}
@@ -8354,6 +8355,14 @@ function findRelatedBooks(book) {
     : [];
 
   return { seriesMatches, authorMatches };
+}
+
+// Prefixes a series book's title with its position, e.g. "#1 " — same
+// "#N" label already used for series books in the related-books slider
+// on the book details panel (see subLabel below), just folded straight
+// into the title instead of shown as a separate line.
+function _seriesTilePrefix(b) {
+  return (b.seriesIndex != null && b.seriesIndex !== '') ? `#${b.seriesIndex} ` : '';
 }
 
 function _relatedBookRow(books) {
@@ -10367,15 +10376,16 @@ function _playTearTransition(onSnap) {
   setTimeout(() => ov.remove(), ms + 60 + 30 + 60);
 }
 
-// "Scroll" transition — the page rolls up and away like a real scroll or
-// window blind, instead of the old version which just reused the same
-// translateX slide with a longer, linear-eased duration.
+// "Scroll" transition — the page rolls off sideways (left for the next
+// page, right for the previous one) like a real scroll unrolling, instead
+// of the old version which just reused the same translateX slide with a
+// longer, linear-eased duration.
 //
 // We can't screenshot the iframe's rendered pixels (no html2canvas here,
 // and doing that properly would be its own heavy cost), so — like the
 // gravity transition already does — we reproduce the visible text onto a
 // canvas once, then animate that single canvas with cheap, GPU-friendly
-// transforms (scaleY + translateY) instead of redrawing every frame. The
+// transforms (scaleX + translateX) instead of redrawing every frame. The
 // real document snaps to the new page immediately underneath, hidden by
 // the overlay until it's rolled away.
 function _playScrollTransition(onSnap, direction) {
@@ -10442,8 +10452,8 @@ function _playScrollTransition(onSnap, direction) {
   // Shading band simulating the shadowed underside of the rolled paper,
   // travelling along with the roll.
   const band = document.createElement('div');
-  band.style.cssText = `position:absolute;left:0;right:0;height:22px;z-index:21;pointer-events:none;
-    background:linear-gradient(to bottom, rgba(0,0,0,.4), rgba(0,0,0,0));will-change:transform,opacity;`;
+  band.style.cssText = `position:absolute;top:0;bottom:0;width:22px;z-index:21;pointer-events:none;
+    background:linear-gradient(to right, rgba(0,0,0,.4), rgba(0,0,0,0));will-change:transform,opacity;`;
 
   content.appendChild(canvas);
   content.appendChild(band);
@@ -10451,22 +10461,22 @@ function _playScrollTransition(onSnap, direction) {
   onSnap();
 
   const ms = 420;
-  const fwd = direction !== -1; // forward = rolls up and away; back = rolls down and away
-  canvas.style.transformOrigin = fwd ? '50% 0%' : '50% 100%';
-  band.style.top = fwd ? '0' : 'auto';
-  band.style.bottom = fwd ? 'auto' : '0';
-  if (!fwd) band.style.background = 'linear-gradient(to top, rgba(0,0,0,.4), rgba(0,0,0,0))';
+  const fwd = direction !== -1; // forward = rolls off to the left; back = rolls off to the right
+  canvas.style.transformOrigin = fwd ? '0% 50%' : '100% 50%';
+  band.style.left = fwd ? '0' : 'auto';
+  band.style.right = fwd ? 'auto' : '0';
+  if (!fwd) band.style.background = 'linear-gradient(to left, rgba(0,0,0,.4), rgba(0,0,0,0))';
 
   canvas.animate([
-    { transform: 'scaleY(1)',    opacity: 1, offset: 0    },
-    { transform: 'scaleY(0.82)', opacity: 1, offset: 0.18 },
-    { transform: 'scaleY(0.03)', opacity: 0, offset: 1    },
+    { transform: 'scaleX(1)',    opacity: 1, offset: 0    },
+    { transform: 'scaleX(0.82)', opacity: 1, offset: 0.18 },
+    { transform: 'scaleX(0.03)', opacity: 0, offset: 1    },
   ], { duration: ms, easing: 'cubic-bezier(.55,0,.85,.35)', fill: 'forwards' });
 
   band.animate([
-    { transform: 'translateY(0)', opacity: 0 },
-    { transform: 'translateY(0)', opacity: 1, offset: 0.06 },
-    { transform: `translateY(${fwd ? h : -h}px)`, opacity: 0, offset: 1 },
+    { transform: 'translateX(0)', opacity: 0 },
+    { transform: 'translateX(0)', opacity: 1, offset: 0.06 },
+    { transform: `translateX(${fwd ? w : -w}px)`, opacity: 0, offset: 1 },
   ], { duration: ms, easing: 'linear', fill: 'forwards' });
 
   setTimeout(() => { canvas.remove(); band.remove(); }, ms + 40);
