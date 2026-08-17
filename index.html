@@ -368,6 +368,23 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .book-card.audio-tile .book-card-cover,
 .book-card.audio-tile .book-card-cover-ph{aspect-ratio:1/1;}
 .book-card.audio-tile .book-card-cover-ph{background:linear-gradient(145deg,var(--rust,#8a4a3a),#5c2f26);}
+/* Collapsed multi-part audio series — a stacked-card look (peeking edges
+   behind the front cover) plus a part-count badge, so a whole series reads
+   as one tile instead of N. */
+.book-card.group-tile{overflow:visible;}
+.book-card.group-tile .book-card-cover,
+.book-card.group-tile .book-card-cover-ph{position:relative;z-index:2;}
+.book-card.group-tile .group-stack-edge{
+  position:absolute;left:0;right:0;aspect-ratio:1/1;border-radius:4px;
+  background:linear-gradient(145deg,var(--rust,#8a4a3a),#5c2f26);
+}
+.book-card.group-tile .group-stack-edge.e1{top:6px;transform:scale(.96);z-index:1;filter:brightness(.85);}
+.book-card.group-tile .group-stack-edge.e2{top:11px;transform:scale(.92);z-index:0;filter:brightness(.7);}
+.group-part-badge{
+  position:absolute;top:.35rem;right:.35rem;z-index:3;background:rgba(15,26,46,.82);color:var(--gold2);
+  font-size:.62rem;font-weight:700;letter-spacing:.03em;padding:.15rem .45rem;border-radius:10px;
+  display:flex;align-items:center;gap:.2rem;
+}
 .book-card-body{
   padding:.45rem .5rem .5rem;
   background:var(--warm-white);
@@ -1822,6 +1839,9 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .audio-player-times{display:flex;justify-content:space-between;margin-top:.4rem;
   font-size:.72rem;color:rgba(255,255,255,.6);font-variant-numeric:tabular-nums;}
 .audio-player-controls{display:flex;align-items:center;justify-content:center;gap:1.6rem;}
+.audio-player-btn-track{opacity:.85;font-size:1.35rem;}
+.audio-player-btn-track:disabled{opacity:.25;cursor:default;}
+.audio-player-part-label{text-align:center;font-size:.7rem;color:var(--muted);letter-spacing:.04em;margin-top:.3rem;}
 .audio-player-btn{
   background:none;border:none;color:#fff;cursor:pointer;
   display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
@@ -2733,6 +2753,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
   </div>
 
   <div class="audio-player-controls">
+    <button class="audio-player-btn audio-player-btn-track" id="audioPrevTrackBtn" title="Previous part">⏮</button>
     <button class="audio-player-btn audio-player-btn-skip" id="audioBackBtn" title="Back 10 seconds">
       <span class="apb-icon">⟲</span><span class="apb-label">10</span>
     </button>
@@ -2740,7 +2761,9 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
     <button class="audio-player-btn audio-player-btn-skip" id="audioFwdBtn" title="Forward 10 seconds">
       <span class="apb-icon">⟳</span><span class="apb-label">10</span>
     </button>
+    <button class="audio-player-btn audio-player-btn-track" id="audioNextTrackBtn" title="Next part">⏭</button>
   </div>
+  <div class="audio-player-part-label" id="audioPartLabel" style="display:none"></div>
 
   <div class="audio-player-speed-wrap" id="audioSpeedWrap">
     <button class="audio-speed-btn" data-speed="0.75">0.75×</button>
@@ -3713,44 +3736,114 @@ async function uploadOneAudioFile(file, rowId, visibility){
   }
 }
 
-// Turns a pasted YouTube link into an audiobook entry.
+// Turns a pasted YouTube link into one or more audiobook entries.
 const YOUTUBE_CONVERT_ENDPOINT = 'https://convert-youtube-audio-310807052995.us-central1.run.app/convertYoutubeAudio';
+// The backend's per-request ceiling. Videos longer than this get split into
+// consecutive time-range requests instead of one call for the whole thing.
+// NOTE: this requires the Cloud Run converter to accept optional
+// `startSec`/`endSec` on the request body (ranged yt-dlp extraction via
+// --download-sections) and to include the video's full `totalDurationSec`
+// in every response — see chat notes for why.
+const YOUTUBE_CHUNK_MAX_SEC = 4 * 60 * 60;
+
+// One converter call for a single time range. startSec/endSec are omitted
+// for a plain (non-split) request, so the request shape for a normal-length
+// video is unchanged from before this feature existed.
+async function convertYoutubeSegment(url, idToken, startSec, endSec){
+  const body = { url };
+  if(startSec != null) body.startSec = startSec;
+  if(endSec != null) body.endSec = endSec;
+  const res = await fetch(YOUTUBE_CONVERT_ENDPOINT, {
+    method: 'POST',
+    headers: {
+      'Content-Type':'application/json',
+      'Authorization': `Bearer ${idToken}`,
+    },
+    body: JSON.stringify(body),
+  });
+  if(!res.ok) throw new Error(`Converter returned ${res.status}`);
+  const result = await res.json();
+  if(!result.downloadUrl || !result.storagePath) throw new Error('Converter did not return a file');
+  return result;
+}
+
+// Saves one converted segment as an audioFiles doc. series/seriesIndex are
+// only stamped when this is one part of a multi-part split (partIndex !=
+// null) — a normal single-part upload is stored exactly as it was before,
+// and stays out of the Library's collapsed-group tiling.
+async function saveYoutubeSegmentDoc(url, visibility, result, seriesTitle, partIndex){
+  const isPart = partIndex != null;
+  const baseTitle = result.title || 'YouTube audio';
+  return addDoc(collection(db,'audioFiles'),{
+    userId: currentUser.uid,
+    name: (isPart ? `${baseTitle} (Part ${partIndex})` : baseTitle) + '.mp3',
+    title: isPart ? `${baseTitle} (Part ${partIndex})` : (result.title || null),
+    sourceUrl: url,
+    storagePath: result.storagePath,
+    downloadUrl: result.downloadUrl,
+    size: result.size || 0,
+    durationSec: result.durationSec || null,
+    series: isPart ? seriesTitle : null,
+    seriesIndex: isPart ? partIndex : null,
+    visibility,
+    uploadedAt: serverTimestamp(),
+  });
+}
 
 async function uploadOneYoutube(url, rowId, visibility){
   try{
     setUpP(rowId,10,'Sending to converter…');
     const idToken = await currentUser.getIdToken();
-    const res = await fetch(YOUTUBE_CONVERT_ENDPOINT, {
-      method: 'POST',
-      headers: {
-        'Content-Type':'application/json',
-        'Authorization': `Bearer ${idToken}`,
-      },
-      body: JSON.stringify({url}),
-    });
-    if(!res.ok) throw new Error(`Converter returned ${res.status}`);
+
+    // The first request always covers 0 → the chunk ceiling. The backend
+    // reports the video's full duration alongside the converted segment,
+    // which is how we learn whether more parts are needed — no separate
+    // "probe" round-trip required.
+    const result = await convertYoutubeSegment(url, idToken, 0, YOUTUBE_CHUNK_MAX_SEC);
     setUpP(rowId,60,'Converting to MP3…');
-    const result = await res.json();
-    if(!result.downloadUrl || !result.storagePath) throw new Error('Converter did not return a file');
+
+    const totalDuration = result.totalDurationSec || result.durationSec || 0;
+    const needsSplit = totalDuration > YOUTUBE_CHUNK_MAX_SEC + 5; // small slop for rounding
+    const totalParts = needsSplit ? Math.ceil(totalDuration / YOUTUBE_CHUNK_MAX_SEC) : 1;
+    const seriesTitle = result.title || 'YouTube audio';
 
     setUpP(rowId,90,'Saving…');
-    const newDocRef = await addDoc(collection(db,'audioFiles'),{
-      userId: currentUser.uid,
-      name: (result.title || 'YouTube audio') + '.mp3',
-      title: result.title || null,
-      sourceUrl: url,
-      storagePath: result.storagePath,
-      downloadUrl: result.downloadUrl,
-      size: result.size || 0,
-      durationSec: result.durationSec || null,
-      visibility,
-      uploadedAt: serverTimestamp(),
-    });
-    if (visibility !== 'private' && currentUser && ledgerState.loaded) _ledgerUnlockAchievement('sharer', newDocRef.id);
-    setUpP(rowId,100, `✓ Converted — ${UPLOAD_VIS_LABEL[visibility].replace(/^\S+\s/, '')}`);
+    const firstDocRef = await saveYoutubeSegmentDoc(url, visibility, result, seriesTitle, needsSplit ? 1 : null);
+    if (visibility !== 'private' && currentUser && ledgerState.loaded) _ledgerUnlockAchievement('sharer', firstDocRef.id);
+    setUpP(rowId,100, needsSplit
+      ? `✓ Part 1 of ${totalParts} converted`
+      : `✓ Converted — ${UPLOAD_VIS_LABEL[visibility].replace(/^\S+\s/, '')}`);
     document.getElementById(rowId)?.classList.add('done');
     document.getElementById(rowId)?.setAttribute('data-status','done');
     const icon=document.getElementById(rowId+'_icon'); if(icon) icon.textContent='✅';
+
+    // Remaining parts each get their own row in the same upload list, so
+    // progress and any per-part failures stay visible and are retryable
+    // without redoing parts that already succeeded.
+    for(let part=2; part<=totalParts; part++){
+      const partRowId = renderUploadRow(`${seriesTitle} (Part ${part} of ${totalParts})`, 'youtube');
+      try{
+        setUpP(partRowId,10,'Sending to converter…');
+        const startSec = (part-1)*YOUTUBE_CHUNK_MAX_SEC;
+        const endSec = Math.min(startSec+YOUTUBE_CHUNK_MAX_SEC, totalDuration);
+        const partResult = await convertYoutubeSegment(url, idToken, startSec, endSec);
+        setUpP(partRowId,60,'Converting to MP3…');
+        setUpP(partRowId,90,'Saving…');
+        const docRef = await saveYoutubeSegmentDoc(url, visibility, partResult, seriesTitle, part);
+        if (visibility !== 'private' && currentUser && ledgerState.loaded) _ledgerUnlockAchievement('sharer', docRef.id);
+        setUpP(partRowId,100, `✓ Part ${part} of ${totalParts} converted`);
+        document.getElementById(partRowId)?.classList.add('done');
+        document.getElementById(partRowId)?.setAttribute('data-status','done');
+        const partIcon=document.getElementById(partRowId+'_icon'); if(partIcon) partIcon.textContent='✅';
+      }catch(e){
+        console.error(e);
+        setUpP(partRowId,100,'✗ Failed: '+e.message);
+        document.getElementById(partRowId)?.classList.add('error');
+        document.getElementById(partRowId)?.setAttribute('data-status','error');
+        const partIcon=document.getElementById(partRowId+'_icon'); if(partIcon) partIcon.textContent='⚠️';
+        showToast(`Part ${part} of ${totalParts} failed: `+e.message);
+      }
+    }
   }catch(e){
     console.error(e);
     setUpP(rowId,100,'✗ Failed: '+e.message);
@@ -3927,9 +4020,21 @@ function renderGrid(gridId){
     grid.innerHTML=`<div style="grid-column:1/-1;padding:3rem 1rem;text-align:center;color:var(--muted)"><div style="font-size:2.5rem;opacity:.25;margin-bottom:.8rem">📚</div><div style="font-family:'Playfair Display',serif;font-size:1.1rem;color:var(--navy2);margin-bottom:.4rem">${isEmpty?'Your library is empty':'No books match'}</div><div style="font-size:.85rem">${isEmpty?'Upload a book or audiobook to get started':'Try a different search or filter'}</div>${isEmpty&&canUpload?`<div style="margin-top:1rem"><button class="hbtn hbtn-upload" onclick="document.getElementById('uploadModal').classList.add('open')">📤 Upload</button></div>`:''}</div>`;
     return;
   }
-  reconcileGrid(grid, books, b => b.id, b => {
+  const gridBooks = collapseAudioSeriesForGrid(books);
+  reconcileGrid(grid, gridBooks, b => b.id, b => {
     const coverSrc=getCoverSrc(b);
     const isSelected=selectedIds.has(b.id);
+    if(b.isGroup){
+      return `<div class="book-card audio-tile group-tile ${isSelected?'selected':''}" data-bookid="${b.id}" data-groupids="${b.groupIds.join(',')}">
+      <div style="position:relative">
+        <div class="group-stack-edge e2"></div>
+        <div class="group-stack-edge e1"></div>
+        ${coverSrc?`<img class="book-card-cover" src="${coverSrc}" alt="" loading="lazy"/>`:`<div class="book-card-cover-ph"><div class="ph-icon">🎧</div><div class="ph-title">${esc(b.title)}</div><div class="ph-author">${esc(b.author)}</div></div>`}
+        <div class="group-part-badge">🎧 ${b.partCount} parts</div>
+      </div><div class="select-check">✓</div>
+      <div class="book-card-body"><div class="book-card-title">${esc(b.title)}</div>
+      <div class="book-card-author">${esc(b.author)}</div></div></div>`;
+    }
     if(b.isAudio){
       const coverHtml=coverSrc?`<img class="book-card-cover" src="${coverSrc}" alt="" loading="lazy"/>`:`<div class="book-card-cover-ph"><div class="ph-icon">🎧</div><div class="ph-title">${esc(b.title)}</div><div class="ph-author">${esc(b.author)}</div></div>`;
       return `<div class="book-card audio-tile ${isSelected?'selected':''}" data-bookid="${b.id}"><div style="position:relative">${coverHtml}</div><div class="select-check">✓</div>
@@ -3953,8 +4058,16 @@ function renderGrid(gridId){
 document.getElementById('deskBookGrid').addEventListener('click',e=>{
   const card=e.target.closest('.book-card[data-bookid]');if(!card)return;
   const id=card.dataset.bookid;
+  // A collapsed group tile stands in for all its member ids — select/open
+  // the whole set together rather than just the first part.
+  const groupIds=card.dataset.groupids?card.dataset.groupids.split(','):null;
   if(selectMode){
-    if(selectedIds.has(id)){selectedIds.delete(id);card.classList.remove('selected');}else{selectedIds.add(id);card.classList.add('selected');}updateBulkBar();return;
+    if(groupIds){
+      const allSelected=groupIds.every(gid=>selectedIds.has(gid));
+      if(allSelected){groupIds.forEach(gid=>selectedIds.delete(gid));card.classList.remove('selected');}
+      else{groupIds.forEach(gid=>selectedIds.add(gid));card.classList.add('selected');}
+    } else if(selectedIds.has(id)){selectedIds.delete(id);card.classList.remove('selected');}else{selectedIds.add(id);card.classList.add('selected');}
+    updateBulkBar();return;
   }
   showBookById(id);
 });
@@ -5367,7 +5480,8 @@ function renderMobLibrary() {
     </div>`;
     return;
   }
-  reconcileGrid(grid, books, b => b.id, b => {
+  const gridBooks = collapseAudioSeriesForGrid(books);
+  reconcileGrid(grid, gridBooks, b => b.id, b => {
     const isComm = communityLib.some(x => x.id === b.id);
     return bookCardHtml(b, isComm);
   });
@@ -5407,7 +5521,7 @@ function startLongPress(bookId){
 document.getElementById('mobGridLibrary').addEventListener('touchstart', e => {
     const card = e.target.closest('.book-card[data-bookid]');
     if(!card) return;
-    startLongPress(card.dataset.bookid);
+    startLongPress(card.dataset.groupids ? card.dataset.groupids.split(',') : card.dataset.bookid);
   }, {passive: false});
 
   document.getElementById('mobGridLibrary').addEventListener('touchend', e => {
@@ -5422,8 +5536,13 @@ document.getElementById('mobGridLibrary').addEventListener('click', e => {
   const card = e.target.closest('.book-card[data-bookid]');
   if (!card) return;
   const id = card.dataset.bookid;
+  const groupIds = card.dataset.groupids ? card.dataset.groupids.split(',') : null;
   if(mobSelectMode) {
-    if(mobSelectedIds.has(id)){ mobSelectedIds.delete(id); }
+    if(groupIds){
+      const allSelected = groupIds.every(gid => mobSelectedIds.has(gid));
+      if(allSelected) groupIds.forEach(gid => mobSelectedIds.delete(gid));
+      else groupIds.forEach(gid => mobSelectedIds.add(gid));
+    } else if(mobSelectedIds.has(id)){ mobSelectedIds.delete(id); }
     else { mobSelectedIds.add(id); }
     if(mobSelectedIds.size === 0){ exitMobSelectMode(); return; }
     renderMobLibrarySelectMode();
@@ -5438,9 +5557,11 @@ document.getElementById('mobGridLibrary').addEventListener('click', e => {
 let mobSelectMode = false;
 let mobSelectedIds = new Set();
 
+// firstBookId may be a single id or an array of ids (a collapsed group tile
+// that was long-pressed selects every part it stands for).
 function enterMobSelectMode(firstBookId){
   mobSelectMode = true;
-  mobSelectedIds = new Set([firstBookId]);
+  mobSelectedIds = new Set(Array.isArray(firstBookId) ? firstBookId : [firstBookId]);
   renderMobLibrarySelectMode();
   showMobBulkBar();
 }
@@ -5454,13 +5575,31 @@ function exitMobSelectMode(){
 }
 
 function renderMobLibrarySelectMode(){
-  const books = getMobLibBooks();
+  const books = collapseAudioSeriesForGrid(getMobLibBooks());
   const grid = document.getElementById('mobGridLibrary');
   grid.classList.add('select-mode');
   reconcileGrid(grid, books, b => b.id, b => {
-    const isComm = communityLib.some(x => x.id === b.id);
-    const isSelected = mobSelectedIds.has(b.id);
     const coverSrc = getCoverSrc(b);
+    if(b.isGroup){
+      const isSelected = b.groupIds.every(gid => mobSelectedIds.has(gid));
+      const coverHtml = coverSrc
+        ? `<img class="book-card-cover" src="${coverSrc}" alt="" loading="lazy"/>`
+        : `<div class="book-card-cover-ph"><div class="ph-icon">🎧</div><div class="ph-title">${esc(b.title)}</div><div class="ph-author">${esc(b.author)}</div></div>`;
+      return `<div class="book-card audio-tile group-tile ${isSelected?'selected':''}" data-bookid="${b.id}" data-groupids="${b.groupIds.join(',')}" style="user-select:none">
+        <div style="position:relative">
+          <div class="group-stack-edge e2"></div>
+          <div class="group-stack-edge e1"></div>
+          ${coverHtml}
+          <div class="group-part-badge">🎧 ${b.partCount} parts</div>
+        </div>
+        <div class="select-check" style="display:flex">${isSelected?'✓':''}</div>
+        <div class="book-card-body">
+          <div class="book-card-title">${esc(b.title)}</div>
+          <div class="book-card-author">${esc(b.author)}</div>
+        </div>
+      </div>`;
+    }
+    const isSelected = mobSelectedIds.has(b.id);
     const coverHtml = coverSrc
       ? `<img class="book-card-cover" src="${coverSrc}" alt="" loading="lazy"/>`
       : `<div class="book-card-cover-ph"><div class="ph-icon">${b.isAudio?'🎧':'📖'}</div><div class="ph-title">${esc(b.title)}</div><div class="ph-author">${esc(b.author)}</div></div>`;
@@ -6369,6 +6508,21 @@ function bookCardHtml(b, isComm, showProgress=false){
     ? `<div class="book-card-progress">
         <div class="book-card-progress-bar" style="width:${Math.round(prog*100)}%"></div>
        </div>` : '';
+
+  if(b.isGroup){
+    return `<div class="book-card audio-tile group-tile" data-bookid="${b.id}" data-groupids="${b.groupIds.join(',')}">
+      <div style="position:relative">
+        <div class="group-stack-edge e2"></div>
+        <div class="group-stack-edge e1"></div>
+        ${coverHtml}
+        <div class="group-part-badge">🎧 ${b.partCount} parts</div>
+      </div>
+      <div class="book-card-body">
+        <div class="book-card-title">${esc(b.title)}</div>
+        <div class="book-card-author">${esc(b.author)}</div>
+      </div>
+    </div>`;
+  }
 
   if(b.isAudio){
     return `<div class="book-card audio-tile" data-bookid="${b.id}">
@@ -8363,6 +8517,46 @@ function findRelatedBooks(book) {
 // into the title instead of shown as a separate line.
 function _seriesTilePrefix(b) {
   return (b.seriesIndex != null && b.seriesIndex !== '') ? `#${b.seriesIndex} ` : '';
+}
+
+// ── Collapsed multi-part audio series tiles (grid display only) ────────────
+// Folds consecutive audio entries that share a `series` value (2+ of them)
+// into a single stacked "group" tile, so a long multi-part audiobook takes
+// one grid slot instead of N. Runs on the already-sorted array right before
+// rendering, so it relies on same-series items sitting next to each other —
+// true for the 'series-recent' and 'title' sorts (which both group by
+// series), a no-op under 'author'/'rating' where they may not be adjacent.
+// Books/epubs are never folded, only audio.
+function collapseAudioSeriesForGrid(books) {
+  const out = [];
+  let i = 0;
+  while (i < books.length) {
+    const b = books[i];
+    if (b.isAudio && b.series) {
+      const key = b.series.trim().toLowerCase();
+      let j = i + 1;
+      while (j < books.length && books[j].isAudio && (books[j].series || '').trim().toLowerCase() === key) j++;
+      const run = books.slice(i, j);
+      if (run.length > 1) {
+        const sorted = [...run].sort((a, b2) => (a.seriesIndex ?? Infinity) - (b2.seriesIndex ?? Infinity));
+        out.push({
+          id: sorted[0].id,
+          isGroup: true,
+          groupIds: sorted.map(m => m.id),
+          title: b.series,
+          author: sorted[0].author,
+          coverUrl: sorted[0].coverUrl,
+          isAudio: true,
+          partCount: sorted.length,
+        });
+        i = j;
+        continue;
+      }
+    }
+    out.push(b);
+    i++;
+  }
+  return out;
 }
 
 function _relatedBookRow(books) {
@@ -17107,6 +17301,56 @@ async function recordAudioOpened(track) {
   }
 }
 
+// ── multi-part series navigation ───────────────────────────────────────────
+// All audio tracks sharing the currently-playing track's `series` value,
+// in series order — used to power the prev/next buttons and auto-advance.
+function getSeriesGroupTracks(track) {
+  if (!track?.series) return [track].filter(Boolean);
+  const key = track.series.trim().toLowerCase();
+  return _audioTracks
+    .filter(t => (t.series || '').trim().toLowerCase() === key)
+    .sort((a, b) => (a.seriesIndex ?? Infinity) - (b.seriesIndex ?? Infinity));
+}
+
+// Plays the sibling track `dir` steps away (±1) from the one currently
+// loaded, within its series. No-ops silently past either end — except when
+// called from the 'ended' auto-advance, where reaching the end just lets
+// playback stop normally instead of erroring.
+function playAdjacentTrack(dir, isAutoAdvance = false) {
+  const current = _audioTracks.find(t => t.id === _audioCurrentId);
+  if (!current) return;
+  const siblings = getSeriesGroupTracks(current);
+  const idx = siblings.findIndex(t => t.id === current.id);
+  const next = siblings[idx + dir];
+  if (!next) { if (!isAutoAdvance) showToast(dir < 0 ? 'This is the first part' : 'This is the last part'); return; }
+  playAudioTrack(next);
+}
+
+// Shows/hides the prev/next buttons and the "Part N of M" label based on
+// whether the currently-loaded track belongs to a multi-part series.
+function updateTrackNavButtons(track) {
+  const prevBtn = document.getElementById('audioPrevTrackBtn');
+  const nextBtn = document.getElementById('audioNextTrackBtn');
+  const label    = document.getElementById('audioPartLabel');
+  if (!prevBtn || !nextBtn) return;
+  const siblings = getSeriesGroupTracks(track);
+  if (siblings.length < 2) {
+    prevBtn.style.display = 'none';
+    nextBtn.style.display = 'none';
+    if (label) label.style.display = 'none';
+    return;
+  }
+  const idx = siblings.findIndex(t => t.id === track.id);
+  prevBtn.style.display = '';
+  nextBtn.style.display = '';
+  prevBtn.disabled = idx <= 0;
+  nextBtn.disabled = idx >= siblings.length - 1;
+  if (label) {
+    label.style.display = '';
+    label.textContent = `Part ${idx + 1} of ${siblings.length} — ${track.series}`;
+  }
+}
+
 // ── play a track ─────────────────────────────────────────────────────────────
 
 function playAudioTrack(track) {
@@ -17147,6 +17391,8 @@ function playAudioTrack(track) {
 
   // Cover art — falls back to the headphone glyph when the track has none.
   setAudioArt(track.coverUrl || null);
+
+  updateTrackNavButtons(track);
 
   // Starting/resuming a track always brings the full player to the front —
   // if it was minimized from a previous track, that state doesn't carry over.
@@ -17233,6 +17479,10 @@ function stopAudioPlayback() {
   if (miniSub) miniSub.textContent = '0:00 / 0:00';
   document.getElementById('audioMiniBar')?.classList.remove('visible');
   setAudioArt(null);
+  document.getElementById('audioPrevTrackBtn')?.style.setProperty('display','none');
+  document.getElementById('audioNextTrackBtn')?.style.setProperty('display','none');
+  const partLabelEl = document.getElementById('audioPartLabel');
+  if (partLabelEl) partLabelEl.style.display = 'none';
 
   document.querySelectorAll('.audio-track-row').forEach(r => {
     r.classList.remove('playing');
@@ -17275,6 +17525,12 @@ function stopAudioPlayback() {
     if (!playerEl.src) return;
     playerEl.currentTime = Math.min(playerEl.duration || playerEl.currentTime, playerEl.currentTime + 10);
   });
+
+  document.getElementById('audioPrevTrackBtn')?.addEventListener('click', () => playAdjacentTrack(-1));
+  document.getElementById('audioNextTrackBtn')?.addEventListener('click', () => playAdjacentTrack(1));
+
+  // Auto-advance to the next part when one finishes, same as a podcast app.
+  playerEl.addEventListener('ended', () => { playAdjacentTrack(1, /*auto*/true); });
 
   seek?.addEventListener('input', () => {
     seeking = true;
