@@ -5005,7 +5005,7 @@ async function mob_showBook(id, opts={}){
 
   const coverEl = coverSrc ? img : ph;
   coverEl.style.cursor='pointer';
-  coverEl.onclick=()=>{ const b=[...library,...communityLib].find(x=>x.id===currentId); if(b?.isAudio){ playAudioTrack(b._audioTrack); return; } if(b&&(b.ownerId===currentUser?.uid||myCheckedOutIds.has(b.id))) readCurrentBook(); else showToast('Sign out this book to read it'); };
+  coverEl.onclick=()=>{ const b=[...library,...communityLib].find(x=>x.id===currentId); if(b?.isAudio){ playAudioTrack(b._audioTrack); return; } readCurrentBook(); };
 
   document.getElementById('mobDetailCat').textContent=book.category?`${catIcon(book.category)} ${book.category}`:'';
   document.getElementById('mobDetailTitle').textContent=book.title||'';
@@ -11283,6 +11283,23 @@ function closeReader(){
   readerZip = null; readerSpine = []; readerBookId = null;
 }
 
+// Closes out any of the current user's still-open checkouts for a book —
+// called when a book is marked Finished, since finishing it counts as
+// returning it. Marks *every* active checkout for the book, not just the
+// most recent, in case more than one ever ended up open at once.
+async function markCheckoutReturned(bookId) {
+  if(!currentUser || !bookId) return;
+  const snap = await getDocs(query(
+    collection(db, 'checkouts'),
+    where('bookId', '==', bookId),
+    where('userId', '==', currentUser.uid)
+  ));
+  const active = snap.docs.filter(d => !d.data().returnedAt);
+  for(const d of active){
+    await updateDoc(doc(db, 'checkouts', d.id), { returnedAt: serverTimestamp() });
+  }
+}
+
 async function markBookFinished(bookId){
   if(!bookId || !currentUser) return;
 
@@ -11321,6 +11338,7 @@ async function markBookFinished(bookId){
       { merge: true }
     ).catch(e => console.warn('markBookFinished finList:', e));
     addBookToActiveGoals(bookId, new Date());
+    markCheckoutReturned(bookId).catch(e => console.warn('markBookFinished checkout return:', e));
   }
 
   // Remove the reading-position bookmark so it drops off the Home tab.
@@ -12759,8 +12777,28 @@ async function recordBookOpened(book) {
     const due = new Date();
     due.setDate(due.getDate() + 14);
 
-    // ── 1. Checkout record (existing behaviour) ───────────────────────────
-    if(!myCheckedOutIds.has(book.id)){
+    // ── 1. Checkout record ──────────────────────────────────────────────
+    // Extends the book's current checkout if one's still active, otherwise
+    // starts a fresh one — which also covers rereads: once a checkout has
+    // been marked returned (via Finish, see markBookFinished()), reopening
+    // the book starts a brand new checkout rather than reviving the old
+    // one, so the reread gets its own entry on the Timeline.
+    const q = query(
+      collection(db, 'checkouts'),
+      where('bookId', '==', book.id),
+      where('userId', '==', currentUser.uid)
+    );
+    const snap = await getDocs(q);
+    const active = snap.docs
+      .filter(d => !d.data().returnedAt)
+      .sort((a,b) => b.data().checkedOutAt?.toMillis() - a.data().checkedOutAt?.toMillis());
+
+    if(active.length){
+      await updateDoc(doc(db, 'checkouts', active[0].id), {
+        openedAt: serverTimestamp(),
+        dueDate: Timestamp.fromDate(due),
+      });
+    } else {
       await addDoc(collection(db, 'checkouts'), {
         bookId: book.id,
         bookTitle: book.title,
@@ -12771,25 +12809,8 @@ async function recordBookOpened(book) {
         returnedAt: null,
         openedAt: serverTimestamp(),
       });
-      myCheckedOutIds.add(book.id);
-    } else {
-      // Extend the due date on the existing active checkout
-      const q = query(
-        collection(db, 'checkouts'),
-        where('bookId', '==', book.id),
-        where('userId', '==', currentUser.uid)
-      );
-      const snap = await getDocs(q);
-      const active = snap.docs
-        .filter(d => !d.data().returnedAt)
-        .sort((a,b) => b.data().checkedOutAt?.toMillis() - a.data().checkedOutAt?.toMillis());
-      if(active.length){
-        await updateDoc(doc(db, 'checkouts', active[0].id), {
-          openedAt: serverTimestamp(),
-          dueDate: Timestamp.fromDate(due),
-        });
-      }
     }
+    myCheckedOutIds.add(book.id);
 
     // ── 2. Add to "currently-reading" list ───────────────────────────────
     const crList = _userLists.find(l => l.id === 'currently-reading');
@@ -16233,10 +16254,16 @@ async function buildTimelineEvents() {
 
   const events = [];
 
-  Object.keys(firstByBook).forEach(bookId => {
-    const book = bookMap[bookId];
+  // One "started" event per checkout doc (not per book, as before) — so
+  // rereads show up as their own entries, and each is individually
+  // deletable (checkoutId carries the doc to remove).
+  checkouts.forEach(c => {
+    if(!c.bookId) return;
+    const book = bookMap[c.bookId];
     if(!book) return;
-    events.push({ type: 'started', bookId, book, date: firstByBook[bookId] });
+    const started = c.checkedOutAt?.toDate?.();
+    if(!started) return;
+    events.push({ type: 'started', bookId: c.bookId, book, date: started, checkoutId: c.id });
   });
 
   const finList = _userLists.find(l => l.id === 'finished');
@@ -16370,6 +16397,66 @@ function renderTimelineContent() {
       mob_showBook(id);
     });
   });
+
+  container.querySelectorAll('[data-timeline-delete-checkout]').forEach(btn => {
+    btn.addEventListener('click', (ev) => {
+      ev.stopPropagation();
+      deleteTimelineStartedEvent(btn.dataset.timelineDeleteCheckout);
+    });
+  });
+  container.querySelectorAll('[data-timeline-delete-finished]').forEach(btn => {
+    btn.addEventListener('click', (ev) => {
+      ev.stopPropagation();
+      deleteTimelineFinishedEvent(btn.dataset.timelineDeleteFinished);
+    });
+  });
+}
+
+// Hard-deletes a single "Started" entry — removes the underlying checkout
+// doc entirely. That doc also backs Admin > Book Signouts, the per-book
+// History modal, and the Admin Users "signed out" info, so deleting it
+// here removes it from those too — it's the same record everywhere, not
+// a Timeline-only view of it.
+async function deleteTimelineStartedEvent(checkoutId) {
+  if(!checkoutId) return;
+  if(!confirm('Delete this "Started" entry?\n\nThis removes the underlying checkout record everywhere it appears (including Admin) — not just from your timeline.\n\nThis cannot be undone.')) return;
+  showLoading('Deleting…');
+  try {
+    await deleteDoc(doc(db, 'checkouts', checkoutId));
+    await renderTimeline();
+    hideLoading();
+    showToast('Entry deleted ✓');
+  } catch(e) {
+    hideLoading();
+    showToast('Failed: ' + e.message);
+  }
+}
+
+// Hard-deletes a "Finished" entry — un-finishes the book: removes it from
+// the Finished list and clears its finishedAtMap stamp. Reading-goal
+// progress is computed on the fly from finishedAtMap, so this also
+// un-counts it from any goal it had contributed to. Same underlying
+// membership everywhere, not a Timeline-only record of it.
+async function deleteTimelineFinishedEvent(bookId) {
+  if(!bookId) return;
+  if(!confirm('Un-finish this book?\n\nIt will be removed from your Finished list (and from any reading goal it counted toward) — not just from your timeline.\n\nThis cannot be undone.')) return;
+  showLoading('Removing…');
+  try {
+    await toggleBookInList('finished', bookId);
+    const finList = _userLists.find(l => l.id === 'finished');
+    if(finList?.finishedAtMap?.[bookId] !== undefined){
+      delete finList.finishedAtMap[bookId];
+      await updateDoc(doc(db, 'user_lists', currentUser.uid, 'lists', 'finished'), {
+        [`finishedAtMap.${bookId}`]: deleteField(),
+      }).catch(e => console.warn('deleteTimelineFinishedEvent finishedAtMap:', e));
+    }
+    await renderTimeline();
+    hideLoading();
+    showToast('Removed ✓');
+  } catch(e) {
+    hideLoading();
+    showToast('Failed: ' + e.message);
+  }
 }
 
 function renderTimelineHero(books, finishedThisYear, inProgress, pagesRead) {
@@ -16575,6 +16662,14 @@ function renderTimelineCard(e) {
   if(e.type === 'reading')  { icon = '📖'; label = `Reading — ${Math.round((e.progress || 0) * 100)}%`; labelColor = 'var(--gold)'; }
 
   if(e.type === 'started' || e.type === 'reading') {
+    // Only a real "Started" event (backed by a checkout doc) is deletable —
+    // a "reading" row is just a live progress snapshot from the current
+    // reading-position bookmark, not a stored record of its own.
+    const delBtn = e.type === 'started'
+      ? `<button class="timeline-delete-btn" data-timeline-delete-checkout="${e.checkoutId}"
+          style="flex-shrink:0;background:none;border:none;color:var(--muted);font-size:.8rem;
+                 padding:.1rem .3rem;cursor:pointer;line-height:1;" title="Delete this entry">✕</button>`
+      : '';
     return `<div data-timeline-bookid="${b.id}" style="display:flex;align-items:center;gap:.5rem;
                 padding:.35rem 0;border-bottom:1px solid var(--border);cursor:pointer;">
       <span style="font-size:.68rem;flex-shrink:0;color:${labelColor}">${icon}</span>
@@ -16583,6 +16678,7 @@ function renderTimelineCard(e) {
       <span style="font-family:'Playfair Display',serif;font-size:.8rem;color:var(--navy2);flex:1;
                   min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(b.title)}</span>
       <span style="font-size:.65rem;color:var(--muted);flex-shrink:0;">${dateStr}</span>
+      ${delBtn}
     </div>`;
   }
 
@@ -16609,7 +16705,14 @@ function renderTimelineCard(e) {
                   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(b.title)}</div>
       <div style="font-size:.7rem;color:var(--muted);margin-top:1px;">${esc(b.author || '')}</div>
     </div>
-    <div style="font-size:.68rem;color:var(--muted);flex-shrink:0;text-align:right;">${dateStr}</div>
+    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:.25rem;flex-shrink:0;">
+      <div style="font-size:.68rem;color:var(--muted);text-align:right;">${dateStr}</div>
+      ${(e.type === 'finished' && !e.isManual)
+        ? `<button class="timeline-delete-btn" data-timeline-delete-finished="${e.bookId}"
+            style="background:none;border:none;color:var(--muted);font-size:.65rem;padding:0;
+                   cursor:pointer;" title="Remove this entry">✕ remove</button>`
+        : ''}
+    </div>
   </div>`;
 }
 
