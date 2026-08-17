@@ -14084,7 +14084,7 @@ async function adminLoadUsers() {
   el.innerHTML = '<div style="color:var(--muted);font-size:.85rem">Loading…</div>';
   try {
     const [userSnap, checkoutSnap, koboQueueSnap] = await Promise.all([
-      getDocs(collection(db, 'users')),
+      _adminFetchAllUsers(),
       getDocs(query(collection(db, 'checkouts'), orderBy('checkedOutAt', 'desc'))),
       getDocs(collection(db, 'kobo_queue')),
     ]);
@@ -14398,11 +14398,19 @@ async function adminToggleUserCard(uid) {
           <div style="font-size:.8rem;color:var(--muted);text-align:center;padding:.5rem 0;">
             No reading activity yet</div>` : ''}
 
+        <div style="border-top:1px solid var(--border);padding-top:.6rem;margin-top:.1rem;">
+          <button class="btn-cancel admin-delete-user-btn" data-uid="${uid}"
+            style="font-size:.72rem;padding:.35rem .7rem;color:var(--danger);border-color:var(--danger);">
+            🗑️ Delete User…</button>
+        </div>
+
       </div>`;
 
     panel.querySelectorAll('.admin-access-btn').forEach(btn => {
       btn.addEventListener('click', (e) => { e.stopPropagation(); adminSetAccessLevel(uid, btn.dataset.level); });
     });
+    panel.querySelector('.admin-delete-user-btn')
+      ?.addEventListener('click', (e) => { e.stopPropagation(); adminDeleteUser(uid); });
 
   } catch(e) {
     panel.innerHTML = `<div style="padding:.6rem .8rem;font-size:.75rem;
@@ -14445,6 +14453,74 @@ async function adminSetAccessLevel(uid, level) {
     }
   } catch(e) { hideLoading(); showToast('Failed: ' + e.message); }
 }
+
+// ── DELETE USER ──────────────────────────────────────────────────────────────
+// Wipes every piece of the user's own data from Firestore: their profile
+// doc, reading lists, checkouts, highlights, ratings, bookmarks, reading
+// goals, manually-logged reads, and any Kobo devices/queued sends they own.
+// Deliberately leaves their uploaded books/audiobooks alone — those are
+// shared library content other people may be reading, so removing a person
+// shouldn't silently pull books out from under everyone else. Delete those
+// separately first (from the Library tab) if that's also wanted.
+//
+// IMPORTANT: this cannot remove the Firebase Authentication account itself.
+// The client SDK only lets a signed-in user delete their own account
+// (deleteUser(auth.currentUser)) — there's no client-side API for an admin
+// to delete someone else's Auth record; that needs a small Cloud Function
+// running with the Admin SDK. Once this finishes, the person's Google
+// account can still sign back in — Firestore will just recreate an empty
+// users/{uid} doc for them, as if they were new.
+async function adminDeleteUser(uid) {
+  const u = adminAllUsersCache.find(x => x.uid === uid);
+  const name = u?.displayName || u?.email || uid;
+
+  if (!confirm(
+    `Permanently delete all data for "${name}"?\n\n` +
+    `This removes their profile, reading lists, checkouts, highlights, ` +
+    `ratings, bookmarks, reading goals and Kobo devices from Firebase. ` +
+    `Their uploaded books are NOT deleted.\n\n` +
+    `Note: this can't remove their sign-in account itself (that needs a ` +
+    `server-side Cloud Function) — they could still sign back in afterward, ` +
+    `starting fresh.\n\nThis cannot be undone.`
+  )) return;
+
+  showLoading('Deleting user…');
+  try {
+    const refs = [doc(db, 'users', uid)];
+
+    const snaps = await Promise.all([
+      getDocs(collection(db, 'user_lists', uid, 'lists')),
+      getDocs(query(collection(db, 'checkouts'),      where('userId',  '==', uid))),
+      getDocs(query(collection(db, 'highlights'),     where('userId',  '==', uid))),
+      getDocs(query(collection(db, 'kobo_devices'),   where('ownerId', '==', uid))),
+      getDocs(query(collection(db, 'kobo_queue'),     where('ownerId', '==', uid))),
+      getDocs(query(collection(db, 'ratings'),        where('userId',  '==', uid))),
+      getDocs(query(collection(db, 'user_bookmarks'), where('userId',  '==', uid))),
+      getDocs(query(collection(db, 'readingGoals'),   where('userId',  '==', uid))),
+      getDocs(query(collection(db, 'manualReads'),    where('userId',  '==', uid))),
+    ]);
+    snaps.forEach(snap => snap.docs.forEach(d => refs.push(d.ref)));
+
+    let failed = 0;
+    for (const ref of refs) {
+      try { await deleteDoc(ref); } catch(e) { failed++; console.warn('delete failed:', ref.path, e); }
+    }
+
+    // Drop them from local caches so the UI updates without a manual refresh.
+    adminAllUsersCache = adminAllUsersCache.filter(x => x.uid !== uid);
+    document.querySelector(`.admin-user-card[data-uid="${uid}"]`)?.remove();
+
+    hideLoading();
+    showToast(failed
+      ? `Deleted "${name}" — ${failed} item${failed===1?'':'s'} couldn't be removed (check Firestore rules)`
+      : `Deleted "${name}"'s data ✓`);
+  } catch(e) {
+    hideLoading();
+    showToast('Failed: ' + e.message);
+    console.error(e);
+  }
+}
+window.adminDeleteUser = adminDeleteUser;
 
 // ── NAV ───────────────────────────────────────────────────────────────────────
   // ── CATEGORIES (admin-managed) ────────────────────────────────────────────────
