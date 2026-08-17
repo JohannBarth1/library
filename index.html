@@ -14393,6 +14393,112 @@ function formatDuration(totalSeconds) {
   return `${hours}h ${minutes}m`;
 }
 
+// Builds one user card's HTML — split out from adminLoadUsers() so the
+// search box can re-render from the cached user/checkout/kobo data without
+// re-fetching anything.
+function _adminUserCardHtml(u, checkoutsByUser, koboSendsByUser) {
+  const lastConnected = u.lastSeen?.toDate?.();
+  const initials = (u.displayName || u.email || '?')
+    .split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
+  const checkouts = checkoutsByUser[u.uid] || [];
+  const activeCheckouts = checkouts.filter(c => !c.returnedAt);
+  const koboSends = koboSendsByUser[u.uid] || [];
+
+  return `<div class="admin-user-card" data-uid="${u.uid}"
+    style="background:var(--warm-white);border:1px solid var(--border);
+           border-radius:4px;margin-bottom:.5rem;overflow:hidden;cursor:pointer;
+           transition:border-color .15s;"
+    onclick="adminToggleUserCard('${u.uid}')">
+
+    <div style="display:flex;align-items:center;gap:.6rem;padding:.6rem .8rem;">
+      ${u.photoURL
+        ? `<img src="${u.photoURL}" style="width:32px;height:32px;border-radius:50%;
+            object-fit:cover;border:1px solid var(--border);flex-shrink:0"/>`
+        : `<div style="width:32px;height:32px;border-radius:50%;background:var(--teal);
+            color:#fff;display:flex;align-items:center;justify-content:center;
+            font-size:.65rem;font-weight:700;flex-shrink:0">${initials}</div>`}
+      <div style="flex:1;min-width:0;">
+        <div style="font-weight:700;font-size:.82rem;color:var(--navy2);">
+          ${esc(u.displayName || 'Unknown')}
+          ${u.uid === currentUser?.uid
+            ? '<span style="font-size:.62rem;font-weight:700;color:var(--gold);margin-left:.35rem;">(you)</span>'
+            : ''}
+        </div>
+        <div style="font-size:.7rem;color:var(--muted);
+                    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+          ${esc(u.email || '')}
+        </div>
+        <div style="font-size:.65rem;color:var(--muted);margin-top:1px;">
+          ${lastConnected ? `Last connected ${timeAgo(lastConnected)}` : 'Never connected'}
+          · ⏱ ${formatDuration(u.totalTimeSeconds)} in app
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;
+                  gap:3px;flex-shrink:0;">
+        ${(() => {
+          const lvl = u.accessLevel || (u.isAdmin === true ? 'admin' : (u.restrictedAccess === true ? 'elevated' : 'standard'));
+          if(lvl === 'admin') return `<span style="font-size:.6rem;font-weight:700;padding:1px 6px;
+              border-radius:8px;background:#fff8ec;color:var(--gold);">Admin</span>`;
+          if(lvl === 'elevated') return `<span style="font-size:.6rem;font-weight:700;padding:1px 6px;
+              border-radius:8px;background:#f3e6e6;color:#a83232;">🔒 Elevated</span>`;
+          return '';
+        })()}
+        ${activeCheckouts.length
+          ? `<span style="font-size:.6rem;color:var(--teal);font-weight:700;">
+              📖 ${activeCheckouts.length} out</span>`
+          : ''}
+        ${koboSends.length
+          ? `<span style="font-size:.6rem;color:#5a48b0;font-weight:700;">
+              🔲 ${koboSends.length} to Kobo</span>`
+          : ''}
+        <span style="font-size:.7rem;color:var(--muted);margin-top:1px;">▾</span>
+      </div>
+    </div>
+
+    <div id="adminUserExpand_${u.uid}"
+      style="display:none;border-top:1px solid var(--border);background:var(--panel);">
+      <div style="padding:.6rem .8rem;font-size:.75rem;color:var(--muted);">
+        Loading…</div>
+    </div>
+  </div>`;
+}
+
+// Re-renders the user list from the already-fetched adminAllUsersCache
+// (plus the checkout/kobo lookups stashed on #adminUsersList), filtered by
+// the search box's text — no re-fetch needed on every keystroke. Also
+// keeps the "N users" / "N of M users" count in sync.
+function _adminFilterUsers(filterText) {
+  const el = document.getElementById('adminUsersList');
+  const countEl = document.getElementById('adminUsersCount');
+  if(!el) return;
+  const checkoutsByUser = el._checkoutsByUser || {};
+  const koboSendsByUser = el._koboSendsByUser || {};
+  const q = (filterText || '').trim().toLowerCase();
+
+  const users = q
+    ? adminAllUsersCache.filter(u =>
+        (u.displayName || '').toLowerCase().includes(q) ||
+        (u.email || '').toLowerCase().includes(q))
+    : adminAllUsersCache;
+
+  const total = adminAllUsersCache.length;
+  if(countEl) {
+    countEl.textContent = q
+      ? `${users.length} of ${total} user${total === 1 ? '' : 's'}`
+      : `${total} user${total === 1 ? '' : 's'}`;
+  }
+
+  if(!total) {
+    el.innerHTML = '<div style="color:var(--muted);font-size:.85rem">No users</div>';
+    return;
+  }
+  if(!users.length) {
+    el.innerHTML = '<div style="color:var(--muted);font-size:.85rem">No users match your search</div>';
+    return;
+  }
+  el.innerHTML = users.map(u => _adminUserCardHtml(u, checkoutsByUser, koboSendsByUser)).join('');
+}
+
 async function adminLoadUsers() {
   const el = document.getElementById('adminUsersList');
   if(!el) return;
@@ -14429,78 +14535,11 @@ async function adminLoadUsers() {
     // can look a user's current restrictedAccess up regardless of which
     // admin section happened to load the cache first.
     adminAllUsersCache = users;
-
-    if(!users.length) {
-      el.innerHTML = '<div style="color:var(--muted);font-size:.85rem">No users</div>';
-      return;
-    }
-
-    el.innerHTML = users.map(u => {
-      const lastConnected = u.lastSeen?.toDate?.();
-      const initials = (u.displayName || u.email || '?')
-        .split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
-      const checkouts = checkoutsByUser[u.uid] || [];
-      const activeCheckouts = checkouts.filter(c => !c.returnedAt);
-      const koboSends = koboSendsByUser[u.uid] || [];
-
-      return `<div class="admin-user-card" data-uid="${u.uid}"
-        style="background:var(--warm-white);border:1px solid var(--border);
-               border-radius:4px;margin-bottom:.5rem;overflow:hidden;cursor:pointer;
-               transition:border-color .15s;"
-        onclick="adminToggleUserCard('${u.uid}')">
-
-        <div style="display:flex;align-items:center;gap:.6rem;padding:.6rem .8rem;">
-          ${u.photoURL
-            ? `<img src="${u.photoURL}" style="width:32px;height:32px;border-radius:50%;
-                object-fit:cover;border:1px solid var(--border);flex-shrink:0"/>`
-            : `<div style="width:32px;height:32px;border-radius:50%;background:var(--teal);
-                color:#fff;display:flex;align-items:center;justify-content:center;
-                font-size:.65rem;font-weight:700;flex-shrink:0">${initials}</div>`}
-          <div style="flex:1;min-width:0;">
-            <div style="font-weight:700;font-size:.82rem;color:var(--navy2);">
-              ${esc(u.displayName || 'Unknown')}
-            </div>
-            <div style="font-size:.7rem;color:var(--muted);
-                        white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
-              ${esc(u.email || '')}
-            </div>
-            <div style="font-size:.65rem;color:var(--muted);margin-top:1px;">
-              ${lastConnected ? `Last connected ${timeAgo(lastConnected)}` : 'Never connected'}
-              · ⏱ ${formatDuration(u.totalTimeSeconds)} in app
-            </div>
-          </div>
-          <div style="display:flex;flex-direction:column;align-items:flex-end;
-                      gap:3px;flex-shrink:0;">
-            ${(() => {
-              const lvl = u.accessLevel || (u.isAdmin === true ? 'admin' : (u.restrictedAccess === true ? 'elevated' : 'standard'));
-              if(lvl === 'admin') return `<span style="font-size:.6rem;font-weight:700;padding:1px 6px;
-                  border-radius:8px;background:#fff8ec;color:var(--gold);">Admin</span>`;
-              if(lvl === 'elevated') return `<span style="font-size:.6rem;font-weight:700;padding:1px 6px;
-                  border-radius:8px;background:#f3e6e6;color:#a83232;">🔒 Elevated</span>`;
-              return '';
-            })()}
-            ${activeCheckouts.length
-              ? `<span style="font-size:.6rem;color:var(--teal);font-weight:700;">
-                  📖 ${activeCheckouts.length} out</span>`
-              : ''}
-            ${koboSends.length
-              ? `<span style="font-size:.6rem;color:#5a48b0;font-weight:700;">
-                  🔲 ${koboSends.length} to Kobo</span>`
-              : ''}
-            <span style="font-size:.7rem;color:var(--muted);margin-top:1px;">▾</span>
-          </div>
-        </div>
-
-        <div id="adminUserExpand_${u.uid}"
-          style="display:none;border-top:1px solid var(--border);background:var(--panel);">
-          <div style="padding:.6rem .8rem;font-size:.75rem;color:var(--muted);">
-            Loading…</div>
-        </div>
-      </div>`;
-    }).join('');
-
     el._checkoutsByUser = checkoutsByUser;
     el._koboSendsByUser = koboSendsByUser;
+
+    const searchBox = document.getElementById('adminUsersSearch');
+    _adminFilterUsers(searchBox ? searchBox.value : '');
 
   } catch(e) {
     el.innerHTML = `<div style="color:var(--danger);font-size:.82rem">
@@ -14510,6 +14549,7 @@ async function adminLoadUsers() {
 }
 
 document.getElementById('adminUsersRefresh')?.addEventListener('click', adminLoadUsers);
+document.getElementById('adminUsersSearch')?.addEventListener('input', (e) => _adminFilterUsers(e.target.value));
 
 // adminAllUsersCache is populated by adminLoadUsers() (Users section)
 // and shared here for the access-level buttons in each user's expand panel.
@@ -14786,6 +14826,19 @@ async function adminSetAccessLevel(uid, level) {
 // account can still sign back in — Firestore will just recreate an empty
 // users/{uid} doc for them, as if they were new.
 async function adminDeleteUser(uid) {
+  // Hard stop: this exact function is what wipes user_lists, checkouts,
+  // highlights, ratings, bookmarks, goals, manual reads, Kobo devices,
+  // ledgerDays AND the users/{uid} doc itself (which is where accessLevel
+  // lives) — running it against your own uid doesn't just empty your
+  // reading lists, it can silently strip your own admin access on the
+  // next sign-in. Since your own account shows up in this same Users list
+  // with nothing marking it as "you", refuse outright rather than rely on
+  // remembering not to click it.
+  if (uid === currentUser?.uid) {
+    showToast("You can't delete your own account from here.");
+    return;
+  }
+
   const u = adminAllUsersCache.find(x => x.uid === uid);
   const name = u?.displayName || u?.email || uid;
 
@@ -16064,8 +16117,15 @@ function buildAdminSections() {
         <span class="admin-section-chevron">▾</span>
       </div>
       <div class="admin-section-body" id="adminUsersBody">
-        <button class="btn-save" style="font-size:.72rem;padding:.4rem .8rem;margin-bottom:.8rem"
-          id="adminUsersRefresh">↻ Refresh</button>
+        <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.6rem;flex-wrap:wrap;">
+          <button class="btn-save" style="font-size:.72rem;padding:.4rem .8rem;flex-shrink:0"
+            id="adminUsersRefresh">↻ Refresh</button>
+          <span id="adminUsersCount" style="font-size:.72rem;color:var(--muted);white-space:nowrap;"></span>
+        </div>
+        <input type="text" id="adminUsersSearch" placeholder="Search by name or email…"
+          style="width:100%;box-sizing:border-box;font-size:16px;padding:.5rem .7rem;
+                 border:1px solid var(--border);border-radius:6px;margin-bottom:.7rem;
+                 background:var(--warm-white);color:var(--navy2);font-family:'Lato',sans-serif;"/>
         <div id="adminUsersList">
           <div style="color:var(--muted);font-size:.85rem">Open to load…</div>
         </div>
