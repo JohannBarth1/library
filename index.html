@@ -3040,6 +3040,9 @@ let _ledgerFlushedPoints = 0;  // points already written to Firestore today
 let _ledgerFlushTimer = null;
 let _ledgerPendingAchievements = new Set(); // achievement ids unlocked locally but not yet confirmed persisted
 let _ledgerSessionPages = 0;   // pages read this reading session, for the Marathon achievement
+let _ledgerSessionStartedAt = null; // Date this reading sitting began, for the session history log
+let _ledgerSessionBookId = null;    // book the current sitting's pages belong to
+let _ledgerSessionBookTitle = null; // captured at session start so a later deleted/renamed book still shows a title
 let _ledgerHighWater = {};     // { bookId: chapterIdx*100000+pageIdx } — highest page reached per book this session
 
 const LEDGER_RANKS = [
@@ -7206,8 +7209,12 @@ async function readCurrentBook(){
       _bookOpenPriority = false;
     }
     readerZip=await JSZip.loadAsync(bytes);readerSpine=[];readerChapter=0;
+    _ledgerFlushSession(); // persist the previous sitting's page count (if any) before starting a new one
     readerBookId = book.id;
     _ledgerSessionPages = 0; // new reading sitting — Marathon achievement counts from here
+    _ledgerSessionStartedAt = new Date();
+    _ledgerSessionBookId = book.id;
+    _ledgerSessionBookTitle = book.title;
     _readerIsInitialChapterLoad = true;
     // Reset every time a book is opened: FX default-on only for a real
     // custom bookmark (one with a template id — award/book/category/seasonal),
@@ -7765,7 +7772,40 @@ function _ledgerFlushNow() {
       .catch(e => console.warn('ledger points flush:', e));
   }
 }
-window.addEventListener('beforeunload', () => { _ledgerFlushAchievementsNow(); _ledgerFlushNow(); });
+window.addEventListener('beforeunload', () => { _ledgerFlushAchievementsNow(); _ledgerFlushNow(); _ledgerFlushSession(); });
+
+// ── Reading session log ──────────────────────────────────────────────────
+// Persists one doc per "sitting" (pages accrued between opening a book and
+// either closing it or opening a different one) so Admin can show a list of
+// pages-read-per-session for a user. Builds on the same _ledgerSessionPages
+// counter already used for the Marathon achievement — this just adds a
+// durable record of it instead of letting it silently reset. Sessions with
+// zero pages (e.g. a book opened and immediately closed) aren't logged.
+function _ledgerFlushSession() {
+  if (!currentUser || _ledgerSessionPages <= 0) {
+    _ledgerSessionPages = 0;
+    _ledgerSessionStartedAt = null;
+    _ledgerSessionBookId = null;
+    _ledgerSessionBookTitle = null;
+    return;
+  }
+  const pages = _ledgerSessionPages;
+  const startedAt = _ledgerSessionStartedAt || new Date();
+  const bookId = _ledgerSessionBookId;
+  const bookTitle = _ledgerSessionBookTitle;
+  _ledgerSessionPages = 0;
+  _ledgerSessionStartedAt = null;
+  _ledgerSessionBookId = null;
+  _ledgerSessionBookTitle = null;
+
+  addDoc(collection(db, 'users', currentUser.uid, 'readingSessions'), {
+    pages,
+    bookId: bookId || null,
+    bookTitle: bookTitle || null,
+    startedAt: Timestamp.fromDate(startedAt),
+    endedAt: serverTimestamp(),
+  }).catch(e => console.warn('ledger session flush:', e));
+}
 
 // ── Rendering ────────────────────────────────────────────────────────────
 function updateReaderLedgerPill() {
@@ -11521,6 +11561,7 @@ function renderReaderBookmarkTab() {
 function closeReader(){
   if(typeof ttsStop === 'function') ttsStop();
   _releaseWakeLock();
+  _ledgerFlushSession(); // persist this sitting's page count to the session history log
   // Move finished book: currently-reading → finished
   if(readerBookId){
     const crList = _userLists.find(l => l.id === 'currently-reading');
@@ -14523,6 +14564,10 @@ async function adminLoadUsers() {
       if(!koboSendsByUser[data.ownerId]) koboSendsByUser[data.ownerId] = [];
       koboSendsByUser[data.ownerId].push({ id: d.id, ...data });
     });
+    // Newest send first for every user's list.
+    Object.values(koboSendsByUser).forEach(list => {
+      list.sort((a, b) => (b.createdAt?.toMillis?.() || 0) - (a.createdAt?.toMillis?.() || 0));
+    });
 
     const users = userSnap.docs
       .map(d => ({ id: d.id, ...d.data() }))
@@ -14599,6 +14644,16 @@ async function adminToggleUserCard(uid) {
     );
     const checkouts = checkoutSnap.docs.map(d => ({ id: d.id, ...d.data() }));
 
+    // Get their reading session history (pages read per sitting), newest first
+    const sessionsSnap = await getDocs(
+      query(
+        collection(db, 'users', uid, 'readingSessions'),
+        orderBy('endedAt', 'desc'),
+        limit(20)
+      )
+    );
+    const sessions = sessionsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+
     // Get their lists (currently reading, finished, want to read)
     const listsSnap = await getDocs(
       collection(db, 'user_lists', uid, 'lists')
@@ -14617,7 +14672,6 @@ async function adminToggleUserCard(uid) {
       return b ? b.title : id;
     };
 
-    const active   = checkouts.filter(c => !c.returnedAt);
     const returned = checkouts.filter(c => c.returnedAt);
 
     // Kobo sends — pulled from the cache stashed on adminUsersList by adminLoadUsers()
@@ -14685,23 +14739,21 @@ async function adminToggleUserCard(uid) {
                   + ${wtrIds.length - 3} more</div>` : ''}
           </div>` : ''}
 
-        ${active.length ? `
+        ${sessions.length ? `
           <div>
             <div style="font-size:.6rem;letter-spacing:.15em;text-transform:uppercase;
                         font-weight:700;color:var(--gold);margin-bottom:.35rem;">
-              📋 Currently Signed Out (${active.length})</div>
-            ${active.map(c => {
-              const due = c.dueDate?.toDate?.();
-              const isOverdue = due && due < new Date();
+              📚 Reading Sessions (${sessions.length})</div>
+            ${sessions.map(s => {
+              const ended = s.endedAt?.toDate?.();
               return `<div style="display:flex;justify-content:space-between;
                           align-items:center;font-size:.75rem;padding:.2rem 0;
                           border-bottom:1px solid var(--border);gap:.4rem;">
                 <span style="color:var(--navy2);flex:1;min-width:0;overflow:hidden;
                              text-overflow:ellipsis;white-space:nowrap;">
-                  ${esc(c.bookTitle || resolveTitle(c.bookId))}</span>
-                <span style="font-size:.68rem;white-space:nowrap;flex-shrink:0;
-                  color:${isOverdue ? 'var(--danger)' : 'var(--muted)'};">
-                  ${isOverdue ? '⚠ ' : ''}Due ${due ? due.toLocaleDateString() : '?'}</span>
+                  ${esc(s.bookTitle || resolveTitle(s.bookId) || 'Unknown book')}</span>
+                <span style="font-size:.68rem;white-space:nowrap;flex-shrink:0;color:var(--muted);">
+                  ${s.pages || 0} page${s.pages === 1 ? '' : 's'} · ${ended ? timeAgo(ended) : ''}</span>
               </div>`;
             }).join('')}
           </div>` : ''}
@@ -14749,7 +14801,7 @@ async function adminToggleUserCard(uid) {
                   + ${returned.length - 5} more</div>` : ''}
           </div>` : ''}
 
-        ${!crIds.length && !finIds.length && !active.length && !koboSends.length && !returned.length ? `
+        ${!crIds.length && !finIds.length && !sessions.length && !koboSends.length && !returned.length ? `
           <div style="font-size:.8rem;color:var(--muted);text-align:center;padding:.5rem 0;">
             No reading activity yet</div>` : ''}
 
@@ -16080,6 +16132,27 @@ function buildAdminSections() {
     </div>
 
     <div class="admin-section">
+      <div class="admin-section-header" data-admin-section="users">
+        <span class="admin-section-title">👤 Users</span>
+        <span class="admin-section-chevron">▾</span>
+      </div>
+      <div class="admin-section-body" id="adminUsersBody">
+        <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.6rem;flex-wrap:wrap;">
+          <button class="btn-save" style="font-size:.72rem;padding:.4rem .8rem;flex-shrink:0"
+            id="adminUsersRefresh">↻ Refresh</button>
+          <span id="adminUsersCount" style="font-size:.72rem;color:var(--muted);white-space:nowrap;"></span>
+        </div>
+        <input type="text" id="adminUsersSearch" placeholder="Search by name or email…"
+          style="width:100%;box-sizing:border-box;font-size:16px;padding:.5rem .7rem;
+                 border:1px solid var(--border);border-radius:6px;margin-bottom:.7rem;
+                 background:var(--warm-white);color:var(--navy2);font-family:'Lato',sans-serif;"/>
+        <div id="adminUsersList">
+          <div style="color:var(--muted);font-size:.85rem">Open to load…</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="admin-section">
       <div class="admin-section-header" data-admin-section="checkouts">
         <span class="admin-section-title">📋 Book Signouts</span>
         <span class="admin-section-chevron">▾</span>
@@ -16106,27 +16179,6 @@ function buildAdminSections() {
         <button class="btn-save" style="font-size:.72rem;padding:.4rem .8rem;margin-bottom:.8rem"
           id="adminKoboRefresh">↻ Refresh</button>
         <div id="adminKoboList">
-          <div style="color:var(--muted);font-size:.85rem">Open to load…</div>
-        </div>
-      </div>
-    </div>
-
-    <div class="admin-section">
-      <div class="admin-section-header" data-admin-section="users">
-        <span class="admin-section-title">👤 Users</span>
-        <span class="admin-section-chevron">▾</span>
-      </div>
-      <div class="admin-section-body" id="adminUsersBody">
-        <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.6rem;flex-wrap:wrap;">
-          <button class="btn-save" style="font-size:.72rem;padding:.4rem .8rem;flex-shrink:0"
-            id="adminUsersRefresh">↻ Refresh</button>
-          <span id="adminUsersCount" style="font-size:.72rem;color:var(--muted);white-space:nowrap;"></span>
-        </div>
-        <input type="text" id="adminUsersSearch" placeholder="Search by name or email…"
-          style="width:100%;box-sizing:border-box;font-size:16px;padding:.5rem .7rem;
-                 border:1px solid var(--border);border-radius:6px;margin-bottom:.7rem;
-                 background:var(--warm-white);color:var(--navy2);font-family:'Lato',sans-serif;"/>
-        <div id="adminUsersList">
           <div style="color:var(--muted);font-size:.85rem">Open to load…</div>
         </div>
       </div>
