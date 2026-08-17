@@ -385,6 +385,22 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
   font-size:.62rem;font-weight:700;letter-spacing:.03em;padding:.15rem .45rem;border-radius:10px;
   display:flex;align-items:center;gap:.2rem;
 }
+/* Expanded group: a slim full-width header (series name + collapse control)
+   spanning the grid, followed by each part as a normal tile with a thin
+   accent border tying them visually back to the header above. */
+.group-header-tile{
+  grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;gap:.6rem;
+  padding:.5rem .8rem;margin:.1rem 0;border-radius:8px;cursor:pointer;
+  background:linear-gradient(90deg,rgba(200,149,42,.12),rgba(200,149,42,.03));
+  border:1px solid rgba(200,149,42,.35);transition:background .15s;
+}
+.group-header-tile:hover{background:linear-gradient(90deg,rgba(200,149,42,.2),rgba(200,149,42,.06));}
+.group-header-title{font-family:'Playfair Display',serif;font-weight:700;font-size:.85rem;color:var(--navy2);}
+.group-header-count{font-size:.72rem;color:var(--muted);margin-left:.5rem;font-weight:400;font-family:'Lato',sans-serif;}
+.group-header-collapse{font-size:.68rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--gold);white-space:nowrap;}
+.book-card.group-member{box-shadow:0 0 0 2px rgba(200,149,42,.3);}
+@keyframes tilePopIn{from{opacity:0;transform:scale(.9) translateY(4px);}to{opacity:1;transform:scale(1) translateY(0);}}
+.tile-pop-in{animation:tilePopIn .22s ease-out both;}
 .book-card-body{
   padding:.45rem .5rem .5rem;
   background:var(--warm-white);
@@ -1839,9 +1855,26 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .audio-player-times{display:flex;justify-content:space-between;margin-top:.4rem;
   font-size:.72rem;color:rgba(255,255,255,.6);font-variant-numeric:tabular-nums;}
 .audio-player-controls{display:flex;align-items:center;justify-content:center;gap:1.6rem;}
-.audio-player-btn-track{opacity:.85;font-size:1.35rem;}
-.audio-player-btn-track:disabled{opacity:.25;cursor:default;}
-.audio-player-part-label{text-align:center;font-size:.7rem;color:var(--muted);letter-spacing:.04em;margin-top:.3rem;}
+.audio-player-part-label{text-align:center;font-size:.72rem;color:var(--gold2,#e8b84b);letter-spacing:.03em;margin-top:-.9rem;}
+/* Prev/next-part row: a cover thumbnail + explicit label on each side,
+   visually distinct from the 10s-skip transport buttons below it. */
+.audio-track-nav{display:flex;align-items:stretch;justify-content:space-between;gap:.6rem;width:min(90vw,440px);}
+.audio-track-nav-btn{
+  display:flex;align-items:center;gap:.55rem;flex:1;min-width:0;
+  background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.14);border-radius:12px;
+  padding:.45rem .6rem;cursor:pointer;-webkit-tap-highlight-color:transparent;
+  transition:background .15s;
+}
+.audio-track-nav-btn:hover{background:rgba(255,255,255,.13);}
+.audio-track-nav-btn:disabled{opacity:.3;cursor:default;pointer-events:none;}
+.audio-track-nav-btn.next{flex-direction:row-reverse;text-align:right;}
+.audio-track-nav-cover-wrap{width:2.4rem;height:2.4rem;border-radius:7px;flex-shrink:0;overflow:hidden;
+  background:linear-gradient(145deg,var(--rust,#8a4a3a),#5c2f26);
+  display:flex;align-items:center;justify-content:center;font-size:1.1rem;}
+.audio-track-nav-cover{width:100%;height:100%;object-fit:cover;}
+.audio-track-nav-text{display:flex;flex-direction:column;min-width:0;overflow:hidden;}
+.audio-track-nav-label{font-size:.6rem;letter-spacing:.05em;text-transform:uppercase;color:var(--gold,#c8952a);font-weight:700;white-space:nowrap;}
+.audio-track-nav-title{font-size:.74rem;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:.1rem;}
 .audio-player-btn{
   background:none;border:none;color:#fff;cursor:pointer;
   display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
@@ -2743,6 +2776,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
   <button class="audio-player-close" id="audioPlayerCloseBtn" title="Close">✕</button>
   <div class="audio-player-art" id="audioPlayerArt"><img id="audioPlayerArtImg" src="" alt="" style="display:none"/><span id="audioPlayerArtIcon">🎧</span></div>
   <div class="audio-now-playing-label" id="audioNowPlayingLabel">Now Playing</div>
+  <div class="audio-player-part-label" id="audioPartLabel" style="display:none"></div>
 
   <div class="audio-player-progress-wrap">
     <input type="range" id="audioSeek" class="audio-player-seek" min="0" max="0" value="0" step="1"/>
@@ -2752,8 +2786,33 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
     </div>
   </div>
 
+  <!-- Prev/next part — a distinct row from the transport controls below, with
+       a cover thumbnail + explicit "Previous/Next part" wording plus the
+       part's own title, so it doesn't get mistaken for the 10s skip buttons. -->
+  <div class="audio-track-nav" id="audioTrackNav" style="display:none">
+    <button class="audio-track-nav-btn" id="audioPrevTrackBtn" title="Previous part">
+      <span class="audio-track-nav-cover-wrap">
+        <img class="audio-track-nav-cover" id="audioPrevCoverImg" src="" alt="" style="display:none"/>
+        <span class="audio-track-nav-cover-ph" id="audioPrevCoverPh">🎧</span>
+      </span>
+      <span class="audio-track-nav-text">
+        <span class="audio-track-nav-label">⏮ Previous part</span>
+        <span class="audio-track-nav-title" id="audioPrevTitle"></span>
+      </span>
+    </button>
+    <button class="audio-track-nav-btn next" id="audioNextTrackBtn" title="Next part">
+      <span class="audio-track-nav-text">
+        <span class="audio-track-nav-label">Next part ⏭</span>
+        <span class="audio-track-nav-title" id="audioNextTitle"></span>
+      </span>
+      <span class="audio-track-nav-cover-wrap">
+        <img class="audio-track-nav-cover" id="audioNextCoverImg" src="" alt="" style="display:none"/>
+        <span class="audio-track-nav-cover-ph" id="audioNextCoverPh">🎧</span>
+      </span>
+    </button>
+  </div>
+
   <div class="audio-player-controls">
-    <button class="audio-player-btn audio-player-btn-track" id="audioPrevTrackBtn" title="Previous part">⏮</button>
     <button class="audio-player-btn audio-player-btn-skip" id="audioBackBtn" title="Back 10 seconds">
       <span class="apb-icon">⟲</span><span class="apb-label">10</span>
     </button>
@@ -2761,9 +2820,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
     <button class="audio-player-btn audio-player-btn-skip" id="audioFwdBtn" title="Forward 10 seconds">
       <span class="apb-icon">⟳</span><span class="apb-label">10</span>
     </button>
-    <button class="audio-player-btn audio-player-btn-track" id="audioNextTrackBtn" title="Next part">⏭</button>
   </div>
-  <div class="audio-player-part-label" id="audioPartLabel" style="display:none"></div>
 
   <div class="audio-player-speed-wrap" id="audioSpeedWrap">
     <button class="audio-speed-btn" data-speed="0.75">0.75×</button>
@@ -4024,8 +4081,14 @@ function renderGrid(gridId){
   reconcileGrid(grid, gridBooks, b => b.id, b => {
     const coverSrc=getCoverSrc(b);
     const isSelected=selectedIds.has(b.id);
+    if(b.isGroupHeader){
+      return `<div class="group-header-tile tile-pop-in" data-groupheader="1" data-groupkey="${esc(b.groupKey)}">
+      <span><span class="group-header-title">🎧 ${esc(b.title)}</span><span class="group-header-count">${b.partCount} parts</span></span>
+      <span class="group-header-collapse">⌃ Collapse</span>
+    </div>`;
+    }
     if(b.isGroup){
-      return `<div class="book-card audio-tile group-tile ${isSelected?'selected':''}" data-bookid="${b.id}" data-groupids="${b.groupIds.join(',')}">
+      return `<div class="book-card audio-tile group-tile ${isSelected?'selected':''}" data-bookid="${b.id}" data-groupids="${b.groupIds.join(',')}" data-groupkey="${esc(b.groupKey)}">
       <div style="position:relative">
         <div class="group-stack-edge e2"></div>
         <div class="group-stack-edge e1"></div>
@@ -4037,7 +4100,7 @@ function renderGrid(gridId){
     }
     if(b.isAudio){
       const coverHtml=coverSrc?`<img class="book-card-cover" src="${coverSrc}" alt="" loading="lazy"/>`:`<div class="book-card-cover-ph"><div class="ph-icon">🎧</div><div class="ph-title">${esc(b.title)}</div><div class="ph-author">${esc(b.author)}</div></div>`;
-      return `<div class="book-card audio-tile ${isSelected?'selected':''}" data-bookid="${b.id}"><div style="position:relative">${coverHtml}</div><div class="select-check">✓</div>
+      return `<div class="book-card audio-tile ${isSelected?'selected':''} ${b._groupExpanded?'group-member tile-pop-in':''}" data-bookid="${b.id}"><div style="position:relative">${coverHtml}</div><div class="select-check">✓</div>
       <div class="book-card-body"><div class="book-card-title">${esc(_seriesTilePrefix(b)+b.title)}</div>
       <div class="book-card-author">${esc(b.author)}</div></div></div>`;
     }
@@ -4056,6 +4119,8 @@ function renderGrid(gridId){
 }
 
 document.getElementById('deskBookGrid').addEventListener('click',e=>{
+  const header=e.target.closest('.group-header-tile[data-groupkey]');
+  if(header && !selectMode){ toggleSeriesGroupExpanded(header.dataset.groupkey); return; }
   const card=e.target.closest('.book-card[data-bookid]');if(!card)return;
   const id=card.dataset.bookid;
   // A collapsed group tile stands in for all its member ids — select/open
@@ -4069,6 +4134,7 @@ document.getElementById('deskBookGrid').addEventListener('click',e=>{
     } else if(selectedIds.has(id)){selectedIds.delete(id);card.classList.remove('selected');}else{selectedIds.add(id);card.classList.add('selected');}
     updateBulkBar();return;
   }
+  if(card.classList.contains('group-tile')){ toggleSeriesGroupExpanded(card.dataset.groupkey); return; }
   showBookById(id);
 });
 document.getElementById('deskSearch').addEventListener('input',e=>{
@@ -5489,8 +5555,11 @@ function renderMobLibrary() {
 
 document.getElementById('mobGridLibrary').addEventListener('click', e => {
   if(mobSelectMode) return; // let grid.onclick handle it in select mode
+  const header = e.target.closest('.group-header-tile[data-groupkey]');
+  if(header){ toggleSeriesGroupExpanded(header.dataset.groupkey); return; }
   const card = e.target.closest('.book-card[data-bookid]');
   if (!card) return;
+  if(card.classList.contains('group-tile')){ toggleSeriesGroupExpanded(card.dataset.groupkey); return; }
   mobPrevPanel = 'mobPanelLibrary';
   mob_showBook(card.dataset.bookid);
 });
@@ -5533,6 +5602,8 @@ document.getElementById('mobGridLibrary').addEventListener('touchstart', e => {
   }, {passive: true});
 
 document.getElementById('mobGridLibrary').addEventListener('click', e => {
+  const header = e.target.closest('.group-header-tile[data-groupkey]');
+  if(header && !mobSelectMode){ toggleSeriesGroupExpanded(header.dataset.groupkey); return; }
   const card = e.target.closest('.book-card[data-bookid]');
   if (!card) return;
   const id = card.dataset.bookid;
@@ -5549,6 +5620,7 @@ document.getElementById('mobGridLibrary').addEventListener('click', e => {
     updateMobBulkBar();
     return;
   }
+  if(card.classList.contains('group-tile')){ toggleSeriesGroupExpanded(card.dataset.groupkey); return; }
   mobPrevPanel = 'mobPanelLibrary';
   mob_showBook(id);
 });
@@ -6492,6 +6564,12 @@ function reconcileGrid(grid, items, keyFn, htmlFn) {
 }
 
 function bookCardHtml(b, isComm, showProgress=false){
+  if(b.isGroupHeader){
+    return `<div class="group-header-tile tile-pop-in" data-groupheader="1" data-groupkey="${esc(b.groupKey)}">
+      <span><span class="group-header-title">🎧 ${esc(b.title)}</span><span class="group-header-count">${b.partCount} parts</span></span>
+      <span class="group-header-collapse">⌃ Collapse</span>
+    </div>`;
+  }
   const coverSrc = getCoverSrc(b);
   const coverHtml = coverSrc
     ? `<img class="book-card-cover" src="${coverSrc}" alt="" loading="lazy"/>`
@@ -6510,7 +6588,7 @@ function bookCardHtml(b, isComm, showProgress=false){
        </div>` : '';
 
   if(b.isGroup){
-    return `<div class="book-card audio-tile group-tile" data-bookid="${b.id}" data-groupids="${b.groupIds.join(',')}">
+    return `<div class="book-card audio-tile group-tile" data-bookid="${b.id}" data-groupids="${b.groupIds.join(',')}" data-groupkey="${esc(b.groupKey)}">
       <div style="position:relative">
         <div class="group-stack-edge e2"></div>
         <div class="group-stack-edge e1"></div>
@@ -6525,7 +6603,7 @@ function bookCardHtml(b, isComm, showProgress=false){
   }
 
   if(b.isAudio){
-    return `<div class="book-card audio-tile" data-bookid="${b.id}">
+    return `<div class="book-card audio-tile ${b._groupExpanded?'group-member tile-pop-in':''}" data-bookid="${b.id}">
       <div style="position:relative">
         ${coverHtml}
       </div>
@@ -8519,6 +8597,12 @@ function _seriesTilePrefix(b) {
   return (b.seriesIndex != null && b.seriesIndex !== '') ? `#${b.seriesIndex} ` : '';
 }
 
+// Series keys (lowercase, trimmed) the person has tapped open to see the
+// individual parts instead of the collapsed stack tile. Browse-mode-only —
+// select mode always shows the collapsed tile so a long-press still selects
+// the whole group.
+let _expandedSeriesGroups = new Set();
+
 // ── Collapsed multi-part audio series tiles (grid display only) ────────────
 // Folds consecutive audio entries that share a `series` value (2+ of them)
 // into a single stacked "group" tile, so a long multi-part audiobook takes
@@ -8527,6 +8611,11 @@ function _seriesTilePrefix(b) {
 // true for the 'series-recent' and 'title' sorts (which both group by
 // series), a no-op under 'author'/'rating' where they may not be adjacent.
 // Books/epubs are never folded, only audio.
+//
+// A group whose key is in _expandedSeriesGroups is rendered "open" instead:
+// a slim header tile (series name + a collapse control) followed by each
+// part as its own normal tile, so tapping the stack expands it in place
+// rather than jumping straight to a detail view.
 function collapseAudioSeriesForGrid(books) {
   const out = [];
   let i = 0;
@@ -8539,16 +8628,22 @@ function collapseAudioSeriesForGrid(books) {
       const run = books.slice(i, j);
       if (run.length > 1) {
         const sorted = [...run].sort((a, b2) => (a.seriesIndex ?? Infinity) - (b2.seriesIndex ?? Infinity));
-        out.push({
-          id: sorted[0].id,
-          isGroup: true,
-          groupIds: sorted.map(m => m.id),
-          title: b.series,
-          author: sorted[0].author,
-          coverUrl: sorted[0].coverUrl,
-          isAudio: true,
-          partCount: sorted.length,
-        });
+        if (_expandedSeriesGroups.has(key)) {
+          out.push({ id: '__grouphdr_' + key, isGroupHeader: true, groupKey: key, title: b.series, partCount: sorted.length });
+          sorted.forEach(m => out.push({ ...m, _groupExpanded: true }));
+        } else {
+          out.push({
+            id: sorted[0].id,
+            isGroup: true,
+            groupIds: sorted.map(m => m.id),
+            groupKey: key,
+            title: b.series,
+            author: sorted[0].author,
+            coverUrl: sorted[0].coverUrl,
+            isAudio: true,
+            partCount: sorted.length,
+          });
+        }
         i = j;
         continue;
       }
@@ -8558,6 +8653,15 @@ function collapseAudioSeriesForGrid(books) {
   }
   return out;
 }
+
+// Opens or re-collapses a group's parts in the grid, then re-renders both
+// the desktop and mobile library views so they stay in sync.
+function toggleSeriesGroupExpanded(key) {
+  if (_expandedSeriesGroups.has(key)) _expandedSeriesGroups.delete(key);
+  else _expandedSeriesGroups.add(key);
+  renderAll();
+}
+
 
 function _relatedBookRow(books) {
   return `<div style="display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;
@@ -17326,25 +17430,42 @@ function playAdjacentTrack(dir, isAutoAdvance = false) {
   playAudioTrack(next);
 }
 
-// Shows/hides the prev/next buttons and the "Part N of M" label based on
-// whether the currently-loaded track belongs to a multi-part series.
+// Shows/hides the prev/next-part row and populates each side with the
+// sibling's cover art + title, based on whether the currently-loaded track
+// belongs to a multi-part series.
 function updateTrackNavButtons(track) {
+  const navRow  = document.getElementById('audioTrackNav');
   const prevBtn = document.getElementById('audioPrevTrackBtn');
   const nextBtn = document.getElementById('audioNextTrackBtn');
-  const label    = document.getElementById('audioPartLabel');
-  if (!prevBtn || !nextBtn) return;
+  const label   = document.getElementById('audioPartLabel');
+  if (!navRow || !prevBtn || !nextBtn) return;
   const siblings = getSeriesGroupTracks(track);
   if (siblings.length < 2) {
-    prevBtn.style.display = 'none';
-    nextBtn.style.display = 'none';
+    navRow.style.display = 'none';
     if (label) label.style.display = 'none';
     return;
   }
-  const idx = siblings.findIndex(t => t.id === track.id);
-  prevBtn.style.display = '';
-  nextBtn.style.display = '';
-  prevBtn.disabled = idx <= 0;
-  nextBtn.disabled = idx >= siblings.length - 1;
+  const idx  = siblings.findIndex(t => t.id === track.id);
+  const prev = siblings[idx - 1] || null;
+  const next = siblings[idx + 1] || null;
+
+  navRow.style.display = 'flex';
+  prevBtn.disabled = !prev;
+  nextBtn.disabled = !next;
+
+  const fillSide = (sib, coverImgId, coverPhId, titleId) => {
+    const img   = document.getElementById(coverImgId);
+    const ph    = document.getElementById(coverPhId);
+    const title = document.getElementById(titleId);
+    if (title) title.textContent = sib ? (sib.title || (sib.name||'').replace(/\.[^./]+$/,'')) : '—';
+    if (img && ph) {
+      if (sib?.coverUrl) { img.src = sib.coverUrl; img.style.display='block'; ph.style.display='none'; }
+      else { img.style.display='none'; ph.style.display='flex'; }
+    }
+  };
+  fillSide(prev, 'audioPrevCoverImg', 'audioPrevCoverPh', 'audioPrevTitle');
+  fillSide(next, 'audioNextCoverImg', 'audioNextCoverPh', 'audioNextTitle');
+
   if (label) {
     label.style.display = '';
     label.textContent = `Part ${idx + 1} of ${siblings.length} — ${track.series}`;
@@ -17479,8 +17600,8 @@ function stopAudioPlayback() {
   if (miniSub) miniSub.textContent = '0:00 / 0:00';
   document.getElementById('audioMiniBar')?.classList.remove('visible');
   setAudioArt(null);
-  document.getElementById('audioPrevTrackBtn')?.style.setProperty('display','none');
-  document.getElementById('audioNextTrackBtn')?.style.setProperty('display','none');
+  const navRow = document.getElementById('audioTrackNav');
+  if (navRow) navRow.style.display = 'none';
   const partLabelEl = document.getElementById('audioPartLabel');
   if (partLabelEl) partLabelEl.style.display = 'none';
 
