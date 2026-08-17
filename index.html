@@ -5553,18 +5553,14 @@ function renderMobLibrary() {
   });
 }
 
-document.getElementById('mobGridLibrary').addEventListener('click', e => {
-  if(mobSelectMode) return; // let grid.onclick handle it in select mode
-  const header = e.target.closest('.group-header-tile[data-groupkey]');
-  if(header){ toggleSeriesGroupExpanded(header.dataset.groupkey); return; }
-  const card = e.target.closest('.book-card[data-bookid]');
-  if (!card) return;
-  if(card.classList.contains('group-tile')){ toggleSeriesGroupExpanded(card.dataset.groupkey); return; }
-  mobPrevPanel = 'mobPanelLibrary';
-  mob_showBook(card.dataset.bookid);
-});
-
 // ── MOBILE LONG PRESS → MULTI SELECT ─────────────────────────────────────────
+// NOTE: this used to coexist with a second, near-identical click listener on
+// #mobGridLibrary. Both fired on every tap — harmless when they both just
+// called mob_showBook(id) (opening the same detail sheet twice is a no-op),
+// but fatal for the group-tile expand/collapse toggle added below: one
+// listener would open the group and the other would immediately close it
+// again, so nothing appeared to happen. This listener now owns all tap
+// handling for the grid; the duplicate has been removed.
 (()=>{
   let longPressTimer = null;
   let longPressBookId = null;
