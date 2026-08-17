@@ -14763,7 +14763,7 @@ async function adminToggleUserCard(uid) {
             <div style="font-size:.6rem;letter-spacing:.15em;text-transform:uppercase;
                         font-weight:700;color:#5a48b0;margin-bottom:.35rem;">
               🔲 Sent to Kobo (${koboSends.length})</div>
-            ${koboSends.slice(0, 8).map(k => `
+            ${koboSends.map(k => `
               <div style="font-size:.75rem;color:var(--navy2);padding:.15rem 0;
                           border-bottom:1px solid var(--border);display:flex;
                           justify-content:space-between;gap:.4rem;">
@@ -14772,16 +14772,13 @@ async function adminToggleUserCard(uid) {
                 <span style="font-size:.65rem;color:var(--muted);flex-shrink:0;">
                   ${k.createdAt?.toDate?.() ? timeAgo(k.createdAt.toDate()) : ''}</span>
               </div>`).join('')}
-            ${koboSends.length > 8
-              ? `<div style="font-size:.68rem;color:var(--muted);margin-top:.2rem;">
-                  + ${koboSends.length - 8} more</div>` : ''}
           </div>` : ''}
 
         ${returned.length ? `
           <div>
             <div style="font-size:.6rem;letter-spacing:.15em;text-transform:uppercase;
                         font-weight:700;color:var(--muted);margin-bottom:.35rem;">
-              History (${returned.length} returned)</div>
+              History</div>
             ${returned.slice(0, 5).map(c => {
               const out = c.checkedOutAt?.toDate?.();
               const ret = c.returnedAt?.toDate?.();
