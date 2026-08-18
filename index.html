@@ -3798,53 +3798,45 @@ async function uploadOneAudioFile(file, rowId, visibility){
 
 // Turns a pasted YouTube link into one or more audiobook entries.
 const YOUTUBE_CONVERT_ENDPOINT = 'https://convert-youtube-audio-310807052995.us-central1.run.app/convertYoutubeAudio';
-// The backend's per-request ceiling. Videos longer than this get split into
-// consecutive time-range requests instead of one call for the whole thing.
-// NOTE: this requires the Cloud Run converter to accept optional
-// `startSec`/`endSec` on the request body (ranged yt-dlp extraction via
-// --download-sections) and to include the video's full `totalDurationSec`
-// in every response — see chat notes for why.
-const YOUTUBE_CHUNK_MAX_SEC = 4 * 60 * 60;
 
-// One converter call for a single time range. startSec/endSec are omitted
-// for a plain (non-split) request, so the request shape for a normal-length
-// video is unchanged from before this feature existed.
-async function convertYoutubeSegment(url, idToken, startSec, endSec){
-  const body = { url };
-  if(startSec != null) body.startSec = startSec;
-  if(endSec != null) body.endSec = endSec;
+// One request, covering the whole video regardless of length. The backend
+// (v2) does its own download + duration probe + splitting server-side —
+// the youtube-mp36 RapidAPI it wraps has no ranged-extraction capability,
+// so asking it for a specific startSec/endSec was never actually possible.
+// The response's `parts` array has one entry per <=4hr chunk the backend
+// produced; a normal-length video just comes back as a single-element array.
+async function convertYoutube(url, idToken){
   const res = await fetch(YOUTUBE_CONVERT_ENDPOINT, {
     method: 'POST',
     headers: {
       'Content-Type':'application/json',
       'Authorization': `Bearer ${idToken}`,
     },
-    body: JSON.stringify(body),
+    body: JSON.stringify({ url }),
   });
   if(!res.ok) throw new Error(`Converter returned ${res.status}`);
   const result = await res.json();
-  if(!result.downloadUrl || !result.storagePath) throw new Error('Converter did not return a file');
+  if(!Array.isArray(result.parts) || !result.parts.length) throw new Error('Converter did not return any files');
   return result;
 }
 
-// Saves one converted segment as an audioFiles doc. series/seriesIndex are
-// only stamped when this is one part of a multi-part split (partIndex !=
-// null) — a normal single-part upload is stored exactly as it was before,
-// and stays out of the Library's collapsed-group tiling.
-async function saveYoutubeSegmentDoc(url, visibility, result, seriesTitle, partIndex){
-  const isPart = partIndex != null;
-  const baseTitle = result.title || 'YouTube audio';
+// Saves one converted part as an audioFiles doc. series/seriesIndex are
+// only stamped when this is one part of a multi-part split (totalParts > 1)
+// — a normal single-part upload is stored exactly as it was before, and
+// stays out of the Library's collapsed-group tiling.
+async function saveYoutubeSegmentDoc(url, visibility, part, seriesTitle, baseTitle, totalParts){
+  const isPart = totalParts > 1;
   return addDoc(collection(db,'audioFiles'),{
     userId: currentUser.uid,
-    name: (isPart ? `${baseTitle} (Part ${partIndex})` : baseTitle) + '.mp3',
-    title: isPart ? `${baseTitle} (Part ${partIndex})` : (result.title || null),
+    name: (isPart ? `${baseTitle} (Part ${part.partIndex})` : baseTitle) + '.mp3',
+    title: isPart ? `${baseTitle} (Part ${part.partIndex})` : baseTitle,
     sourceUrl: url,
-    storagePath: result.storagePath,
-    downloadUrl: result.downloadUrl,
-    size: result.size || 0,
-    durationSec: result.durationSec || null,
+    storagePath: part.storagePath,
+    downloadUrl: part.downloadUrl,
+    size: part.size || 0,
+    durationSec: part.durationSec || null,
     series: isPart ? seriesTitle : null,
-    seriesIndex: isPart ? partIndex : null,
+    seriesIndex: isPart ? part.partIndex : null,
     visibility,
     uploadedAt: serverTimestamp(),
   });
@@ -3855,20 +3847,19 @@ async function uploadOneYoutube(url, rowId, visibility){
     setUpP(rowId,10,'Sending to converter…');
     const idToken = await currentUser.getIdToken();
 
-    // The first request always covers 0 → the chunk ceiling. The backend
-    // reports the video's full duration alongside the converted segment,
-    // which is how we learn whether more parts are needed — no separate
-    // "probe" round-trip required.
-    const result = await convertYoutubeSegment(url, idToken, 0, YOUTUBE_CHUNK_MAX_SEC);
-    setUpP(rowId,60,'Converting to MP3…');
-
-    const totalDuration = result.totalDurationSec || result.durationSec || 0;
-    const needsSplit = totalDuration > YOUTUBE_CHUNK_MAX_SEC + 5; // small slop for rounding
-    const totalParts = needsSplit ? Math.ceil(totalDuration / YOUTUBE_CHUNK_MAX_SEC) : 1;
-    const seriesTitle = result.title || 'YouTube audio';
+    // Single call — the backend handles conversion, downloading, duration
+    // probing, and any splitting itself, and returns every resulting part
+    // in one response instead of us looping per-chunk.
+    setUpP(rowId,40,'Converting — this can take a while for long videos…');
+    const result = await convertYoutube(url, idToken);
+    const { parts } = result;
+    const totalParts = parts.length;
+    const needsSplit = totalParts > 1;
+    const baseTitle = result.title || 'YouTube audio';
+    const seriesTitle = baseTitle;
 
     setUpP(rowId,90,'Saving…');
-    const firstDocRef = await saveYoutubeSegmentDoc(url, visibility, result, seriesTitle, needsSplit ? 1 : null);
+    const firstDocRef = await saveYoutubeSegmentDoc(url, visibility, parts[0], seriesTitle, baseTitle, totalParts);
     if (visibility !== 'private' && currentUser && ledgerState.loaded) _ledgerUnlockAchievement('sharer', firstDocRef.id);
     setUpP(rowId,100, needsSplit
       ? `✓ Part 1 of ${totalParts} converted`
@@ -3877,21 +3868,18 @@ async function uploadOneYoutube(url, rowId, visibility){
     document.getElementById(rowId)?.setAttribute('data-status','done');
     const icon=document.getElementById(rowId+'_icon'); if(icon) icon.textContent='✅';
 
-    // Remaining parts each get their own row in the same upload list, so
-    // progress and any per-part failures stay visible and are retryable
-    // without redoing parts that already succeeded.
-    for(let part=2; part<=totalParts; part++){
-      const partRowId = renderUploadRow(`${seriesTitle} (Part ${part} of ${totalParts})`, 'youtube');
+    // Remaining parts (already converted and uploaded by the backend in
+    // the same request above) each still get their own upload row, purely
+    // so progress/errors for saving each Firestore doc stay visible and
+    // any single failed save is obvious without losing the others.
+    for(let i=1; i<parts.length; i++){
+      const part = parts[i];
+      const partRowId = renderUploadRow(`${seriesTitle} (Part ${part.partIndex} of ${totalParts})`, 'youtube');
       try{
-        setUpP(partRowId,10,'Sending to converter…');
-        const startSec = (part-1)*YOUTUBE_CHUNK_MAX_SEC;
-        const endSec = Math.min(startSec+YOUTUBE_CHUNK_MAX_SEC, totalDuration);
-        const partResult = await convertYoutubeSegment(url, idToken, startSec, endSec);
-        setUpP(partRowId,60,'Converting to MP3…');
         setUpP(partRowId,90,'Saving…');
-        const docRef = await saveYoutubeSegmentDoc(url, visibility, partResult, seriesTitle, part);
+        const docRef = await saveYoutubeSegmentDoc(url, visibility, part, seriesTitle, baseTitle, totalParts);
         if (visibility !== 'private' && currentUser && ledgerState.loaded) _ledgerUnlockAchievement('sharer', docRef.id);
-        setUpP(partRowId,100, `✓ Part ${part} of ${totalParts} converted`);
+        setUpP(partRowId,100, `✓ Part ${part.partIndex} of ${totalParts} converted`);
         document.getElementById(partRowId)?.classList.add('done');
         document.getElementById(partRowId)?.setAttribute('data-status','done');
         const partIcon=document.getElementById(partRowId+'_icon'); if(partIcon) partIcon.textContent='✅';
@@ -3901,7 +3889,7 @@ async function uploadOneYoutube(url, rowId, visibility){
         document.getElementById(partRowId)?.classList.add('error');
         document.getElementById(partRowId)?.setAttribute('data-status','error');
         const partIcon=document.getElementById(partRowId+'_icon'); if(partIcon) partIcon.textContent='⚠️';
-        showToast(`Part ${part} of ${totalParts} failed: `+e.message);
+        showToast(`Part ${part.partIndex} of ${totalParts} failed to save: `+e.message);
       }
     }
   }catch(e){
@@ -3911,6 +3899,7 @@ async function uploadOneYoutube(url, rowId, visibility){
     document.getElementById(rowId)?.setAttribute('data-status','error');
     const icon=document.getElementById(rowId+'_icon'); if(icon) icon.textContent='⚠️';
     showToast('YouTube conversion failed: '+e.message);
+
   }
 }
 
