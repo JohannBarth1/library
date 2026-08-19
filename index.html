@@ -3869,7 +3869,7 @@ async function uploadOneYoutube(url, rowId, visibility){
     const firstDocRef = await saveYoutubeSegmentDoc(url, visibility, parts[0], seriesTitle, baseTitle, totalParts);
     if (visibility !== 'private' && currentUser && ledgerState.loaded) _ledgerUnlockAchievement('sharer', firstDocRef.id);
     setUpP(rowId,100, needsSplit
-      ? `✓ Episode 1 of ${totalParts} converted`
+      ? `✓ Part 1 of ${totalParts} converted`
       : `✓ Converted — ${UPLOAD_VIS_LABEL[visibility].replace(/^\S+\s/, '')}`);
     document.getElementById(rowId)?.classList.add('done');
     document.getElementById(rowId)?.setAttribute('data-status','done');
@@ -3881,12 +3881,12 @@ async function uploadOneYoutube(url, rowId, visibility){
     // any single failed save is obvious without losing the others.
     for(let i=1; i<parts.length; i++){
       const part = parts[i];
-      const partRowId = renderUploadRow(`${seriesTitle} (Episode ${part.partIndex} of ${totalParts})`, 'youtube');
+      const partRowId = renderUploadRow(`${seriesTitle} (Part ${part.partIndex} of ${totalParts})`, 'youtube');
       try{
         setUpP(partRowId,90,'Saving…');
         const docRef = await saveYoutubeSegmentDoc(url, visibility, part, seriesTitle, baseTitle, totalParts);
         if (visibility !== 'private' && currentUser && ledgerState.loaded) _ledgerUnlockAchievement('sharer', docRef.id);
-        setUpP(partRowId,100, `✓ Episode ${part.partIndex} of ${totalParts} converted`);
+        setUpP(partRowId,100, `✓ Part ${part.partIndex} of ${totalParts} converted`);
         document.getElementById(partRowId)?.classList.add('done');
         document.getElementById(partRowId)?.setAttribute('data-status','done');
         const partIcon=document.getElementById(partRowId+'_icon'); if(partIcon) partIcon.textContent='✅';
@@ -3896,7 +3896,7 @@ async function uploadOneYoutube(url, rowId, visibility){
         document.getElementById(partRowId)?.classList.add('error');
         document.getElementById(partRowId)?.setAttribute('data-status','error');
         const partIcon=document.getElementById(partRowId+'_icon'); if(partIcon) partIcon.textContent='⚠️';
-        showToast(`Episode ${part.partIndex} of ${totalParts} failed to save: `+e.message);
+        showToast(`Part ${part.partIndex} of ${totalParts} failed to save: `+e.message);
       }
     }
   }catch(e){
@@ -4133,12 +4133,7 @@ document.getElementById('deskBookGrid').addEventListener('click',e=>{
     } else if(selectedIds.has(id)){selectedIds.delete(id);card.classList.remove('selected');}else{selectedIds.add(id);card.classList.add('selected');}
     updateBulkBar();return;
   }
-  if(card.classList.contains('group-tile')){ 
-    const allBooks = dedupe([...library, ...communityLib]);
-    const seriesTitle = allBooks.find(b => b.id === id)?.series || card.dataset.groupkey;
-    showSeriesEpisodesModal(seriesTitle); 
-    return; 
-  }
+  if(card.classList.contains('group-tile')){ toggleSeriesGroupExpanded(card.dataset.groupkey); return; }
   showBookById(id);
 });
 document.getElementById('deskSearch').addEventListener('input',e=>{
@@ -5620,12 +5615,7 @@ document.getElementById('mobGridLibrary').addEventListener('click', e => {
     updateMobBulkBar();
     return;
   }
-  if(card.classList.contains('group-tile')){ 
-    const allBooks = dedupe([...library, ...communityLib]);
-    const seriesTitle = allBooks.find(b => b.id === id)?.series || card.dataset.groupkey;
-    showSeriesEpisodesModal(seriesTitle); 
-    return; 
-  }
+  if(card.classList.contains('group-tile')){ toggleSeriesGroupExpanded(card.dataset.groupkey); return; }
   mobPrevPanel = 'mobPanelLibrary';
   mob_showBook(id);
 });
@@ -8702,50 +8692,6 @@ function toggleSeriesGroupExpanded(key) {
   if (_expandedSeriesGroups.has(key)) _expandedSeriesGroups.delete(key);
   else _expandedSeriesGroups.add(key);
   renderAll();
-}
-
-// Show a modal overlay listing all episodes in a series with their durations and edit buttons
-function showSeriesEpisodesModal(seriesTitle) {
-  const allBooks = dedupe([...library, ...communityLib]);
-  const episodes = allBooks.filter(b => b.isAudio && b.series === seriesTitle)
-    .sort((a, b) => (a.seriesIndex ?? Infinity) - (b.seriesIndex ?? Infinity));
-  
-  const totalDuration = episodes.reduce((sum, e) => sum + (e.durationSec || 0), 0);
-  
-  const html = `<div style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);
-    display:flex;align-items:center;justify-content:center;z-index:10000;padding:1rem;">
-    <div style="background:var(--warm-white);border-radius:12px;max-height:80vh;overflow-y:auto;
-      width:100%;max-width:500px;padding:1.5rem;color:var(--navy2);">
-      <div style="font-size:1.2rem;font-weight:700;margin-bottom:.5rem;color:var(--navy2);">
-        ${esc(seriesTitle)}</div>
-      <div style="font-size:.85rem;color:var(--muted);margin-bottom:1.2rem;">
-        ${episodes.length} Episode${episodes.length === 1 ? '' : 's'} · ${formatDuration(totalDuration)}</div>
-      <div style="display:flex;flex-direction:column;gap:.8rem;margin-bottom:1.2rem;">
-        ${episodes.map((ep, idx) => `
-          <div style="display:flex;gap:.8rem;padding:.8rem;background:rgba(200,149,42,.08);
-            border-radius:8px;cursor:pointer;align-items:center;" onclick="showBookById('${ep.id}')">
-            <img src="${getCoverSrc(ep) || ''}" style="width:48px;height:${ep.isAudio ? 48 : 64}px;
-              object-fit:cover;border-radius:4px;background:var(--navy2);" 
-              onerror="this.style.display='none'"/>
-            <div style="flex:1;min-width:0;">
-              <div style="font-size:.85rem;font-weight:600;white-space:nowrap;overflow:hidden;
-                text-overflow:ellipsis;">${esc(ep.title || ep.name || 'Untitled')}</div>
-              <div style="font-size:.75rem;color:var(--muted);margin-top:.2rem;">
-                Episode ${idx + 1} · ${formatDuration(ep.durationSec || 0)}</div>
-            </div>
-            <div style="font-size:1.3rem;color:var(--gold);flex-shrink:0;">✎</div>
-          </div>
-        `).join('')}
-      </div>
-      <button onclick="this.closest('div').parentElement.remove()" 
-        style="width:100%;padding:.7rem;background:var(--navy2);color:var(--cream);
-          border:none;border-radius:6px;cursor:pointer;font-weight:600;">Close</button>
-    </div>
-  </div>`;
-  
-  const scrim = document.createElement('div');
-  scrim.innerHTML = html;
-  document.body.appendChild(scrim.firstElementChild);
 }
 
 
@@ -14302,15 +14248,6 @@ function timeAgo(date) {
   return date.toLocaleDateString();
 }
 
-// Format duration in seconds as "Xh Ym Zs", or "Ym Zs" if under an hour
-function formatDuration(seconds) {
-  if (!seconds || seconds <= 0) return '—';
-  const h = Math.floor(seconds / 3600);
-  const m = Math.floor((seconds % 3600) / 60);
-  const s = Math.floor(seconds % 60);
-  return h > 0 ? `${h}h ${m}m ${s}s` : `${m}m ${s}s`;
-}
-
 document.getElementById('mobNavLibrary').onclick  = () => mob_switchTab('library');
 document.getElementById('mobNavHome').onclick      = () => mob_switchTab('home');
 document.getElementById('mobNavSettings').onclick  = () => mob_switchTab('settings');
@@ -14485,7 +14422,7 @@ async function adminLoadKoboDevices() {
 
 document.getElementById('adminKoboRefresh')?.addEventListener('click', adminLoadKoboDevices);
 
-function formatDurationTotal(totalSeconds) {
+function formatDuration(totalSeconds) {
   if(!totalSeconds) return '—';
   const hours = Math.floor(totalSeconds / 3600);
   const minutes = Math.round((totalSeconds % 3600) / 60);
@@ -14530,7 +14467,7 @@ function _adminUserCardHtml(u, checkoutsByUser, koboSendsByUser) {
         </div>
         <div style="font-size:.65rem;color:var(--muted);margin-top:1px;">
           ${lastConnected ? `Last connected ${timeAgo(lastConnected)}` : 'Never connected'}
-          · ⏱ ${formatDurationTotal(u.totalTimeSeconds)} in app
+          · ⏱ ${formatDuration(u.totalTimeSeconds)} in app
         </div>
       </div>
       <div style="display:flex;flex-direction:column;align-items:flex-end;
@@ -17632,8 +17569,7 @@ function updateTrackNavButtons(track) {
 
   if (label) {
     label.style.display = '';
-    const epDuration = formatDurationTotal(track.durationSec || 0);
-    label.textContent = `Episode ${idx + 1} of ${siblings.length} · ${epDuration} — ${track.series}`;
+    label.textContent = `Part ${idx + 1} of ${siblings.length} — ${track.series}`;
   }
 }
 
