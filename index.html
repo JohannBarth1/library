@@ -4134,6 +4134,7 @@ document.getElementById('deskBookGrid').addEventListener('click',e=>{
     updateBulkBar();return;
   }
   if(card.classList.contains('group-tile')){ 
+    const allBooks = dedupe([...library, ...communityLib]);
     const seriesTitle = allBooks.find(b => b.id === id)?.series || card.dataset.groupkey;
     showSeriesEpisodesModal(seriesTitle); 
     return; 
@@ -5620,6 +5621,7 @@ document.getElementById('mobGridLibrary').addEventListener('click', e => {
     return;
   }
   if(card.classList.contains('group-tile')){ 
+    const allBooks = dedupe([...library, ...communityLib]);
     const seriesTitle = allBooks.find(b => b.id === id)?.series || card.dataset.groupkey;
     showSeriesEpisodesModal(seriesTitle); 
     return; 
@@ -8704,6 +8706,7 @@ function toggleSeriesGroupExpanded(key) {
 
 // Show a modal overlay listing all episodes in a series with their durations and edit buttons
 function showSeriesEpisodesModal(seriesTitle) {
+  const allBooks = dedupe([...library, ...communityLib]);
   const episodes = allBooks.filter(b => b.isAudio && b.series === seriesTitle)
     .sort((a, b) => (a.seriesIndex ?? Infinity) - (b.seriesIndex ?? Infinity));
   
@@ -14299,7 +14302,7 @@ function timeAgo(date) {
   return date.toLocaleDateString();
 }
 
-// Format duration in seconds to HH:MM:SS or MM:SS if under an hour
+// Format duration in seconds as "Xh Ym Zs", or "Ym Zs" if under an hour
 function formatDuration(seconds) {
   if (!seconds || seconds <= 0) return '—';
   const h = Math.floor(seconds / 3600);
