@@ -14482,7 +14482,7 @@ async function adminLoadKoboDevices() {
 
 document.getElementById('adminKoboRefresh')?.addEventListener('click', adminLoadKoboDevices);
 
-function formatDuration(totalSeconds) {
+function formatDurationTotal(totalSeconds) {
   if(!totalSeconds) return '—';
   const hours = Math.floor(totalSeconds / 3600);
   const minutes = Math.round((totalSeconds % 3600) / 60);
@@ -14527,7 +14527,7 @@ function _adminUserCardHtml(u, checkoutsByUser, koboSendsByUser) {
         </div>
         <div style="font-size:.65rem;color:var(--muted);margin-top:1px;">
           ${lastConnected ? `Last connected ${timeAgo(lastConnected)}` : 'Never connected'}
-          · ⏱ ${formatDuration(u.totalTimeSeconds)} in app
+          · ⏱ ${formatDurationTotal(u.totalTimeSeconds)} in app
         </div>
       </div>
       <div style="display:flex;flex-direction:column;align-items:flex-end;
@@ -17629,7 +17629,7 @@ function updateTrackNavButtons(track) {
 
   if (label) {
     label.style.display = '';
-    const epDuration = formatDuration(track.durationSec || 0);
+    const epDuration = formatDurationTotal(track.durationSec || 0);
     label.textContent = `Episode ${idx + 1} of ${siblings.length} · ${epDuration} — ${track.series}`;
   }
 }
