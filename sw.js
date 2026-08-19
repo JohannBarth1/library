@@ -7,7 +7,7 @@
 // touch offline EPUBs/covers — those live in caches that start with
 // 'elib-epub-cache' / 'elib-cover-cache' and are deliberately preserved
 // below regardless of shell version.
-const SHELL_CACHE = 'elib-shell-v3';
+const SHELL_CACHE = 'elib-shell-v2';
 const SHELL_URLS = [
   self.registration.scope,
   'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js',
@@ -40,14 +40,7 @@ self.addEventListener('fetch', e => {
       const networkFetch = fetch(e.request).then(resp => {
         if(resp && resp.ok && (url.startsWith(self.location.origin) || SHELL_URLS.includes(url))) {
           const copy = resp.clone();
-          // Guarantee the write finishes even if the SW would otherwise be
-          // suspended right after respondWith() settles. Without this, a
-          // large response (e.g. index.html) could get truncated mid-write,
-          // and a later load would serve that corrupted cache entry —
-          // causing "Unexpected end of input" errors.
-          e.waitUntil(
-            caches.open(SHELL_CACHE).then(cache => cache.put(e.request, copy)).catch(()=>{})
-          );
+          caches.open(SHELL_CACHE).then(cache => cache.put(e.request, copy));
         }
         return resp;
       }).catch(() => {
