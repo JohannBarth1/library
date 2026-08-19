@@ -3814,7 +3814,14 @@ async function convertYoutube(url, idToken){
     },
     body: JSON.stringify({ url }),
   });
-  if(!res.ok) throw new Error(`Converter returned ${res.status}`);
+  if(!res.ok){
+    // Surface the server's actual error message (server.js always returns
+    // { error: "..." } on failure) instead of just the bare status code —
+    // otherwise every failure looks identical from the upload modal.
+    let detail = '';
+    try{ detail = (await res.json())?.error || ''; }catch{}
+    throw new Error(detail ? `Converter returned ${res.status}: ${detail}` : `Converter returned ${res.status}`);
+  }
   const result = await res.json();
   if(!Array.isArray(result.parts) || !result.parts.length) throw new Error('Converter did not return any files');
   return result;
