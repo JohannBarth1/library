@@ -381,9 +381,8 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .book-card.group-tile .group-stack-edge.e1{top:6px;transform:scale(.96);z-index:1;filter:brightness(.85);}
 .book-card.group-tile .group-stack-edge.e2{top:11px;transform:scale(.92);z-index:0;filter:brightness(.7);}
 .group-part-badge{
-  position:absolute;top:.35rem;right:.35rem;z-index:3;background:rgba(15,26,46,.82);color:var(--gold2);
-  font-size:.62rem;font-weight:700;letter-spacing:.03em;padding:.15rem .45rem;border-radius:10px;
-  display:flex;align-items:center;gap:.2rem;
+  font-size:.62rem;color:var(--teal-dark);font-weight:600;white-space:nowrap;overflow:hidden;
+  text-overflow:ellipsis;margin-top:.15rem;display:flex;align-items:center;gap:.2rem;
 }
 /* Expanded group: a slim full-width header (series name + collapse control)
    spanning the grid, followed by each part as a normal tile with a thin
@@ -4094,11 +4093,10 @@ function renderGrid(gridId){
         <div class="group-stack-edge e2"></div>
         <div class="group-stack-edge e1"></div>
         ${coverSrc?`<img class="book-card-cover" src="${coverSrc}" alt="" loading="lazy"/>`:`<div class="book-card-cover-ph"><div class="ph-icon">🎧</div><div class="ph-title">${esc(b.title)}</div><div class="ph-author">${esc(b.author)}</div></div>`}
-        <div class="group-part-badge">🎧 ${b.partCount} ep</div>
       </div><div class="select-check">✓</div>
       <div class="book-card-body"><div class="book-card-title">${esc(b.title)}</div>
       <div class="book-card-author">${esc(b.author)}</div>
-      ${b.totalDuration?`<div class="book-card-duration">⏱ ${formatDuration(b.totalDuration)}</div>`:''}</div></div>`;
+      <div class="group-part-badge">🎧 ${b.partCount} Episode${b.partCount===1?'':'s'}${b.totalDuration?` · ${formatDuration(b.totalDuration)}`:''}</div></div></div>`;
     }
     if(b.isAudio){
       const coverHtml=coverSrc?`<img class="book-card-cover" src="${coverSrc}" alt="" loading="lazy"/>`:`<div class="book-card-cover-ph"><div class="ph-icon">🎧</div><div class="ph-title">${esc(b.title)}</div><div class="ph-author">${esc(b.author)}</div></div>`;
@@ -5200,7 +5198,8 @@ async function mob_showBook(id, opts={}){
 
   const mobSeriesEl=document.getElementById('mobDetailSeries');
   if(book.series){
-    mobSeriesEl.textContent='📚 '+book.series+(book.seriesIndex!=null&&book.seriesIndex!==''?' · Book '+book.seriesIndex:'');
+    const seriesUnitLabel = book.isAudio ? 'Episode' : 'Book';
+    mobSeriesEl.textContent='📚 '+book.series+(book.seriesIndex!=null&&book.seriesIndex!==''?` · ${seriesUnitLabel} `+book.seriesIndex:'');
     mobSeriesEl.style.display='block';
   } else mobSeriesEl.style.display='none';
 
@@ -5671,13 +5670,12 @@ function renderMobLibrarySelectMode(){
           <div class="group-stack-edge e2"></div>
           <div class="group-stack-edge e1"></div>
           ${coverHtml}
-          <div class="group-part-badge">🎧 ${b.partCount} ep</div>
         </div>
         <div class="select-check" style="display:flex">${isSelected?'✓':''}</div>
         <div class="book-card-body">
           <div class="book-card-title">${esc(b.title)}</div>
           <div class="book-card-author">${esc(b.author)}</div>
-          ${b.totalDuration?`<div class="book-card-duration">⏱ ${formatDuration(b.totalDuration)}</div>`:''}
+          <div class="group-part-badge">🎧 ${b.partCount} Episode${b.partCount===1?'':'s'}${b.totalDuration?` · ${formatDuration(b.totalDuration)}`:''}</div>
         </div>
       </div>`;
     }
@@ -6603,12 +6601,11 @@ function bookCardHtml(b, isComm, showProgress=false){
         <div class="group-stack-edge e2"></div>
         <div class="group-stack-edge e1"></div>
         ${coverHtml}
-        <div class="group-part-badge">🎧 ${b.partCount} ep</div>
       </div>
       <div class="book-card-body">
         <div class="book-card-title">${esc(b.title)}</div>
         <div class="book-card-author">${esc(b.author)}</div>
-        ${b.totalDuration?`<div class="book-card-duration">⏱ ${formatDuration(b.totalDuration)}</div>`:''}
+        <div class="group-part-badge">🎧 ${b.partCount} Episode${b.partCount===1?'':'s'}${b.totalDuration?` · ${formatDuration(b.totalDuration)}`:''}</div>
       </div>
     </div>`;
   }
@@ -8898,7 +8895,7 @@ function showSeriesEpisodesModal(seriesTitle) {
     panel.appendChild(bulkRule);
   }
 
-  // ── Episode tiles — horizontal scrolling shelf ──
+  // ── Episode tiles — grid ──
   const shelfLabel = document.createElement('div');
   shelfLabel.style.cssText = 'font-size:.65rem;font-weight:700;letter-spacing:.1em;'
     + 'text-transform:uppercase;color:var(--muted);margin-bottom:.55rem;';
@@ -8906,13 +8903,13 @@ function showSeriesEpisodesModal(seriesTitle) {
   panel.appendChild(shelfLabel);
 
   const shelf = document.createElement('div');
-  shelf.style.cssText = 'display:flex;gap:10px;overflow-x:auto;padding-bottom:8px;'
-    + '-webkit-overflow-scrolling:touch;scrollbar-width:none;margin-bottom:1.4rem;';
+  shelf.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fill,minmax(64px,1fr));'
+    + 'gap:10px;max-height:300px;overflow-y:auto;padding-bottom:4px;margin-bottom:1.4rem;';
 
   myEpisodes.forEach((ep, idx) => {
     const src = getCoverSrc(ep);
     const tile = document.createElement('div');
-    tile.style.cssText = 'flex-shrink:0;width:64px;cursor:pointer;'
+    tile.style.cssText = 'width:100%;cursor:pointer;'
       + 'transition:opacity .15s,transform .15s;';
     tile.addEventListener('mouseenter', () => {
       tile.style.opacity = '.82';
@@ -8929,7 +8926,7 @@ function showSeriesEpisodesModal(seriesTitle) {
           const img = document.createElement('img');
           img.src = src;
           img.loading = 'lazy';
-          img.style.cssText = 'width:64px;height:64px;object-fit:cover;border-radius:4px;'
+          img.style.cssText = 'width:100%;aspect-ratio:1/1;object-fit:cover;border-radius:4px;'
             + 'display:block;box-shadow:0 0 8px rgba(200,149,42,.35);';
           img.onerror = () => {
             img.replaceWith(placeholder());
@@ -8940,21 +8937,21 @@ function showSeriesEpisodesModal(seriesTitle) {
 
     function placeholder() {
       const ph = document.createElement('div');
-      ph.style.cssText = 'width:64px;height:64px;background:linear-gradient(145deg,var(--navy2),#2a3d5a);'
+      ph.style.cssText = 'width:100%;aspect-ratio:1/1;background:linear-gradient(145deg,var(--navy2),#2a3d5a);'
         + 'border-radius:4px;box-shadow:0 0 8px rgba(200,149,42,.35);'
         + 'display:flex;align-items:center;justify-content:center;'
         + 'font-size:.55rem;color:rgba(200,180,140,0.8);text-align:center;'
         + 'padding:4px;line-height:1.2;';
-      ph.textContent = ep.title || 'Ep';
+      ph.textContent = ep.title || 'Episode';
       return ph;
     }
 
-    // Sub-label: "Ep 3 · 1h 2m"
+    // Sub-label: "Episode 3 · 1h 2m"
     const epNum = ep.seriesIndex ?? idx + 1;
     const sub = document.createElement('div');
     sub.style.cssText = 'font-size:.62rem;color:var(--muted);margin-top:.35rem;line-height:1.25;'
       + 'overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;';
-    sub.textContent = `Ep ${epNum}` + (ep.durationSec ? ` · ${formatDuration(ep.durationSec)}` : '');
+    sub.textContent = `Episode ${epNum}` + (ep.durationSec ? ` · ${formatDuration(ep.durationSec)}` : '');
 
     tile.appendChild(cover);
     tile.appendChild(sub);
