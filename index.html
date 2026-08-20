@@ -2323,6 +2323,9 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
           </span>
           <span class="settings-row-chevron">›</span>
         </button>
+      </div>
+
+      <div class="settings-card">
         <button class="settings-row" id="btnMobRefresh">
           <span class="settings-row-icon" style="background:var(--panel);color:var(--teal)">↻</span>
           <span class="settings-row-text">
@@ -13300,7 +13303,14 @@ function dataUrlToBlob(dataUrl){const[header,data]=dataUrl.split(',');const mime
 [document.getElementById('btnHeaderUpload'),document.getElementById('btnSideUpload'),document.getElementById('btnMobUpload')].forEach(b=>b?.addEventListener('click',showUploadModal));
 document.getElementById('btnMobUploadAudio')?.addEventListener('click', showAudioUploadModal);
 [document.getElementById('btnHeaderUploadAudio'),document.getElementById('btnSideUploadAudio')].forEach(b=>b?.addEventListener('click',showAudioUploadModal));
-[document.getElementById('btnSideRefresh'),document.getElementById('btnMobRefresh')].forEach(b=>b?.addEventListener('click',loadLibrary));
+// Explicit user-triggered refresh — loadLibrary() itself stays silent since
+// it's also called on sign-in and after uploads, where a "refreshed" toast
+// would just be noise on top of feedback those flows already give.
+async function refreshLibraryWithToast(){
+  await loadLibrary();
+  showToast('Library refreshed ✓');
+}
+[document.getElementById('btnSideRefresh'),document.getElementById('btnMobRefresh')].forEach(b=>b?.addEventListener('click',refreshLibraryWithToast));
 document.getElementById('btnToggleSettings').addEventListener('click',e=>{
   e.stopPropagation();
   const s=document.getElementById('deskSettings');
