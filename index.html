@@ -1949,6 +1949,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
   </div>
   <div class="header-right">
     <button class="hbtn hbtn-upload" id="btnHeaderUpload">📤 Upload</button>
+    <button class="hbtn hbtn-upload" id="btnHeaderUploadAudio" title="Upload Audio">🎧 Upload Audio</button>
     <button class="hbtn hbtn-ghost btnToggleSettingsDesk" id="btnToggleSettings">⚙</button>
     <div id="notifScrim" class="notif-scrim"></div>
     <div class="notif-bell-wrap">
@@ -2069,6 +2070,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
       <!-- Pinned footer -->
       <div class="filter-footer">
         <button class="btn-upload-f" id="btnSideUpload">+ Upload</button>
+        <button class="btn-upload-f" id="btnSideUploadAudio">🎧 Upload Audio</button>
         <button class="btn-refresh-f" id="btnSideRefresh">↻ Refresh</button>
       </div>
     </aside>
@@ -2313,6 +2315,14 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
           </span>
           <span class="settings-row-chevron">›</span>
         </button>
+        <button class="settings-row" id="btnMobUploadAudio">
+          <span class="settings-row-icon" style="background:var(--teal);color:var(--gold)">🎧</span>
+          <span class="settings-row-text">
+            <span class="settings-row-title">Upload Audio</span>
+            <span class="settings-row-desc">Add audio files or a YouTube link</span>
+          </span>
+          <span class="settings-row-chevron">›</span>
+        </button>
         <button class="settings-row" id="btnMobRefresh">
           <span class="settings-row-icon" style="background:var(--panel);color:var(--teal)">↻</span>
           <span class="settings-row-text">
@@ -2495,17 +2505,11 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 <!-- Modals -->
 <div class="modal-overlay" id="uploadModal">
   <div class="modal upload-modal-wide">
-    <h3>Add to Your Library</h3>
+    <h3>Add Books to Your Library</h3>
     <div class="drop-zone" id="dropZone">
       <div class="dz-icon">📤</div>
-      <p><strong>Click to browse</strong> or drag &amp; drop files here</p>
-      <p style="font-size:.78rem;margin-top:.3rem">EPUB or audio files — we'll figure out which is which. Multiple files at once are fine.</p>
-    </div>
-    <div class="upload-yt-row" style="display:flex;gap:.5rem;align-items:center;margin-top:.7rem;">
-      <input type="url" id="youtubeUrlInput" placeholder="…or paste a YouTube link to add as an audiobook"
-        style="flex:1;padding:.5rem .7rem;border:1px solid var(--border);border-radius:6px;
-               font-family:'Lato',sans-serif;font-size:.85rem;background:var(--paper,#fff);color:inherit;">
-      <button type="button" class="btn-save" id="btnAddYoutube" style="padding:.5rem .9rem;white-space:nowrap;">＋ Add</button>
+      <p><strong>Click to browse</strong> or drag &amp; drop EPUB files here</p>
+      <p style="font-size:.78rem;margin-top:.3rem">EPUB files only — multiple at once are fine. Looking to add audio? Use <strong>Upload Audio</strong> instead.</p>
     </div>
     <div class="upload-select-all" id="uploadSelectAll" style="display:none">
       <span>Set visibility for all</span>
@@ -2515,6 +2519,32 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
     <div class="modal-actions">
       <button class="btn-cancel" id="btnCloseUpload">Close</button>
       <button class="btn-save" id="btnStartUpload" style="display:none">Start Upload</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="audioUploadModal">
+  <div class="modal upload-modal-wide">
+    <h3>Upload Audio</h3>
+    <div class="drop-zone" id="audioDropZone">
+      <div class="dz-icon">🎧</div>
+      <p><strong>Click to browse</strong> or drag &amp; drop audio files here</p>
+      <p style="font-size:.78rem;margin-top:.3rem">MP3, M4A, M4B, AAC, WAV, OGG, FLAC — multiple at once are fine.</p>
+    </div>
+    <div class="upload-yt-row" style="display:flex;gap:.5rem;align-items:center;margin-top:.7rem;">
+      <input type="url" id="audioYoutubeUrlInput" placeholder="…or paste a YouTube link to add as an audiobook"
+        style="flex:1;padding:.5rem .7rem;border:1px solid var(--border);border-radius:6px;
+               font-family:'Lato',sans-serif;font-size:.85rem;background:var(--paper,#fff);color:inherit;">
+      <button type="button" class="btn-save" id="btnAddAudioYoutube" style="padding:.5rem .9rem;white-space:nowrap;">＋ Add</button>
+    </div>
+    <div class="upload-select-all" id="audioUploadSelectAll" style="display:none">
+      <span>Set visibility for all</span>
+      <button class="up-visibility-btn is-public" id="audioUploadVisibilityAllBtn" data-visibility="public">🌐 Public</button>
+    </div>
+    <div class="upload-list" id="audioUploadList"></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" id="btnCloseAudioUpload">Close</button>
+      <button class="btn-save" id="btnStartAudioUpload" style="display:none">Start Upload</button>
     </div>
   </div>
 </div>
@@ -2968,6 +2998,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 
 <div class="toast" id="toast"></div>
 <input type="file" id="epubFileInput" multiple style="display:none"/>
+<input type="file" id="audioFileInput" multiple accept="audio/*" style="display:none"/>
 
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
@@ -3562,8 +3593,6 @@ function showUploadModal(){
   const startBtn=document.getElementById('btnStartUpload');
   startBtn.style.display='none'; startBtn.disabled=false; startBtn.textContent='Start Upload';
   document.getElementById('dropZone').classList.remove('disabled');
-  const ytInput=document.getElementById('youtubeUrlInput');
-  if(ytInput) ytInput.value='';
   _setUploadVisBtn(document.getElementById('uploadVisibilityAllBtn'), 'public');
   _uploadQueue=[];
   document.getElementById('uploadModal').classList.add('open');
@@ -3577,9 +3606,8 @@ document.getElementById('epubFileInput').addEventListener('change',e=>{const fil
 document.getElementById('btnCloseUpload').addEventListener('click',closeUploadModal);
 
 // Sniffs a dropped/selected file to decide which pipeline it belongs to.
-// Any file type is accepted at the picker/drop-zone level now — this is
-// what actually tells an ebook from an audiobook apart, so the person never
-// has to pick a mode up front.
+// Shared by both the EPUB uploader and the separate Audio uploader below,
+// each of which only accepts the kind it cares about.
 const AUDIO_FILE_EXTENSIONS = ['.mp3','.m4a','.m4b','.aac','.wav','.ogg','.oga','.flac','.webm'];
 function detectUploadKind(file){
   const name = (file.name || '').toLowerCase();
@@ -3596,33 +3624,18 @@ function isYoutubeUrl(url){
 // Files are only staged here — nothing touches Storage/Firestore until the
 // person presses "Start Upload" below, so the Public/Private choice can
 // never be raced by an upload that's already finished by the time they get
-// to it. Unsupported file types are silently skipped (with a toast) rather
-// than blocking the whole batch.
+// to it. This modal is EPUB-only — audio files are skipped with a toast
+// pointing at the separate Upload Audio modal.
 function stageUploadFiles(files){
   const skipped = [];
   files.forEach(file => {
     const kind = detectUploadKind(file);
-    if(!kind){ skipped.push(file.name); return; }
+    if(kind !== 'epub'){ skipped.push(file.name); return; }
     _uploadQueue.push({kind, file, rowId: renderUploadRow(file.name, kind), visibility:'public'});
   });
   if(skipped.length){
-    showToast(`Skipped ${skipped.length} unsupported file${skipped.length>1?'s':''} — only EPUB and audio files are supported`);
+    showToast(`Skipped ${skipped.length} file${skipped.length>1?'s':''} — this uploader only accepts EPUB files. Use Upload Audio for audio.`);
   }
-  document.getElementById('uploadSelectAll').style.display = _uploadQueue.length>1 ? 'flex' : 'none';
-  document.getElementById('btnStartUpload').style.display = _uploadQueue.length ? 'inline-block' : 'none';
-}
-
-document.getElementById('btnAddYoutube')?.addEventListener('click', addYoutubeToQueue);
-document.getElementById('youtubeUrlInput')?.addEventListener('keydown', e => {
-  if(e.key === 'Enter'){ e.preventDefault(); addYoutubeToQueue(); }
-});
-function addYoutubeToQueue(){
-  const input = document.getElementById('youtubeUrlInput');
-  const url = (input?.value || '').trim();
-  if(!url) return;
-  if(!isYoutubeUrl(url)){ showToast("That doesn't look like a YouTube link"); return; }
-  _uploadQueue.push({kind:'youtube', url, rowId: renderUploadRow(url, 'youtube'), visibility:'public'});
-  input.value = '';
   document.getElementById('uploadSelectAll').style.display = _uploadQueue.length>1 ? 'flex' : 'none';
   document.getElementById('btnStartUpload').style.display = _uploadQueue.length ? 'inline-block' : 'none';
 }
@@ -3664,7 +3677,6 @@ async function startQueuedUploads(){
   document.getElementById('uploadSelectAll').style.display = 'none';
 
   const queue = [..._uploadQueue];
-  let hadAudio = false;
   for(const item of queue){
     // Lock this row's controls the instant its own upload begins — the
     // visibility choice is already captured in `item.visibility`, so
@@ -3674,19 +3686,120 @@ async function startQueuedUploads(){
     document.getElementById(item.rowId+'_remove')?.remove();
     const stEl = document.getElementById(item.rowId+'_st');
     if(stEl) stEl.style.display = 'inline';
-    if(item.kind === 'epub'){
-      await uploadOneEpub(item.file, item.rowId, item.visibility);
-    } else if(item.kind === 'audio'){
-      hadAudio = true;
-      await uploadOneAudioFile(item.file, item.rowId, item.visibility);
-    } else if(item.kind === 'youtube'){
-      hadAudio = true;
-      await uploadOneYoutube(item.url, item.rowId, item.visibility);
-    }
+    await uploadOneEpub(item.file, item.rowId, item.visibility);
   }
   _uploadQueue = [];
   await loadLibrary();
-  if(hadAudio){ await renderAudioPanel(); mergeAudioIntoLibrary(); renderAll(); }
+  startBtn.textContent = 'Done ✓';
+  setTimeout(() => { startBtn.style.display = 'none'; }, 1500);
+}
+
+// ── AUDIO UPLOAD (separate modal) ───────────────────────────────────────────
+let _audioUploadQueue = []; // {kind, file|url, rowId, visibility} — staged, not-yet-started
+
+function showAudioUploadModal(){
+  if(!currentUser){showToast('Please sign in first');return;}
+  document.getElementById('audioUploadList').innerHTML='';
+  document.getElementById('audioUploadSelectAll').style.display='none';
+  const startBtn=document.getElementById('btnStartAudioUpload');
+  startBtn.style.display='none'; startBtn.disabled=false; startBtn.textContent='Start Upload';
+  document.getElementById('audioDropZone').classList.remove('disabled');
+  const ytInput=document.getElementById('audioYoutubeUrlInput');
+  if(ytInput) ytInput.value='';
+  _setUploadVisBtn(document.getElementById('audioUploadVisibilityAllBtn'), 'public');
+  _audioUploadQueue=[];
+  document.getElementById('audioUploadModal').classList.add('open');
+}
+function closeAudioUploadModal(){document.getElementById('audioUploadModal').classList.remove('open');}
+document.getElementById('audioDropZone').addEventListener('click',()=>document.getElementById('audioFileInput').click());
+document.getElementById('audioDropZone').addEventListener('dragover',e=>{e.preventDefault();e.currentTarget.classList.add('drag-over');});
+document.getElementById('audioDropZone').addEventListener('dragleave',e=>e.currentTarget.classList.remove('drag-over'));
+document.getElementById('audioDropZone').addEventListener('drop',e=>{e.preventDefault();e.currentTarget.classList.remove('drag-over');stageAudioUploadFiles([...e.dataTransfer.files]);});
+document.getElementById('audioFileInput').addEventListener('change',e=>{const files=[...e.target.files];e.target.value='';stageAudioUploadFiles(files);});
+document.getElementById('btnCloseAudioUpload').addEventListener('click',closeAudioUploadModal);
+
+// This modal is audio-only — EPUB files (or anything unrecognized) are
+// skipped with a toast pointing back at the regular book uploader.
+function stageAudioUploadFiles(files){
+  const skipped = [];
+  files.forEach(file => {
+    const kind = detectUploadKind(file);
+    if(kind !== 'audio'){ skipped.push(file.name); return; }
+    _audioUploadQueue.push({kind, file, rowId: renderAudioUploadRow(file.name, kind), visibility:'public'});
+  });
+  if(skipped.length){
+    showToast(`Skipped ${skipped.length} file${skipped.length>1?'s':''} — this uploader only accepts audio files.`);
+  }
+  document.getElementById('audioUploadSelectAll').style.display = _audioUploadQueue.length>1 ? 'flex' : 'none';
+  document.getElementById('btnStartAudioUpload').style.display = _audioUploadQueue.length ? 'inline-block' : 'none';
+}
+
+document.getElementById('btnAddAudioYoutube')?.addEventListener('click', addAudioYoutubeToQueue);
+document.getElementById('audioYoutubeUrlInput')?.addEventListener('keydown', e => {
+  if(e.key === 'Enter'){ e.preventDefault(); addAudioYoutubeToQueue(); }
+});
+function addAudioYoutubeToQueue(){
+  const input = document.getElementById('audioYoutubeUrlInput');
+  const url = (input?.value || '').trim();
+  if(!url) return;
+  if(!isYoutubeUrl(url)){ showToast("That doesn't look like a YouTube link"); return; }
+  _audioUploadQueue.push({kind:'youtube', url, rowId: renderAudioUploadRow(url, 'youtube'), visibility:'public'});
+  input.value = '';
+  document.getElementById('audioUploadSelectAll').style.display = _audioUploadQueue.length>1 ? 'flex' : 'none';
+  document.getElementById('btnStartAudioUpload').style.display = _audioUploadQueue.length ? 'inline-block' : 'none';
+}
+
+function renderAudioUploadRow(label, kind){
+  const rowId='aup_'+Date.now()+Math.random().toString(36).slice(2);
+  const kindIcon = kind === 'audio' ? '🎧' : '▶️';
+  document.getElementById('audioUploadList').insertAdjacentHTML('beforeend',`<div class="upload-progress" id="${rowId}" data-status="staged"><span class="up-icon" id="${rowId}_icon">⏳</span><div style="flex:1;min-width:0"><div class="up-name">${kindIcon} ${esc(label)}</div><div class="progress-bar-wrap"><div class="progress-bar" id="${rowId}_bar" style="width:0%"></div></div></div><button class="up-visibility-btn is-public" id="${rowId}_pub" data-visibility="public">🌐 Public</button><button class="up-remove-btn" id="${rowId}_remove" title="Remove">✕</button><span class="up-status" id="${rowId}_st" style="display:none">Waiting…</span></div>`);
+  document.getElementById(rowId+'_pub').addEventListener('click', () => {
+    const btn = document.getElementById(rowId+'_pub');
+    setAudioRowVisibility(rowId, _cycleUploadVisibility(btn.dataset.visibility));
+  });
+  document.getElementById(rowId+'_remove').addEventListener('click', () => {
+    _audioUploadQueue = _audioUploadQueue.filter(q => q.rowId !== rowId);
+    document.getElementById(rowId)?.remove();
+    document.getElementById('btnStartAudioUpload').style.display = _audioUploadQueue.length ? 'inline-block' : 'none';
+    document.getElementById('audioUploadSelectAll').style.display = _audioUploadQueue.length>1 ? 'flex' : 'none';
+  });
+  return rowId;
+}
+function setAudioRowVisibility(rowId, visibility){
+  const q = _audioUploadQueue.find(q => q.rowId === rowId);
+  if(q) q.visibility = visibility;
+  _setUploadVisBtn(document.getElementById(rowId+'_pub'), visibility);
+}
+document.getElementById('audioUploadVisibilityAllBtn').addEventListener('click', () => {
+  const allBtn = document.getElementById('audioUploadVisibilityAllBtn');
+  const next = _cycleUploadVisibility(allBtn.dataset.visibility);
+  _setUploadVisBtn(allBtn, next);
+  _audioUploadQueue.forEach(q => { if(document.getElementById(q.rowId)?.dataset.status === 'staged') setAudioRowVisibility(q.rowId, next); });
+});
+
+document.getElementById('btnStartAudioUpload').addEventListener('click', startQueuedAudioUploads);
+async function startQueuedAudioUploads(){
+  const startBtn = document.getElementById('btnStartAudioUpload');
+  startBtn.disabled = true;
+  startBtn.textContent = 'Uploading…';
+  document.getElementById('audioDropZone').classList.add('disabled');
+  document.getElementById('audioUploadSelectAll').style.display = 'none';
+
+  const queue = [..._audioUploadQueue];
+  for(const item of queue){
+    document.getElementById(item.rowId)?.setAttribute('data-status','uploading');
+    document.getElementById(item.rowId+'_pub')?.remove();
+    document.getElementById(item.rowId+'_remove')?.remove();
+    const stEl = document.getElementById(item.rowId+'_st');
+    if(stEl) stEl.style.display = 'inline';
+    if(item.kind === 'audio'){
+      await uploadOneAudioFile(item.file, item.rowId, item.visibility);
+    } else if(item.kind === 'youtube'){
+      await uploadOneYoutube(item.url, item.rowId, item.visibility);
+    }
+  }
+  _audioUploadQueue = [];
+  await renderAudioPanel(); mergeAudioIntoLibrary(); renderAll();
   startBtn.textContent = 'Done ✓';
   setTimeout(() => { startBtn.style.display = 'none'; }, 1500);
 }
@@ -4074,7 +4187,11 @@ function renderGrid(gridId){
   if(!books.length){
     const isEmpty=activeBooks().length===0;
     const canUpload=deskLibFilter==='all'||deskLibFilter==='private';
-    grid.innerHTML=`<div style="grid-column:1/-1;padding:3rem 1rem;text-align:center;color:var(--muted)"><div style="font-size:2.5rem;opacity:.25;margin-bottom:.8rem">📚</div><div style="font-family:'Playfair Display',serif;font-size:1.1rem;color:var(--navy2);margin-bottom:.4rem">${isEmpty?'Your library is empty':'No books match'}</div><div style="font-size:.85rem">${isEmpty?'Upload a book or audiobook to get started':'Try a different search or filter'}</div>${isEmpty&&canUpload?`<div style="margin-top:1rem"><button class="hbtn hbtn-upload" onclick="document.getElementById('uploadModal').classList.add('open')">📤 Upload</button></div>`:''}</div>`;
+    grid.innerHTML=`<div style="grid-column:1/-1;padding:3rem 1rem;text-align:center;color:var(--muted)"><div style="font-size:2.5rem;opacity:.25;margin-bottom:.8rem">📚</div><div style="font-family:'Playfair Display',serif;font-size:1.1rem;color:var(--navy2);margin-bottom:.4rem">${isEmpty?'Your library is empty':'No books match'}</div><div style="font-size:.85rem">${isEmpty?'Upload a book or audiobook to get started':'Try a different search or filter'}</div>${isEmpty&&canUpload?`<div style="margin-top:1rem;display:flex;gap:.5rem;justify-content:center;flex-wrap:wrap"><button class="hbtn hbtn-upload" id="emptyStateUploadBtn">📤 Upload</button><button class="hbtn hbtn-upload" id="emptyStateUploadAudioBtn">🎧 Upload Audio</button></div>`:''}</div>`;
+    if(isEmpty&&canUpload){
+      grid.querySelector('#emptyStateUploadBtn')?.addEventListener('click', showUploadModal);
+      grid.querySelector('#emptyStateUploadAudioBtn')?.addEventListener('click', showAudioUploadModal);
+    }
     return;
   }
   const gridBooks = collapseAudioSeriesForGrid(books);
@@ -13181,6 +13298,8 @@ function dataUrlToBlob(dataUrl){const[header,data]=dataUrl.split(',');const mime
 
 // ── MISC UI ───────────────────────────────────────────────────────────────────
 [document.getElementById('btnHeaderUpload'),document.getElementById('btnSideUpload'),document.getElementById('btnMobUpload')].forEach(b=>b?.addEventListener('click',showUploadModal));
+document.getElementById('btnMobUploadAudio')?.addEventListener('click', showAudioUploadModal);
+[document.getElementById('btnHeaderUploadAudio'),document.getElementById('btnSideUploadAudio')].forEach(b=>b?.addEventListener('click',showAudioUploadModal));
 [document.getElementById('btnSideRefresh'),document.getElementById('btnMobRefresh')].forEach(b=>b?.addEventListener('click',loadLibrary));
 document.getElementById('btnToggleSettings').addEventListener('click',e=>{
   e.stopPropagation();
@@ -14582,7 +14701,7 @@ async function checkAdminStatus() {
   overlay.className = 'modal-overlay open';
   overlay.innerHTML = `
     <div class="modal" style="max-width:500px;max-height:80vh;display:flex;flex-direction:column;overflow:hidden;">
-      <h3 style="margin-bottom:.8rem">${section === 'categories' ? '🏷 Manage Genres' : '🏷 Manage Tags'}</h3>
+      <h3 style="margin-bottom:.8rem">${section === 'categories' ? '📗 Manage Genres' : '🏷 Manage Tags'}</h3>
       <div style="flex:1;overflow-y:auto;" id="adminSheetBody"></div>
       <div class="modal-actions" style="margin-top:.8rem">
         <button class="btn-cancel" onclick="this.closest('.modal-overlay').remove()">Close</button>
@@ -14733,8 +14852,6 @@ function _adminUserCardHtml(u, checkoutsByUser, koboSendsByUser) {
   const lastConnected = u.lastSeen?.toDate?.();
   const initials = (u.displayName || u.email || '?')
     .split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
-  const checkouts = checkoutsByUser[u.uid] || [];
-  const activeCheckouts = checkouts.filter(c => !c.returnedAt);
   const koboSends = koboSendsByUser[u.uid] || [];
 
   return `<div class="admin-user-card" data-uid="${u.uid}"
@@ -14776,10 +14893,6 @@ function _adminUserCardHtml(u, checkoutsByUser, koboSendsByUser) {
               border-radius:8px;background:#f3e6e6;color:#a83232;">🔒 Elevated</span>`;
           return '';
         })()}
-        ${activeCheckouts.length
-          ? `<span style="font-size:.6rem;color:var(--teal);font-weight:700;">
-              📖 ${activeCheckouts.length} out</span>`
-          : ''}
         ${koboSends.length
           ? `<span style="font-size:.6rem;color:#5a48b0;font-weight:700;">
               🔲 ${koboSends.length} to Kobo</span>`
@@ -16442,24 +16555,6 @@ function buildAdminSections() {
     </div>
 
     <div class="admin-section">
-      <div class="admin-section-header" data-admin-section="checkouts">
-        <span class="admin-section-title">📋 Book Signouts</span>
-        <span class="admin-section-chevron">▾</span>
-      </div>
-      <div class="admin-section-body" id="adminCheckoutsBody">
-        <div style="display:flex;gap:.5rem;margin-bottom:.8rem;flex-wrap:wrap">
-          <button class="btn-save" style="font-size:.72rem;padding:.4rem .8rem"
-            id="adminCheckoutsRefresh">↻ Refresh</button>
-          <button class="btn-cancel" style="font-size:.72rem;padding:.4rem .8rem"
-            id="adminCheckoutsFilter">Show Active Only</button>
-        </div>
-        <div id="adminCheckoutsList">
-          <div style="color:var(--muted);font-size:.85rem">Open to load…</div>
-        </div>
-      </div>
-    </div>
-
-    <div class="admin-section">
       <div class="admin-section-header" data-admin-section="kobo">
         <span class="admin-section-title">📖 Kobo Devices</span>
         <span class="admin-section-chevron">▾</span>
@@ -16475,7 +16570,7 @@ function buildAdminSections() {
 
     <div class="admin-section">
       <div class="admin-section-header" data-admin-section="categories">
-        <span class="admin-section-title">🏷 Genres</span>
+        <span class="admin-section-title">📗 Genres</span>
         <span class="admin-section-chevron">▾</span>
       </div>
       <div class="admin-section-body" id="adminCatBody">
@@ -16512,7 +16607,6 @@ function buildAdminSections() {
       body.classList.toggle('open', !isOpen);
       header.classList.toggle('open', !isOpen);
       if(!isOpen) {
-        if(section === 'checkouts')   adminLoadCheckouts();
         if(section === 'kobo')        adminLoadKoboDevices();
         if(section === 'users')       adminLoadUsers();
         if(section === 'categories')  adminLoadCategories();
@@ -16523,14 +16617,6 @@ function buildAdminSections() {
   });
 
   // Re-bind refresh buttons
-  scroll.querySelector('#adminCheckoutsRefresh')
-    ?.addEventListener('click', adminLoadCheckouts);
-  scroll.querySelector('#adminCheckoutsFilter')
-    ?.addEventListener('click', function(){
-      adminCheckoutsShowAll = !adminCheckoutsShowAll;
-      this.textContent = adminCheckoutsShowAll ? 'Show Active Only' : 'Show All';
-      adminLoadCheckouts();
-    });
   scroll.querySelector('#adminKoboRefresh')
     ?.addEventListener('click', adminLoadKoboDevices);
   scroll.querySelector('#adminUsersRefresh')
@@ -18239,10 +18325,10 @@ async function deleteAudioTrack(id) {
 }
 
 // ── wire audio-panel "+ Upload" button ──────────────────────────────────────
-// Routes into the same unified upload modal used everywhere else (file-type
-// auto-detection + YouTube link), instead of the old audio-only file input.
+// Routes into the dedicated Audio Upload modal (audio files + YouTube link),
+// kept separate from the EPUB uploader.
 
-document.getElementById('audioUploadLabel')?.addEventListener('click', showUploadModal);
+document.getElementById('audioUploadLabel')?.addEventListener('click', showAudioUploadModal);
 
 renderAll();
 </script>
