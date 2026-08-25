@@ -8,7 +8,7 @@
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="eLibrary"/>
-<link rel="manifest" id="manifestLink"/>
+<link rel="manifest" href="manifest.json"/>
   <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-192.png">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
@@ -2552,6 +2552,20 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
   </div>
 </div>
 
+<div class="modal-overlay" id="migrationModal">
+  <div class="modal" style="max-width:420px;text-align:center">
+    <div style="font-size:2.2rem;margin-bottom:.5rem">🚀</div>
+    <h3 style="margin-bottom:.6rem">We've Moved!</h3>
+    <p style="font-size:.88rem;color:var(--muted);line-height:1.55;margin-bottom:1.1rem">
+      eLibrary now lives at a new, more reliable home. This page will stay up for a little
+      while during the transition, but please switch over — new features and updates will
+      only appear on the new site from here on.
+    </p>
+    <button class="btn-save" id="btnMigrationGo" style="width:100%;padding:.75rem;font-size:.95rem;margin-bottom:.7rem">Take Me to the New Site</button>
+    <div style="font-size:.72rem;color:var(--muted)">Redirecting automatically in <span id="migrationCountdown">8</span>s…</div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="broadcastModal">
   <div class="modal" style="max-width:420px">
     <h3 id="broadcastModalTitle">📢 Announcement</h3>
@@ -3014,21 +3028,25 @@ import { getStorage, ref as storageRef, uploadBytes, getDownloadURL, getBytes, d
   from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js';
 
 // ── PWA ──────────────────────────────────────────────────────────────────────
-(function(){
-  const manifest={name:'eLibrary',short_name:'eLibrary',description:'Your personal EPUB library',start_url:new URL('./', location.href).href,display:'standalone',background_color:'#0f1a2e',theme_color:'#0f1a2e',icons:[{src:"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'%3E%3Crect width='192' height='192' rx='32' fill='%230f1a2e'/%3E%3Ctext y='130' x='30' font-size='120' fill='%23c8952a'%3E📚%3C/text%3E%3C/svg%3E",sizes:'192x192',type:'image/svg+xml'},{src:"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='80' fill='%230f1a2e'/%3E%3Ctext y='360' x='60' font-size='320' fill='%23c8952a'%3E📚%3C/text%3E%3C/svg%3E",sizes:'512x512',type:'image/svg+xml'}]};
-  const blob=new Blob([JSON.stringify(manifest)],{type:'application/json'});
-  document.getElementById('manifestLink').href=URL.createObjectURL(blob);
-  // Registered from a real file (sw.js, alongside index.html) rather than a
-  // fresh blob: URL generated on every load — a blob URL is a different
-  // "script identity" each time, which defeats the browser's normal
-  // is-this-actually-a-new-version check and forces a reinstall/activate
-  // cycle on every single page load instead of just when the code changes.
-  if('serviceWorker' in navigator){
-    navigator.serviceWorker.register(new URL('./sw.js', location.href).href).catch(e => console.warn('SW registration failed:', e));
-  }
-})();
+// manifest.json is now a real static file (see /manifest.json) rather than a
+// Blob URL generated on load — needed so packaging tools like Bubblewrap can
+// fetch it directly when building the Play Store TWA, and so Chrome doesn't
+// see a "new" manifest identity on every single page load.
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register(new URL('./sw.js', location.href).href).catch(e => console.warn('SW registration failed:', e));
+  // Once a new service worker takes over (after skipWaiting()/clients.claim()
+  // in sw.js finish their handoff), reload once so the tab actually gets the
+  // new index.html/assets instead of leaving the old ones running until the
+  // person manually refreshes. The `refreshing` guard stops a loop in case
+  // this fires more than once.
+  let refreshing = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if(refreshing) return;
+    refreshing = true;
+    location.reload();
+  });
+}
 
-let deferredInstall=null;
 window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredInstall=e;document.getElementById('deskInstallBtn').style.display='block';document.getElementById('deskInstallNote').style.display='none';document.getElementById('mobInstallBtn').style.display='flex';document.getElementById('mobInstallNote').style.display='none';});
 
 // ── FIREBASE ─────────────────────────────────────────────────────────────────
@@ -3154,6 +3172,32 @@ let _myBookmarks = [];
 
   const _savingReadingProgress = new Set(); // bookIds with an in-flight saveReadingProgress write
 
+// ── MIGRATION NOTICE (GitHub → Firebase) ────────────────────────────────────
+// This file gets deployed to BOTH the old GitHub Pages copy and the new
+// Firebase Hosting site. Gating on hostname means the same index.html works
+// in both places without manual edits before each push — the notice simply
+// never fires once this file is actually running on the new domain.
+const OLD_SITE_HOSTNAMES = ['johannbarth1.github.io'];
+const NEW_SITE_URL = 'https://fellowship-of-the-kobo.web.app/';
+function maybeShowMigrationNotice(){
+  if(!OLD_SITE_HOSTNAMES.includes(location.hostname)) return;
+  if(isAdmin) return; // admins keep using this copy for testing/dev
+  const modal = document.getElementById('migrationModal');
+  if(!modal) return;
+  modal.classList.add('open');
+  document.getElementById('btnMigrationGo').addEventListener('click', () => { location.href = NEW_SITE_URL; });
+  let secondsLeft = 8;
+  const countdownEl = document.getElementById('migrationCountdown');
+  const timer = setInterval(() => {
+    secondsLeft--;
+    if(countdownEl) countdownEl.textContent = secondsLeft;
+    if(secondsLeft <= 0){
+      clearInterval(timer);
+      location.href = NEW_SITE_URL;
+    }
+  }, 1000);
+}
+
 // ── AUTH ──────────────────────────────────────────────────────────────────────
 onAuthStateChanged(auth, async user => {
   currentUser = user;
@@ -3179,6 +3223,7 @@ onAuthStateChanged(auth, async user => {
     // silently reads isAdmin as undefined even though the server copy is
     // untouched. Doing this read first avoids the race entirely.
     await checkAdminStatus();
+    maybeShowMigrationNotice();
 
     // Fire-and-forget lastSeen — never blocks anything
     setDoc(doc(db,'users',user.uid), {
