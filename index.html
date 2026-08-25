@@ -2562,7 +2562,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
       only appear on the new site from here on.
     </p>
     <button class="btn-save" id="btnMigrationGo" style="width:100%;padding:.75rem;font-size:.95rem;margin-bottom:.7rem">Take Me to the New Site</button>
-    <div style="font-size:.72rem;color:var(--muted)">Redirecting automatically in <span id="migrationCountdown">8</span>s…</div>
+    <div style="font-size:.72rem;color:var(--muted)">Redirecting automatically in <span id="migrationCountdown">30</span>s…</div>
   </div>
 </div>
 
@@ -3186,7 +3186,7 @@ function maybeShowMigrationNotice(){
   if(!modal) return;
   modal.classList.add('open');
   document.getElementById('btnMigrationGo').addEventListener('click', () => { location.href = NEW_SITE_URL; });
-  let secondsLeft = 8;
+  let secondsLeft = 30;
   const countdownEl = document.getElementById('migrationCountdown');
   const timer = setInterval(() => {
     secondsLeft--;
