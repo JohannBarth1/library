@@ -7,7 +7,7 @@
 // touch offline EPUBs/covers — those live in caches that start with
 // 'elib-epub-cache' / 'elib-cover-cache' and are deliberately preserved
 // below regardless of shell version.
-const SHELL_CACHE = 'elib-shell-v2';
+const SHELL_CACHE = 'elib-shell-v3';
 const SHELL_URLS = [
   self.registration.scope,
   'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js',
