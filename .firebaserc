@@ -1,0 +1,15 @@
+{
+  "projects": {
+    "default": "elibrary-c0074"
+  },
+  "targets": {
+    "elibrary-c0074": {
+      "hosting": {
+        "main": [
+          "fellowship-of-the-kobo"
+        ]
+      }
+    }
+  },
+  "etags": {}
+}
