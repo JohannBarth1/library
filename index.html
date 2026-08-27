@@ -4164,6 +4164,7 @@ function filteredBooks(){
   if(deskLibFormat==='book')books=books.filter(b=>!b.isAudio&&!b.isRecipe);
   if(deskLibFormat==='audio')books=books.filter(b=>b.isAudio);
   if(deskLibFormat==='recipe')books=books.filter(b=>b.isRecipe);
+  else books=books.filter(b=>!b.isRecipe); // recipes are opt-in via the Format filter, not shown by default
   if(searchQ)books=books.filter(b=>b.title?.toLowerCase().includes(searchQ)||b.author?.toLowerCase().includes(searchQ)||b.category?.toLowerCase().includes(searchQ));
   if(deskActiveTags.size)books=books.filter(b=>(b.tags||[]).some(t=>deskActiveTags.has(t)));
   return sortBooks(books,deskLibSort);
@@ -4266,26 +4267,28 @@ function renderGrid(gridId){
     }
     return;
   }
-  const gridBooks = collapseAudioSeriesForGrid(books);
+  const gridBooks = collapseAudioSeriesForGrid(collapseRecipesByCategoryForGrid(books));
   reconcileGrid(grid, gridBooks, b => b.id, b => {
     const coverSrc=getCoverSrc(b);
     const isSelected=selectedIds.has(b.id);
     if(b.isGroupHeader){
+      const icon=b.isRecipe?'🍲':'🎧', unit=b.isRecipe?'recipe':'episode';
       return `<div class="group-header-tile tile-pop-in" data-groupheader="1" data-groupkey="${esc(b.groupKey)}">
-      <span><span class="group-header-title">🎧 ${esc(b.title)}</span><span class="group-header-count">${b.partCount} episodes</span></span>
+      <span><span class="group-header-title">${icon} ${esc(b.title)}</span><span class="group-header-count">${b.partCount} ${unit}${b.partCount===1?'':'s'}</span></span>
       <span class="group-header-collapse">⌃ Collapse</span>
     </div>`;
     }
     if(b.isGroup){
-      return `<div class="book-card audio-tile group-tile ${isSelected?'selected':''}" data-bookid="${b.id}" data-groupids="${b.groupIds.join(',')}" data-groupkey="${esc(b.groupKey)}">
+      const icon=b.isRecipe?'🍲':'🎧', unit=b.isRecipe?'Recipe':'Episode';
+      return `<div class="book-card ${b.isRecipe?'recipe-tile':'audio-tile'} group-tile ${isSelected?'selected':''}" data-bookid="${b.id}" data-groupids="${b.groupIds.join(',')}" data-groupkey="${esc(b.groupKey)}">
       <div style="position:relative">
         <div class="group-stack-edge e2"></div>
         <div class="group-stack-edge e1"></div>
-        ${coverSrc?`<img class="book-card-cover" src="${coverSrc}" alt="" loading="lazy"/>`:`<div class="book-card-cover-ph"><div class="ph-icon">🎧</div><div class="ph-title">${esc(b.title)}</div><div class="ph-author">${esc(b.author)}</div></div>`}
+        ${coverSrc?`<img class="book-card-cover" src="${coverSrc}" alt="" loading="lazy"/>`:`<div class="book-card-cover-ph"><div class="ph-icon">${icon}</div><div class="ph-title">${esc(b.title)}</div><div class="ph-author">${esc(b.author)}</div></div>`}
       </div><div class="select-check">✓</div>
       <div class="book-card-body"><div class="book-card-title">${esc(b.title)}</div>
       <div class="book-card-author">${esc(b.author)}</div>
-      <div class="group-part-badge">🎧 ${b.partCount} Episode${b.partCount===1?'':'s'}${b.totalDuration?` · ${formatDuration(b.totalDuration)}`:''}</div></div></div>`;
+      <div class="group-part-badge">${icon} ${b.partCount} ${unit}${b.partCount===1?'':'s'}${b.totalDuration?` · ${formatDuration(b.totalDuration)}`:''}</div></div></div>`;
     }
     if(b.isAudio){
       const coverHtml=coverSrc?`<img class="book-card-cover" src="${coverSrc}" alt="" loading="lazy"/>`:`<div class="book-card-cover-ph"><div class="ph-icon">🎧</div><div class="ph-title">${esc(b.title)}</div><div class="ph-author">${esc(b.author)}</div></div>`;
@@ -4325,6 +4328,7 @@ document.getElementById('deskBookGrid').addEventListener('click',e=>{
     updateBulkBar();return;
   }
   if(card.classList.contains('group-tile')){ 
+    if(card.classList.contains('recipe-tile')){ toggleSeriesGroupExpanded(card.dataset.groupkey); return; }
     const allBooks = dedupe([...library, ...communityLib]);
     const seriesTitle = allBooks.find(b => b.id === id)?.series || card.dataset.groupkey;
     showSeriesEpisodesModal(seriesTitle); 
@@ -5717,6 +5721,7 @@ function getMobLibBooks() {
   if (mobLibFormat === 'book') src = src.filter(b => !b.isAudio && !b.isRecipe);
   if (mobLibFormat === 'audio') src = src.filter(b => b.isAudio);
   if (mobLibFormat === 'recipe') src = src.filter(b => b.isRecipe);
+  else src = src.filter(b => !b.isRecipe); // recipes are opt-in via the Format filter, not shown by default
   // Tags filter (book must match every selected tag — AND logic)
   if (mobActiveTags.size) src = src.filter(b => [...mobActiveTags].every(t => (b.tags || []).includes(t)));
   // Search
@@ -5748,7 +5753,7 @@ function renderMobLibrary() {
     </div>`;
     return;
   }
-  const gridBooks = collapseAudioSeriesForGrid(books);
+  const gridBooks = collapseAudioSeriesForGrid(collapseRecipesByCategoryForGrid(books));
   reconcileGrid(grid, gridBooks, b => b.id, b => {
     const isComm = communityLib.some(x => x.id === b.id);
     return bookCardHtml(b, isComm);
@@ -5819,6 +5824,7 @@ document.getElementById('mobGridLibrary').addEventListener('click', e => {
     return;
   }
   if(card.classList.contains('group-tile')){ 
+    if(card.classList.contains('recipe-tile')){ toggleSeriesGroupExpanded(card.dataset.groupkey); return; }
     const allBooks = dedupe([...library, ...communityLib]);
     const seriesTitle = allBooks.find(b => b.id === id)?.series || card.dataset.groupkey;
     showSeriesEpisodesModal(seriesTitle); 
@@ -5850,17 +5856,18 @@ function exitMobSelectMode(){
 }
 
 function renderMobLibrarySelectMode(){
-  const books = collapseAudioSeriesForGrid(getMobLibBooks());
+  const books = collapseAudioSeriesForGrid(collapseRecipesByCategoryForGrid(getMobLibBooks()));
   const grid = document.getElementById('mobGridLibrary');
   grid.classList.add('select-mode');
   reconcileGrid(grid, books, b => b.id, b => {
     const coverSrc = getCoverSrc(b);
     if(b.isGroup){
+      const icon = b.isRecipe?'🍲':'🎧', unit = b.isRecipe?'Recipe':'Episode';
       const isSelected = b.groupIds.every(gid => mobSelectedIds.has(gid));
       const coverHtml = coverSrc
         ? `<img class="book-card-cover" src="${coverSrc}" alt="" loading="lazy"/>`
-        : `<div class="book-card-cover-ph"><div class="ph-icon">🎧</div><div class="ph-title">${esc(b.title)}</div><div class="ph-author">${esc(b.author)}</div></div>`;
-      return `<div class="book-card audio-tile group-tile ${isSelected?'selected':''}" data-bookid="${b.id}" data-groupids="${b.groupIds.join(',')}" style="user-select:none">
+        : `<div class="book-card-cover-ph"><div class="ph-icon">${icon}</div><div class="ph-title">${esc(b.title)}</div><div class="ph-author">${esc(b.author)}</div></div>`;
+      return `<div class="book-card ${b.isRecipe?'recipe-tile':'audio-tile'} group-tile ${isSelected?'selected':''}" data-bookid="${b.id}" data-groupids="${b.groupIds.join(',')}" style="user-select:none">
         <div style="position:relative">
           <div class="group-stack-edge e2"></div>
           <div class="group-stack-edge e1"></div>
@@ -5870,7 +5877,7 @@ function renderMobLibrarySelectMode(){
         <div class="book-card-body">
           <div class="book-card-title">${esc(b.title)}</div>
           <div class="book-card-author">${esc(b.author)}</div>
-          <div class="group-part-badge">🎧 ${b.partCount} Episode${b.partCount===1?'':'s'}${b.totalDuration?` · ${formatDuration(b.totalDuration)}`:''}</div>
+          <div class="group-part-badge">${icon} ${b.partCount} ${unit}${b.partCount===1?'':'s'}${b.totalDuration?` · ${formatDuration(b.totalDuration)}`:''}</div>
         </div>
       </div>`;
     }
@@ -6772,8 +6779,9 @@ function reconcileGrid(grid, items, keyFn, htmlFn) {
 
 function bookCardHtml(b, isComm, showProgress=false){
   if(b.isGroupHeader){
+    const icon=b.isRecipe?'🍲':'🎧', unit=b.isRecipe?'recipe':'episode';
     return `<div class="group-header-tile tile-pop-in" data-groupheader="1" data-groupkey="${esc(b.groupKey)}">
-      <span><span class="group-header-title">🎧 ${esc(b.title)}</span><span class="group-header-count">${b.partCount} episodes${b.totalDuration?' · '+formatDuration(b.totalDuration):''}</span></span>
+      <span><span class="group-header-title">${icon} ${esc(b.title)}</span><span class="group-header-count">${b.partCount} ${unit}${b.partCount===1?'':'s'}${b.totalDuration?' · '+formatDuration(b.totalDuration):''}</span></span>
       <span class="group-header-collapse">⌃ Collapse</span>
     </div>`;
   }
@@ -6795,7 +6803,8 @@ function bookCardHtml(b, isComm, showProgress=false){
        </div>` : '';
 
   if(b.isGroup){
-    return `<div class="book-card audio-tile group-tile" data-bookid="${b.id}" data-groupids="${b.groupIds.join(',')}" data-groupkey="${esc(b.groupKey)}">
+    const icon=b.isRecipe?'🍲':'🎧', unit=b.isRecipe?'Recipe':'Episode';
+    return `<div class="book-card ${b.isRecipe?'recipe-tile':'audio-tile'} group-tile" data-bookid="${b.id}" data-groupids="${b.groupIds.join(',')}" data-groupkey="${esc(b.groupKey)}">
       <div style="position:relative">
         <div class="group-stack-edge e2"></div>
         <div class="group-stack-edge e1"></div>
@@ -6804,7 +6813,7 @@ function bookCardHtml(b, isComm, showProgress=false){
       <div class="book-card-body">
         <div class="book-card-title">${esc(b.title)}</div>
         <div class="book-card-author">${esc(b.author)}</div>
-        <div class="group-part-badge">🎧 ${b.partCount} Episode${b.partCount===1?'':'s'}${b.totalDuration?` · ${formatDuration(b.totalDuration)}`:''}</div>
+        <div class="group-part-badge">${icon} ${b.partCount} ${unit}${b.partCount===1?'':'s'}${b.totalDuration?` · ${formatDuration(b.totalDuration)}`:''}</div>
       </div>
     </div>`;
   }
@@ -8861,6 +8870,46 @@ let _expandedSeriesGroups = new Set();
 // a slim header tile (series name + a collapse control) followed by each
 // part as its own normal tile, so tapping the stack expands it in place
 // rather than jumping straight to a detail view.
+// Groups recipes by category into the same collapsible group-header/group-tile
+// UI already built for audio series (collapseAudioSeriesForGrid below) — same
+// _expandedSeriesGroups set and CSS classes, just keyed by category instead
+// of series. Non-recipe items pass through untouched, and a category with
+// only one recipe in it isn't worth collapsing into a group of its own.
+function collapseRecipesByCategoryForGrid(books) {
+  const recipes = books.filter(b => b.isRecipe);
+  if (!recipes.length) return books;
+  const others = books.filter(b => !b.isRecipe);
+  const byCat = new Map();
+  recipes.forEach(r => {
+    const cat = r.category || 'Uncategorised';
+    if (!byCat.has(cat)) byCat.set(cat, []);
+    byCat.get(cat).push(r);
+  });
+  const out = [...others];
+  [...byCat.keys()].sort((a, b) => a.localeCompare(b)).forEach(cat => {
+    const group = byCat.get(cat);
+    if (group.length === 1) { out.push(group[0]); return; }
+    const key = 'recipecat:' + cat.toLowerCase();
+    if (_expandedSeriesGroups.has(key)) {
+      out.push({ id: '__grouphdr_' + key, isGroupHeader: true, groupKey: key, title: cat, partCount: group.length, isRecipe: true });
+      group.forEach(r => out.push({ ...r, _groupExpanded: true }));
+    } else {
+      out.push({
+        id: group[0].id,
+        isGroup: true,
+        groupIds: group.map(r => r.id),
+        groupKey: key,
+        title: cat,
+        author: '',
+        coverUrl: group.find(r => r.coverUrl)?.coverUrl || null,
+        isRecipe: true,
+        partCount: group.length,
+      });
+    }
+  });
+  return out;
+}
+
 function collapseAudioSeriesForGrid(books) {
   const out = [];
   let i = 0;
@@ -18328,6 +18377,7 @@ function _cmEnsureOverlay() {
       <div id="cmTimerList"></div>
     </div>
     <div style="flex:1;overflow-y:auto;padding:1.2rem 1.2rem 3rem;max-width:720px;margin:0 auto;width:100%;box-sizing:border-box;">
+      <img id="cmCoverImg" style="display:none;width:100%;max-height:280px;object-fit:cover;border-radius:10px;margin-bottom:1rem;"/>
       <div id="cmByline" style="font-size:.8rem;color:var(--muted);margin-bottom:.6rem;display:none;"></div>
       <div id="cmDesc" style="font-size:.92rem;color:var(--navy);margin-bottom:1.2rem;line-height:1.5;"></div>
       <h3 style="font-family:'Playfair Display',serif;color:var(--rust);border-bottom:2px solid var(--gold);padding-bottom:.3rem;margin-bottom:.6rem;">Ingredients</h3>
@@ -18352,6 +18402,9 @@ function openRecipeCookMode(recipe) {
   _cmEnsureOverlay();
   document.getElementById('cmCategory').textContent = recipe.chapterName || recipe.category || '';
   document.getElementById('cmTitle').textContent = recipe.title || 'Untitled Recipe';
+  const coverImg = document.getElementById('cmCoverImg');
+  if (recipe.coverUrl) { coverImg.src = recipe.coverUrl; coverImg.style.display = 'block'; }
+  else { coverImg.style.display = 'none'; }
   const bylineEl = document.getElementById('cmByline');
   if (recipe.createdByName) { bylineEl.textContent = `Recipe by ${recipe.createdByName}`; bylineEl.style.display = 'block'; }
   else { bylineEl.style.display = 'none'; }
@@ -18392,6 +18445,19 @@ function _reEnsureEditor() {
       <button id="reSaveBtn" style="border:none;background:var(--teal);color:var(--warm-white);font-weight:700;font-size:.85rem;padding:.5rem 1.1rem;border-radius:20px;cursor:pointer;">Save</button>
     </div>
     <div style="flex:1;overflow-y:auto;padding:1.2rem 1.2rem 3rem;max-width:640px;margin:0 auto;width:100%;box-sizing:border-box;">
+      <label class="re-lbl">Cover Image <span class="re-hint">(optional)</span></label>
+      <div style="display:flex;align-items:center;gap:.8rem;">
+        <div id="reCoverPreviewWrap" style="width:64px;height:64px;border-radius:8px;overflow:hidden;flex-shrink:0;background:var(--panel);display:flex;align-items:center;justify-content:center;border:1px solid var(--border);">
+          <span id="reCoverPh" style="font-size:1.6rem;">🍲</span>
+          <img id="reCoverPreview" style="width:100%;height:100%;object-fit:cover;display:none;"/>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:.4rem;">
+          <button id="reCoverBtn" type="button" style="border:1px solid var(--border);background:var(--warm-white);border-radius:20px;padding:.4rem 1rem;font-size:.8rem;cursor:pointer;color:var(--teal-dark);width:fit-content;">📷 Upload Cover</button>
+          <button id="reCoverRemoveBtn" type="button" style="display:none;border:none;background:none;font-size:.75rem;cursor:pointer;color:var(--muted);text-align:left;padding:0;width:fit-content;">Remove cover</button>
+        </div>
+        <input id="reCoverFile" type="file" accept="image/*" style="display:none;"/>
+      </div>
+
       <label class="re-lbl">Title</label>
       <input id="reTitle" class="re-input" type="text" placeholder="Cowboy Coffee Cake"/>
 
@@ -18433,6 +18499,53 @@ function _reEnsureEditor() {
   document.getElementById('reVisPublic').addEventListener('click', () => _reSetVis('public'));
   document.getElementById('reSaveBtn').addEventListener('click', saveRecipeFromEditor);
   document.getElementById('reDeleteBtn').addEventListener('click', deleteRecipeFromEditor);
+  document.getElementById('reCoverBtn').addEventListener('click', () => document.getElementById('reCoverFile').click());
+  document.getElementById('reCoverFile').addEventListener('change', _reHandleCoverFile);
+  document.getElementById('reCoverRemoveBtn').addEventListener('click', () => {
+    document.getElementById('recipeEditorOverlay').dataset.pendingCoverUrl = '';
+    _reRenderCoverPreview();
+  });
+}
+
+function _reRenderCoverPreview() {
+  const url = document.getElementById('recipeEditorOverlay').dataset.pendingCoverUrl || '';
+  const img = document.getElementById('reCoverPreview');
+  const ph = document.getElementById('reCoverPh');
+  const removeBtn = document.getElementById('reCoverRemoveBtn');
+  if (url) {
+    img.src = url; img.style.display = 'block'; ph.style.display = 'none';
+    removeBtn.style.display = 'block';
+  } else {
+    img.style.display = 'none'; ph.style.display = 'block';
+    removeBtn.style.display = 'none';
+  }
+}
+
+// Uploads immediately to Firebase Storage on selection (same pattern as the
+// audio cover uploader) rather than deferring to save time — this way the
+// preview reflects the real hosted image right away, and saveRecipeFromEditor
+// just needs to write whatever URL is currently in pendingCoverUrl, whether
+// this is a brand-new recipe or an edit.
+async function _reHandleCoverFile(e) {
+  const file = e.target.files[0];
+  e.target.value = ''; // allow re-selecting the same file later
+  if (!file || !currentUser) return;
+  const btn = document.getElementById('reCoverBtn');
+  const prevLabel = btn.textContent;
+  btn.textContent = 'Uploading…'; btn.disabled = true;
+  try {
+    const safeName = `${Date.now()}_${file.name.replace(/[^a-zA-Z0-9._\-]/g, '_')}`;
+    const coverRef = storageRef(storage, `recipe_covers/${currentUser.uid}/${safeName}`);
+    await uploadBytes(coverRef, file);
+    const coverUrl = await getDownloadURL(coverRef);
+    document.getElementById('recipeEditorOverlay').dataset.pendingCoverUrl = coverUrl;
+    _reRenderCoverPreview();
+  } catch (err) {
+    console.error('Recipe cover upload failed:', err);
+    showToast('Cover upload failed: ' + err.message);
+  } finally {
+    btn.textContent = prevLabel; btn.disabled = false;
+  }
 }
 
 function _reSetVis(vis) {
@@ -18457,6 +18570,9 @@ function showRecipeEditor(recipe) {
   document.getElementById('reSteps').value = (recipe?.steps || []).join('\n');
   document.getElementById('reTip').value = recipe?.tip || '';
   _reSetVis(recipe?.visibility || 'private');
+
+  overlay.dataset.pendingCoverUrl = recipe?.coverUrl || '';
+  _reRenderCoverPreview();
 
   // Populate category suggestions from recipes already loaded.
   const cats = [...new Set(_recipes.map(r => r.chapterName || r.category).filter(Boolean))];
@@ -18487,6 +18603,7 @@ async function saveRecipeFromEditor() {
     steps,
     tip: document.getElementById('reTip').value.trim(),
     visibility: overlay.dataset.vis || 'private',
+    coverUrl: overlay.dataset.pendingCoverUrl || null,
     updatedAt: serverTimestamp(),
   };
 
