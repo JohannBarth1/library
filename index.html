@@ -4692,10 +4692,12 @@ function renderDetailActionRows(peekContainer, moreContainer, book, isMine){
   // PEEK — visible the moment the sheet opens: primary actions + Lists
   // ═══════════════════════════════════════════════════════════════════════
   let peekHtml = `<div style="display:flex;gap:.5rem;margin-bottom:.7rem;flex-wrap:wrap;">
-    ${book.isAudio
+    ${book.isRecipe
+      ? bigBtn('🍲', 'Open', 'read','#3d7a96','var(--gold)')
+      : book.isAudio
       ? bigBtn('🎧', hasStarted ? 'Continue Listening' : 'Listen', 'read','#3d7a96','var(--gold)')
       : bigBtn('📖', hasStarted ? 'Continue Reading' : 'Read', 'read','#3d7a96','var(--gold)')}
-    ${book.isAudio ? '' : bigBtn('🔲','Send to Kobo','sendtokobo','var(--teal)','var(--gold)')}
+    ${(book.isAudio || book.isRecipe) ? '' : bigBtn('🔲','Send to Kobo','sendtokobo','var(--teal)','var(--gold)')}
   </div>`;
 
   const hasCustomLists = _userLists.some(l => !l.system);
@@ -4941,13 +4943,13 @@ function buildDrawerIconBar(book, isMine){
   const isFav = !!_userLists.find(l => l.id === 'favourites')?.bookIds?.includes(book.id);
 
   let html = `
-    <!-- Primary: Read/Listen (+ Continue variants) + Send to Kobo -->
+    <!-- Primary: Read/Listen/Open (+ Continue variants) + Send to Kobo -->
     <div style="display:flex;gap:.5rem;padding:.65rem 1.5rem .5rem;border-bottom:1px solid var(--border);">
       <button class="btn-action btn-read" style="flex:1;justify-content:center;padding:.6rem 1rem;font-size:.83rem;border-radius:24px;gap:.4rem;" data-action="read">
-        <span style="font-size:1rem;line-height:1;">${book.isAudio ? '🎧' : '📖'}</span>
-        <span>${book.isAudio ? (hasStarted ? 'Continue Listening' : 'Listen') : (hasStarted ? 'Continue Reading' : 'Read')}</span>
+        <span style="font-size:1rem;line-height:1;">${book.isRecipe ? '🍲' : book.isAudio ? '🎧' : '📖'}</span>
+        <span>${book.isRecipe ? 'Open' : book.isAudio ? (hasStarted ? 'Continue Listening' : 'Listen') : (hasStarted ? 'Continue Reading' : 'Read')}</span>
       </button>
-      ${book.isAudio ? '' : `<button class="btn-action btn-kobo" style="flex:1;justify-content:center;padding:.6rem 1rem;font-size:.83rem;border-radius:24px;gap:.4rem;" data-action="sendtokobo">
+      ${(book.isAudio || book.isRecipe) ? '' : `<button class="btn-action btn-kobo" style="flex:1;justify-content:center;padding:.6rem 1rem;font-size:.83rem;border-radius:24px;gap:.4rem;" data-action="sendtokobo">
         <span style="font-size:1rem;line-height:1;">🔲</span>
         <span>Send to Kobo</span>
       </button>`}
