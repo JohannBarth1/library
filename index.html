@@ -17836,13 +17836,26 @@ let _recipes = [];
 
 async function loadRecipes() {
   if (!currentUser) return;
-  const q = query(
-    collection(db, 'recipes'),
-    where('ownerId', '==', currentUser.uid),
-    orderBy('createdAt', 'desc')
-  );
-  const snap = await getDocs(q);
-  _recipes = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  // Swallows its own errors (most likely: the `recipes` collection has no
+  // Firestore security rules yet, so this comes back permission-denied).
+  // This function is awaited inside loadLibrary()'s Promise.all alongside
+  // the books/audio queries — if it threw instead, that single rejection
+  // would cascade and take down the ENTIRE initial load, books and audio
+  // included, since Promise.all rejects as soon as any one promise does.
+  // Recipes failing to load should only mean an empty recipes shelf, never
+  // a blank library.
+  try {
+    const q = query(
+      collection(db, 'recipes'),
+      where('ownerId', '==', currentUser.uid),
+      orderBy('createdAt', 'desc')
+    );
+    const snap = await getDocs(q);
+    _recipes = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  } catch (e) {
+    console.warn('Recipes failed to load (check Firestore security rules for the `recipes` collection):', e);
+    _recipes = [];
+  }
 }
 
 // Mirrors loadCommunityAudioTracks() — public/shared/restricted queries
