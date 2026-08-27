@@ -4125,9 +4125,10 @@ async function setBookVisibilityFromDrawer(vis) {
   try {
     // Audiobooks live in `audioFiles`, not `books` — same pattern as
     // showEditMeta's save handler.
-    await updateDoc(doc(db, book.isAudio ? 'audioFiles' : 'books', currentId), { visibility: vis, updatedAt: serverTimestamp() });
+    await updateDoc(doc(db, collectionForBook(book), currentId), { visibility: vis, updatedAt: serverTimestamp() });
     book.visibility = vis;
     if(book.isAudio && book._audioTrack) book._audioTrack.visibility = vis;
+    if(book.isRecipe && book._recipe) book._recipe.visibility = vis;
     if(vis === 'public') {
       if(!communityLib.find(b => b.id === currentId)) communityLib.push(book);
       if(currentUser && book.ownerId === currentUser.uid && ledgerState.loaded) _ledgerUnlockAchievement('sharer', currentId);
@@ -5193,9 +5194,10 @@ document.getElementById('btnConfirmPrivateShare').addEventListener('click',async
     const allowed=[...(book.allowedUsers||[])];
     if(!allowed.includes(uid))allowed.push(uid);
     // Audiobooks live in `audioFiles`, not `books`.
-    await updateDoc(doc(db, book.isAudio ? 'audioFiles' : 'books', currentId),{allowedUsers:allowed,updatedAt:serverTimestamp()});
+    await updateDoc(doc(db, collectionForBook(book), currentId),{allowedUsers:allowed,updatedAt:serverTimestamp()});
     book.allowedUsers=allowed;
     if(book.isAudio && book._audioTrack) book._audioTrack.allowedUsers=allowed;
+    if(book.isRecipe && book._recipe) book._recipe.allowedUsers=allowed;
     hideLoading();
     const recipientName = document.getElementById('privateShareUserSelect').selectedOptions[0]?.textContent;
     notifyBookShared(uid, book, recipientName);
@@ -5313,7 +5315,7 @@ document.getElementById('btnSaveEditMeta').addEventListener('click',async()=>{
   try{
     // Audiobooks are stored in `audioFiles`, not `books` — same shape of
     // edit, different collection.
-    await updateDoc(doc(db, book.isAudio ? 'audioFiles' : 'books', currentId),updates);
+    await updateDoc(doc(db, collectionForBook(book), currentId),updates);
     Object.assign(book,updates);
     if(book.isAudio && book._audioTrack) Object.assign(book._audioTrack,updates);
     hideLoading();renderAll();showBookById(currentId);showToast('Details saved ✓');
@@ -5989,9 +5991,10 @@ async function handleMobBulkAction(action){
     try{
       for(const id of ids){
         const book = library.find(b=>b.id===id); if(!book) continue;
-        await updateDoc(doc(db,book.isAudio?'audioFiles':'books',id),{visibility:'public',updatedAt:serverTimestamp()});
+        await updateDoc(doc(db,collectionForBook(book),id),{visibility:'public',updatedAt:serverTimestamp()});
         book.visibility='public';
         if(book.isAudio && book._audioTrack) book._audioTrack.visibility='public';
+        if(book.isRecipe && book._recipe) book._recipe.visibility='public';
         if(!communityLib.find(b=>b.id===id)) communityLib.push(book);
       }
       if (currentUser && ledgerState.loaded) _ledgerUnlockAchievement('sharer', ids[0]);
@@ -6007,9 +6010,10 @@ async function handleMobBulkAction(action){
     try{
       for(const id of ids){
         const book = library.find(b=>b.id===id); if(!book) continue;
-        await updateDoc(doc(db,book.isAudio?'audioFiles':'books',id),{visibility:'private',updatedAt:serverTimestamp()});
+        await updateDoc(doc(db,collectionForBook(book),id),{visibility:'private',updatedAt:serverTimestamp()});
         book.visibility='private';
         if(book.isAudio && book._audioTrack) book._audioTrack.visibility='private';
+        if(book.isRecipe && book._recipe) book._recipe.visibility='private';
         communityLib = communityLib.filter(b=>b.id!==id);
       }
       hideLoading(); exitMobSelectMode(); renderAll(); showToast('Unpublished ✓');
@@ -6021,7 +6025,7 @@ async function handleMobBulkAction(action){
     const ids = [...mobSelectedIds].filter(id => { const b=library.find(x=>x.id===id); return b&&!b.recommended; });
     showLoading('Updating…');
     try{
-      for(const id of ids){ const b=library.find(x=>x.id===id); if(!b)continue; await updateDoc(doc(db,b.isAudio?'audioFiles':'books',id),{recommended:true,recommendedAt:serverTimestamp(),updatedAt:serverTimestamp()}); b.recommended=true; b.recommendedAt=new Date(); }
+      for(const id of ids){ const b=library.find(x=>x.id===id); if(!b)continue; await updateDoc(doc(db,collectionForBook(b),id),{recommended:true,recommendedAt:serverTimestamp(),updatedAt:serverTimestamp()}); b.recommended=true; b.recommendedAt=new Date(); }
       hideLoading(); exitMobSelectMode(); renderAll(); showToast('Marked recommended ✓');
     }catch(e){ hideLoading(); showToast('Failed: '+e.message); }
     return;
@@ -6031,7 +6035,7 @@ async function handleMobBulkAction(action){
     const ids = [...mobSelectedIds].filter(id => { const b=library.find(x=>x.id===id); return b&&b.recommended; });
     showLoading('Updating…');
     try{
-      for(const id of ids){ const b=library.find(x=>x.id===id); if(!b)continue; await updateDoc(doc(db,b.isAudio?'audioFiles':'books',id),{recommended:false,recommendedAt:null,updatedAt:serverTimestamp()}); b.recommended=false; b.recommendedAt=null; }
+      for(const id of ids){ const b=library.find(x=>x.id===id); if(!b)continue; await updateDoc(doc(db,collectionForBook(b),id),{recommended:false,recommendedAt:null,updatedAt:serverTimestamp()}); b.recommended=false; b.recommendedAt=null; }
       hideLoading(); exitMobSelectMode(); renderAll(); showToast('Unrecommended ✓');
     }catch(e){ hideLoading(); showToast('Failed: '+e.message); }
     return;
@@ -6105,9 +6109,10 @@ function showMobBulkCategoryPicker(){
       try{
         for(const id of ids){
           const book = library.find(b=>b.id===id); if(!book) continue;
-          await updateDoc(doc(db,book.isAudio?'audioFiles':'books',id),{category:newCat,updatedAt:serverTimestamp()});
+          await updateDoc(doc(db,collectionForBook(book),id),{category:newCat,updatedAt:serverTimestamp()});
           book.category=newCat;
           if(book.isAudio && book._audioTrack) book._audioTrack.category=newCat;
+          if(book.isRecipe && book._recipe) book._recipe.chapterName=newCat;
         }
         hideLoading(); exitMobSelectMode(); renderAll();
         showToast(`Genre updated for ${ids.length} book${ids.length!==1?'s':''} ✓`);
@@ -6203,9 +6208,10 @@ function showMobBulkTagsPicker(){
       for(const id of ids){
         const book = library.find(b=>b.id===id); if(!book) continue;
         const tags = [...new Set([...(book.tags||[]), ...newTags])];
-        await updateDoc(doc(db,book.isAudio?'audioFiles':'books',id),{tags,updatedAt:serverTimestamp()});
+        await updateDoc(doc(db,collectionForBook(book),id),{tags,updatedAt:serverTimestamp()});
         book.tags = tags;
         if(book.isAudio && book._audioTrack) book._audioTrack.tags = tags;
+        if(book.isRecipe && book._recipe) book._recipe.tags = tags;
       }
       hideLoading(); exitMobSelectMode(); renderAll();
       showToast(`Tags added to ${ids.length} book${ids.length!==1?'s':''} ✓`);
@@ -6256,7 +6262,7 @@ function showMobBulkSeriesPicker(){
     try{
       for(const id of ids){
         const book = library.find(b=>b.id===id); if(!book) continue;
-        await updateDoc(doc(db,book.isAudio?'audioFiles':'books',id),{series,seriesIndex,updatedAt:serverTimestamp()});
+        await updateDoc(doc(db,collectionForBook(book),id),{series,seriesIndex,updatedAt:serverTimestamp()});
         book.series = series; book.seriesIndex = seriesIndex;
         if(book.isAudio && book._audioTrack){ book._audioTrack.series = series; book._audioTrack.seriesIndex = seriesIndex; }
       }
@@ -13529,9 +13535,9 @@ document.getElementById('tagsInput').addEventListener('keydown',async e=>{
   if(e.key!=='Enter')return;const tag=e.target.value.trim();if(!tag)return;e.target.value='';
   const book=library.find(b=>b.id===currentId);if(!book)return;
   const tags=[...new Set([...(book.tags||[]),tag])];book.tags=tags;
-  await updateDoc(doc(db,book.isAudio?'audioFiles':'books',currentId),{tags,updatedAt:serverTimestamp()});renderTagsModal();
+  await updateDoc(doc(db,collectionForBook(book),currentId),{tags,updatedAt:serverTimestamp()});renderTagsModal();
 });
-async function removeTag(tag){const book=library.find(b=>b.id===currentId);if(!book)return;const tags=(book.tags||[]).filter(t=>t!==tag);book.tags=tags;await updateDoc(doc(db,book.isAudio?'audioFiles':'books',currentId),{tags,updatedAt:serverTimestamp()});renderTagsModal();}
+async function removeTag(tag){const book=library.find(b=>b.id===currentId);if(!book)return;const tags=(book.tags||[]).filter(t=>t!==tag);book.tags=tags;await updateDoc(doc(db,collectionForBook(book),currentId),{tags,updatedAt:serverTimestamp()});renderTagsModal();}
 function renderTagsModal(){
   const book=library.find(b=>b.id===currentId);if(!book)return;
   const current=book.tags||[];
@@ -13539,7 +13545,7 @@ function renderTagsModal(){
   document.getElementById('tagsCurrentWrap').querySelectorAll('.tag-pill-remove').forEach(el=>el.addEventListener('click',()=>removeTag(el.dataset.tag)));
   const allT=getAllTags().filter(t=>!current.includes(t));
   document.getElementById('tagsAllWrap').innerHTML=allT.length?allT.map(t=>`<span class="tag-pill" data-quicktag="${esc(t)}">${esc(t)}</span>`).join(''):'<span style="font-size:.75rem;color:var(--muted)">No other tags yet</span>';
-  document.getElementById('tagsAllWrap').querySelectorAll('[data-quicktag]').forEach(el=>el.addEventListener('click',async()=>{const book=library.find(b=>b.id===currentId);if(!book)return;const tags=[...new Set([...(book.tags||[]),el.dataset.quicktag])];book.tags=tags;await updateDoc(doc(db,book.isAudio?'audioFiles':'books',currentId),{tags,updatedAt:serverTimestamp()});renderTagsModal();}));
+  document.getElementById('tagsAllWrap').querySelectorAll('[data-quicktag]').forEach(el=>el.addEventListener('click',async()=>{const book=library.find(b=>b.id===currentId);if(!book)return;const tags=[...new Set([...(book.tags||[]),el.dataset.quicktag])];book.tags=tags;await updateDoc(doc(db,collectionForBook(book),currentId),{tags,updatedAt:serverTimestamp()});renderTagsModal();}));
 }
 
 // ── RECOMMENDED ───────────────────────────────────────────────────────────────
@@ -13552,7 +13558,7 @@ async function toggleRecommended() {
   book.recommended = rec;
   book.recommendedAt = rec ? new Date() : null;
   try {
-    await updateDoc(doc(db, book.isAudio?'audioFiles':'books', currentId), {
+    await updateDoc(doc(db, collectionForBook(book), currentId), {
       recommended: rec,
       recommendedAt: rec ? serverTimestamp() : null,
       updatedAt: serverTimestamp()
@@ -13779,7 +13785,7 @@ document.getElementById('btnSaveBulkEdit').addEventListener('click',async()=>{
   document.getElementById('bulkEditModal').classList.remove('open');
   showLoading(`Updating ${ids.length} book${ids.length!==1?'s':''}…`);
   try{
-    for(const id of ids){const book=library.find(b=>b.id===id);if(!book)continue;const bookUpdates={...updates};if(newTags.length)bookUpdates.tags=[...new Set([...(book.tags||[]),...newTags])];await updateDoc(doc(db,book.isAudio?'audioFiles':'books',id),bookUpdates);Object.assign(book,bookUpdates);if(book.isAudio&&book._audioTrack)Object.assign(book._audioTrack,bookUpdates);}
+    for(const id of ids){const book=library.find(b=>b.id===id);if(!book)continue;const bookUpdates={...updates};if(newTags.length)bookUpdates.tags=[...new Set([...(book.tags||[]),...newTags])];await updateDoc(doc(db,collectionForBook(book),id),bookUpdates);Object.assign(book,bookUpdates);if(book.isAudio&&book._audioTrack)Object.assign(book._audioTrack,bookUpdates);}
     hideLoading();toggleSelectMode();renderAll();
     showToast(skipped
       ? `${ids.length} book${ids.length!==1?'s':''} updated ✓ (${skipped} skipped — not yours)`
@@ -13798,12 +13804,13 @@ document.getElementById('bulkBtnPublish').addEventListener('click', async () => 
     for (const id of ids) {
       const book = library.find(b => b.id === id);
       if (!book) continue;
-      await updateDoc(doc(db, book.isAudio ? 'audioFiles' : 'books', id), {
+      await updateDoc(doc(db, collectionForBook(book), id), {
         visibility: 'public',
         updatedAt: serverTimestamp()
       });
       book.visibility = 'public';
       if (book.isAudio && book._audioTrack) book._audioTrack.visibility = 'public';
+      if (book.isRecipe && book._recipe) book._recipe.visibility = 'public';
       if (!communityLib.find(b => b.id === id)) communityLib.push(book);
     }
     if (currentUser && ledgerState.loaded) _ledgerUnlockAchievement('sharer', ids[0]);
@@ -13829,12 +13836,13 @@ document.getElementById('bulkBtnUnpublish').addEventListener('click', async () =
     for (const id of ids) {
       const book = library.find(b => b.id === id);
       if (!book) continue;
-      await updateDoc(doc(db, book.isAudio ? 'audioFiles' : 'books', id), {
+      await updateDoc(doc(db, collectionForBook(book), id), {
         visibility: 'private',
         updatedAt: serverTimestamp()
       });
       book.visibility = 'private';
       if (book.isAudio && book._audioTrack) book._audioTrack.visibility = 'private';
+      if (book.isRecipe && book._recipe) book._recipe.visibility = 'private';
       communityLib = communityLib.filter(b => b.id !== id);
     }
     hideLoading();
@@ -13865,12 +13873,12 @@ document.getElementById('bulkBtnCheckout').addEventListener('click',async()=>{
 });
 document.getElementById('bulkBtnRec').addEventListener('click',async()=>{
   const ids=[...selectedIds].filter(id=>{const b=library.find(x=>x.id===id);return b&&!b.recommended;});if(!ids.length)return;showLoading('Updating…');
-  try{for(const id of ids){const b=library.find(x=>x.id===id);if(!b)continue;await updateDoc(doc(db,b.isAudio?'audioFiles':'books',id),{recommended:true,recommendedAt:serverTimestamp(),updatedAt:serverTimestamp()});b.recommended=true;b.recommendedAt=new Date();}hideLoading();toggleSelectMode();renderAll();showToast(`${ids.length} marked recommended ✓`);}
+  try{for(const id of ids){const b=library.find(x=>x.id===id);if(!b)continue;await updateDoc(doc(db,collectionForBook(b),id),{recommended:true,recommendedAt:serverTimestamp(),updatedAt:serverTimestamp()});b.recommended=true;b.recommendedAt=new Date();}hideLoading();toggleSelectMode();renderAll();showToast(`${ids.length} marked recommended ✓`);}
   catch(e){hideLoading();showToast('Failed: '+e.message);}
 });
 document.getElementById('bulkBtnUnrec').addEventListener('click',async()=>{
   const ids=[...selectedIds].filter(id=>{const b=library.find(x=>x.id===id);return b&&b.recommended;});if(!ids.length)return;showLoading('Updating…');
-  try{for(const id of ids){const b=library.find(x=>x.id===id);if(!b)continue;await updateDoc(doc(db,b.isAudio?'audioFiles':'books',id),{recommended:false,recommendedAt:null,updatedAt:serverTimestamp()});b.recommended=false;b.recommendedAt=null;}hideLoading();toggleSelectMode();renderAll();showToast(`${ids.length} unrecommended ✓`);}
+  try{for(const id of ids){const b=library.find(x=>x.id===id);if(!b)continue;await updateDoc(doc(db,collectionForBook(b),id),{recommended:false,recommendedAt:null,updatedAt:serverTimestamp()});b.recommended=false;b.recommendedAt=null;}hideLoading();toggleSelectMode();renderAll();showToast(`${ids.length} unrecommended ✓`);}
   catch(e){hideLoading();showToast('Failed: '+e.message);}
 });
 document.getElementById('bulkBtnCancel').addEventListener('click',toggleSelectMode);
@@ -15566,9 +15574,10 @@ function showQuickCategoryModal() {
       showLoading('Saving…', book.coverUrl);
       try {
         // Audiobooks live in `audioFiles`, not `books`.
-        await updateDoc(doc(db, book.isAudio ? 'audioFiles' : 'books', currentId), { category: newCat, updatedAt: serverTimestamp() });
+        await updateDoc(doc(db, collectionForBook(book), currentId), { category: newCat, updatedAt: serverTimestamp() });
         book.category = newCat;
         if(book.isAudio && book._audioTrack) book._audioTrack.category = newCat;
+        if(book.isRecipe && book._recipe) book._recipe.chapterName = newCat;
         hideLoading();
         renderAll();
         if(window.innerWidth > 768) showBookById(currentId);
@@ -16263,8 +16272,9 @@ function showTagsModal() {
         book.tags = tags;
         item.classList.toggle('selected');
         // Audiobooks live in `audioFiles`, not `books`.
-        await updateDoc(doc(db, book.isAudio ? 'audioFiles' : 'books', currentId), { tags, updatedAt: serverTimestamp() });
+        await updateDoc(doc(db, collectionForBook(book), currentId), { tags, updatedAt: serverTimestamp() });
         if(book.isAudio && book._audioTrack) book._audioTrack.tags = tags;
+        if(book.isRecipe && book._recipe) book._recipe.tags = tags;
         renderAll();
       });
     });
@@ -16278,8 +16288,9 @@ function showTagsModal() {
       const tags = [...new Set([...(book.tags || []), tag])];
       book.tags = tags;
       // Audiobooks live in `audioFiles`, not `books`.
-      await updateDoc(doc(db, book.isAudio ? 'audioFiles' : 'books', currentId), { tags, updatedAt: serverTimestamp() });
+      await updateDoc(doc(db, collectionForBook(book), currentId), { tags, updatedAt: serverTimestamp() });
       if(book.isAudio && book._audioTrack) book._audioTrack.tags = tags;
+      if(book.isRecipe && book._recipe) book._recipe.tags = tags;
       // Add to global tag list if new
       if(!_globalTags.includes(tag)) {
         _globalTags.push(tag);
@@ -17890,6 +17901,18 @@ function recipeToBookLike(r) {
 function mergeRecipesIntoLibrary() {
   library = library.filter(b => !b.isRecipe);
   library.push(..._recipes.map(recipeToBookLike));
+}
+
+// Resolves which Firestore collection a book-like object's doc actually
+// lives in. Hoisted (function declaration), so it's usable anywhere in this
+// module regardless of source order — every edit/share/delete call site that
+// used to branch `book.isAudio ? 'audioFiles' : 'books'` now calls this
+// instead, so recipes route to 'recipes' the same way audiobooks route to
+// 'audioFiles'.
+function collectionForBook(book) {
+  if (book?.isAudio) return 'audioFiles';
+  if (book?.isRecipe) return 'recipes';
+  return 'books';
 }
 
 // ── render the audio panel ────────────────────────────────────────────────────
