@@ -3427,10 +3427,11 @@ async function loadLibrary() {
       ? getDocs(query(collection(db, 'books'), where('visibility', '==', 'restricted')))
       : Promise.resolve({ docs: [] });
 
-    // Load and render my books (+ audiobooks) immediately
-    const [mySnap] = await Promise.all([getDocs(myQ), loadAudioTracks()]);
+    // Load and render my books (+ audiobooks + recipes) immediately
+    const [mySnap] = await Promise.all([getDocs(myQ), loadAudioTracks(), loadRecipes()]);
     library = mySnap.docs.map(d => ({ id: d.id, ...d.data() }));
     mergeAudioIntoLibrary();
+    mergeRecipesIntoLibrary();
     renderAll();
 
     // Load public and shared in background without blocking UI.
@@ -3441,8 +3442,8 @@ async function loadLibrary() {
     // means one denied query no longer takes the whole public/shared library
     // down with it; whatever did succeed still renders, and only the piece
     // that failed is silently dropped (with a console warning to spot it).
-    Promise.allSettled([getDocs(pubQ), getDocs(sharedQ), restrictedPromise, loadCommunityAudioTracks()])
-      .then(([pubR, sharedR, restrictedR, audioR]) => {
+    Promise.allSettled([getDocs(pubQ), getDocs(sharedQ), restrictedPromise, loadCommunityAudioTracks(), loadCommunityRecipes()])
+      .then(([pubR, sharedR, restrictedR, audioR, recipeR]) => {
         const failed = [];
         const pubBooks = pubR.status === 'fulfilled'
           ? pubR.value.docs.map(d => ({ id: d.id, ...d.data() }))
@@ -3454,14 +3455,15 @@ async function loadLibrary() {
           ? restrictedR.value.docs.map(d => ({ id: d.id, ...d.data() })).filter(b => b.ownerId !== currentUser.uid)
           : (failed.push('restricted books'), []);
         const communityAudio = audioR.status === 'fulfilled' ? audioR.value : (failed.push('community audiobooks'), []);
+        const communityRecipes = recipeR.status === 'fulfilled' ? recipeR.value : (failed.push('community recipes'), []);
 
         if (failed.length) {
           console.warn('Background load: partial failure —', failed.join(', '),
-            [pubR, sharedR, restrictedR, audioR].map(r => r.reason).filter(Boolean));
+            [pubR, sharedR, restrictedR, audioR, recipeR].map(r => r.reason).filter(Boolean));
           showToast(`Some content couldn't be loaded (${failed.join(', ')})`);
         }
 
-        communityLib = dedupe([...pubBooks, ...sharedBooks, ...restrictedBooks, ...communityAudio]);
+        communityLib = dedupe([...pubBooks, ...sharedBooks, ...restrictedBooks, ...communityAudio, ...communityRecipes]);
         renderAll();
         renderMobHome();
         renderDeskHome();
@@ -4139,8 +4141,9 @@ function filteredBooks(){
     books=dedupe([...library,...communityLib]).filter(b=>ids.has(b.id));
   }
   if(deskLibCat!=='All')books=books.filter(b=>(b.category||'Uncategorised')===deskLibCat);
-  if(deskLibFormat==='book')books=books.filter(b=>!b.isAudio);
+  if(deskLibFormat==='book')books=books.filter(b=>!b.isAudio&&!b.isRecipe);
   if(deskLibFormat==='audio')books=books.filter(b=>b.isAudio);
+  if(deskLibFormat==='recipe')books=books.filter(b=>b.isRecipe);
   if(searchQ)books=books.filter(b=>b.title?.toLowerCase().includes(searchQ)||b.author?.toLowerCase().includes(searchQ)||b.category?.toLowerCase().includes(searchQ));
   if(deskActiveTags.size)books=books.filter(b=>(b.tags||[]).some(t=>deskActiveTags.has(t)));
   return sortBooks(books,deskLibSort);
@@ -4561,6 +4564,7 @@ async function showBookById(id){
   document.getElementById('drawerCoverReadBtn').onclick=()=>{
     closeDrawer();
     if(book.isAudio){ playAudioTrack(book._audioTrack); return; }
+    if(book.isRecipe){ openRecipeCookMode(book._recipe); return; }
     readCurrentBook();
   };
 
@@ -5011,6 +5015,7 @@ function runDetailAction(a){
   if(a==='read'){
     const book=[...library,...communityLib].find(b=>b.id===currentId);
     if(book?.isAudio){ playAudioTrack(book._audioTrack); closeMobBookSheet(); closeDrawer(); return; }
+    if(book?.isRecipe){ openRecipeCookMode(book._recipe); closeMobBookSheet(); closeDrawer(); return; }
     readCurrentBook();
     return;
   }
@@ -5511,9 +5516,10 @@ const MOB_SOURCE_OPTIONS = [
   { id:'shared',  label:'Shared with Me' },
 ];
 const FORMAT_OPTIONS = [
-  { id:'all',   label:'Format', icon:'📚' },
-  { id:'book',  label:'Ebook',  icon:'📖' },
-  { id:'audio', label:'Audio',  icon:'🎧' },
+  { id:'all',    label:'Format', icon:'📚' },
+  { id:'book',   label:'Ebook',  icon:'📖' },
+  { id:'audio',  label:'Audio',  icon:'🎧' },
+  { id:'recipe', label:'Recipe', icon:'🍲' },
 ];
 
 function getAllMobTags() {
@@ -5685,8 +5691,9 @@ function getMobLibBooks() {
   // Category filter
   if (mobLibCat !== 'All') src = src.filter(b => (b.category || 'Uncategorised') === mobLibCat);
   // Format filter
-  if (mobLibFormat === 'book') src = src.filter(b => !b.isAudio);
+  if (mobLibFormat === 'book') src = src.filter(b => !b.isAudio && !b.isRecipe);
   if (mobLibFormat === 'audio') src = src.filter(b => b.isAudio);
+  if (mobLibFormat === 'recipe') src = src.filter(b => b.isRecipe);
   // Tags filter (book must match every selected tag — AND logic)
   if (mobActiveTags.size) src = src.filter(b => [...mobActiveTags].every(t => (b.tags || []).includes(t)));
   // Search
@@ -5847,8 +5854,8 @@ function renderMobLibrarySelectMode(){
     const isSelected = mobSelectedIds.has(b.id);
     const coverHtml = coverSrc
       ? `<img class="book-card-cover" src="${coverSrc}" alt="" loading="lazy"/>`
-      : `<div class="book-card-cover-ph"><div class="ph-icon">${b.isAudio?'🎧':'📖'}</div><div class="ph-title">${esc(b.title)}</div><div class="ph-author">${esc(b.author)}</div></div>`;
-    return `<div class="book-card ${b.isAudio?'audio-tile':''} ${isSelected?'selected':''}" data-bookid="${b.id}" style="user-select:none">
+      : `<div class="book-card-cover-ph"><div class="ph-icon">${b.isRecipe?'🍲':b.isAudio?'🎧':'📖'}</div><div class="ph-title">${esc(b.title)}</div><div class="ph-author">${esc(b.author)}</div></div>`;
+    return `<div class="book-card ${b.isAudio?'audio-tile':''}${b.isRecipe?'recipe-tile':''} ${isSelected?'selected':''}" data-bookid="${b.id}" style="user-select:none">
       <div style="position:relative">${coverHtml}</div>
       <div class="select-check" style="display:flex">${isSelected?'✓':''}</div>
       <div class="book-card-body">
@@ -6747,7 +6754,7 @@ function bookCardHtml(b, isComm, showProgress=false){
   const coverHtml = coverSrc
     ? `<img class="book-card-cover" src="${coverSrc}" alt="" loading="lazy"/>`
     : `<div class="book-card-cover-ph">
-        <div class="ph-icon">${b.isAudio ? '🎧' : '📖'}</div>
+        <div class="ph-icon">${b.isRecipe ? '🍲' : b.isAudio ? '🎧' : '📖'}</div>
         <div class="ph-title">${esc(b.title)}</div>
         <div class="ph-author">${esc(b.author)}</div>
        </div>`;
@@ -17784,6 +17791,83 @@ function mergeAudioIntoLibrary() {
   library.push(..._audioTracks.map(audioTrackToBookLike));
 }
 
+// ═══════════════════════════════════════════════════════════════════════════
+// RECIPES — own `recipes` collection, wrapped as book-like objects for the
+// existing grid/card/filter code, same pattern as audioTrackToBookLike above.
+// ═══════════════════════════════════════════════════════════════════════════
+
+let _recipes = [];
+
+async function loadRecipes() {
+  if (!currentUser) return;
+  const q = query(
+    collection(db, 'recipes'),
+    where('ownerId', '==', currentUser.uid),
+    orderBy('createdAt', 'desc')
+  );
+  const snap = await getDocs(q);
+  _recipes = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+}
+
+// Mirrors loadCommunityAudioTracks() — public/shared/restricted queries
+// against `recipes` instead of `audioFiles`.
+async function loadCommunityRecipes() {
+  if (!currentUser) return [];
+  const pubQ = query(
+    collection(db, 'recipes'),
+    where('visibility', '==', 'public')
+  );
+  const sharedQ = query(
+    collection(db, 'recipes'),
+    where('allowedUsers', 'array-contains', currentUser.uid)
+  );
+  const restrictedPromise = (isAdmin || hasRestrictedAccess)
+    ? getDocs(query(collection(db, 'recipes'), where('visibility', '==', 'restricted')))
+    : Promise.resolve({ docs: [] });
+
+  const [pubR, sharedR, restrictedR] = await Promise.allSettled([getDocs(pubQ), getDocs(sharedQ), restrictedPromise]);
+  const toBookLike = d => recipeToBookLike({ id: d.id, ...d.data() });
+  if (pubR.status === 'rejected') console.warn('Public recipes failed to load:', pubR.reason);
+  if (sharedR.status === 'rejected') console.warn('Shared recipes failed to load:', sharedR.reason);
+  if (restrictedR.status === 'rejected') console.warn('Restricted recipes failed to load:', restrictedR.reason);
+  const pub = pubR.status === 'fulfilled' ? pubR.value.docs.map(toBookLike) : [];
+  const shared = sharedR.status === 'fulfilled' ? sharedR.value.docs.map(toBookLike).filter(b => b.ownerId !== currentUser.uid) : [];
+  const restricted = restrictedR.status === 'fulfilled' ? restrictedR.value.docs.map(toBookLike).filter(b => b.ownerId !== currentUser.uid) : [];
+  return [...pub, ...shared, ...restricted];
+}
+
+// Wraps a recipe doc in the same shape the grid renders, tagged with
+// isRecipe (parallel to isAudio) so cards pick the right icon/tile and
+// clicks open cook-mode instead of the reader/player.
+// Field names match eRecipe's data.js model: title, desc, ingredients[],
+// steps[] (plain strings, ":"-suffixed lines are sub-headings), tip,
+// createdByName. eRecipe's chapterId/chapterName (its "chapters" are
+// really categories — Breakfast, Cakes, etc.) maps to eLibrary's category.
+function recipeToBookLike(r) {
+  return {
+    id: r.id,
+    title: r.title || 'Untitled Recipe',
+    author: r.createdByName || '',
+    category: r.chapterName || r.category || 'Uncategorised',
+    language: r.language || '',
+    description: r.desc || '',
+    series: null,
+    seriesIndex: null,
+    tags: r.tags || [],
+    visibility: r.visibility || 'private',
+    ownerId: r.ownerId || currentUser?.uid,
+    createdAt: r.createdAt,
+    coverUrl: r.coverUrl || null,
+    isRecipe: true,
+    _recipe: r,
+  };
+}
+
+function mergeRecipesIntoLibrary() {
+  library = library.filter(b => !b.isRecipe);
+  library.push(..._recipes.map(recipeToBookLike));
+}
+
 // ── render the audio panel ────────────────────────────────────────────────────
 
 async function renderAudioPanel() {
@@ -18009,6 +18093,213 @@ function updateTrackNavButtons(track) {
     const epDuration = formatDurationTotal(track.durationSec || 0);
     label.textContent = `Episode ${idx + 1} of ${siblings.length} · ${epDuration} — ${track.series}`;
   }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// COOK MODE — full-screen overlay reader for recipes, ported from eRecipe.
+// Self-contained (builds its own DOM/CSS on first use) rather than wired
+// into the mob-sheet/drawer system, so it doesn't disturb book/audio layout.
+// ═══════════════════════════════════════════════════════════════════════════
+
+// ── sectioned list renderer (ingredients / steps) ───────────────────────────
+// Ported verbatim from eRecipe's js/render.js. Lines ending in ":" become
+// sub-headings; otherwise normal list items. Numbered for steps (tag='ol').
+function renderSectionedList(lines, tag) {
+  let html    = `<${tag}>`;
+  let open    = true;
+  let stepNum = 0;
+  for (const line of (lines || [])) {
+    const t = line.trim();
+    if (!t) continue;
+    if (t.endsWith(':')) {
+      if (open) { html += `</${tag}>`; open = false; }
+      html += `<li style="list-style:none;font-weight:700;margin-top:.7em;margin-left:0">${esc(t.slice(0, -1))}</li>`;
+      open = true;
+      if (tag === 'ol') stepNum = 0;
+    } else if (tag === 'ol') {
+      stepNum++;
+      html += `<li><span class="cm-step-num">${stepNum}</span><span>${esc(t)}</span></li>`;
+    } else {
+      html += `<li>${esc(t)}</li>`;
+    }
+  }
+  if (open) html += `</${tag}>`;
+  return html;
+}
+
+// ── inline timer buttons in step text ────────────────────────────────────
+// Ported from eRecipe's js/timers.js. Turns "bake 25 minutes" into
+// "bake 25 minutes [⏱ Start]" with a button that calls cmTimerAdd().
+const CM_TIME_RE = /(\d+(?:[.,½¼¾]\d*)?(?:\s*-\s*\d+(?:[.,½¼¾]\d*)?)?)\s*(hours?|hrs?|minutes?|mins?)/gi;
+function linkifyTimers(text) {
+  return text.replace(CM_TIME_RE, (match, num, unit, offset, string) => {
+    const lastNum = num.split('-').pop().trim();
+    let n = parseFloat(lastNum.replace(',', '.').replace('½', '.5').replace('¼', '.25').replace('¾', '.75'));
+    if (isNaN(n)) return match;
+    const isHour = /^h/i.test(unit);
+    const mins = isHour ? Math.round(n * 60) : Math.round(n);
+    if (mins < 1 || mins > 600) return match;
+
+    const before = string.slice(0, offset);
+    const after = string.slice(offset + match.length);
+    const sentStart = Math.max(before.lastIndexOf('.'), before.lastIndexOf('\n')) + 1;
+    const sentEnd = after.search(/[.\n]|$/);
+    const rawSentence = (before.slice(sentStart) + match + after.slice(0, sentEnd)).replace(/<[^>]+>/g, '').trim();
+    let context = rawSentence.replace(match, '').replace(/^\s*\d+[.)]?\s*/, '').replace(/\s+/g, ' ').trim();
+    if (context.length > 60) context = context.slice(0, 57).trim() + '...';
+    const safeCtx = context.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+    const label = match.trim();
+    return `${match}<button class="inline-timer-btn" onclick="cmTimerAdd(${mins}, '${label}', '${safeCtx}')">⏱ Start</button>`;
+  });
+}
+
+// ── timer engine ──────────────────────────────────────────────────────────
+// Ported from eRecipe's js/timers.js, renamed with a cm (cook-mode) prefix
+// to avoid clashing with eLibrary's own globals. Renders into the cook-mode
+// overlay's timer tray (#cmTimerList) built in openRecipeCookMode().
+let _cmAudioCtx = null;
+function cmEnsureAudioCtx() {
+  try {
+    if (!_cmAudioCtx) _cmAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (_cmAudioCtx.state === 'suspended') _cmAudioCtx.resume().catch(() => {});
+  } catch (e) { /* ignore */ }
+  return _cmAudioCtx;
+}
+let cmTimers = [];
+let cmTimerNextId = 1;
+function cmTimerFmt(secs) {
+  const h = Math.floor(secs / 3600), m = Math.floor((secs % 3600) / 60), s = secs % 60;
+  if (h > 0) return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+  return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+}
+function cmTimerAdd(minutes, label, context) {
+  cmEnsureAudioCtx();
+  const id = cmTimerNextId++;
+  const t = { id, label: context || label, timeLabel: label, totalSecs: minutes * 60, endsAt: Date.now() + minutes * 60 * 1000, interval: null, done: false };
+  cmTimers.push(t);
+  t.interval = setInterval(() => cmTimerTick(id), 1000);
+  showToast(`⏱ ${context || label} — ${label}`);
+  cmTimerRender();
+  const tray = document.getElementById('cmTimerTray');
+  if (tray) tray.style.display = 'block';
+}
+function cmTimerTick(id) {
+  const t = cmTimers.find(x => x.id === id);
+  if (!t || t.done) return;
+  const remaining = Math.round((t.endsAt - Date.now()) / 1000);
+  if (remaining <= 0) { t.done = true; clearInterval(t.interval); cmTimerNotify(t.label); }
+  cmTimerRender();
+}
+function cmTimerNotify(label) {
+  try {
+    const ctx = cmEnsureAudioCtx();
+    if (ctx && ctx.state === 'running') {
+      const beep = (freq, start, dur) => {
+        const o = ctx.createOscillator(), g = ctx.createGain();
+        o.connect(g); g.connect(ctx.destination);
+        o.frequency.value = freq; o.type = 'sine';
+        g.gain.setValueAtTime(0.6, ctx.currentTime + start);
+        g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + start + dur);
+        o.start(ctx.currentTime + start); o.stop(ctx.currentTime + start + dur);
+      };
+      beep(880, 0, .3); beep(880, .35, .3); beep(880, .7, .5);
+    }
+  } catch (e) { /* ignore */ }
+  if (navigator.vibrate) navigator.vibrate([400, 200, 400, 200, 400]);
+  showToast('⏱ ' + label + ' — done!');
+}
+function cmTimerRemove(id) {
+  const t = cmTimers.find(x => x.id === id);
+  if (t && t.interval) clearInterval(t.interval);
+  cmTimers = cmTimers.filter(x => x.id !== id);
+  cmTimerRender();
+}
+function cmTimerReset(id) {
+  const t = cmTimers.find(x => x.id === id);
+  if (!t) return;
+  if (t.interval) clearInterval(t.interval);
+  t.endsAt = Date.now() + t.totalSecs * 1000;
+  t.done = false;
+  t.interval = setInterval(() => cmTimerTick(id), 1000);
+  cmTimerRender();
+}
+function cmTimerRender() {
+  const list = document.getElementById('cmTimerList');
+  if (!list) return;
+  list.innerHTML = cmTimers.map(t => {
+    const remaining = Math.round((t.endsAt - Date.now()) / 1000);
+    return `<div style="display:flex;align-items:center;gap:.6rem;padding:.5rem .7rem;border-bottom:1px solid var(--border);">
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:.85rem;font-weight:700;color:var(--navy);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(t.label)}</div>
+        <div style="font-size:.68rem;color:var(--muted);">${esc(t.timeLabel)}</div>
+      </div>
+      <div style="font-variant-numeric:tabular-nums;font-weight:700;color:${t.done ? 'var(--rust)' : 'var(--teal-dark)'};">${t.done ? 'Done!' : cmTimerFmt(Math.max(0, remaining))}</div>
+      ${t.done ? `<button onclick="cmTimerReset(${t.id})" style="border:none;background:none;font-size:1rem;cursor:pointer;color:var(--teal-dark);">↺</button>` : ''}
+      <button onclick="cmTimerRemove(${t.id})" style="border:none;background:none;font-size:1rem;cursor:pointer;color:var(--muted);">✕</button>
+    </div>`;
+  }).join('');
+  const tray = document.getElementById('cmTimerTray');
+  if (tray && !cmTimers.length) tray.style.display = 'none';
+}
+
+// ── overlay shell (built once, reused across recipes) ────────────────────
+function _cmEnsureOverlay() {
+  if (document.getElementById('cookModeOverlay')) return;
+  const el = document.createElement('div');
+  el.id = 'cookModeOverlay';
+  el.style.cssText = 'position:fixed;inset:0;z-index:500;background:var(--cream);display:none;flex-direction:column;';
+  el.innerHTML = `
+    <div style="flex-shrink:0;display:flex;align-items:center;gap:.8rem;padding:.9rem 1rem;background:var(--warm-white);border-bottom:1px solid var(--border);">
+      <button onclick="closeRecipeCookMode()" style="border:none;background:none;font-size:1.3rem;cursor:pointer;color:var(--navy);line-height:1;">←</button>
+      <div style="flex:1;min-width:0;">
+        <div id="cmCategory" style="font-size:.72rem;color:var(--teal-dark);font-weight:700;letter-spacing:.03em;"></div>
+        <div id="cmTitle" style="font-family:'Playfair Display',serif;font-size:1.15rem;color:var(--navy);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"></div>
+      </div>
+      <button onclick="document.getElementById('cmTimerTray').style.display=document.getElementById('cmTimerTray').style.display==='none'?'block':'none';" style="border:none;background:none;font-size:1.25rem;cursor:pointer;">⏱</button>
+    </div>
+    <div id="cmTimerTray" style="display:none;flex-shrink:0;max-height:35vh;overflow-y:auto;background:var(--panel);border-bottom:1px solid var(--border);">
+      <div id="cmTimerList"></div>
+    </div>
+    <div style="flex:1;overflow-y:auto;padding:1.2rem 1.2rem 3rem;max-width:720px;margin:0 auto;width:100%;box-sizing:border-box;">
+      <div id="cmByline" style="font-size:.8rem;color:var(--muted);margin-bottom:.6rem;display:none;"></div>
+      <div id="cmDesc" style="font-size:.92rem;color:var(--navy);margin-bottom:1.2rem;line-height:1.5;"></div>
+      <h3 style="font-family:'Playfair Display',serif;color:var(--rust);border-bottom:2px solid var(--gold);padding-bottom:.3rem;margin-bottom:.6rem;">Ingredients</h3>
+      <div id="cmIngredients" style="margin-bottom:1.6rem;line-height:1.7;"></div>
+      <h3 style="font-family:'Playfair Display',serif;color:var(--rust);border-bottom:2px solid var(--gold);padding-bottom:.3rem;margin-bottom:.6rem;">Steps</h3>
+      <div id="cmSteps" style="line-height:1.9;"></div>
+      <div id="cmTip" style="display:none;margin-top:1.4rem;padding:.8rem 1rem;background:var(--teal-light);border-radius:8px;font-size:.85rem;color:var(--teal-dark);"></div>
+    </div>`;
+  document.body.appendChild(el);
+
+  const style = document.createElement('style');
+  style.textContent = `
+    .cm-step-num{display:inline-flex;align-items:center;justify-content:center;width:1.6em;height:1.6em;border-radius:50%;background:var(--gold);color:#fff;font-size:.75em;font-weight:700;margin-right:.5em;flex-shrink:0;}
+    #cmSteps ol,#cmIngredients ul{list-style:none;margin:0;padding:0;}
+    #cmSteps li{display:flex;align-items:flex-start;margin-bottom:.7em;}
+    #cmIngredients li{padding:.25em 0;border-bottom:1px dashed var(--border);}
+    .inline-timer-btn{border:1px solid var(--gold);background:var(--warm-white);color:var(--teal-dark);border-radius:12px;font-size:.72rem;padding:.15em .6em;margin-left:.4em;cursor:pointer;white-space:nowrap;}`;
+  document.head.appendChild(style);
+}
+
+function openRecipeCookMode(recipe) {
+  _cmEnsureOverlay();
+  document.getElementById('cmCategory').textContent = recipe.chapterName || recipe.category || '';
+  document.getElementById('cmTitle').textContent = recipe.title || 'Untitled Recipe';
+  const bylineEl = document.getElementById('cmByline');
+  if (recipe.createdByName) { bylineEl.textContent = `Recipe by ${recipe.createdByName}`; bylineEl.style.display = 'block'; }
+  else { bylineEl.style.display = 'none'; }
+  document.getElementById('cmDesc').innerHTML = esc(recipe.desc || '');
+  document.getElementById('cmIngredients').innerHTML = renderSectionedList(recipe.ingredients, 'ul');
+  document.getElementById('cmSteps').innerHTML = linkifyTimers(renderSectionedList(recipe.steps, 'ol'));
+  const tipEl = document.getElementById('cmTip');
+  if (recipe.tip) { tipEl.innerHTML = esc(recipe.tip); tipEl.style.display = 'block'; }
+  else { tipEl.style.display = 'none'; }
+  document.getElementById('cookModeOverlay').style.display = 'flex';
+}
+
+function closeRecipeCookMode() {
+  const el = document.getElementById('cookModeOverlay');
+  if (el) el.style.display = 'none';
 }
 
 // ── play a track ─────────────────────────────────────────────────────────────
