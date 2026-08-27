@@ -4772,8 +4772,8 @@ function renderDetailActionRows(peekContainer, moreContainer, book, isMine){
   // ── "Edit" — owner or admin ───────────────────────────────────────────
   const editOpts = [];
   if(canManage){
-    editOpts.push({ icon:'✎', label:'Edit Details', action:'editmeta' });
-    if(!book.isAudio) editOpts.push({ icon:'📑', label:'Edit Contents', action:'chapters' });
+    editOpts.push({ icon:'✎', label:'Edit Details', action: book.isRecipe ? 'editrecipe' : 'editmeta' });
+    if(!book.isAudio && !book.isRecipe) editOpts.push({ icon:'📑', label:'Edit Contents', action:'chapters' });
   }
 
   // ── Recommend/Unrecommend — its own toggle, not tucked in a dropdown ────
@@ -5044,6 +5044,7 @@ function runDetailAction(a){
   if(a==='shareprivate') showPrivateShare();
   if(a==='link')         showDirectLink();
   if(a==='editmeta')     showEditMeta();
+  if(a==='editrecipe'){ const book=[...library,...communityLib].find(b=>b.id===currentId); if(book?._recipe) showRecipeEditor(book._recipe); }
   if(a==='chapters')     openChapterManager();
   if(a==='recommend')    toggleRecommended();
   if(a==='tags')         showTagsModal();
@@ -13785,7 +13786,7 @@ document.getElementById('btnSaveBulkEdit').addEventListener('click',async()=>{
   document.getElementById('bulkEditModal').classList.remove('open');
   showLoading(`Updating ${ids.length} book${ids.length!==1?'s':''}…`);
   try{
-    for(const id of ids){const book=library.find(b=>b.id===id);if(!book)continue;const bookUpdates={...updates};if(newTags.length)bookUpdates.tags=[...new Set([...(book.tags||[]),...newTags])];await updateDoc(doc(db,collectionForBook(book),id),bookUpdates);Object.assign(book,bookUpdates);if(book.isAudio&&book._audioTrack)Object.assign(book._audioTrack,bookUpdates);}
+    for(const id of ids){const book=library.find(b=>b.id===id);if(!book)continue;const bookUpdates={...updates};if(newTags.length)bookUpdates.tags=[...new Set([...(book.tags||[]),...newTags])];await updateDoc(doc(db,collectionForBook(book),id),bookUpdates);Object.assign(book,bookUpdates);if(book.isAudio&&book._audioTrack)Object.assign(book._audioTrack,bookUpdates);if(book.isRecipe&&book._recipe)Object.assign(book._recipe,bookUpdates);}
     hideLoading();toggleSelectMode();renderAll();
     showToast(skipped
       ? `${ids.length} book${ids.length!==1?'s':''} updated ✓ (${skipped} skipped — not yours)`
