@@ -17845,13 +17845,18 @@ async function loadRecipes() {
   // Recipes failing to load should only mean an empty recipes shelf, never
   // a blank library.
   try {
+    // No orderBy here on purpose — combining it with the ownerId equality
+    // filter would need a composite index (ownerId + createdAt) that
+    // Firestore has to build per-collection. Sorting the small result set
+    // client-side avoids that setup step entirely.
     const q = query(
       collection(db, 'recipes'),
-      where('ownerId', '==', currentUser.uid),
-      orderBy('createdAt', 'desc')
+      where('ownerId', '==', currentUser.uid)
     );
     const snap = await getDocs(q);
-    _recipes = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    _recipes = snap.docs
+      .map(d => ({ id: d.id, ...d.data() }))
+      .sort((a, b) => (b.createdAt?.toMillis?.() || 0) - (a.createdAt?.toMillis?.() || 0));
   } catch (e) {
     console.warn('Recipes failed to load (check Firestore security rules for the `recipes` collection):', e);
     _recipes = [];
