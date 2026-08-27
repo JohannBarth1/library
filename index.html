@@ -18601,6 +18601,21 @@ function closeImportERecipeModal() {
   if (el) el.style.display = 'none';
 }
 
+// This script runs as type="module", so top-level function declarations are
+// module-scoped, not attached to `window` — unlike a classic <script>. Every
+// function below is called from an inline onclick="..." attribute inside
+// HTML built with innerHTML (cook mode, the recipe editor, the import
+// modal), and the browser resolves those attribute handlers against the
+// global scope, not module scope. Without this, clicking any of these
+// throws "X is not defined". (Buttons wired via addEventListener don't need
+// this — they hold a direct reference to the function already.)
+window.closeRecipeCookMode = closeRecipeCookMode;
+window.cmTimerAdd = cmTimerAdd;
+window.cmTimerReset = cmTimerReset;
+window.cmTimerRemove = cmTimerRemove;
+window.closeRecipeEditor = closeRecipeEditor;
+window.closeImportERecipeModal = closeImportERecipeModal;
+
 function _ieLog(msg, color) {
   const results = document.getElementById('ieResults');
   results.insertAdjacentHTML('beforeend', `<div style="padding:.15rem 0;color:${color || 'var(--navy)'};">${esc(msg)}</div>`);
