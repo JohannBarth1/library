@@ -1950,6 +1950,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
   <div class="header-right">
     <button class="hbtn hbtn-upload" id="btnHeaderUpload">📤 Upload</button>
     <button class="hbtn hbtn-upload" id="btnHeaderUploadAudio" title="Upload Audio">🎧 Upload Audio</button>
+    <button class="hbtn hbtn-upload" id="btnHeaderAddRecipe" title="Add Recipe">🍲 Add Recipe</button>
     <button class="hbtn hbtn-ghost btnToggleSettingsDesk" id="btnToggleSettings">⚙</button>
     <div id="notifScrim" class="notif-scrim"></div>
     <div class="notif-bell-wrap">
@@ -2071,6 +2072,8 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
       <div class="filter-footer">
         <button class="btn-upload-f" id="btnSideUpload">+ Upload</button>
         <button class="btn-upload-f" id="btnSideUploadAudio">🎧 Upload Audio</button>
+        <button class="btn-upload-f" id="btnSideAddRecipe">🍲 Add Recipe</button>
+        <button class="btn-upload-f" id="btnSideImportERecipe">📥 Import from eRecipe</button>
         <button class="btn-refresh-f" id="btnSideRefresh">↻ Refresh</button>
       </div>
     </aside>
@@ -2320,6 +2323,22 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
           <span class="settings-row-text">
             <span class="settings-row-title">Upload Audio</span>
             <span class="settings-row-desc">Add audio files or a YouTube link</span>
+          </span>
+          <span class="settings-row-chevron">›</span>
+        </button>
+        <button class="settings-row" id="btnMobAddRecipe">
+          <span class="settings-row-icon" style="background:var(--teal);color:var(--gold)">🍲</span>
+          <span class="settings-row-text">
+            <span class="settings-row-title">Add Recipe</span>
+            <span class="settings-row-desc">Write a new recipe into your library</span>
+          </span>
+          <span class="settings-row-chevron">›</span>
+        </button>
+        <button class="settings-row" id="btnMobImportERecipe">
+          <span class="settings-row-icon" style="background:var(--teal);color:var(--gold)">📥</span>
+          <span class="settings-row-text">
+            <span class="settings-row-title">Import from eRecipe</span>
+            <span class="settings-row-desc">One-time import of your eRecipe collection</span>
           </span>
           <span class="settings-row-chevron">›</span>
         </button>
@@ -4238,10 +4257,11 @@ function renderGrid(gridId){
   if(!books.length){
     const isEmpty=activeBooks().length===0;
     const canUpload=deskLibFilter==='all'||deskLibFilter==='private';
-    grid.innerHTML=`<div style="grid-column:1/-1;padding:3rem 1rem;text-align:center;color:var(--muted)"><div style="font-size:2.5rem;opacity:.25;margin-bottom:.8rem">📚</div><div style="font-family:'Playfair Display',serif;font-size:1.1rem;color:var(--navy2);margin-bottom:.4rem">${isEmpty?'Your library is empty':'No books match'}</div><div style="font-size:.85rem">${isEmpty?'Upload a book or audiobook to get started':'Try a different search or filter'}</div>${isEmpty&&canUpload?`<div style="margin-top:1rem;display:flex;gap:.5rem;justify-content:center;flex-wrap:wrap"><button class="hbtn hbtn-upload" id="emptyStateUploadBtn">📤 Upload</button><button class="hbtn hbtn-upload" id="emptyStateUploadAudioBtn">🎧 Upload Audio</button></div>`:''}</div>`;
+    grid.innerHTML=`<div style="grid-column:1/-1;padding:3rem 1rem;text-align:center;color:var(--muted)"><div style="font-size:2.5rem;opacity:.25;margin-bottom:.8rem">📚</div><div style="font-family:'Playfair Display',serif;font-size:1.1rem;color:var(--navy2);margin-bottom:.4rem">${isEmpty?'Your library is empty':'No books match'}</div><div style="font-size:.85rem">${isEmpty?'Upload a book or audiobook to get started':'Try a different search or filter'}</div>${isEmpty&&canUpload?`<div style="margin-top:1rem;display:flex;gap:.5rem;justify-content:center;flex-wrap:wrap"><button class="hbtn hbtn-upload" id="emptyStateUploadBtn">📤 Upload</button><button class="hbtn hbtn-upload" id="emptyStateUploadAudioBtn">🎧 Upload Audio</button><button class="hbtn hbtn-upload" id="emptyStateAddRecipeBtn">🍲 Add Recipe</button></div>`:''}</div>`;
     if(isEmpty&&canUpload){
       grid.querySelector('#emptyStateUploadBtn')?.addEventListener('click', showUploadModal);
       grid.querySelector('#emptyStateUploadAudioBtn')?.addEventListener('click', showAudioUploadModal);
+      grid.querySelector('#emptyStateAddRecipeBtn')?.addEventListener('click', () => showRecipeEditor());
     }
     return;
   }
@@ -13355,6 +13375,10 @@ function dataUrlToBlob(dataUrl){const[header,data]=dataUrl.split(',');const mime
 [document.getElementById('btnHeaderUpload'),document.getElementById('btnSideUpload'),document.getElementById('btnMobUpload')].forEach(b=>b?.addEventListener('click',showUploadModal));
 document.getElementById('btnMobUploadAudio')?.addEventListener('click', showAudioUploadModal);
 [document.getElementById('btnHeaderUploadAudio'),document.getElementById('btnSideUploadAudio')].forEach(b=>b?.addEventListener('click',showAudioUploadModal));
+document.getElementById('btnMobAddRecipe')?.addEventListener('click', () => showRecipeEditor());
+[document.getElementById('btnHeaderAddRecipe'),document.getElementById('btnSideAddRecipe')].forEach(b=>b?.addEventListener('click',() => showRecipeEditor()));
+document.getElementById('btnMobImportERecipe')?.addEventListener('click', showImportERecipeModal);
+document.getElementById('btnSideImportERecipe')?.addEventListener('click', showImportERecipeModal);
 // Explicit user-triggered refresh — loadLibrary() itself stays silent since
 // it's also called on sign-in and after uploads, where a "refreshed" toast
 // would just be noise on top of feedback those flows already give.
@@ -18256,6 +18280,7 @@ function _cmEnsureOverlay() {
         <div id="cmTitle" style="font-family:'Playfair Display',serif;font-size:1.15rem;color:var(--navy);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"></div>
       </div>
       <button onclick="document.getElementById('cmTimerTray').style.display=document.getElementById('cmTimerTray').style.display==='none'?'block':'none';" style="border:none;background:none;font-size:1.25rem;cursor:pointer;">⏱</button>
+      <button id="cmEditBtn" style="display:none;border:none;background:none;font-size:1.15rem;cursor:pointer;">✎</button>
     </div>
     <div id="cmTimerTray" style="display:none;flex-shrink:0;max-height:35vh;overflow-y:auto;background:var(--panel);border-bottom:1px solid var(--border);">
       <div id="cmTimerList"></div>
@@ -18294,12 +18319,320 @@ function openRecipeCookMode(recipe) {
   const tipEl = document.getElementById('cmTip');
   if (recipe.tip) { tipEl.innerHTML = esc(recipe.tip); tipEl.style.display = 'block'; }
   else { tipEl.style.display = 'none'; }
+  const editBtn = document.getElementById('cmEditBtn');
+  const isMine = recipe.ownerId === currentUser?.uid;
+  editBtn.style.display = isMine ? 'block' : 'none';
+  editBtn.onclick = () => showRecipeEditor(recipe);
   document.getElementById('cookModeOverlay').style.display = 'flex';
 }
 
 function closeRecipeCookMode() {
   const el = document.getElementById('cookModeOverlay');
   if (el) el.style.display = 'none';
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// RECIPE EDITOR — add/edit form, self-built overlay like cook mode.
+// Ingredients/steps are entered one-per-line to match eRecipe's storage
+// format (plain strings; a line ending in ":" becomes a sub-heading).
+// ═══════════════════════════════════════════════════════════════════════════
+
+function _reEnsureEditor() {
+  if (document.getElementById('recipeEditorOverlay')) return;
+  const el = document.createElement('div');
+  el.id = 'recipeEditorOverlay';
+  el.style.cssText = 'position:fixed;inset:0;z-index:510;background:var(--cream);display:none;flex-direction:column;';
+  el.innerHTML = `
+    <div style="flex-shrink:0;display:flex;align-items:center;gap:.8rem;padding:.9rem 1rem;background:var(--warm-white);border-bottom:1px solid var(--border);">
+      <button onclick="closeRecipeEditor()" style="border:none;background:none;font-size:1.3rem;cursor:pointer;color:var(--navy);line-height:1;">←</button>
+      <div id="reHeaderTitle" style="flex:1;font-family:'Playfair Display',serif;font-size:1.1rem;color:var(--navy);">Add Recipe</div>
+      <button id="reDeleteBtn" style="display:none;border:none;background:none;font-size:.85rem;color:var(--danger);cursor:pointer;">Delete</button>
+      <button id="reSaveBtn" style="border:none;background:var(--teal);color:var(--warm-white);font-weight:700;font-size:.85rem;padding:.5rem 1.1rem;border-radius:20px;cursor:pointer;">Save</button>
+    </div>
+    <div style="flex:1;overflow-y:auto;padding:1.2rem 1.2rem 3rem;max-width:640px;margin:0 auto;width:100%;box-sizing:border-box;">
+      <label class="re-lbl">Title</label>
+      <input id="reTitle" class="re-input" type="text" placeholder="Cowboy Coffee Cake"/>
+
+      <label class="re-lbl">Category</label>
+      <input id="reCategory" class="re-input" type="text" list="reCategoryList" placeholder="Breakfast Foods, Cakes, Mains…"/>
+      <datalist id="reCategoryList"></datalist>
+
+      <label class="re-lbl">Description</label>
+      <textarea id="reDesc" class="re-input" rows="2" placeholder="A rustic, hearty coffee cake with a thick brown sugar crumble."></textarea>
+
+      <label class="re-lbl">Ingredients <span class="re-hint">(one per line — end a line with ":" for a sub-heading)</span></label>
+      <textarea id="reIngredients" class="re-input re-mono" rows="8" placeholder="2 cups all-purpose flour&#10;3/4 cup brown sugar, packed&#10;1/2 tsp salt"></textarea>
+
+      <label class="re-lbl">Steps <span class="re-hint">(one per line — end a line with ":" for a sub-heading)</span></label>
+      <textarea id="reSteps" class="re-input re-mono" rows="8" placeholder="Preheat oven to 375F (190C).&#10;Bake 25-30 minutes until golden."></textarea>
+
+      <label class="re-lbl">Tip <span class="re-hint">(optional)</span></label>
+      <textarea id="reTip" class="re-input" rows="2" placeholder="No buttermilk? Add 1 tbsp vinegar to 1 cup regular milk and let sit 5 minutes."></textarea>
+
+      <label class="re-lbl">Visibility</label>
+      <div style="display:flex;gap:.5rem;">
+        <button id="reVisPrivate" class="re-vis-btn" data-vis="private">🔒 Private</button>
+        <button id="reVisPublic" class="re-vis-btn" data-vis="public">🌐 Public</button>
+      </div>
+    </div>`;
+  document.body.appendChild(el);
+
+  const style = document.createElement('style');
+  style.textContent = `
+    .re-lbl{display:block;font-size:.78rem;font-weight:700;color:var(--teal-dark);margin:1rem 0 .3rem;}
+    .re-hint{font-weight:400;color:var(--muted);font-size:.72rem;}
+    .re-input{width:100%;box-sizing:border-box;border:1px solid var(--border);border-radius:8px;padding:.6rem .7rem;font-family:'Lato',sans-serif;font-size:.88rem;color:var(--navy);background:var(--warm-white);resize:vertical;}
+    .re-mono{font-family:ui-monospace,Menlo,monospace;font-size:.82rem;line-height:1.5;}
+    .re-vis-btn{flex:1;border:1px solid var(--border);background:var(--warm-white);border-radius:20px;padding:.5rem;font-size:.82rem;cursor:pointer;color:var(--muted);}
+    .re-vis-btn.active{border-color:var(--teal);background:var(--teal-light);color:var(--teal-dark);font-weight:700;}`;
+  document.head.appendChild(style);
+
+  document.getElementById('reVisPrivate').addEventListener('click', () => _reSetVis('private'));
+  document.getElementById('reVisPublic').addEventListener('click', () => _reSetVis('public'));
+  document.getElementById('reSaveBtn').addEventListener('click', saveRecipeFromEditor);
+  document.getElementById('reDeleteBtn').addEventListener('click', deleteRecipeFromEditor);
+}
+
+function _reSetVis(vis) {
+  document.getElementById('recipeEditorOverlay').dataset.vis = vis;
+  document.getElementById('reVisPrivate').classList.toggle('active', vis === 'private');
+  document.getElementById('reVisPublic').classList.toggle('active', vis === 'public');
+}
+
+// Pass an existing eRecipe-shaped recipe object to edit it; omit to create new.
+function showRecipeEditor(recipe) {
+  if (!currentUser) { showToast('Please sign in first'); return; }
+  _reEnsureEditor();
+  const overlay = document.getElementById('recipeEditorOverlay');
+  overlay.dataset.editId = recipe?.id || '';
+
+  document.getElementById('reHeaderTitle').textContent = recipe ? 'Edit Recipe' : 'Add Recipe';
+  document.getElementById('reDeleteBtn').style.display = recipe ? 'block' : 'none';
+  document.getElementById('reTitle').value = recipe?.title || '';
+  document.getElementById('reCategory').value = recipe?.chapterName || recipe?.category || '';
+  document.getElementById('reDesc').value = recipe?.desc || '';
+  document.getElementById('reIngredients').value = (recipe?.ingredients || []).join('\n');
+  document.getElementById('reSteps').value = (recipe?.steps || []).join('\n');
+  document.getElementById('reTip').value = recipe?.tip || '';
+  _reSetVis(recipe?.visibility || 'private');
+
+  // Populate category suggestions from recipes already loaded.
+  const cats = [...new Set(_recipes.map(r => r.chapterName || r.category).filter(Boolean))];
+  document.getElementById('reCategoryList').innerHTML = cats.map(c => `<option value="${esc(c)}">`).join('');
+
+  overlay.style.display = 'flex';
+}
+
+function closeRecipeEditor() {
+  const el = document.getElementById('recipeEditorOverlay');
+  if (el) el.style.display = 'none';
+}
+
+async function saveRecipeFromEditor() {
+  const overlay = document.getElementById('recipeEditorOverlay');
+  const title = document.getElementById('reTitle').value.trim();
+  if (!title) { showToast('Please enter a title'); return; }
+  const ingredients = document.getElementById('reIngredients').value.split('\n').map(l => l.trim()).filter(Boolean);
+  const steps = document.getElementById('reSteps').value.split('\n').map(l => l.trim()).filter(Boolean);
+  if (!ingredients.length) { showToast('Please add at least one ingredient'); return; }
+  if (!steps.length) { showToast('Please add at least one step'); return; }
+
+  const payload = {
+    title,
+    chapterName: document.getElementById('reCategory').value.trim() || 'Uncategorised',
+    desc: document.getElementById('reDesc').value.trim(),
+    ingredients,
+    steps,
+    tip: document.getElementById('reTip').value.trim(),
+    visibility: overlay.dataset.vis || 'private',
+    updatedAt: serverTimestamp(),
+  };
+
+  const saveBtn = document.getElementById('reSaveBtn');
+  saveBtn.disabled = true; saveBtn.textContent = 'Saving…';
+  try {
+    const editId = overlay.dataset.editId;
+    if (editId) {
+      await updateDoc(doc(db, 'recipes', editId), payload);
+    } else {
+      await addDoc(collection(db, 'recipes'), {
+        ...payload,
+        ownerId: currentUser.uid,
+        createdByName: currentUser.displayName || currentUser.email || '',
+        allowedUsers: [],
+        createdAt: serverTimestamp(),
+      });
+    }
+    await loadRecipes();
+    mergeRecipesIntoLibrary();
+    renderAll();
+    closeRecipeEditor();
+    showToast(editId ? 'Recipe updated' : 'Recipe added');
+  } catch (e) {
+    console.error('Failed to save recipe:', e);
+    showToast('Failed to save recipe: ' + e.message);
+  } finally {
+    saveBtn.disabled = false; saveBtn.textContent = 'Save';
+  }
+}
+
+async function deleteRecipeFromEditor() {
+  const overlay = document.getElementById('recipeEditorOverlay');
+  const editId = overlay.dataset.editId;
+  if (!editId) return;
+  if (!confirm('Delete this recipe? This cannot be undone.')) return;
+  try {
+    await deleteDoc(doc(db, 'recipes', editId));
+    await loadRecipes();
+    mergeRecipesIntoLibrary();
+    renderAll();
+    closeRecipeEditor();
+    closeRecipeCookMode();
+    showToast('Recipe deleted');
+  } catch (e) {
+    console.error('Failed to delete recipe:', e);
+    showToast('Failed to delete recipe: ' + e.message);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// IMPORT FROM eRECIPE — one-time tool. eLibrary and eRecipe are separate
+// origins/apps, so there's no live cross-origin read; the person exports
+// eRecipe's local `data` object (matching js/data.js: {chapters:[...],
+// recipes:[...]}) and pastes/uploads the JSON here. Idempotent: re-running
+// skips recipes already imported (matched by title + sourceApp tag), so
+// it's safe to run again after adding a few more recipes in eRecipe.
+// ═══════════════════════════════════════════════════════════════════════════
+
+function _ieEnsureModal() {
+  if (document.getElementById('importERecipeOverlay')) return;
+  const el = document.createElement('div');
+  el.id = 'importERecipeOverlay';
+  el.style.cssText = 'position:fixed;inset:0;z-index:520;background:rgba(15,26,46,.55);display:none;align-items:center;justify-content:center;padding:1rem;';
+  el.innerHTML = `
+    <div style="background:var(--warm-white);border-radius:12px;max-width:560px;width:100%;max-height:88vh;overflow-y:auto;padding:1.4rem;box-sizing:border-box;">
+      <div style="display:flex;align-items:center;gap:.6rem;margin-bottom:.6rem;">
+        <div style="font-family:'Playfair Display',serif;font-size:1.15rem;color:var(--navy);flex:1;">Import from eRecipe</div>
+        <button onclick="closeImportERecipeModal()" style="border:none;background:none;font-size:1.2rem;cursor:pointer;color:var(--muted);">✕</button>
+      </div>
+      <div style="font-size:.82rem;color:var(--muted);line-height:1.5;margin-bottom:1rem;">
+        In eRecipe, open the browser console (F12) and run:
+        <div style="background:var(--panel);border-radius:6px;padding:.5rem .7rem;margin:.4rem 0;font-family:ui-monospace,Menlo,monospace;font-size:.78rem;user-select:all;">copy(JSON.stringify(data))</div>
+        This copies your chapters and recipes to the clipboard. Paste it below, or upload the file if you exported one instead.
+      </div>
+      <textarea id="ieJsonInput" class="re-input re-mono" rows="6" placeholder='{"chapters":[...],"recipes":[...]}'></textarea>
+      <div style="display:flex;align-items:center;gap:.6rem;margin-top:.6rem;">
+        <label for="ieFileInput" style="border:1px solid var(--border);border-radius:20px;padding:.4rem 1rem;font-size:.8rem;cursor:pointer;color:var(--teal-dark);">📄 Upload JSON file</label>
+        <input id="ieFileInput" type="file" accept="application/json,.json" style="display:none;"/>
+        <span id="ieFileName" style="font-size:.78rem;color:var(--muted);"></span>
+      </div>
+      <div id="ieResults" style="margin-top:1rem;max-height:200px;overflow-y:auto;font-size:.8rem;"></div>
+      <div style="display:flex;justify-content:flex-end;gap:.6rem;margin-top:1.2rem;">
+        <button onclick="closeImportERecipeModal()" style="border:1px solid var(--border);background:none;border-radius:20px;padding:.5rem 1.1rem;font-size:.85rem;cursor:pointer;color:var(--muted);">Cancel</button>
+        <button id="ieImportBtn" style="border:none;background:var(--teal);color:var(--warm-white);font-weight:700;font-size:.85rem;padding:.5rem 1.2rem;border-radius:20px;cursor:pointer;">Import</button>
+      </div>
+    </div>`;
+  document.body.appendChild(el);
+
+  document.getElementById('ieFileInput').addEventListener('change', e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    document.getElementById('ieFileName').textContent = file.name;
+    const reader = new FileReader();
+    reader.onload = () => { document.getElementById('ieJsonInput').value = reader.result; };
+    reader.readAsText(file);
+  });
+  document.getElementById('ieImportBtn').addEventListener('click', runImportFromERecipe);
+}
+
+function showImportERecipeModal() {
+  if (!currentUser) { showToast('Please sign in first'); return; }
+  _ieEnsureModal();
+  document.getElementById('ieJsonInput').value = '';
+  document.getElementById('ieFileName').textContent = '';
+  document.getElementById('ieResults').innerHTML = '';
+  document.getElementById('importERecipeOverlay').style.display = 'flex';
+}
+
+function closeImportERecipeModal() {
+  const el = document.getElementById('importERecipeOverlay');
+  if (el) el.style.display = 'none';
+}
+
+function _ieLog(msg, color) {
+  const results = document.getElementById('ieResults');
+  results.insertAdjacentHTML('beforeend', `<div style="padding:.15rem 0;color:${color || 'var(--navy)'};">${esc(msg)}</div>`);
+  results.scrollTop = results.scrollHeight;
+}
+
+async function runImportFromERecipe() {
+  const raw = document.getElementById('ieJsonInput').value.trim();
+  if (!raw) { showToast('Paste or upload eRecipe\'s exported JSON first'); return; }
+
+  let parsed;
+  try { parsed = JSON.parse(raw); }
+  catch (e) { showToast('That doesn\'t look like valid JSON'); return; }
+
+  const chapters = Array.isArray(parsed.chapters) ? parsed.chapters : [];
+  const recipes = Array.isArray(parsed.recipes) ? parsed.recipes : [];
+  if (!recipes.length) { showToast('No recipes found in that data'); return; }
+
+  const chapterName = id => chapters.find(c => c.id === id)?.name || 'Uncategorised';
+
+  // Idempotency: skip anything already imported with the same title, so
+  // re-running after adding a few new recipes in eRecipe doesn't duplicate
+  // what's already here. Requires this user's own recipes to be loaded.
+  await loadRecipes();
+  const alreadyImported = new Set(
+    _recipes.filter(r => r.sourceApp === 'eRecipe').map(r => r.title)
+  );
+
+  const btn = document.getElementById('ieImportBtn');
+  btn.disabled = true; btn.textContent = 'Importing…';
+  document.getElementById('ieResults').innerHTML = '';
+
+  let imported = 0, skipped = 0, failed = 0;
+  for (const r of recipes) {
+    const title = r.title || 'Untitled Recipe';
+    if (alreadyImported.has(title)) {
+      _ieLog(`⏭ Skipped "${title}" (already imported)`, 'var(--muted)');
+      skipped++;
+      continue;
+    }
+    try {
+      await addDoc(collection(db, 'recipes'), {
+        title,
+        chapterName: chapterName(r.chapterId),
+        desc: r.desc || '',
+        ingredients: Array.isArray(r.ingredients) ? r.ingredients : [],
+        steps: Array.isArray(r.steps) ? r.steps : [],
+        tip: r.tip || '',
+        visibility: 'private',
+        ownerId: currentUser.uid,
+        createdByName: r.createdByName || currentUser.displayName || currentUser.email || '',
+        allowedUsers: [],
+        sourceApp: 'eRecipe',
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      });
+      _ieLog(`✓ Imported "${title}"`, '#2a7a4a');
+      imported++;
+    } catch (e) {
+      console.error('Failed to import recipe:', title, e);
+      _ieLog(`✕ Failed "${title}": ${e.message}`, 'var(--danger)');
+      failed++;
+    }
+  }
+
+  btn.disabled = false; btn.textContent = 'Import';
+  _ieLog(`── Done: ${imported} imported, ${skipped} skipped, ${failed} failed ──`, 'var(--navy)');
+  showToast(`Imported ${imported} recipe${imported === 1 ? '' : 's'}${skipped ? `, skipped ${skipped}` : ''}`);
+
+  if (imported > 0) {
+    await loadRecipes();
+    mergeRecipesIntoLibrary();
+    renderAll();
+  }
 }
 
 // ── play a track ─────────────────────────────────────────────────────────────
