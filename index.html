@@ -18613,14 +18613,19 @@ function showRecipeEditor(recipe) {
   _reRenderCoverPreview();
 
   // Category suggestions: the same shared, admin-managed genre list used
-  // for books/audio (getCategoryList(), each with its own icon via
-  // catIcon()) — this is what makes it a "proper" category system rather
-  // than something recipes track separately — plus any category already in
-  // use on a recipe that hasn't been added to that shared list yet (e.g.
-  // one that came in through the eRecipe import tool).
+  // for books/audio (getCategoryList()) — this is what makes it a "proper"
+  // category system rather than something recipes track separately — plus
+  // any category already in use on a recipe that hasn't been added to that
+  // shared list yet (e.g. one that came in through the eRecipe import tool).
+  // No icon prefix here: a <datalist> option's value has to be the plain
+  // category name (that's what actually gets saved), and giving the option
+  // a *different* visible label than its value is exactly what makes some
+  // browsers show the name twice in the suggestion list. Icons still show
+  // everywhere it's actually useful to see them at a glance — group tiles,
+  // the Admin genre manager — just not in this free-text picker.
   const recipeOnlyCats = _recipes.map(r => r.chapterName || r.category).filter(Boolean);
   const cats = [...new Set([...getCategoryList(), ...recipeOnlyCats])].sort((a, b) => a.localeCompare(b));
-  document.getElementById('reCategoryList').innerHTML = cats.map(c => `<option value="${esc(c)}">${catIcon(c)} ${esc(c)}</option>`).join('');
+  document.getElementById('reCategoryList').innerHTML = cats.map(c => `<option value="${esc(c)}"></option>`).join('');
 
   overlay.style.display = 'flex';
 }
