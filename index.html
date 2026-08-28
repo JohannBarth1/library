@@ -4272,14 +4272,14 @@ function renderGrid(gridId){
     const coverSrc=getCoverSrc(b);
     const isSelected=selectedIds.has(b.id);
     if(b.isGroupHeader){
-      const icon=b.isRecipe?'🍲':'🎧', unit=b.isRecipe?'recipe':'episode';
+      const icon=b.icon||(b.isRecipe?'🍲':'🎧'), unit=b.isRecipe?'recipe':'episode';
       return `<div class="group-header-tile tile-pop-in" data-groupheader="1" data-groupkey="${esc(b.groupKey)}">
       <span><span class="group-header-title">${icon} ${esc(b.title)}</span><span class="group-header-count">${b.partCount} ${unit}${b.partCount===1?'':'s'}</span></span>
       <span class="group-header-collapse">⌃ Collapse</span>
     </div>`;
     }
     if(b.isGroup){
-      const icon=b.isRecipe?'🍲':'🎧', unit=b.isRecipe?'Recipe':'Episode';
+      const icon=b.icon||(b.isRecipe?'🍲':'🎧'), unit=b.isRecipe?'Recipe':'Episode';
       return `<div class="book-card ${b.isRecipe?'recipe-tile':'audio-tile'} group-tile ${isSelected?'selected':''}" data-bookid="${b.id}" data-groupids="${b.groupIds.join(',')}" data-groupkey="${esc(b.groupKey)}">
       <div style="position:relative">
         <div class="group-stack-edge e2"></div>
@@ -4703,7 +4703,7 @@ function renderDetailActionRows(peekContainer, moreContainer, book, isMine){
   const hasCustomLists = _userLists.some(l => !l.system);
 
   peekHtml += `<div class="mob-list-section">
-    ${hasCustomLists ? `<div class="mob-list-section-label">🗂️ Lists</div>
+    ${hasCustomLists ? `<div class="mob-list-section-label">Lists</div>
     <div class="mob-list-row" style="margin-bottom:.5rem;">
       <button class="mob-list-other-btn" data-action="otherlists" id="mobOtherListsBtn">Other Lists ▾</button>
     </div>` : ''}
@@ -4957,7 +4957,7 @@ function buildDrawerIconBar(book, isMine){
 
     <!-- Lists: Favourites quick-toggle + reading-stage segmented control -->
     <div style="padding:.55rem 1.5rem .45rem;border-bottom:1px solid var(--border);">
-      <div style="font-size:.58rem;letter-spacing:.15em;text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:.4rem;">🗂️ Lists</div>
+      <div style="font-size:.58rem;letter-spacing:.15em;text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:.4rem;">Lists</div>
       <div style="display:flex;flex-wrap:wrap;gap:.4rem;margin-bottom:.5rem;">
         <button class="mob-list-quickbtn ${isFav?'active':''}" data-list="favourites" data-action="quicklist">
           <span class="lq-icon">${isFav?'❤️':'🤍'}</span><span>Favourites</span>
@@ -5864,7 +5864,7 @@ function renderMobLibrarySelectMode(){
   reconcileGrid(grid, books, b => b.id, b => {
     const coverSrc = getCoverSrc(b);
     if(b.isGroup){
-      const icon = b.isRecipe?'🍲':'🎧', unit = b.isRecipe?'Recipe':'Episode';
+      const icon = b.icon||(b.isRecipe?'🍲':'🎧'), unit = b.isRecipe?'Recipe':'Episode';
       const isSelected = b.groupIds.every(gid => mobSelectedIds.has(gid));
       const coverHtml = coverSrc
         ? `<img class="book-card-cover" src="${coverSrc}" alt="" loading="lazy"/>`
@@ -6781,7 +6781,7 @@ function reconcileGrid(grid, items, keyFn, htmlFn) {
 
 function bookCardHtml(b, isComm, showProgress=false){
   if(b.isGroupHeader){
-    const icon=b.isRecipe?'🍲':'🎧', unit=b.isRecipe?'recipe':'episode';
+    const icon=b.icon||(b.isRecipe?'🍲':'🎧'), unit=b.isRecipe?'recipe':'episode';
     return `<div class="group-header-tile tile-pop-in" data-groupheader="1" data-groupkey="${esc(b.groupKey)}">
       <span><span class="group-header-title">${icon} ${esc(b.title)}</span><span class="group-header-count">${b.partCount} ${unit}${b.partCount===1?'':'s'}${b.totalDuration?' · '+formatDuration(b.totalDuration):''}</span></span>
       <span class="group-header-collapse">⌃ Collapse</span>
@@ -6805,7 +6805,7 @@ function bookCardHtml(b, isComm, showProgress=false){
        </div>` : '';
 
   if(b.isGroup){
-    const icon=b.isRecipe?'🍲':'🎧', unit=b.isRecipe?'Recipe':'Episode';
+    const icon=b.icon||(b.isRecipe?'🍲':'🎧'), unit=b.isRecipe?'Recipe':'Episode';
     return `<div class="book-card ${b.isRecipe?'recipe-tile':'audio-tile'} group-tile" data-bookid="${b.id}" data-groupids="${b.groupIds.join(',')}" data-groupkey="${esc(b.groupKey)}">
       <div style="position:relative">
         <div class="group-stack-edge e2"></div>
@@ -8875,8 +8875,14 @@ let _expandedSeriesGroups = new Set();
 // Groups recipes by category into the same collapsible group-header/group-tile
 // UI already built for audio series (collapseAudioSeriesForGrid below) — same
 // _expandedSeriesGroups set and CSS classes, just keyed by category instead
-// of series. Non-recipe items pass through untouched, and a category with
-// only one recipe in it isn't worth collapsing into a group of its own.
+// of series. Non-recipe items pass through untouched. Unlike audio series,
+// every category gets a group — even one with a single recipe in it — so
+// browsing is always organised by category. The group's icon is whatever
+// icon that category has been assigned (recipeCatIcon(), same shared
+// per-category icon map the rest of the library uses), falling back to a
+// generic 🍲 rather than the folder icon catIcon() uses for other content.
+function recipeCatIcon(cat) { return _categoryIcons[cat] || '🍲'; }
+
 function collapseRecipesByCategoryForGrid(books) {
   const recipes = books.filter(b => b.isRecipe);
   if (!recipes.length) return books;
@@ -8890,10 +8896,10 @@ function collapseRecipesByCategoryForGrid(books) {
   const out = [...others];
   [...byCat.keys()].sort((a, b) => a.localeCompare(b)).forEach(cat => {
     const group = byCat.get(cat);
-    if (group.length === 1) { out.push(group[0]); return; }
     const key = 'recipecat:' + cat.toLowerCase();
+    const icon = recipeCatIcon(cat);
     if (_expandedSeriesGroups.has(key)) {
-      out.push({ id: '__grouphdr_' + key, isGroupHeader: true, groupKey: key, title: cat, partCount: group.length, isRecipe: true });
+      out.push({ id: '__grouphdr_' + key, isGroupHeader: true, groupKey: key, title: cat, partCount: group.length, isRecipe: true, icon });
       group.forEach(r => out.push({ ...r, _groupExpanded: true }));
     } else {
       out.push({
@@ -8906,6 +8912,7 @@ function collapseRecipesByCategoryForGrid(books) {
         coverUrl: group.find(r => r.coverUrl)?.coverUrl || null,
         isRecipe: true,
         partCount: group.length,
+        icon,
       });
     }
   });
@@ -18400,6 +18407,33 @@ function _cmEnsureOverlay() {
   document.head.appendChild(style);
 }
 
+// ── screen wake lock — keep the display on while a recipe is open, since
+// hands are often busy/messy mid-cook and the screen dimming/locking mid-step
+// is exactly the wrong moment. Falls back to doing nothing on browsers that
+// don't support the Wake Lock API rather than erroring.
+let _cmWakeLock = null;
+async function _cmAcquireWakeLock() {
+  if (!('wakeLock' in navigator)) return;
+  try {
+    _cmWakeLock = await navigator.wakeLock.request('screen');
+    _cmWakeLock.addEventListener('release', () => { _cmWakeLock = null; });
+  } catch (e) {
+    console.warn('Wake lock request failed:', e);
+  }
+}
+function _cmReleaseWakeLock() {
+  if (_cmWakeLock) { _cmWakeLock.release().catch(() => {}); _cmWakeLock = null; }
+}
+// The API auto-releases the lock whenever the tab loses visibility (switching
+// apps, screen off) — re-acquire it once the tab is visible again, but only
+// if cook mode is still actually open.
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible'
+      && document.getElementById('cookModeOverlay')?.style.display === 'flex') {
+    _cmAcquireWakeLock();
+  }
+});
+
 function openRecipeCookMode(recipe) {
   _cmEnsureOverlay();
   document.getElementById('cmCategory').textContent = recipe.chapterName || recipe.category || '';
@@ -18421,11 +18455,13 @@ function openRecipeCookMode(recipe) {
   editBtn.style.display = isMine ? 'block' : 'none';
   editBtn.onclick = () => showRecipeEditor(recipe);
   document.getElementById('cookModeOverlay').style.display = 'flex';
+  _cmAcquireWakeLock();
 }
 
 function closeRecipeCookMode() {
   const el = document.getElementById('cookModeOverlay');
   if (el) el.style.display = 'none';
+  _cmReleaseWakeLock();
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -18576,9 +18612,15 @@ function showRecipeEditor(recipe) {
   overlay.dataset.pendingCoverUrl = recipe?.coverUrl || '';
   _reRenderCoverPreview();
 
-  // Populate category suggestions from recipes already loaded.
-  const cats = [...new Set(_recipes.map(r => r.chapterName || r.category).filter(Boolean))];
-  document.getElementById('reCategoryList').innerHTML = cats.map(c => `<option value="${esc(c)}">`).join('');
+  // Category suggestions: the same shared, admin-managed genre list used
+  // for books/audio (getCategoryList(), each with its own icon via
+  // catIcon()) — this is what makes it a "proper" category system rather
+  // than something recipes track separately — plus any category already in
+  // use on a recipe that hasn't been added to that shared list yet (e.g.
+  // one that came in through the eRecipe import tool).
+  const recipeOnlyCats = _recipes.map(r => r.chapterName || r.category).filter(Boolean);
+  const cats = [...new Set([...getCategoryList(), ...recipeOnlyCats])].sort((a, b) => a.localeCompare(b));
+  document.getElementById('reCategoryList').innerHTML = cats.map(c => `<option value="${esc(c)}">${catIcon(c)} ${esc(c)}</option>`).join('');
 
   overlay.style.display = 'flex';
 }
@@ -18608,6 +18650,18 @@ async function saveRecipeFromEditor() {
     coverUrl: overlay.dataset.pendingCoverUrl || null,
     updatedAt: serverTimestamp(),
   };
+
+  // A category typed in that isn't in the shared list yet (books/audio use
+  // the same list) gets registered the same way the Admin "add genre" flow
+  // does — same collection, same default-icon fallback — so it immediately
+  // becomes a first-class, icon-assignable category rather than a one-off
+  // string that only this recipe knows about.
+  if (payload.chapterName !== 'Uncategorised' && !_categories.includes(payload.chapterName)) {
+    _categories.push(payload.chapterName);
+    _categories.sort((a, b) => a.localeCompare(b));
+    try { await setDoc(doc(db, 'config', 'categories'), { list: _categories }); }
+    catch (e) { console.warn('Failed to register new category:', e); }
+  }
 
   const saveBtn = document.getElementById('reSaveBtn');
   saveBtn.disabled = true; saveBtn.textContent = 'Saving…';
@@ -18754,6 +18808,19 @@ async function runImportFromERecipe() {
   if (!recipes.length) { showToast('No recipes found in that data'); return; }
 
   const chapterName = id => chapters.find(c => c.id === id)?.name || 'Uncategorised';
+
+  // Register every eRecipe chapter name that isn't already a known category
+  // (books/audio share this same list) — one batched write rather than one
+  // per recipe, so importing 30 recipes across 5 chapters only touches
+  // config/categories once.
+  const newCats = [...new Set(chapters.map(c => c.name).filter(Boolean))]
+    .filter(name => name !== 'Uncategorised' && !_categories.includes(name));
+  if (newCats.length) {
+    _categories.push(...newCats);
+    _categories.sort((a, b) => a.localeCompare(b));
+    try { await setDoc(doc(db, 'config', 'categories'), { list: _categories }); }
+    catch (e) { console.warn('Failed to register imported categories:', e); }
+  }
 
   // Idempotency: skip anything already imported with the same title, so
   // re-running after adding a few new recipes in eRecipe doesn't duplicate
