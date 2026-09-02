@@ -13163,25 +13163,50 @@ async function _forceStoredMimetype(zip){
 // layout — this was the original concern, but it turned out not to be
 // the whole story.
 //
-// Chapters containing an image are left completely untouched (no
-// koboSpan wrapping, no book-columns/book-inner wrapper) rather than
-// converted. Two separate rounds of on-device testing showed
-// image-containing chapters rendering as a full-screen image with no
-// visible text — the image's native size didn't match what was actually
-// rendering, pointing at some interaction with Nickel's own
-// image/page-layout handling that isn't reproducible in this sandbox (no
-// physical device to test against). A custom CSS override was tried
-// first and removed again — Nickel already inserts its own max-width/
-// max-height CSS for images by default, per Kobo's own documentation to
-// content creators, so the override was likely redundant and is the
-// most non-standard thing in this output compared to real kepubify's.
-// Text-only chapters still get the full conversion; this is the safe
-// fallback for the ones that don't, at the cost of those chapters not
-// getting kepub's footnote-popup/pagination benefits.
+// Chapters containing an image: v1 of this function left the WHOLE chapter
+// completely untouched (no koboSpan wrapping, no book-columns/book-inner
+// wrapper) rather than converted, after two rounds of on-device testing
+// showed image-containing chapters rendering as a full-screen image with no
+// visible text when the image itself ended up inside a book-inner wrapper —
+// the image's native size didn't match what was actually rendering, pointing
+// at some interaction with Nickel's own image/page-layout handling that
+// isn't reproducible in this sandbox (no physical device to test against).
+// A custom CSS override was tried first and removed again — Nickel already
+// inserts its own max-width/max-height CSS for images by default, per
+// Kobo's own documentation to content creators, so the override was likely
+// redundant.
+//
+// The whole-chapter skip fixed that, but at a real cost that only showed up
+// later: on a real Kobo device, chapters converted this way — sitting
+// unconverted inside an otherwise-kepub file — were reported clipping their
+// own content short right after the image, as if Nickel's kepub-aware
+// pagination doesn't know what to do with a spine item that doesn't have
+// the book-inner structure it expects.
+//
+// v2 (below) is an attempt to get both: split the chapter into segments —
+// wrap runs of image-free content in book-columns/book-inner (getting the
+// koboSpan treatment) exactly as normal, but leave every element that hosts
+// an image (the <img> itself, or a wrapping <figure>/<div>/etc. around it)
+// completely untouched and OUTSIDE any book-inner wrapper — recursing into
+// such a wrapper if it has children of its own, so a whole chapter wrapped
+// in one outer <div class="chapter"> (very common in real EPUBs) doesn't
+// just swallow everything back into one giant "leave alone" block and
+// silently undo this whole approach.
+//
+// UNVERIFIED ON REAL HARDWARE. This is a second attempt at the same
+// interaction the two earlier attempts got wrong in different ways, and
+// there's no way to test Nickel's actual rendering behavior from here.
+// Known limitation even if it does work: an <img> sitting INLINE inside a
+// paragraph of running text (rare, but does happen — a small icon between
+// words) will cause that paragraph to be split into three separate
+// block-level chunks (text-before, bare image, text-after) instead of
+// staying one inline flow, since this only distinguishes "image-hosting"
+// vs "image-free" at the block level. Standalone images between paragraphs
+// (the common case, and the one that prompted all of this) aren't affected
+// by that limitation.
 function _kepubifyXhtml(raw){
   let {before, body, after} = _splitXhtmlShell(raw);
   if(/id=["']book-inner["']/.test(body))return raw; // already converted — don't double-wrap
-  if(/<img[\s>]|<image[\s>:]/i.test(body))return raw; // contains an image — see note above, leave untouched
 
   const doc=new DOMParser().parseFromString('<html><body>'+body+'</body></html>','text/html');
   const root=doc.body;
@@ -13189,6 +13214,13 @@ function _kepubifyXhtml(raw){
 
   let counter=1;
   const SKIP_TAGS=new Set(['script','style','svg','math','head','iframe','video','audio','canvas']);
+
+  function hasImage(el){
+    if(el.nodeType!==1)return false;
+    const tag=el.tagName.toLowerCase();
+    if(tag==='img'||tag==='image')return true;
+    return !!(el.querySelector && el.querySelector('img,image'));
+  }
 
   function wrapTextNode(el,node){
     const span=doc.createElement('span');
@@ -13207,17 +13239,75 @@ function _kepubifyXhtml(raw){
       else if(node.nodeType===1)walk(node);
     });
   }
-  walk(root);
 
-  // Wrap as a STRING rather than moving each child node one at a time into
-  // new wrapper elements — moving thousands of nodes individually turned
-  // out to be the actual cause of large chapters hanging the send flow
-  // (profiled at ~20s out of ~22s total for an 8000-paragraph chapter).
-  // Serializing once and wrapping the string is semantically identical
-  // and about 12x faster on the same test case.
-  const wrapped='<div id="book-columns"><div id="book-inner">'+root.innerHTML+'</div></div>';
+  // Renders `container`'s children as an HTML string: runs of image-free
+  // children get grouped and wrapped in one book-columns/book-inner block
+  // each (via walk(), same koboSpan treatment as before); each
+  // image-hosting child is left as-is — UNLESS it has element children of
+  // its own, in which case this recurses into it, so text inside a
+  // <figure> or a wrapping chapter <div> still gets converted even though
+  // an image sits somewhere inside that same container. Returns null if
+  // `container` has no image anywhere among its children — the caller
+  // falls back to the simple whole-container wrap in that case.
+  function renderSplit(container){
+    const kids = Array.from(container.childNodes);
+    const segments = [];
+    let run = [];
+    for(const node of kids){
+      const isImgHost = node.nodeType===1 && hasImage(node);
+      if(isImgHost){
+        if(run.length){ segments.push({type:'text', nodes:run}); run=[]; }
+        segments.push({type:'imghost', node});
+      } else {
+        run.push(node);
+      }
+    }
+    if(run.length) segments.push({type:'text', nodes:run});
+    if(!segments.some(s=>s.type==='imghost')) return null;
 
-  return before+wrapped+after;
+    let html='';
+    for(const seg of segments){
+      if(seg.type==='imghost'){
+        const el=seg.node;
+        const tag=el.tagName.toLowerCase();
+        if(tag==='img'||tag==='image'||SKIP_TAGS.has(tag)||!el.children.length){
+          html+=el.outerHTML; // the image itself, or a simple host with no element children to recurse into — leave completely untouched
+        } else {
+          const inner=renderSplit(el);
+          if(inner===null){
+            html+=el.outerHTML; // no split found inside either — leave it alone
+          } else {
+            const shell=el.cloneNode(false); // keep the original tag + attributes/classes/styles
+            shell.innerHTML=inner;
+            html+=shell.outerHTML;
+          }
+        }
+      } else {
+        const wrapper=doc.createElement('div');
+        seg.nodes.forEach(n=>wrapper.appendChild(n));
+        walk(wrapper);
+        if(wrapper.innerHTML.trim()){
+          html+='<div id="book-columns"><div id="book-inner">'+wrapper.innerHTML+'</div></div>';
+        }
+      }
+    }
+    return html;
+  }
+
+  const split=renderSplit(root);
+  let finalHtml;
+  if(split===null){
+    // No image found after all (caller only reaches this function once
+    // toKepub has already seen an <img>/<image> somewhere in the raw
+    // string, but a false-positive text match is possible) — same plain
+    // whole-body wrap as a chapter with no images at all.
+    walk(root);
+    finalHtml='<div id="book-columns"><div id="book-inner">'+root.innerHTML+'</div></div>';
+  } else {
+    finalHtml=split;
+  }
+
+  return before+finalHtml+after;
 }
 
 // Converts an EPUB Blob to a KEPUB Blob. Throws on any failure (no OPF, no
@@ -13247,6 +13337,31 @@ async function toKepub(blob){
     .filter(it=>it&&/application\/xhtml\+xml|text\/html/i.test(it.mediaType||''))
     .map(it=>it.href);
   if(!htmlHrefs.length)throw new Error('toKepub: no spine HTML content found');
+
+  // Neutralize publisher <a> link styling (color/underline) across every
+  // stylesheet in the book. Real-world publisher CSS resets almost always
+  // style links with something like `a{color:#4c7aa9;text-decoration:
+  // underline}` — completely normal for a browser, but on Kobo this becomes
+  // visible whenever a chapter is rendered through Nickel's plain-EPUB
+  // fallback pipeline rather than its native kepub one, which is exactly
+  // what happens to any chapter containing an image (see the note on
+  // _kepubifyXhtml below — those chapters are deliberately left
+  // unconverted). Rather than touch that fragile per-chapter DOM logic
+  // again, this appends one CSS override to every stylesheet — cheap,
+  // reversible, and it fixes the *visible* symptom (faint/blue/underlined
+  // text) regardless of which rendering pipeline a given chapter ends up
+  // going through. `!important` is necessary since it has to beat whatever
+  // specificity the publisher's own reset used.
+  const cssHrefs = Object.values(manifestMap)
+    .filter(it => /text\/css/i.test(it.mediaType || ''))
+    .map(it => it.href);
+  const LINK_RESET_CSS = '\n/* injected by eLibrary\u2019s KEPUB conversion: neutralize publisher link styling that renders oddly on Kobo\u2019s plain-EPUB fallback pipeline */\na,a:link,a:visited{color:inherit!important;text-decoration:none!important;}\n';
+  for (const href of cssHrefs) {
+    const fullPath = opfDir + href;
+    const cssRaw = await zip.file(fullPath)?.async('string');
+    if (cssRaw === undefined) continue;
+    zip.file(fullPath, cssRaw + LINK_RESET_CSS);
+  }
 
   // A cap on how much markup we'll run the DOM-walking transform on for a
   // single chapter. Scraped/converted books (exactly the kind in this
