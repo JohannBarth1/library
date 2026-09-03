@@ -4214,6 +4214,12 @@ function sortBooks(books,sort){
   });
   if(sort==='author')copy.sort((a,b)=>(a.author||'').localeCompare(b.author||''));
   if(sort==='rating')copy.sort((a,b)=>getAvgRating(b)-getAvgRating(a));
+  // Longest first, same convention as Rating (highest first). Uses the
+  // cached standard-page word count (see computeBookWordCount) rather than
+  // readerPageCount, since that moves with the reader's font size — this
+  // stays fixed. A book whose word count hasn't been computed yet (its
+  // details sheet has never been opened) sorts to the bottom until it has.
+  if(sort==='pages')copy.sort((a,b)=>(b.wordCount||0)-(a.wordCount||0));
   return copy;
 }
 function getCats(){
@@ -5553,6 +5559,7 @@ const MOB_SORT_OPTIONS   = [
   { id:'title',  label:'Title',  icon:'🔤' },
   { id:'author', label:'Author', icon:'✍️' },
   { id:'rating', label:'Rating', icon:'⭐' },
+  { id:'pages',  label:'Pages',  icon:'📄' },
 ];
 const MOB_SOURCE_OPTIONS = [
   { id:'all',     label:'All' },
