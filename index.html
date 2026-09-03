@@ -4718,6 +4718,7 @@ function renderDetailActionRows(peekContainer, moreContainer, book, isMine){
   // secondary actions and the "More options" collapse.
   // ═══════════════════════════════════════════════════════════════════════
   let html = `<div class="mob-taxonomy-card">
+    ${(!book.isAudio && !book.isRecipe) ? `<div id="detailStdPages" style="font-size:.78rem;color:var(--muted);margin-bottom:.5rem;">📄 ${book.wordCount ? _formatStandardPages(book.wordCount) : 'Calculating length…'}</div>` : ''}
     <div style="display:flex;gap:.4rem;">
       ${medBtn('📚','Genre','category','var(--gold)','rgba(200,149,42,.4)')}
       ${medBtn('🏷','Tags','tags','var(--teal)','var(--teal)')}
@@ -4812,6 +4813,21 @@ function renderDetailActionRows(peekContainer, moreContainer, book, isMine){
 
   moreContainer.innerHTML = html;
   moreContainer.querySelectorAll('[data-action]').forEach(b => b.addEventListener('click', handleAction));
+
+  // Computing this requires downloading and parsing the whole EPUB, so it
+  // never blocks the sheet opening — render immediately with a
+  // "Calculating…" placeholder (or the cached number, if this book's
+  // already had it computed once) and fill it in once ready.
+  if (!book.isAudio && !book.isRecipe && !book.wordCount) {
+    getOrComputeStandardPages(book).then(({ wordCount }) => {
+      const el = document.getElementById('detailStdPages');
+      if (el) el.textContent = '📄 ' + _formatStandardPages(wordCount);
+    }).catch(e => {
+      console.warn('Failed to compute standard page count for', book.title, e);
+      const el = document.getElementById('detailStdPages');
+      if (el) el.style.display = 'none';
+    });
+  }
 
   wirePillSelect(moreContainer, 'detailShareSelect', shareOpts, {
     isSelected: it => it.action === 'setvis' && it.vis === (book.visibility || 'private'),
@@ -17276,8 +17292,98 @@ function manualReadAsBook(manualId) {
            coverUrl: r.coverUrl || null, pages: r.pages || null, isManual: true };
 }
 
+// Standard page length used to turn a book's total word count into a
+// device/font-independent page count. Counting actual page TURNS in the
+// reader (readerPageCount) moves with whatever font size the reader
+// currently has set — a larger font means fewer words per page, so the
+// same amount of actual reading racks up more "pages" than it would at a
+// smaller font. This number never changes: 250 words/page is the
+// long-standing publishing-industry reference figure (a double-spaced,
+// 12pt Courier manuscript page holds ~250 words) and is still the figure
+// most commonly cited as "the" standard page length — modern print
+// paperbacks run closer to 300, and Amazon's own KENPC (used to measure
+// actual Kindle reading) lands lower still, around 180-200, but 250 is
+// the most broadly recognized round number and a reasonable middle
+// ground between those two.
+const STANDARD_WORDS_PER_PAGE = 250;
+
+function _stripHtmlToText(html) {
+  return html
+    .replace(/<(script|style)[^>]*>[\s\S]*?<\/\1>/gi, ' ')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&[a-z#0-9]+;/gi, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function _formatStandardPages(wordCount) {
+  const pages = Math.round(wordCount / STANDARD_WORDS_PER_PAGE);
+  return `~${pages.toLocaleString()} standard pages (${wordCount.toLocaleString()} words)`;
+}
+
+// Computes a book's total word count by extracting and stripping every
+// spine XHTML file's text content. Same OPF/manifest/spine parsing used
+// throughout this file (toKepub, the reader's own chapter loader, etc.),
+// but kept fully independent of the reader's own state (readerZip/
+// readerSpine) so this can run without the book being open — it's called
+// from the book details sheet, which may be showing a book that isn't
+// the one currently in the reader.
+async function computeBookWordCount(book) {
+  const bytes = await getBytes(storageRef(storage, book.storagePath));
+  const zip = await JSZip.loadAsync(bytes);
+  const container = await zip.file('META-INF/container.xml')?.async('string');
+  const opfPath = container?.match(/full-path="([^"]+\.opf)"/i)?.[1];
+  if (!opfPath) throw new Error('computeBookWordCount: no OPF found');
+  const opfXml = await zip.file(opfPath)?.async('string');
+  if (!opfXml) throw new Error('computeBookWordCount: could not read OPF');
+  const opfDir = opfPath.includes('/') ? opfPath.replace(/\/[^/]+$/, '/') : '';
+
+  const manifestMap = {};
+  const mRe = /<item\s+([^>]+)\/?>/gi; let m;
+  while ((m = mRe.exec(opfXml)) !== null) {
+    const a = m[1];
+    const id = a.match(/\bid="([^"]+)"/)?.[1];
+    const href = a.match(/\bhref="([^"]+)"/)?.[1];
+    const mt = a.match(/\bmedia-type="([^"]+)"/)?.[1];
+    if (id && href) manifestMap[id] = { href, mediaType: mt };
+  }
+  const spineIds = [...opfXml.matchAll(/<itemref\s+[^>]*idref="([^"]+)"[^>]*\/?>/gi)].map(x => x[1]);
+  const htmlHrefs = spineIds
+    .map(id => manifestMap[id])
+    .filter(it => it && /application\/xhtml\+xml|text\/html/i.test(it.mediaType || ''))
+    .map(it => it.href);
+
+  let wordCount = 0;
+  for (const href of htmlHrefs) {
+    const raw = await zip.file(opfDir + href)?.async('string');
+    if (!raw) continue;
+    const text = _stripHtmlToText(raw);
+    if (text) wordCount += text.split(' ').filter(Boolean).length;
+  }
+  return wordCount;
+}
+
+// Returns a book's word count, computing it once and caching the result
+// into Firestore so it's only ever done the first time this book's
+// details are viewed — every book uploaded before this feature existed
+// won't have it yet, and this backfills them lazily rather than needing
+// a one-time migration over the whole library.
+async function getOrComputeStandardPages(book) {
+  if (book.wordCount) return { wordCount: book.wordCount };
+  const wordCount = await computeBookWordCount(book);
+  try {
+    await updateDoc(doc(db, collectionForBook(book), book.id), { wordCount });
+    book.wordCount = wordCount; // keep the in-memory library entry in sync so re-opening this sheet doesn't recompute
+  } catch (e) {
+    console.warn('Failed to cache word count for', book.title, e);
+  }
+  return { wordCount };
+}
+
 function estimatePages(book) {
   if(book?.pages) return book.pages;
+  if(book?.wordCount) return Math.round(book.wordCount / STANDARD_WORDS_PER_PAGE);
   const map = {
     'Short Stories': 180, 'Poetry': 120, "Children's": 150, 'Young Adult': 280,
     'Graphic Novel': 160,
