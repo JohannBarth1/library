@@ -2251,7 +2251,6 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
           <span class="lq-icon">🤍</span>
         </button>
         <div class="mob-detail-hero-text">
-          <div class="mob-detail-cat" id="mobDetailCat"></div>
           <div class="mob-detail-title" id="mobDetailTitle"></div>
           <div class="mob-detail-author" id="mobDetailAuthor"></div>
           <div id="mobDetailSeries" style="display:none;font-size:.72rem;color:var(--muted);font-weight:600;margin-top:.15rem"></div>
@@ -2776,6 +2775,12 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
     </p>
     <div id="koboPickerList" style="border:1px solid var(--border);border-radius:4px;
          margin-bottom:1rem;max-height:240px;overflow-y:auto"></div>
+    <label style="display:flex;align-items:flex-start;gap:.6rem;padding:.5rem .1rem .9rem;cursor:pointer;">
+      <input type="checkbox" id="koboEnhancedToggle" style="accent-color:var(--teal);width:15px;height:15px;flex-shrink:0;margin-top:.15rem;"/>
+      <span style="font-size:.78rem;color:var(--muted);line-height:1.45;">
+        <b style="color:var(--navy);">Enhanced KEPUB send</b> (experimental) — tries an alternate way of converting chapters that contain images, for testing against the normal send. May behave differently per book; not guaranteed to be better.
+      </span>
+    </label>
     <div class="modal-actions">
       <button class="btn-cancel" id="koboPickerCancel">Cancel</button>
       <button class="btn-save" id="koboPickerConfirm">Send ✓</button>
@@ -4724,7 +4729,7 @@ function renderDetailActionRows(peekContainer, moreContainer, book, isMine){
   // secondary actions and the "More options" collapse.
   // ═══════════════════════════════════════════════════════════════════════
   let html = `<div class="mob-taxonomy-card">
-    ${(!book.isAudio && !book.isRecipe) ? `<div id="detailStdPages" style="font-size:.78rem;color:var(--muted);margin-bottom:.5rem;">📄 ${book.wordCount ? _formatStandardPages(book.wordCount) : 'Calculating length…'}</div>` : ''}
+    ${book.category ? `<div id="detailCatPages" style="font-size:.78rem;color:var(--muted);margin-bottom:.2rem;">${catIcon(book.category)} ${esc(book.category)}${(!book.isAudio && !book.isRecipe) ? ` · ${book.wordCount ? _formatStandardPages(book.wordCount) : 'Calculating\u2026'}` : ''}</div>` : ''}
     <div style="display:flex;gap:.4rem;">
       ${medBtn('📚','Genre','category','var(--gold)','rgba(200,149,42,.4)')}
       ${medBtn('🏷','Tags','tags','var(--teal)','var(--teal)')}
@@ -4826,12 +4831,12 @@ function renderDetailActionRows(peekContainer, moreContainer, book, isMine){
   // already had it computed once) and fill it in once ready.
   if (!book.isAudio && !book.isRecipe && !book.wordCount) {
     getOrComputeStandardPages(book).then(({ wordCount }) => {
-      const el = document.getElementById('detailStdPages');
-      if (el) el.textContent = '📄 ' + _formatStandardPages(wordCount);
+      const el = document.getElementById('detailCatPages');
+      if (el && book.category) el.textContent = `${catIcon(book.category)} ${book.category} · ${_formatStandardPages(wordCount)}`;
     }).catch(e => {
       console.warn('Failed to compute standard page count for', book.title, e);
-      const el = document.getElementById('detailStdPages');
-      if (el) el.style.display = 'none';
+      const el = document.getElementById('detailCatPages');
+      if (el && book.category) el.textContent = `${catIcon(book.category)} ${book.category}`;
     });
   }
 
@@ -5413,7 +5418,6 @@ async function mob_showBook(id, opts={}){
   coverEl.style.cursor='pointer';
   coverEl.onclick=()=>{ const b=[...library,...communityLib].find(x=>x.id===currentId); if(b?.isAudio){ playAudioTrack(b._audioTrack); return; } readCurrentBook(); };
 
-  document.getElementById('mobDetailCat').textContent=book.category?`${catIcon(book.category)} ${book.category}`:'';
   document.getElementById('mobDetailTitle').textContent=book.title||'';
   document.getElementById('mobDetailAuthor').textContent=book.author||'';
 
@@ -13214,28 +13218,56 @@ async function _forceStoredMimetype(zip){
 // such a wrapper if it has children of its own, so a whole chapter wrapped
 // in one outer <div class="chapter"> (very common in real EPUBs) doesn't
 // just swallow everything back into one giant "leave alone" block and
-// silently undo this whole approach.
+// silently undo this whole approach. This is now the DEFAULT behavior for
+// every Kobo send.
 //
-// UNVERIFIED ON REAL HARDWARE. This is a second attempt at the same
-// interaction the two earlier attempts got wrong in different ways, and
-// there's no way to test Nickel's actual rendering behavior from here.
-// Known limitation even if it does work: an <img> sitting INLINE inside a
-// paragraph of running text (rare, but does happen — a small icon between
-// words) will cause that paragraph to be split into three separate
-// block-level chunks (text-before, bare image, text-after) instead of
-// staying one inline flow, since this only distinguishes "image-hosting"
-// vs "image-free" at the block level. Standalone images between paragraphs
-// (the common case, and the one that prompted all of this) aren't affected
-// by that limitation.
-function _kepubifyXhtml(raw){
+// Real-device testing of v2 came back mixed: better than v1 for some
+// books, but some chapters now render as blank or image-only — worse than
+// v1's clipping for those specific cases. Inconsistent across books rather
+// than uniformly broken points at a specific, plausible cause: this
+// function can emit MULTIPLE <div id="book-inner"> elements as siblings
+// within one chapter file — one per text run between images — and HTML
+// IDs are supposed to be unique per document. Real kepub only ever has
+// one book-inner per file. If Nickel's rendering keys off finding "the
+// element with this id" rather than every element with the koboSpan
+// class, it would only ever find the first book-inner and could plausibly
+// drop or misrender everything after it — which would explain why
+// single-image chapters (one book-inner pair, no duplicate ID) worked
+// fine while multi-image chapters (multiple book-inner pairs, same id
+// repeated) didn't.
+//
+// `opts.enhanced` (opt-in per send, via the "Enhanced KEPUB send" checkbox
+// in the Kobo send modal) tests that theory directly: instead of reusing
+// the literal string "book-inner"/"book-columns" for every split segment,
+// each one gets its own number (book-inner-1, book-inner-2, ...), so no
+// two elements in the same file ever share an id. Genuinely unverified
+// whether this actually fixes anything on real hardware — if Nickel's
+// kepub support specifically keys off the exact string "book-inner"
+// rather than a pattern/class, numbering it could mean those blocks lose
+// kepub treatment entirely instead of fixing the bug. That's exactly what
+// the side-by-side "Enhanced" option is for: send both, compare on the
+// device, keep whichever actually works. Default (unchecked) behavior is
+// unchanged from what's shipped so far.
+//
+// Known limitation either way: an <img> sitting INLINE inside a paragraph
+// of running text (rare, but does happen — a small icon between words)
+// will cause that paragraph to be split into three separate block-level
+// chunks (text-before, bare image, text-after) instead of staying one
+// inline flow, since this only distinguishes "image-hosting" vs
+// "image-free" at the block level. Standalone images between paragraphs
+// (the common case, and the one that prompted all of this) aren't
+// affected by that limitation.
+function _kepubifyXhtml(raw, opts = {}){
+  const enhanced = !!opts.enhanced;
   let {before, body, after} = _splitXhtmlShell(raw);
-  if(/id=["']book-inner["']/.test(body))return raw; // already converted — don't double-wrap
+  if(/id=["']book-inner(-\d+)?["']/.test(body))return raw; // already converted (either id style) — don't double-wrap
 
   const doc=new DOMParser().parseFromString('<html><body>'+body+'</body></html>','text/html');
   const root=doc.body;
   if(!root)throw new Error('_kepubifyXhtml: no body content to convert');
 
   let counter=1;
+  let blockCounter=1; // only used when enhanced — shared across recursive renderSplit() calls so ids stay unique across the whole chapter, not just within one nesting level
   const SKIP_TAGS=new Set(['script','style','svg','math','head','iframe','video','audio','canvas']);
 
   function hasImage(el){
@@ -13310,7 +13342,12 @@ function _kepubifyXhtml(raw){
         seg.nodes.forEach(n=>wrapper.appendChild(n));
         walk(wrapper);
         if(wrapper.innerHTML.trim()){
-          html+='<div id="book-columns"><div id="book-inner">'+wrapper.innerHTML+'</div></div>';
+          if(enhanced){
+            const n=blockCounter++;
+            html+=`<div id="book-columns-${n}"><div id="book-inner-${n}">`+wrapper.innerHTML+'</div></div>';
+          } else {
+            html+='<div id="book-columns"><div id="book-inner">'+wrapper.innerHTML+'</div></div>';
+          }
         }
       }
     }
@@ -13336,7 +13373,7 @@ function _kepubifyXhtml(raw){
 // Converts an EPUB Blob to a KEPUB Blob. Throws on any failure (no OPF, no
 // spine content, a chapter that can't be parsed at all) — callers must
 // catch and fall back to the plain EPUB rather than blocking delivery.
-async function toKepub(blob){
+async function toKepub(blob, opts = {}){
   const zip=await JSZip.loadAsync(blob);
   const container=await zip.file('META-INF/container.xml')?.async('string');
   const opfPath=container?.match(/full-path="([^"]+\.opf)"/i)?.[1];
@@ -13400,7 +13437,7 @@ async function toKepub(blob){
     const raw=await zip.file(fullPath)?.async('string');
     if(raw===undefined)continue; // spine references a file missing from the zip — skip rather than fail the whole conversion
     if(raw.length<=KEPUB_CHAPTER_SIZE_CAP){
-      zip.file(fullPath,_kepubifyXhtml(raw));
+      zip.file(fullPath,_kepubifyXhtml(raw,opts));
     }
     // Yield to the event loop between chapters so a long book can't block
     // the UI continuously — keeps the send flow responsive rather than
@@ -14567,7 +14604,7 @@ async function deleteKoboDevice(deviceId) {
 // ── SEND BOOK(S) TO KOBO ─────────────────────────────────────────────────────
 // Writes entries to kobo_queue. getFirebaseFiles.sh on the Kobo polls this.
 
-async function sendBooksToKoboDevice(bookIds, deviceId) {
+async function sendBooksToKoboDevice(bookIds, deviceId, enhanced = false) {
   if (!currentUser) return;
   const device = koboDevices.find(d => d.id === deviceId);
   if (!device) { showToast('Device not found'); return; }
@@ -14642,11 +14679,21 @@ async function sendBooksToKoboDevice(bookIds, deviceId) {
         // this is the backstop that guarantees the send flow itself can
         // never hang indefinitely on one problem book — it just falls
         // back to plain EPUB for that book, same as any other failure.
+        //
+        // `enhanced` (opt-in, from the "Enhanced KEPUB send" checkbox in
+        // the send modal) is an experimental alternate handling of
+        // chapters containing images — see _kepubifyXhtml's comments.
+        // Uses a distinct storage path/filename (.enhanced.kepub.epub,
+        // " [Enhanced]" suffix on the title) so it lands on the device as
+        // a separate book from a normal send of the same title, rather
+        // than overwriting or being confused with it — the whole point is
+        // to compare the two side by side.
         try {
           await _withDelayedMessage((async () => {
             const bytes = await getBytes(storageRef(storage, book.storagePath));
-            const kepubBlob = await _withTimeout(toKepub(new Blob([bytes], {type:'application/epub+zip'})), 30000, 'KEPUB conversion');
-            const kepubRef = storageRef(storage, book.storagePath.replace(/\.epub$/i, '.kepub.epub'));
+            const kepubBlob = await _withTimeout(toKepub(new Blob([bytes], {type:'application/epub+zip'}), {enhanced}), 30000, 'KEPUB conversion');
+            const kepubPath = book.storagePath.replace(/\.epub$/i, enhanced ? '.enhanced.kepub.epub' : '.kepub.epub');
+            const kepubRef = storageRef(storage, kepubPath);
             const kepubSnap = await uploadBytes(kepubRef, kepubBlob);
             downloadUrl = await getDownloadURL(kepubSnap.ref);
             sentAsKepub = true;
@@ -14662,16 +14709,20 @@ async function sendBooksToKoboDevice(bookIds, deviceId) {
         continue;
       }
 
+      const sendTitle = enhanced ? `${book.title || 'Unknown Title'} [Enhanced]` : (book.title || 'Unknown Title');
+      const baseFilename = book.filename || (book.title || 'book') + '.epub';
+      const sendFilename = sentAsKepub
+        ? baseFilename.replace(/\.epub$/i, enhanced ? ' [Enhanced].kepub.epub' : '.kepub.epub')
+        : baseFilename;
+
       await addDoc(collection(db, 'kobo_queue'), {
         deviceId,
         deviceToken: device.token,
         ownerId: currentUser.uid,
         bookId: book.id,
-        title: book.title || 'Unknown Title',
+        title: sendTitle,
         author: book.author || '',
-        filename: sentAsKepub
-          ? (book.filename || (book.title || 'book') + '.epub').replace(/\.epub$/i, '.kepub.epub')
-          : (book.filename || (book.title || 'book') + '.epub'),
+        filename: sendFilename,
         downloadUrl,
         // Fallback cover source for the device script — Nickel gets its
         // cover from the EPUB's own OPF declaration (see
@@ -14728,6 +14779,8 @@ function showKoboDevicePicker(bookIds) {
   }
 
   document.getElementById('koboPickerModal').classList.add('open');
+  const enhancedToggle = document.getElementById('koboEnhancedToggle');
+  if (enhancedToggle) enhancedToggle.checked = false; // always default off — this is an opt-in experiment per send
 }
 
 document.getElementById('koboPickerCancel')?.addEventListener('click', () => {
@@ -14737,8 +14790,9 @@ document.getElementById('koboPickerCancel')?.addEventListener('click', () => {
 document.getElementById('koboPickerConfirm')?.addEventListener('click', async () => {
   const selected = document.querySelector('input[name="koboPicker"]:checked');
   if (!selected) { showToast('Please select a device'); return; }
+  const enhanced = !!document.getElementById('koboEnhancedToggle')?.checked;
   document.getElementById('koboPickerModal').classList.remove('open');
-  await sendBooksToKoboDevice(_pickerBookIds, selected.value);
+  await sendBooksToKoboDevice(_pickerBookIds, selected.value, enhanced);
 });
 
 // ── RENDER KOBO SETTINGS (desktop + mobile) ───────────────────────────────────
@@ -17326,7 +17380,7 @@ function _stripHtmlToText(html) {
 
 function _formatStandardPages(wordCount) {
   const pages = Math.round(wordCount / STANDARD_WORDS_PER_PAGE);
-  return `~${pages.toLocaleString()} standard pages (${wordCount.toLocaleString()} words)`;
+  return `${pages.toLocaleString()} pages`;
 }
 
 // Computes a book's total word count by extracting and stripping every
