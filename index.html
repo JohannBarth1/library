@@ -4819,20 +4819,22 @@ function renderDetailActionRows(peekContainer, moreContainer, book, isMine){
   // with them) — not just books they uploaded themselves.
   const canManage = isMine || isAdmin;
 
-  // ── "Share" — visibility (Public/Restricted/Private) plus Share
-  // Privately stay owner-or-admin; Copy Link and Download are available to
-  // anyone viewing the book, but grouped here with the rest of sharing.
-  // This is the one place in the app a book's visibility gets set — admins
-  // manage any book's restriction/publication from here too, on the book
-  // itself, rather than through a separate admin list.
+  // ── "Visibility" — Public/Restricted/Private as a segmented triple-toggle,
+  // same interaction as the Want to Read/Reading/Finished control above.
+  // Owner-or-admin only; a plain viewer never sees or sets this.
+  const visibilitySegmentHtml = () => {
+    const vis = book.visibility === 'public' ? 'public' : book.visibility === 'restricted' ? 'restricted' : 'private';
+    const segs = [{ key:'private', label:'🔏 Private' }];
+    if(isAdmin || hasRestrictedAccess) segs.push({ key:'restricted', label:'🔒 Restricted' });
+    segs.push({ key:'public', label:'🌐 Public' });
+    const seg = s => `<button class="mob-stage-seg" data-action="setvisseg" data-vis="${s.key}"
+      style="${vis === s.key ? 'background:var(--teal);color:var(--warm-white);' : ''}">${s.label}</button>`;
+    return `<div class="mob-stage-row">${segs.map(seg).join('')}</div>`;
+  };
+
+  // ── "Share" — Share Privately stays owner-only; Copy Link and Download
+  // are available to anyone viewing the book.
   const shareOpts = [];
-  if(canManage){
-    shareOpts.push({ icon:'🌐', label:'Public', action:'setvis', vis:'public' });
-    if(isAdmin || hasRestrictedAccess){
-      shareOpts.push({ icon:'🔒', label:'Restricted', action:'setvis', vis:'restricted' });
-    }
-    shareOpts.push({ icon:'🔏', label:'Private', action:'setvis', vis:'private' });
-  }
   if(isMine){
     shareOpts.push({ icon:'🔗', label:'Share Privately', action:'shareprivate' });
   }
@@ -4853,9 +4855,14 @@ function renderDetailActionRows(peekContainer, moreContainer, book, isMine){
       <span style="font-size:.78rem;line-height:1">${book.recommended?'⭐':'☆'}</span><span>${book.recommended?'Recommended':'Recommend'}</span>
     </button>`;
 
-  const shareLabel = canManage
-    ? (book.visibility === 'public' ? '🌐 Public' : book.visibility === 'restricted' ? '🔒 Restricted' : '🔏 Private')
-    : 'Share';
+  const shareLabel = '🔗 Share';
+
+  if(canManage){
+    html += `<div class="mob-taxonomy-card" style="margin-top:.5rem;">
+      <div style="font-size:.58rem;letter-spacing:.15em;text-transform:uppercase;color:var(--gold);font-weight:700;margin-bottom:.4rem;">Visibility</div>
+      ${visibilitySegmentHtml()}
+    </div>`;
+  }
 
   html += `<div style="display:flex;flex-wrap:wrap;gap:.4rem;padding:.6rem 0 .3rem;border-top:1px solid var(--border);margin-top:.4rem;">
     ${pillSelect('detailShareSelect', shareLabel, shareOpts)}
@@ -4893,10 +4900,7 @@ function renderDetailActionRows(peekContainer, moreContainer, book, isMine){
     });
   }
 
-  wirePillSelect(moreContainer, 'detailShareSelect', shareOpts, {
-    isSelected: it => it.action === 'setvis' && it.vis === (book.visibility || 'private'),
-    onSelect: it => it.action === 'setvis' ? setBookVisibilityFromDrawer(it.vis) : runDetailAction(it.action),
-  });
+  wirePillSelect(moreContainer, 'detailShareSelect', shareOpts);
   wirePillSelect(moreContainer, 'detailEditSelect', editOpts);
 }
 
@@ -5117,6 +5121,12 @@ function handleAction(e){
   const a=btn.dataset.action;
   if(a==='quicklist'){ handleQuickListToggle(btn); return; }
   if(a==='stage'){ handleReadingStageClick(btn); return; }
+  if(a==='setvisseg'){
+    const book=[...library,...communityLib].find(b=>b.id===currentId);
+    const current = book ? (book.visibility||'private') : null;
+    if(book && btn.dataset.vis !== current) setBookVisibilityFromDrawer(btn.dataset.vis);
+    return;
+  }
   runDetailAction(a);
 }
 function runDetailAction(a){
@@ -9110,7 +9120,7 @@ function showSeriesEpisodesModal(seriesTitle) {
     let bulkOpen = false;
     editAllBtn.addEventListener('click', () => {
       bulkOpen = !bulkOpen;
-      bulkBody.style.maxHeight = bulkOpen ? '300px' : '0';
+      bulkBody.style.maxHeight = bulkOpen ? '560px' : '0';
       bulkBody.style.opacity = bulkOpen ? '1' : '0';
       editAllBtn.textContent = bulkOpen ? '✕ Done' : '✎ Edit All';
     });
@@ -9139,6 +9149,41 @@ function showSeriesEpisodesModal(seriesTitle) {
 
     const bulkInner = document.createElement('div');
     bulkInner.style.cssText = 'padding-bottom:1rem;display:flex;flex-direction:column;gap:.6rem;';
+
+    // Title (series name) row — renames the shared `series` field on every
+    // owned episode. This is the value the group tile shows as its title,
+    // so renaming it here is what "editing the series' title" means.
+    const titleFieldRow = document.createElement('div');
+    titleFieldRow.style.cssText = 'display:flex;gap:.5rem;align-items:center;';
+    const titleFieldInput = document.createElement('input');
+    titleFieldInput.type = 'text';
+    titleFieldInput.placeholder = 'Series title — apply to all episodes';
+    titleFieldInput.value = seriesTitle || '';
+    titleFieldInput.style.cssText = 'flex:1;padding:.55rem .8rem;border:1px solid var(--border);'
+      + 'border-radius:8px;font-family:"Lato",sans-serif;font-size:.88rem;'
+      + 'background:var(--cream);color:var(--navy);outline:none;min-width:0;';
+    const titleFieldSave = document.createElement('button');
+    titleFieldSave.className = 'btn-save';
+    titleFieldSave.style.cssText = 'padding:.42rem 1rem;font-size:.68rem;white-space:nowrap;flex-shrink:0;';
+    titleFieldSave.textContent = 'Apply';
+    titleFieldSave.addEventListener('click', async () => {
+      const newTitle = titleFieldInput.value.trim();
+      if (!newTitle) { showToast('Enter a series title'); return; }
+      showLoading('Renaming series…');
+      try {
+        for (const ep of myEpisodes) {
+          if (ep.ownerId !== currentUser?.uid) continue;
+          await updateDoc(doc(db, 'audioFiles', ep.id), { series: newTitle, updatedAt: serverTimestamp() });
+          ep.series = newTitle;
+          if (ep._audioTrack) ep._audioTrack.series = newTitle;
+        }
+        hideLoading(); overlay.remove(); renderAll();
+        showToast(`Series renamed ✓`);
+      } catch (err) { hideLoading(); showToast('Failed: ' + err.message); }
+    });
+    titleFieldRow.appendChild(titleFieldInput);
+    titleFieldRow.appendChild(titleFieldSave);
+    bulkInner.appendChild(titleFieldRow);
 
     // Author row
     const authorRow = document.createElement('div');
@@ -9172,6 +9217,74 @@ function showSeriesEpisodesModal(seriesTitle) {
     authorRow.appendChild(authorInput);
     authorRow.appendChild(authorSave);
     bulkInner.appendChild(authorRow);
+
+    // Genre row
+    const genreRow = document.createElement('div');
+    genreRow.style.cssText = 'display:flex;gap:.5rem;align-items:center;';
+    const genreSelect = document.createElement('select');
+    genreSelect.style.cssText = 'flex:1;padding:.55rem .8rem;border:1px solid var(--border);'
+      + 'border-radius:8px;font-family:"Lato",sans-serif;font-size:.88rem;'
+      + 'background:var(--cream);color:var(--navy);outline:none;min-width:0;-webkit-appearance:none;appearance:none;';
+    genreSelect.innerHTML = _categories.map(c =>
+      `<option value="${esc(c)}" ${(myEpisodes[0]?.category||'Uncategorised')===c?'selected':''}>${catIcon(c)} ${esc(c)}</option>`
+    ).join('');
+    const genreSave = document.createElement('button');
+    genreSave.className = 'btn-save';
+    genreSave.style.cssText = 'padding:.42rem 1rem;font-size:.68rem;white-space:nowrap;flex-shrink:0;';
+    genreSave.textContent = 'Apply';
+    genreSave.addEventListener('click', async () => {
+      const category = genreSelect.value;
+      showLoading('Updating genre…');
+      try {
+        for (const ep of myEpisodes) {
+          if (ep.ownerId !== currentUser?.uid) continue;
+          await updateDoc(doc(db, 'audioFiles', ep.id), { category, updatedAt: serverTimestamp() });
+          ep.category = category;
+          if (ep._audioTrack) ep._audioTrack.category = category;
+        }
+        hideLoading(); renderAll();
+        showToast(`Genre updated ✓`);
+      } catch (err) { hideLoading(); showToast('Failed: ' + err.message); }
+    });
+    genreRow.appendChild(genreSelect);
+    genreRow.appendChild(genreSave);
+    bulkInner.appendChild(genreRow);
+
+    // Tags row — comma-separated, added to each episode's existing tags
+    // (same convention as the admin bulk-edit modal for regular books).
+    const tagsRow = document.createElement('div');
+    tagsRow.style.cssText = 'display:flex;gap:.5rem;align-items:center;';
+    const tagsInput = document.createElement('input');
+    tagsInput.type = 'text';
+    tagsInput.placeholder = 'Tags — comma-separated, added to existing';
+    tagsInput.style.cssText = 'flex:1;padding:.55rem .8rem;border:1px solid var(--border);'
+      + 'border-radius:8px;font-family:"Lato",sans-serif;font-size:.88rem;'
+      + 'background:var(--cream);color:var(--navy);outline:none;min-width:0;';
+    const tagsSave = document.createElement('button');
+    tagsSave.className = 'btn-save';
+    tagsSave.style.cssText = 'padding:.42rem 1rem;font-size:.68rem;white-space:nowrap;flex-shrink:0;';
+    tagsSave.textContent = 'Apply';
+    tagsSave.addEventListener('click', async () => {
+      const raw = tagsInput.value.trim();
+      const newTags = raw ? raw.split(',').map(t => t.trim()).filter(Boolean) : [];
+      if (!newTags.length) { showToast('Enter one or more tags'); return; }
+      showLoading('Updating tags…');
+      try {
+        for (const ep of myEpisodes) {
+          if (ep.ownerId !== currentUser?.uid) continue;
+          const tags = [...new Set([...(ep.tags || []), ...newTags])];
+          await updateDoc(doc(db, 'audioFiles', ep.id), { tags, updatedAt: serverTimestamp() });
+          ep.tags = tags;
+          if (ep._audioTrack) ep._audioTrack.tags = tags;
+        }
+        hideLoading(); renderAll();
+        tagsInput.value = '';
+        showToast(`Tags updated ✓`);
+      } catch (err) { hideLoading(); showToast('Failed: ' + err.message); }
+    });
+    tagsRow.appendChild(tagsInput);
+    tagsRow.appendChild(tagsSave);
+    bulkInner.appendChild(tagsRow);
 
     // Cover row
     const coverRow = document.createElement('div');
@@ -15190,9 +15303,7 @@ async function checkAdminStatus() {
       || (data.isAdmin === true ? 'admin' : (data.restrictedAccess === true ? 'elevated' : 'standard'));
     isAdmin = accessLevel === 'admin';
     hasRestrictedAccess = accessLevel === 'elevated' || accessLevel === 'admin';
-    if(isAdmin){
-      document.getElementById('mobAdminSettingsCard').style.display = '';
-    }
+    document.getElementById('mobAdminSettingsCard').style.display = isAdmin ? '' : 'none';
   } catch(e) {
     console.warn('Admin check failed:', e);
   }
