@@ -2252,6 +2252,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
         </button>
         <div class="mob-detail-hero-text">
           <div class="mob-detail-title" id="mobDetailTitle"></div>
+          <div class="mob-detail-cat" id="mobDetailCatPages" style="display:none;"></div>
           <div class="mob-detail-author" id="mobDetailAuthor"></div>
           <div id="mobDetailSeries" style="display:none;font-size:.72rem;color:var(--muted);font-weight:600;margin-top:.15rem"></div>
           <div id="mobDetailSharedBy" style="display:none;font-size:.72rem;color:var(--teal);font-weight:700;margin-top:.2rem"></div>
@@ -3532,14 +3533,28 @@ async function findBookById(id) {
     if (book) return book;
   }
 
-  try {
-    const snap = await getDoc(doc(db, 'books', id));
-    if (snap.exists()) return { id: snap.id, ...snap.data() };
-    _lastFindBookByIdErrorCode = 'permission-denied';
-  } catch (e) {
-    console.warn('findBookById direct fetch failed:', e);
-    _lastFindBookByIdErrorCode = e.code || null;
+  // Not in the local cache (e.g. reached right after creation/import,
+  // before this session's own arrays have it, or via a link to something
+  // not owned/shared with this user yet). Which Firestore collection it
+  // lives in isn't known ahead of time — books/audioFiles/recipes all
+  // funnel through this same lookup — so try each in turn. This whole
+  // fallback is rarely reached (the local cache covers the normal case),
+  // so trying up to three collections here doesn't cost much in practice.
+  const attempts = [
+    { name: 'books', wrap: d => d },
+    { name: 'audioFiles', wrap: d => audioTrackToBookLike(d) },
+    { name: 'recipes', wrap: d => recipeToBookLike(d) },
+  ];
+  for (const { name, wrap } of attempts) {
+    try {
+      const snap = await getDoc(doc(db, name, id));
+      if (snap.exists()) return wrap({ id: snap.id, ...snap.data() });
+    } catch (e) {
+      console.warn(`findBookById: ${name} fetch failed:`, e);
+      _lastFindBookByIdErrorCode = e.code || _lastFindBookByIdErrorCode;
+    }
   }
+  if (!_lastFindBookByIdErrorCode) _lastFindBookByIdErrorCode = 'permission-denied';
   return null;
 }
 
@@ -4723,7 +4738,6 @@ function renderDetailActionRows(peekContainer, moreContainer, book, isMine){
   // secondary actions and the "More options" collapse.
   // ═══════════════════════════════════════════════════════════════════════
   let html = `<div class="mob-taxonomy-card">
-    ${book.category ? `<div id="detailCatPages" style="font-size:.78rem;color:var(--muted);margin-bottom:.2rem;">${catIcon(book.category)} ${esc(book.category)}${(!book.isAudio && !book.isRecipe) ? ` · ${book.wordCount ? _formatStandardPages(book.wordCount) : 'Calculating\u2026'}` : ''}</div>` : ''}
     <div style="display:flex;gap:.4rem;">
       ${medBtn('📚','Genre','category','var(--gold)','rgba(200,149,42,.4)')}
       ${medBtn('🏷','Tags','tags','var(--teal)','var(--teal)')}
@@ -4820,16 +4834,17 @@ function renderDetailActionRows(peekContainer, moreContainer, book, isMine){
   moreContainer.querySelectorAll('[data-action]').forEach(b => b.addEventListener('click', handleAction));
 
   // Computing this requires downloading and parsing the whole EPUB, so it
-  // never blocks the sheet opening — render immediately with a
+  // never blocks the sheet opening — the hero line already shows a
   // "Calculating…" placeholder (or the cached number, if this book's
-  // already had it computed once) and fill it in once ready.
+  // already had it computed once — see mob_showBook) and gets filled in
+  // once ready.
   if (!book.isAudio && !book.isRecipe && !book.wordCount) {
     getOrComputeStandardPages(book).then(({ wordCount }) => {
-      const el = document.getElementById('detailCatPages');
+      const el = document.getElementById('mobDetailCatPages');
       if (el && book.category) el.textContent = `${catIcon(book.category)} ${book.category} · ${_formatStandardPages(wordCount)}`;
     }).catch(e => {
       console.warn('Failed to compute standard page count for', book.title, e);
-      const el = document.getElementById('detailCatPages');
+      const el = document.getElementById('mobDetailCatPages');
       if (el && book.category) el.textContent = `${catIcon(book.category)} ${book.category}`;
     });
   }
@@ -5414,6 +5429,14 @@ async function mob_showBook(id, opts={}){
 
   document.getElementById('mobDetailTitle').textContent=book.title||'';
   document.getElementById('mobDetailAuthor').textContent=book.author||'';
+
+  const catPagesEl = document.getElementById('mobDetailCatPages');
+  if(book.category){
+    catPagesEl.style.display='block';
+    catPagesEl.textContent = `${catIcon(book.category)} ${book.category}${(!book.isAudio && !book.isRecipe) ? ` · ${book.wordCount ? _formatStandardPages(book.wordCount) : 'Calculating\u2026'}` : ''}`;
+  } else {
+    catPagesEl.style.display='none';
+  }
 
   const mobSeriesEl=document.getElementById('mobDetailSeries');
   if(book.series){
