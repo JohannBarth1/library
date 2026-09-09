@@ -2587,10 +2587,53 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 
 <div class="modal-overlay" id="broadcastModal">
   <div class="modal" style="max-width:420px">
+    <div id="broadcastModalBookTile" style="display:none;align-items:center;gap:.7rem;margin-bottom:.9rem;">
+      <img id="broadcastModalBookCover" src="" alt="" style="width:52px;height:78px;object-fit:cover;border-radius:4px;background:var(--navy2);flex-shrink:0;box-shadow:0 4px 10px rgba(15,26,46,.25);"/>
+    </div>
     <h3 id="broadcastModalTitle">📢 Announcement</h3>
     <p id="broadcastModalBody" style="font-size:.88rem;color:var(--navy2);line-height:1.6;white-space:pre-wrap"></p>
     <div class="modal-actions">
+      <button class="btn-cancel" id="btnBroadcastModalDismiss" style="display:none">Dismiss</button>
       <button class="btn-save" id="btnBroadcastModalOk">Got it</button>
+    </div>
+  </div>
+</div>
+
+<!-- Bug report — reachable from the bell composer, the book detail slider
+     (desktop drawer + mobile sheet), and the reader toolbar. Collects where
+     it happened and how broad it is, on top of the free-text summary, so
+     reports are actually actionable instead of a single vague sentence. -->
+<div class="modal-overlay" id="bugReportModal">
+  <div class="modal" style="max-width:440px">
+    <h3>🐞 Report a Bug</h3>
+    <div class="form-row" id="bugReportBookRow" style="display:none">
+      <label>Book</label>
+      <div id="bugReportBookName" style="font-weight:700;color:var(--navy2);font-size:.85rem;"></div>
+    </div>
+    <div class="form-row">
+      <label>Summary</label>
+      <input type="text" id="bugReportTitle" placeholder="Short summary of the issue"/>
+    </div>
+    <div class="form-row">
+      <label>Where did this happen?</label>
+      <select id="bugReportLocation">
+        <option value="reader">In the Reader</option>
+        <option value="kobo">On my Kobo</option>
+        <option value="naming">Naming / metadata issue</option>
+        <option value="other">Somewhere else in the app</option>
+      </select>
+    </div>
+    <div class="form-row">
+      <label>Does this affect…</label>
+      <select id="bugReportScope"></select>
+    </div>
+    <div class="form-row">
+      <label>Details</label>
+      <textarea id="bugReportDetails" rows="4" placeholder="What happened? Steps to reproduce, if you can…" style="width:100%;padding:.6rem .85rem;font-family:'Lato',sans-serif;font-size:.88rem;color:var(--navy);background:var(--cream);border:1px solid var(--border);border-radius:3px;outline:none;resize:vertical;line-height:1.5"></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" id="btnBugReportCancel">Cancel</button>
+      <button class="btn-save" id="btnBugReportSend">Send Report</button>
     </div>
   </div>
 </div>
@@ -2988,6 +3031,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
   </div>
     <div class="reader-nav">
   <button class="reader-btn" id="btnToggleReaderSettings" title="Settings">Aa</button>
+  <button class="reader-btn" id="btnReaderReportBug" title="Report a Bug">🐞</button>
   </div>
     <div class="reader-nav">
   <button class="reader-btn" id="btnReaderPrev">‹</button>
@@ -3041,7 +3085,7 @@ import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/fireba
 import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut }
   from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
 import { getFirestore, collection, addDoc, getDocs, getDoc, doc,
-         query, where, orderBy, updateDoc, deleteDoc, serverTimestamp, setDoc, Timestamp, limit, onSnapshot, deleteField, increment, arrayUnion }
+         query, where, orderBy, updateDoc, deleteDoc, serverTimestamp, setDoc, Timestamp, limit, onSnapshot, deleteField, increment, arrayUnion, arrayRemove }
   from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 import { getStorage, ref as storageRef, uploadBytes, getDownloadURL, getBytes, deleteObject }
   from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js';
@@ -4823,7 +4867,7 @@ function renderDetailActionRows(peekContainer, moreContainer, book, isMine){
   // the dropdowns since one is an audit trail and the other is destructive;
   // neither belongs to "share" or "edit" and both are rare enough not to
   // need their own group.
-  const bottomBtns = [];
+  const bottomBtns = [smBtn('🐞','Report Bug','reportbug')];
   if(isAdmin) bottomBtns.push(smBtn('📋','History','history'));
   if(isMine)  bottomBtns.push(smBtn('✕','Delete','delete',{danger:true}));
   if(bottomBtns.length){
@@ -5015,6 +5059,7 @@ function buildDrawerIconBar(book, isMine){
         </button>
         <button class="drawer-icon-btn" data-action="download"><span class="di-icon">⬇</span><span class="di-label">Download</span></button>
         <button class="drawer-icon-btn" data-action="link"><span class="di-icon">📎</span><span class="di-label">Copy Link</span></button>
+        <button class="drawer-icon-btn" data-action="reportbug"><span class="di-icon">🐞</span><span class="di-label">Report Bug</span></button>
         ${isAdmin ? `<button class="drawer-icon-btn" data-action="history"><span class="di-icon">📋</span><span class="di-label">History</span></button>` : ''}
       </div>
     </div>`;
@@ -5097,6 +5142,10 @@ function runDetailAction(a){
   if(a==='otherlists') toggleOtherListsDropdown();
   if(a==='category')     showQuickCategoryModal();
   if(a==='markfinished')  doMarkFinishedFromDetail();
+  if(a==='reportbug') {
+    const book = [...library, ...communityLib].find(b => b.id === currentId);
+    openBugReportModal({ bookId: currentId, bookTitle: book?.title, location: 'book_detail' });
+  }
 }
 
 // ── UNPUBLISH and DELETE functions ─────────────────────────────────────────────────────────────────
@@ -7055,6 +7104,11 @@ document.getElementById('btnToggleReaderSettings').addEventListener('click', e =
   document.getElementById('readerSettingsBar').classList.toggle('open');
   // PATCH: settings bar floats over the text now, so opening/closing it
   // no longer needs to resize/repaginate reader-content.
+});
+document.getElementById('btnReaderReportBug').addEventListener('click', e => {
+  e.stopPropagation();
+  const book = [...library, ...communityLib].find(b => b.id === currentId);
+  openBugReportModal({ bookId: currentId, bookTitle: book?.title, location: 'reader' });
 });
 document.getElementById('btnToggleChapters').addEventListener('click',()=>{
   document.getElementById('readerBookmarkListPanel').classList.remove('open');
@@ -9460,22 +9514,57 @@ let appNotifUnsub = null;
 let appNotifRepliesUnsub = null;
 let currentNotifThreadId = null;
 let notifComposeType = 'book_request';
-let _broadcastModalShownThisSession = false;
+// Tracks which notif ids have already popped up this session — a Set keyed
+// by id (not a single boolean) so every new broadcast or book-shared notif
+// still gets its own popup, even after an earlier one was already shown and
+// dismissed in the same session.
+let _popupNotifShownIds = new Set();
 
+// Broadcasts AND book-shared notifications are meant to be seen right away,
+// not just sit in the notification center — so both pop up as a modal the
+// moment they're unread. If more than one is waiting, they queue one after
+// another (each dismissal re-checks for the next).
 function maybeShowBroadcastModal() {
-  if (_broadcastModalShownThisSession || !currentUser) return;
+  if (!currentUser) return;
   const unread = appNotifications.find(n =>
-    n.type === 'broadcast' && !(n.readBy || []).includes(currentUser.uid)
+    (n.type === 'broadcast' || n.type === 'book_shared') &&
+    !(n.readBy || []).includes(currentUser.uid) &&
+    !_popupNotifShownIds.has(n.id)
   );
   if (!unread) return;
-  _broadcastModalShownThisSession = true;
-  document.getElementById('broadcastModalTitle').textContent = '📢 ' + (unread.title || 'Announcement');
-  document.getElementById('broadcastModalBody').textContent = unread.body || '';
-  document.getElementById('broadcastModal').style.display = 'flex';
-  document.getElementById('btnBroadcastModalOk').onclick = () => {
-    document.getElementById('broadcastModal').style.display = 'none';
+  _popupNotifShownIds.add(unread.id);
+
+  const tileWrap = document.getElementById('broadcastModalBookTile');
+  const okBtn = document.getElementById('btnBroadcastModalOk');
+  const dismissBtn = document.getElementById('btnBroadcastModalDismiss');
+  const advance = () => {
+    document.getElementById('broadcastModal').classList.remove('open');
     markNotifRead(unread.id);
+    maybeShowBroadcastModal();
   };
+
+  if (unread.type === 'book_shared') {
+    const book = [...library, ...communityLib].find(b => b.id === unread.bookId);
+    document.getElementById('broadcastModalTitle').textContent = '🎁 Book Shared';
+    document.getElementById('broadcastModalBody').textContent = unread.body || '';
+    document.getElementById('broadcastModalBookCover').src = (book && getCoverSrc(book)) || 'icon-192.png';
+    tileWrap.style.display = 'flex';
+    dismissBtn.style.display = 'inline-block';
+    okBtn.textContent = 'Open Book';
+    dismissBtn.onclick = advance;
+    okBtn.onclick = () => {
+      advance();
+      if (window.innerWidth > 768) showBookById(unread.bookId); else mob_showBook(unread.bookId);
+    };
+  } else {
+    document.getElementById('broadcastModalTitle').textContent = '📢 ' + (unread.title || 'Announcement');
+    document.getElementById('broadcastModalBody').textContent = unread.body || '';
+    tileWrap.style.display = 'none';
+    dismissBtn.style.display = 'none';
+    okBtn.textContent = 'Got it';
+    okBtn.onclick = advance;
+  }
+  document.getElementById('broadcastModal').classList.add('open');
 }
 const notifThreadInlineEl = document.getElementById('notifThreadInline');
 function startAppNotifListener() {
@@ -9578,6 +9667,11 @@ function notifTypeIconHTML(n) {
   if(n.type === 'seasonal_bookmark' && n.bmTemplate) {
     return renderBookmarkSVG(n.bmTemplate, 22, 34, 'notif' + n.id, false, true);
   }
+  if(n.type === 'book_shared' && n.bookId) {
+    const book = [...library, ...communityLib].find(b => b.id === n.bookId);
+    const src = book && getCoverSrc(book);
+    if(src) return `<img src="${esc(src)}" alt="" style="width:26px;height:38px;object-fit:cover;border-radius:3px;background:var(--navy2);display:block;box-shadow:0 2px 6px rgba(15,26,46,.2);">`;
+  }
   return `<span class="notif-emoji">${notifTypeEmoji(n.type)}</span>`;
 }
 
@@ -9609,14 +9703,19 @@ function renderNotifList() {
   const visible = [], archived = [];
   withAge.forEach(({ n, ts }, i) => {
     const unread = currentUser && !(n.readBy||[]).includes(currentUser.uid);
+    // A user can archive any notification themselves (archivedBy) to clear it
+    // out of their main list, on top of the existing auto-archive-when-old
+    // behaviour below.
+    const manuallyArchived = currentUser && (n.archivedBy||[]).includes(currentUser.uid);
     const isOld = (now - ts) > TWO_WEEKS || i >= 10;
-    if(!unread && isOld) archived.push(n); else visible.push(n);
+    if(manuallyArchived || (!unread && isOld)) archived.push(n); else visible.push(n);
   });
 
   const list = notifShowArchived ? withAge.map(x => x.n) : visible;
 
   const rowHTML = n => {
     const unread = currentUser && !(n.readBy||[]).includes(currentUser.uid);
+    const isArchived = currentUser && (n.archivedBy||[]).includes(currentUser.uid);
     const when = n.createdAt?.toDate ? timeAgo(n.createdAt.toDate()) : '';
     return `<div class="notif-list-item ${unread?'unread':''}" data-notifid="${n.id}">
       <div class="notif-emoji-wrap">
@@ -9628,14 +9727,32 @@ function renderNotifList() {
         <div class="notif-preview">${esc(n.body||'')}</div>
         <div class="notif-meta">${esc(n.creatorName||'Someone')} · ${when}</div>
       </div>
+      <button class="notif-archive-btn" data-archiveid="${n.id}" data-archived="${isArchived?'1':'0'}"
+        title="${isArchived?'Unarchive':'Archive'}"
+        style="align-self:flex-start;flex-shrink:0;background:none;border:none;cursor:pointer;font-size:.85rem;opacity:.4;padding:.25rem;line-height:1;">${isArchived?'↩':'🗄'}</button>
     </div>`;
   };
 
   listEl.innerHTML = list.map(rowHTML).join('') +
     (archived.length ? `<button id="btnNotifToggleArchive" style="width:100%;background:none;border:none;color:var(--muted);font-size:.7rem;font-weight:700;letter-spacing:.03em;padding:.6rem 0;cursor:pointer;">${notifShowArchived ? 'Hide archived' : `Archived (${archived.length})`}</button>` : '');
 
+  // Book-shared notifications jump straight to the book's detail slider —
+  // the point of that notification IS the book, so there's no reason to
+  // make the user open a thread first to find an "Open Book" link inside it.
+  // Every other type still opens the inline thread as before.
   listEl.querySelectorAll('[data-notifid]').forEach(el => {
-    el.addEventListener('click', () => openNotifThread(el.dataset.notifid));
+    el.addEventListener('click', () => {
+      const id = el.dataset.notifid;
+      const n = appNotifications.find(x => x.id === id);
+      if(n && n.type === 'book_shared' && n.bookId) openSharedBookNotif(n);
+      else openNotifThread(id);
+    });
+  });
+  listEl.querySelectorAll('[data-archiveid]').forEach(btn => {
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      toggleNotifArchive(btn.dataset.archiveid, btn.dataset.archived === '1');
+    });
   });
   document.getElementById('btnNotifToggleArchive')?.addEventListener('click', () => {
     notifShowArchived = !notifShowArchived;
@@ -9662,6 +9779,29 @@ async function markNotifRead(notifId) {
   try {
     await updateDoc(doc(db, 'app_notifications', notifId), { readBy: arrayUnion(currentUser.uid) });
   } catch(e) { console.warn('markNotifRead:', e); }
+}
+
+// Archiving is per-user (archivedBy), same shape as readBy — it just clears
+// the notification out of that one user's list, not everyone's. Archiving
+// also counts as reading it, so it can't inflate the unread badge.
+async function toggleNotifArchive(notifId, isArchived) {
+  if(!currentUser) return;
+  try {
+    await updateDoc(doc(db, 'app_notifications', notifId), {
+      archivedBy: isArchived ? arrayRemove(currentUser.uid) : arrayUnion(currentUser.uid),
+      readBy: arrayUnion(currentUser.uid)
+    });
+  } catch(e) { showToast('Archive failed'); }
+}
+
+// Book-shared notifications skip the thread panel entirely and go straight
+// to the book's detail slider — same mobile/desktop branching used
+// everywhere else book detail is opened.
+function openSharedBookNotif(n) {
+  if(currentUser && !(n.readBy||[]).includes(currentUser.uid)) markNotifRead(n.id);
+  closeNotifFullList();
+  if(window.innerWidth > 768) showBookById(n.bookId);
+  else mob_showBook(n.bookId);
 }
 
 async function openNotifThread(notifId) {
@@ -9705,6 +9845,23 @@ async function openNotifThread(notifId) {
       if(window.innerWidth > 768) showBookById(n.bookId);
       else mob_showBook(n.bookId);
     });
+  }
+  if(n.type === 'bug' && (n.bugLocation || n.bugScope || n.bookTitle)) {
+    bodyEl.style.display = '';
+    const rows = [];
+    if(n.bugLocation) rows.push(`<div><strong>Where:</strong> ${esc(n.bugLocation)}</div>`);
+    if(n.bugScope) rows.push(`<div><strong>Affects:</strong> ${esc(n.bugScope)}</div>`);
+    if(n.bookTitle) rows.push(`<div><strong>Book:</strong> ${esc(n.bookTitle)}</div>`);
+    bodyEl.innerHTML = `<div style="font-size:.75rem;color:var(--muted);line-height:1.7;margin-bottom:.5rem;">${rows.join('')}</div>` +
+      (n.bookId ? `<div><a href="${esc(getDirectLink(n.bookId))}" id="notifOpenBugBook" class="notif-btn notif-btn-fill" style="display:inline-block;text-decoration:none;">📖 Open Book</a></div>` : '');
+    if(n.bookId) {
+      document.getElementById('notifOpenBugBook').addEventListener('click', (e) => {
+        e.preventDefault();
+        closeNotifFullList();
+        if(window.innerWidth > 768) showBookById(n.bookId);
+        else mob_showBook(n.bookId);
+      });
+    }
   }
   document.getElementById('btnNotifThreadDelete').style.display =
     (currentUser && n.creatorId === currentUser.uid && n.type !== 'book_shared') ? 'inline-block' : 'none';
@@ -9861,9 +10018,85 @@ document.getElementById('btnNotifNew').addEventListener('click', () => {
 });
 document.querySelectorAll('#notifComposeInline [data-notiftype]').forEach(chip => {
   chip.addEventListener('click', () => {
+    // Bug reports get their own structured modal (location + scope fields)
+    // instead of the plain title/body composer used by the other types.
+    if(chip.dataset.notiftype === 'bug') {
+      closeNotifCompose();
+      openBugReportModal();
+      return;
+    }
     notifComposeType = chip.dataset.notiftype;
     document.querySelectorAll('#notifComposeInline [data-notiftype]').forEach(c => c.classList.toggle('active', c === chip));
   });
+});
+
+// ── Bug report modal ────────────────────────────────────────────────────────
+// ctx: { bookId, bookTitle, location } — location pre-selects the "Where did
+// this happen?" field based on the entry point (reader vs book detail vs the
+// generic bell composer), and the user can still change it. When opened with
+// a book in context, "Just this book" is offered and pre-selected; otherwise
+// the scope options assume no single book is involved.
+let _bugReportCtx = {};
+function openBugReportModal(ctx = {}) {
+  _bugReportCtx = ctx;
+  document.getElementById('bugReportTitle').value = '';
+  document.getElementById('bugReportDetails').value = '';
+  const locationDefaults = { reader: 'reader', kobo: 'kobo', book_detail: 'other' };
+  document.getElementById('bugReportLocation').value = locationDefaults[ctx.location] || 'other';
+
+  const scopeSel = document.getElementById('bugReportScope');
+  const bookRow = document.getElementById('bugReportBookRow');
+  if(ctx.bookId) {
+    bookRow.style.display = '';
+    document.getElementById('bugReportBookName').textContent = ctx.bookTitle || 'Untitled';
+    scopeSel.innerHTML = `
+      <option value="this_book">Just this book</option>
+      <option value="multiple_books">Multiple books</option>
+      <option value="app_wide">Not book-related (app-wide)</option>`;
+    scopeSel.value = 'this_book';
+  } else {
+    bookRow.style.display = 'none';
+    scopeSel.innerHTML = `
+      <option value="multiple_books">Multiple books</option>
+      <option value="app_wide">Not book-related (app-wide)</option>`;
+    scopeSel.value = 'app_wide';
+  }
+  document.getElementById('bugReportModal').classList.add('open');
+}
+function closeBugReportModal() {
+  document.getElementById('bugReportModal').classList.remove('open');
+}
+document.getElementById('btnBugReportCancel').addEventListener('click', closeBugReportModal);
+document.getElementById('btnBugReportSend').addEventListener('click', async () => {
+  const title = document.getElementById('bugReportTitle').value.trim();
+  const details = document.getElementById('bugReportDetails').value.trim();
+  const bugLocation = document.getElementById('bugReportLocation').value;
+  const bugScope = document.getElementById('bugReportScope').value;
+  if(!title) { showToast('Please add a short summary'); return; }
+  if(!currentUser) return;
+  const locationLabel = { reader:'In the Reader', kobo:'On my Kobo', naming:'Naming / metadata issue', other:'Somewhere else in the app' }[bugLocation] || bugLocation;
+  const scopeLabel = { this_book:'Just this book', multiple_books:'Multiple books', app_wide:'Not book-related (app-wide)' }[bugScope] || bugScope;
+  try {
+    const oneYearMs = 365*24*60*60*1000;
+    await addDoc(collection(db, 'app_notifications'), {
+      type: 'bug',
+      title,
+      body: details,
+      bugLocation: locationLabel,
+      bugScope: scopeLabel,
+      bookId: _bugReportCtx.bookId || null,
+      bookTitle: _bugReportCtx.bookTitle || null,
+      creatorId: currentUser.uid,
+      creatorName: currentUser.displayName || currentUser.email || 'Someone',
+      creatorPhoto: currentUser.photoURL || null,
+      createdAt: serverTimestamp(),
+      readBy: [currentUser.uid],
+      expireAt: Timestamp.fromMillis(Date.now() + oneYearMs),
+      deleted: false
+    });
+    closeBugReportModal();
+    showToast('Bug reported — thanks! 🐞');
+  } catch(e) { showToast('Report failed'); }
 });
 document.getElementById('btnNotifComposeSend').addEventListener('click', async () => {
   const title = document.getElementById('notifComposeTitle').value.trim();
