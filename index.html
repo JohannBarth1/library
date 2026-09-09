@@ -10354,7 +10354,7 @@ function _showLookupBadge() {
   const content = document.getElementById('readerContent');
   const b = document.createElement('button');
   b.id = 'readerLookupBadge';
-  b.innerHTML = '<span style="font-size:.85em;line-height:1">✕</span><span>Tap a word to look it up</span>';
+  b.innerHTML = '<span style="font-size:.85em;line-height:1">✕</span><span>Press & hold a word for your device\u2019s lookup menu</span>';
   b.style.cssText = `position:absolute;top:8px;left:50%;transform:translateX(-50%);
     display:flex;align-items:center;gap:.35em;
     background:rgba(42,124,138,.94);color:#fff;font-size:.68rem;font-weight:700;
@@ -10369,6 +10369,23 @@ function setReaderLookupMode(on) {
   readerLookupMode = on;
   document.getElementById('btnToggleLookupMode')?.classList.toggle('active', on);
   if (on && readerSelectMode) setReaderSelectMode(false);
+
+  // The page-turn overlay normally intercepts every touch (needed for
+  // reliable tap-to-turn-page) — but a native long-press-and-drag
+  // selection, and with it the OS's own "Look Up"/definition menu, only
+  // ever appears for a touch the OS tracked from the very start. A touch
+  // that's already had preventDefault() called on it (which the overlay
+  // always does) can't retroactively get that treatment. So: while Lookup
+  // Mode is on, let touches skip the overlay entirely and land directly on
+  // the page content, where the browser's own long-press selection can
+  // take over normally. Touch-only — desktop's overlay is already
+  // permanently pass-through (see _attachReaderTapHandlers), so leave it
+  // alone there rather than fighting that with `on ? 'none' : ''`.
+  const isTouchDevice = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
+  if (isTouchDevice) {
+    const overlay = document.getElementById('readerTouchOverlay');
+    if (overlay) overlay.style.pointerEvents = on ? 'none' : '';
+  }
 
   if (on) {
     _showLookupBadge();
@@ -10698,6 +10715,14 @@ function _attachReaderTapHandlers(doc) {
     return;
   }
 
+  // This overlay is rebuilt fresh on every chapter load — if Lookup Mode
+  // was already on (e.g. the reader navigated to a new chapter without
+  // leaving lookup mode), the new overlay needs the same pass-through
+  // treatment setReaderLookupMode() applied to the previous one, or a
+  // long-press right after a page turn would silently fall back to being
+  // captured by the overlay instead of reaching native selection.
+  if (readerLookupMode) overlay.style.pointerEvents = 'none';
+
   // ── MOBILE: this overlay always catches every tap/swipe on the page —
   // reliable page-turning and toolbar-toggling took priority after real
   // native long-press selection proved too unreliable to combine with them
@@ -10720,14 +10745,19 @@ function _attachReaderTapHandlers(doc) {
     e.preventDefault();
     tx0 = e.touches[0].clientX;
     ty0 = e.touches[0].clientY;
-    // Long-press (500 ms, no drag) → enter lookup mode and look up that word
+    // Long-press (500 ms, no drag) → arm lookup mode. This touch has
+    // already had preventDefault() called on it (needed so the timer below
+    // gets priority over the browser's own gesture handling), so it can't
+    // retroactively become a native selection itself — it just switches the
+    // overlay to pass-through (see setReaderLookupMode) so the NEXT
+    // press-and-hold, a real uninterrupted one, reaches the page directly
+    // and can trigger the device's own native selection/Look Up.
     clearTimeout(_lpTimer);
     _lpFired = false;
     _lpTimer = setTimeout(() => {
       _lpTimer = null;
       _lpFired = true;
       if (!readerLookupMode) setReaderLookupMode(true);
-      _handleWordLookupTap(doc, tx0, ty0);
     }, 500);
   }, { passive: false });
 
@@ -10739,8 +10769,8 @@ function _attachReaderTapHandlers(doc) {
   overlay.addEventListener('touchend', e => {
     clearTimeout(_lpTimer); _lpTimer = null; // short tap: cancel long-press timer
     if (_lpFired) {
-      // The long-press already opened the lookup popup during this touch —
-      // don't let the matching touchend immediately act on/close it too.
+      // The long-press already armed lookup mode during this touch —
+      // don't let the matching touchend act on it a second time.
       _lpFired = false;
       return;
     }
@@ -10772,11 +10802,14 @@ function _attachReaderTapHandlers(doc) {
         // Swipe (handled above) is still how you turn pages in both modes.
         if (readerSelectMode) {
           _handleSentenceTap(doc, x, e.changedTouches[0].clientY);
-        } else if (_wordLookupPopup) {
-          // Tap anywhere outside the popup while it's open → dismiss + exit mode
+        } else if (readerLookupMode) {
+          // Shouldn't normally fire — once lookup mode is on, the overlay
+          // is pointer-events:none and doesn't receive touchend at all; a
+          // real long-press-and-drag on the page content itself is what
+          // triggers native selection now. Kept as a safety fallback in
+          // case this is somehow still reached: exit lookup mode rather
+          // than doing nothing.
           setReaderLookupMode(false);
-        } else {
-          _handleWordLookupTap(doc, x, e.changedTouches[0].clientY);
         }
       }
       return;
