@@ -1028,7 +1028,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .mob-sheet-close-btn{margin-left:auto;background:none;border:none;font-size:1.2rem;font-weight:400;color:var(--muted);cursor:pointer;-webkit-tap-highlight-color:transparent;display:flex;align-items:center;line-height:1;padding:0;}
 .mob-detail-scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:1rem 1rem calc(var(--mob-nav-h) + var(--sab) + 1.5rem);overscroll-behavior-y:contain;}
 .mob-detail-top{margin:-1rem -1rem 1rem;}
-.mob-detail-hero{position:relative;overflow:hidden;min-height:250px;display:flex;align-items:flex-end;}
+.mob-detail-hero{position:relative;overflow:hidden;min-height:285px;display:flex;align-items:flex-end;}
 .mob-detail-hero .mob-detail-cover,
 .mob-detail-hero .mob-detail-cover-ph{
   position:absolute;inset:0;width:100%!important;height:100%!important;
@@ -1151,12 +1151,12 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
    (Home, Library, wherever) is open behind it — never a separate "page". */
 .mob-sheet{
   position:fixed;left:0;right:0;bottom:0;
-  height:52vh;max-height:52vh;
+  height:58vh;max-height:58vh;
   /* dvh fallback (see .full below for why): plain vh is based on iOS
      Safari's viewport with the address bar hidden, so a peek sized only in
      vh can end up partly behind the address bar / home-indicator area when
      it's showing, clipping the handle + "Swipe up…" label at the bottom. */
-  height:52dvh;max-height:52dvh;
+  height:58dvh;max-height:58dvh;
   box-sizing:border-box;
   background:var(--warm-white);border-radius:20px 20px 0 0;
   box-shadow:0 -10px 34px rgba(20,30,45,.28);
@@ -2331,14 +2331,6 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
           <span class="settings-row-text">
             <span class="settings-row-title">Add Recipe</span>
             <span class="settings-row-desc">Write a new recipe into your library</span>
-          </span>
-          <span class="settings-row-chevron">›</span>
-        </button>
-        <button class="settings-row" id="btnMobImportERecipe">
-          <span class="settings-row-icon" style="background:var(--teal);color:var(--gold)">📥</span>
-          <span class="settings-row-text">
-            <span class="settings-row-title">Import from eRecipe</span>
-            <span class="settings-row-desc">One-time import of your eRecipe collection</span>
           </span>
           <span class="settings-row-chevron">›</span>
         </button>
@@ -4197,8 +4189,8 @@ async function setBookVisibilityFromDrawer(vis) {
     }
     hideLoading();
     renderAll();
-    showBookById(currentId);
-    mob_showBook(currentId, { preserveState: true });
+    await showBookById(currentId);
+    await mob_showBook(currentId, { preserveState: true });
     const label = vis === 'public' ? 'published' : vis === 'restricted' ? 'set to Restricted' : 'set to Private';
     showToast(`"${book.title}" ${label} ✓`);
   } catch(e) {
@@ -4755,7 +4747,7 @@ function renderDetailActionRows(peekContainer, moreContainer, book, isMine){
   // ═══════════════════════════════════════════════════════════════════════
   // PEEK — visible the moment the sheet opens: primary actions + Lists
   // ═══════════════════════════════════════════════════════════════════════
-  let peekHtml = `<div style="display:flex;gap:.5rem;margin-bottom:.7rem;flex-wrap:wrap;">
+  let peekHtml = `<div style="display:flex;gap:.5rem;margin-bottom:.4rem;flex-wrap:wrap;">
     ${book.isRecipe
       ? bigBtn('🍲', 'Open', 'read','#3d7a96','var(--gold)')
       : book.isAudio
@@ -4859,7 +4851,6 @@ function renderDetailActionRows(peekContainer, moreContainer, book, isMine){
 
   if(canManage){
     html += `<div class="mob-taxonomy-card" style="margin-top:.5rem;">
-      <div style="font-size:.58rem;letter-spacing:.15em;text-transform:uppercase;color:var(--gold);font-weight:700;margin-bottom:.4rem;">Visibility</div>
       ${visibilitySegmentHtml()}
     </div>`;
   }
@@ -5722,9 +5713,16 @@ function openMobFilterPicker({ anchor, title, items, isSelected, onSelect, multi
 
   scrim.addEventListener('click', () => { scrim.remove(); dd.remove(); });
   dd.querySelectorAll('[data-idx]').forEach(el => {
-    el.addEventListener('click', () => {
+    el.addEventListener('click', async () => {
       const item = items[+el.dataset.idx];
-      onSelect(item);
+      // Awaited even though onSelect (e.g. setBookVisibilityFromDrawer)
+      // isn't always async itself — a plain return value awaits fine. The
+      // point is making sure the whole chain, including whatever refresh
+      // onSelect kicks off, actually finishes before this dropdown closes
+      // and the sheet is interactive again — otherwise a fast second tap
+      // right after selecting something could land while that refresh is
+      // still rebuilding the sheet's buttons, racing it.
+      await onSelect(item);
       if (onAfterSelect) onAfterSelect(); else { updateMobFilterPillLabels(); renderMobLibrary(); }
       if (multi) el.classList.toggle('selected', isSelected(item));
       else { scrim.remove(); dd.remove(); }
@@ -12662,8 +12660,8 @@ async function doMarkFinishedFromDetail(){
     await markBookFinished(currentId);
     hideLoading();
     showToast('Marked as Finished ✓');
-    if(window.innerWidth > 768) showBookById(currentId);
-    else mob_showBook(currentId, { preserveState: true });
+    if(window.innerWidth > 768) await showBookById(currentId);
+    else await mob_showBook(currentId, { preserveState: true });
   } catch(e) {
     hideLoading();
     showToast('Failed: ' + e.message);
@@ -13904,7 +13902,6 @@ document.getElementById('btnMobUploadAudio')?.addEventListener('click', showAudi
 [document.getElementById('btnHeaderUploadAudio'),document.getElementById('btnSideUploadAudio')].forEach(b=>b?.addEventListener('click',showAudioUploadModal));
 document.getElementById('btnMobAddRecipe')?.addEventListener('click', () => showRecipeEditor());
 [document.getElementById('btnHeaderAddRecipe'),document.getElementById('btnSideAddRecipe')].forEach(b=>b?.addEventListener('click',() => showRecipeEditor()));
-document.getElementById('btnMobImportERecipe')?.addEventListener('click', showImportERecipeModal);
 document.getElementById('btnSideImportERecipe')?.addEventListener('click', showImportERecipeModal);
 // Explicit user-triggered refresh — loadLibrary() itself stays silent since
 // it's also called on sign-in and after uploads, where a "refreshed" toast
@@ -14089,8 +14086,8 @@ async function toggleRecommended() {
     renderAll();
     renderMobHome();
     renderDeskHome();
-    if(window.innerWidth > 768) showBookById(currentId);
-    else mob_showBook(currentId, { preserveState: true });
+    if(window.innerWidth > 768) await showBookById(currentId);
+    else await mob_showBook(currentId, { preserveState: true });
     showToast(rec ? 'Marked as Recommended ⭐' : 'Removed from Recommended');
   } catch(e) {
     // Roll back optimistic update if Firestore write failed
@@ -16099,8 +16096,8 @@ function showQuickCategoryModal() {
         if(book.isRecipe && book._recipe) book._recipe.chapterName = newCat;
         hideLoading();
         renderAll();
-        if(window.innerWidth > 768) showBookById(currentId);
-        else mob_showBook(currentId, { preserveState: true });
+        if(window.innerWidth > 768) await showBookById(currentId);
+        else await mob_showBook(currentId, { preserveState: true });
         showToast('Genre updated ✓');
       } catch(e) {
         hideLoading();
