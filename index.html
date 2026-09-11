@@ -1039,10 +1039,11 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .mob-detail-hero-fade{position:absolute;inset:0;
   background:linear-gradient(to bottom,
     rgba(15,26,46,0.22) 0%,
-    rgba(15,26,46,0.04) 28%,
-    transparent 45%,
-    rgba(250,247,242,0.5) 62%,
-    rgba(250,247,242,0.93) 78%,
+    rgba(15,26,46,0.04) 10%,
+    transparent 20%,
+    transparent 72%,
+    rgba(250,247,242,0.55) 82%,
+    rgba(250,247,242,0.93) 92%,
     var(--warm-white) 100%
   );
   pointer-events:none;}
@@ -4890,7 +4891,7 @@ function renderDetailActionRows(peekContainer, moreContainer, book, isMine){
   const shareLabel = '🔗 Share';
 
   if(canManage){
-    html += `<div class="mob-taxonomy-card" style="margin-top:.5rem;">
+    html += `<div class="mob-list-section" style="margin-top:.5rem;">
       ${visibilitySegmentHtml()}
     </div>`;
   }
