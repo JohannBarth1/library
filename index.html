@@ -3074,7 +3074,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
-import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut }
+import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, onAuthStateChanged, signOut }
   from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
 import { getFirestore, collection, addDoc, getDocs, getDoc, doc,
          query, where, orderBy, updateDoc, deleteDoc, serverTimestamp, setDoc, Timestamp, limit, onSnapshot, deleteField, increment, arrayUnion, arrayRemove }
@@ -3387,7 +3387,47 @@ window.addEventListener('online', () => {
   if (!library.length) loadLibrary();
   if (!_userLists.length) loadUserLists().then(() => { renderMobHome(); renderDeskSidebar(); });
 });
-document.getElementById('btnGoogleSignIn').addEventListener('click',()=>signInWithPopup(auth,gprovider).catch(e=>showToast('Sign-in failed: '+e.message)));
+// signInWithPopup can fail purely because of how the browser's
+// Cross-Origin-Opener-Policy header interacts with Firebase's popup-close
+// detection (see https://github.com/firebase/firebase-js-sdk/issues/... —
+// the popup polling code needs to read `popup.closed`, which COOP can
+// block outright). The real fix is a `Cross-Origin-Opener-Policy:
+// same-origin-allow-popups` response header on this page (set via
+// firebase.json hosting.headers) — this fallback exists for whenever that
+// header isn't in place yet, or some other browser quirk breaks the
+// popup mechanism. It only fires for error codes that mean "the popup
+// itself didn't work", not for the person's own choices (e.g. declining
+// the Google account picker isn't one of these codes).
+const POPUP_MECHANISM_FAILURE_CODES = new Set([
+  'auth/popup-blocked',
+  'auth/popup-closed-by-user', // COOP interference commonly misreports as this — see the GitHub issue above
+  'auth/cancelled-popup-request',
+  'auth/internal-error',
+]);
+async function attemptGoogleSignIn(){
+  try {
+    await signInWithPopup(auth, gprovider);
+  } catch(e) {
+    if (POPUP_MECHANISM_FAILURE_CODES.has(e.code)) {
+      console.warn('Popup sign-in failed (', e.code, ') — falling back to redirect:', e);
+      try { await signInWithRedirect(auth, gprovider); }
+      catch(e2) { showToast('Sign-in failed: ' + e2.message); }
+      // No further code runs here on success — signInWithRedirect navigates
+      // the whole page away to Google and back; onAuthStateChanged picks up
+      // the result after that round trip.
+    } else {
+      showToast('Sign-in failed: ' + e.message);
+    }
+  }
+}
+// Surfaces an error from a sign-in that just completed via the redirect
+// fallback above. A *successful* redirect sign-in doesn't need anything
+// here — onAuthStateChanged already reacts to it — this is purely for
+// showing the person something if that flow itself failed. A no-op (empty
+// resolved value) on every normal page load that isn't returning from one.
+getRedirectResult(auth).catch(e => showToast('Sign-in failed: ' + e.message));
+
+document.getElementById('btnGoogleSignIn').addEventListener('click', attemptGoogleSignIn);
 document.getElementById('btnSignOut').addEventListener('click',doSignOut);
 function doSignOut(){if(!confirm('Sign out?'))return;signOut(auth);}
 
