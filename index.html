@@ -1028,7 +1028,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .mob-sheet-close-btn{margin-left:auto;background:none;border:none;font-size:1.2rem;font-weight:400;color:var(--muted);cursor:pointer;-webkit-tap-highlight-color:transparent;display:flex;align-items:center;line-height:1;padding:0;}
 .mob-detail-scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:1rem 1rem calc(var(--mob-nav-h) + var(--sab) + 1.5rem);overscroll-behavior-y:contain;}
 .mob-detail-top{margin:-1rem -1rem 1rem;}
-.mob-detail-hero{position:relative;overflow:hidden;min-height:250px;display:flex;align-items:flex-end;}
+.mob-detail-hero{position:relative;overflow:hidden;min-height:285px;display:flex;align-items:flex-end;}
 .mob-detail-hero .mob-detail-cover,
 .mob-detail-hero .mob-detail-cover-ph{
   position:absolute;inset:0;width:100%!important;height:100%!important;
@@ -1151,12 +1151,12 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
    (Home, Library, wherever) is open behind it — never a separate "page". */
 .mob-sheet{
   position:fixed;left:0;right:0;bottom:0;
-  height:52vh;max-height:52vh;
+  height:58vh;max-height:58vh;
   /* dvh fallback (see .full below for why): plain vh is based on iOS
      Safari's viewport with the address bar hidden, so a peek sized only in
      vh can end up partly behind the address bar / home-indicator area when
      it's showing, clipping the handle + "Swipe up…" label at the bottom. */
-  height:52dvh;max-height:52dvh;
+  height:58dvh;max-height:58dvh;
   box-sizing:border-box;
   background:var(--warm-white);border-radius:20px 20px 0 0;
   box-shadow:0 -10px 34px rgba(20,30,45,.28);
@@ -1950,6 +1950,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
   <div class="header-right">
     <button class="hbtn hbtn-upload" id="btnHeaderUpload">📤 Upload</button>
     <button class="hbtn hbtn-upload" id="btnHeaderUploadAudio" title="Upload Audio">🎧 Upload Audio</button>
+    <button class="hbtn hbtn-upload" id="btnHeaderAddRecipe" title="Add Recipe">🍲 Add Recipe</button>
     <button class="hbtn hbtn-ghost btnToggleSettingsDesk" id="btnToggleSettings">⚙</button>
     <div id="notifScrim" class="notif-scrim"></div>
     <div class="notif-bell-wrap">
@@ -2071,6 +2072,8 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
       <div class="filter-footer">
         <button class="btn-upload-f" id="btnSideUpload">+ Upload</button>
         <button class="btn-upload-f" id="btnSideUploadAudio">🎧 Upload Audio</button>
+        <button class="btn-upload-f" id="btnSideAddRecipe">🍲 Add Recipe</button>
+        <button class="btn-upload-f" id="btnSideImportERecipe">📥 Import from eRecipe</button>
         <button class="btn-refresh-f" id="btnSideRefresh">↻ Refresh</button>
       </div>
     </aside>
@@ -2248,8 +2251,8 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
           <span class="lq-icon">🤍</span>
         </button>
         <div class="mob-detail-hero-text">
-          <div class="mob-detail-cat" id="mobDetailCat"></div>
           <div class="mob-detail-title" id="mobDetailTitle"></div>
+          <div class="mob-detail-cat" id="mobDetailCatPages" style="display:none;"></div>
           <div class="mob-detail-author" id="mobDetailAuthor"></div>
           <div id="mobDetailSeries" style="display:none;font-size:.72rem;color:var(--muted);font-weight:600;margin-top:.15rem"></div>
           <div id="mobDetailSharedBy" style="display:none;font-size:.72rem;color:var(--teal);font-weight:700;margin-top:.2rem"></div>
@@ -2320,6 +2323,14 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
           <span class="settings-row-text">
             <span class="settings-row-title">Upload Audio</span>
             <span class="settings-row-desc">Add audio files or a YouTube link</span>
+          </span>
+          <span class="settings-row-chevron">›</span>
+        </button>
+        <button class="settings-row" id="btnMobAddRecipe">
+          <span class="settings-row-icon" style="background:var(--teal);color:var(--gold)">🍲</span>
+          <span class="settings-row-text">
+            <span class="settings-row-title">Add Recipe</span>
+            <span class="settings-row-desc">Write a new recipe into your library</span>
           </span>
           <span class="settings-row-chevron">›</span>
         </button>
@@ -2568,10 +2579,53 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 
 <div class="modal-overlay" id="broadcastModal">
   <div class="modal" style="max-width:420px">
+    <div id="broadcastModalBookTile" style="display:none;align-items:center;gap:.7rem;margin-bottom:.9rem;">
+      <img id="broadcastModalBookCover" src="" alt="" style="width:52px;height:78px;object-fit:cover;border-radius:4px;background:var(--navy2);flex-shrink:0;box-shadow:0 4px 10px rgba(15,26,46,.25);"/>
+    </div>
     <h3 id="broadcastModalTitle">📢 Announcement</h3>
     <p id="broadcastModalBody" style="font-size:.88rem;color:var(--navy2);line-height:1.6;white-space:pre-wrap"></p>
     <div class="modal-actions">
+      <button class="btn-cancel" id="btnBroadcastModalDismiss" style="display:none">Dismiss</button>
       <button class="btn-save" id="btnBroadcastModalOk">Got it</button>
+    </div>
+  </div>
+</div>
+
+<!-- Bug report — reachable from the bell composer, the book detail slider
+     (desktop drawer + mobile sheet), and the reader toolbar. Collects where
+     it happened and how broad it is, on top of the free-text summary, so
+     reports are actually actionable instead of a single vague sentence. -->
+<div class="modal-overlay" id="bugReportModal">
+  <div class="modal" style="max-width:440px">
+    <h3>🐞 Report a Bug</h3>
+    <div class="form-row" id="bugReportBookRow" style="display:none">
+      <label>Book</label>
+      <div id="bugReportBookName" style="font-weight:700;color:var(--navy2);font-size:.85rem;"></div>
+    </div>
+    <div class="form-row">
+      <label>Summary</label>
+      <input type="text" id="bugReportTitle" placeholder="Short summary of the issue"/>
+    </div>
+    <div class="form-row">
+      <label>Where did this happen?</label>
+      <select id="bugReportLocation">
+        <option value="reader">In the Reader</option>
+        <option value="kobo">On my Kobo</option>
+        <option value="naming">Naming / metadata issue</option>
+        <option value="other">Somewhere else in the app</option>
+      </select>
+    </div>
+    <div class="form-row">
+      <label>Does this affect…</label>
+      <select id="bugReportScope"></select>
+    </div>
+    <div class="form-row">
+      <label>Details</label>
+      <textarea id="bugReportDetails" rows="4" placeholder="What happened? Steps to reproduce, if you can…" style="width:100%;padding:.6rem .85rem;font-family:'Lato',sans-serif;font-size:.88rem;color:var(--navy);background:var(--cream);border:1px solid var(--border);border-radius:3px;outline:none;resize:vertical;line-height:1.5"></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" id="btnBugReportCancel">Cancel</button>
+      <button class="btn-save" id="btnBugReportSend">Send Report</button>
     </div>
   </div>
 </div>
@@ -2969,6 +3023,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
   </div>
     <div class="reader-nav">
   <button class="reader-btn" id="btnToggleReaderSettings" title="Settings">Aa</button>
+  <button class="reader-btn" id="btnReaderReportBug" title="Report a Bug">🐞</button>
   </div>
     <div class="reader-nav">
   <button class="reader-btn" id="btnReaderPrev">‹</button>
@@ -3022,7 +3077,7 @@ import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/fireba
 import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut }
   from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
 import { getFirestore, collection, addDoc, getDocs, getDoc, doc,
-         query, where, orderBy, updateDoc, deleteDoc, serverTimestamp, setDoc, Timestamp, limit, onSnapshot, deleteField, increment, arrayUnion }
+         query, where, orderBy, updateDoc, deleteDoc, serverTimestamp, setDoc, Timestamp, limit, onSnapshot, deleteField, increment, arrayUnion, arrayRemove }
   from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 import { getStorage, ref as storageRef, uploadBytes, getDownloadURL, getBytes, deleteObject }
   from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js';
@@ -3427,10 +3482,11 @@ async function loadLibrary() {
       ? getDocs(query(collection(db, 'books'), where('visibility', '==', 'restricted')))
       : Promise.resolve({ docs: [] });
 
-    // Load and render my books (+ audiobooks) immediately
-    const [mySnap] = await Promise.all([getDocs(myQ), loadAudioTracks()]);
+    // Load and render my books (+ audiobooks + recipes) immediately
+    const [mySnap] = await Promise.all([getDocs(myQ), loadAudioTracks(), loadRecipes()]);
     library = mySnap.docs.map(d => ({ id: d.id, ...d.data() }));
     mergeAudioIntoLibrary();
+    mergeRecipesIntoLibrary();
     renderAll();
 
     // Load public and shared in background without blocking UI.
@@ -3441,8 +3497,8 @@ async function loadLibrary() {
     // means one denied query no longer takes the whole public/shared library
     // down with it; whatever did succeed still renders, and only the piece
     // that failed is silently dropped (with a console warning to spot it).
-    Promise.allSettled([getDocs(pubQ), getDocs(sharedQ), restrictedPromise, loadCommunityAudioTracks()])
-      .then(([pubR, sharedR, restrictedR, audioR]) => {
+    Promise.allSettled([getDocs(pubQ), getDocs(sharedQ), restrictedPromise, loadCommunityAudioTracks(), loadCommunityRecipes()])
+      .then(([pubR, sharedR, restrictedR, audioR, recipeR]) => {
         const failed = [];
         const pubBooks = pubR.status === 'fulfilled'
           ? pubR.value.docs.map(d => ({ id: d.id, ...d.data() }))
@@ -3454,14 +3510,15 @@ async function loadLibrary() {
           ? restrictedR.value.docs.map(d => ({ id: d.id, ...d.data() })).filter(b => b.ownerId !== currentUser.uid)
           : (failed.push('restricted books'), []);
         const communityAudio = audioR.status === 'fulfilled' ? audioR.value : (failed.push('community audiobooks'), []);
+        const communityRecipes = recipeR.status === 'fulfilled' ? recipeR.value : (failed.push('community recipes'), []);
 
         if (failed.length) {
           console.warn('Background load: partial failure —', failed.join(', '),
-            [pubR, sharedR, restrictedR, audioR].map(r => r.reason).filter(Boolean));
+            [pubR, sharedR, restrictedR, audioR, recipeR].map(r => r.reason).filter(Boolean));
           showToast(`Some content couldn't be loaded (${failed.join(', ')})`);
         }
 
-        communityLib = dedupe([...pubBooks, ...sharedBooks, ...restrictedBooks, ...communityAudio]);
+        communityLib = dedupe([...pubBooks, ...sharedBooks, ...restrictedBooks, ...communityAudio, ...communityRecipes]);
         renderAll();
         renderMobHome();
         renderDeskHome();
@@ -3512,14 +3569,28 @@ async function findBookById(id) {
     if (book) return book;
   }
 
-  try {
-    const snap = await getDoc(doc(db, 'books', id));
-    if (snap.exists()) return { id: snap.id, ...snap.data() };
-    _lastFindBookByIdErrorCode = 'permission-denied';
-  } catch (e) {
-    console.warn('findBookById direct fetch failed:', e);
-    _lastFindBookByIdErrorCode = e.code || null;
+  // Not in the local cache (e.g. reached right after creation/import,
+  // before this session's own arrays have it, or via a link to something
+  // not owned/shared with this user yet). Which Firestore collection it
+  // lives in isn't known ahead of time — books/audioFiles/recipes all
+  // funnel through this same lookup — so try each in turn. This whole
+  // fallback is rarely reached (the local cache covers the normal case),
+  // so trying up to three collections here doesn't cost much in practice.
+  const attempts = [
+    { name: 'books', wrap: d => d },
+    { name: 'audioFiles', wrap: d => audioTrackToBookLike(d) },
+    { name: 'recipes', wrap: d => recipeToBookLike(d) },
+  ];
+  for (const { name, wrap } of attempts) {
+    try {
+      const snap = await getDoc(doc(db, name, id));
+      if (snap.exists()) return wrap({ id: snap.id, ...snap.data() });
+    } catch (e) {
+      console.warn(`findBookById: ${name} fetch failed:`, e);
+      _lastFindBookByIdErrorCode = e.code || _lastFindBookByIdErrorCode;
+    }
   }
+  if (!_lastFindBookByIdErrorCode) _lastFindBookByIdErrorCode = 'permission-denied';
   return null;
 }
 
@@ -4104,9 +4175,10 @@ async function setBookVisibilityFromDrawer(vis) {
   try {
     // Audiobooks live in `audioFiles`, not `books` — same pattern as
     // showEditMeta's save handler.
-    await updateDoc(doc(db, book.isAudio ? 'audioFiles' : 'books', currentId), { visibility: vis, updatedAt: serverTimestamp() });
+    await updateDoc(doc(db, collectionForBook(book), currentId), { visibility: vis, updatedAt: serverTimestamp() });
     book.visibility = vis;
     if(book.isAudio && book._audioTrack) book._audioTrack.visibility = vis;
+    if(book.isRecipe && book._recipe) book._recipe.visibility = vis;
     if(vis === 'public') {
       if(!communityLib.find(b => b.id === currentId)) communityLib.push(book);
       if(currentUser && book.ownerId === currentUser.uid && ledgerState.loaded) _ledgerUnlockAchievement('sharer', currentId);
@@ -4117,8 +4189,8 @@ async function setBookVisibilityFromDrawer(vis) {
     }
     hideLoading();
     renderAll();
-    showBookById(currentId);
-    mob_showBook(currentId, { preserveState: true });
+    await showBookById(currentId);
+    await mob_showBook(currentId, { preserveState: true });
     const label = vis === 'public' ? 'published' : vis === 'restricted' ? 'set to Restricted' : 'set to Private';
     showToast(`"${book.title}" ${label} ✓`);
   } catch(e) {
@@ -4139,8 +4211,10 @@ function filteredBooks(){
     books=dedupe([...library,...communityLib]).filter(b=>ids.has(b.id));
   }
   if(deskLibCat!=='All')books=books.filter(b=>(b.category||'Uncategorised')===deskLibCat);
-  if(deskLibFormat==='book')books=books.filter(b=>!b.isAudio);
+  if(deskLibFormat==='book')books=books.filter(b=>!b.isAudio&&!b.isRecipe);
   if(deskLibFormat==='audio')books=books.filter(b=>b.isAudio);
+  if(deskLibFormat==='recipe')books=books.filter(b=>b.isRecipe);
+  else books=books.filter(b=>!b.isRecipe); // recipes are opt-in via the Format filter, not shown by default
   if(searchQ)books=books.filter(b=>b.title?.toLowerCase().includes(searchQ)||b.author?.toLowerCase().includes(searchQ)||b.category?.toLowerCase().includes(searchQ));
   if(deskActiveTags.size)books=books.filter(b=>(b.tags||[]).some(t=>deskActiveTags.has(t)));
   return sortBooks(books,deskLibSort);
@@ -4190,6 +4264,12 @@ function sortBooks(books,sort){
   });
   if(sort==='author')copy.sort((a,b)=>(a.author||'').localeCompare(b.author||''));
   if(sort==='rating')copy.sort((a,b)=>getAvgRating(b)-getAvgRating(a));
+  // Longest first, same convention as Rating (highest first). Uses the
+  // cached standard-page word count (see computeBookWordCount) rather than
+  // readerPageCount, since that moves with the reader's font size — this
+  // stays fixed. A book whose word count hasn't been computed yet (its
+  // details sheet has never been opened) sorts to the bottom until it has.
+  if(sort==='pages')copy.sort((a,b)=>(b.wordCount||0)-(a.wordCount||0));
   return copy;
 }
 function getCats(){
@@ -4235,33 +4315,36 @@ function renderGrid(gridId){
   if(!books.length){
     const isEmpty=activeBooks().length===0;
     const canUpload=deskLibFilter==='all'||deskLibFilter==='private';
-    grid.innerHTML=`<div style="grid-column:1/-1;padding:3rem 1rem;text-align:center;color:var(--muted)"><div style="font-size:2.5rem;opacity:.25;margin-bottom:.8rem">📚</div><div style="font-family:'Playfair Display',serif;font-size:1.1rem;color:var(--navy2);margin-bottom:.4rem">${isEmpty?'Your library is empty':'No books match'}</div><div style="font-size:.85rem">${isEmpty?'Upload a book or audiobook to get started':'Try a different search or filter'}</div>${isEmpty&&canUpload?`<div style="margin-top:1rem;display:flex;gap:.5rem;justify-content:center;flex-wrap:wrap"><button class="hbtn hbtn-upload" id="emptyStateUploadBtn">📤 Upload</button><button class="hbtn hbtn-upload" id="emptyStateUploadAudioBtn">🎧 Upload Audio</button></div>`:''}</div>`;
+    grid.innerHTML=`<div style="grid-column:1/-1;padding:3rem 1rem;text-align:center;color:var(--muted)"><div style="font-size:2.5rem;opacity:.25;margin-bottom:.8rem">📚</div><div style="font-family:'Playfair Display',serif;font-size:1.1rem;color:var(--navy2);margin-bottom:.4rem">${isEmpty?'Your library is empty':'No books match'}</div><div style="font-size:.85rem">${isEmpty?'Upload a book or audiobook to get started':'Try a different search or filter'}</div>${isEmpty&&canUpload?`<div style="margin-top:1rem;display:flex;gap:.5rem;justify-content:center;flex-wrap:wrap"><button class="hbtn hbtn-upload" id="emptyStateUploadBtn">📤 Upload</button><button class="hbtn hbtn-upload" id="emptyStateUploadAudioBtn">🎧 Upload Audio</button><button class="hbtn hbtn-upload" id="emptyStateAddRecipeBtn">🍲 Add Recipe</button></div>`:''}</div>`;
     if(isEmpty&&canUpload){
       grid.querySelector('#emptyStateUploadBtn')?.addEventListener('click', showUploadModal);
       grid.querySelector('#emptyStateUploadAudioBtn')?.addEventListener('click', showAudioUploadModal);
+      grid.querySelector('#emptyStateAddRecipeBtn')?.addEventListener('click', () => showRecipeEditor());
     }
     return;
   }
-  const gridBooks = collapseAudioSeriesForGrid(books);
+  const gridBooks = collapseAudioSeriesForGrid(collapseRecipesByCategoryForGrid(books));
   reconcileGrid(grid, gridBooks, b => b.id, b => {
     const coverSrc=getCoverSrc(b);
     const isSelected=selectedIds.has(b.id);
     if(b.isGroupHeader){
+      const icon=b.icon||(b.isRecipe?'🍲':'🎧'), unit=b.isRecipe?'recipe':'episode';
       return `<div class="group-header-tile tile-pop-in" data-groupheader="1" data-groupkey="${esc(b.groupKey)}">
-      <span><span class="group-header-title">🎧 ${esc(b.title)}</span><span class="group-header-count">${b.partCount} episodes</span></span>
+      <span><span class="group-header-title">${icon} ${esc(b.title)}</span><span class="group-header-count">${b.partCount} ${unit}${b.partCount===1?'':'s'}</span></span>
       <span class="group-header-collapse">⌃ Collapse</span>
     </div>`;
     }
     if(b.isGroup){
-      return `<div class="book-card audio-tile group-tile ${isSelected?'selected':''}" data-bookid="${b.id}" data-groupids="${b.groupIds.join(',')}" data-groupkey="${esc(b.groupKey)}">
+      const icon=b.icon||(b.isRecipe?'🍲':'🎧'), unit=b.isRecipe?'Recipe':'Episode';
+      return `<div class="book-card ${b.isRecipe?'recipe-tile':'audio-tile'} group-tile ${isSelected?'selected':''}" data-bookid="${b.id}" data-groupids="${b.groupIds.join(',')}" data-groupkey="${esc(b.groupKey)}">
       <div style="position:relative">
         <div class="group-stack-edge e2"></div>
         <div class="group-stack-edge e1"></div>
-        ${coverSrc?`<img class="book-card-cover" src="${coverSrc}" alt="" loading="lazy"/>`:`<div class="book-card-cover-ph"><div class="ph-icon">🎧</div><div class="ph-title">${esc(b.title)}</div><div class="ph-author">${esc(b.author)}</div></div>`}
+        ${coverSrc?`<img class="book-card-cover" src="${coverSrc}" alt="" loading="lazy"/>`:`<div class="book-card-cover-ph"><div class="ph-icon">${icon}</div><div class="ph-title">${esc(b.title)}</div><div class="ph-author">${esc(b.author)}</div></div>`}
       </div><div class="select-check">✓</div>
       <div class="book-card-body"><div class="book-card-title">${esc(b.title)}</div>
       <div class="book-card-author">${esc(b.author)}</div>
-      <div class="group-part-badge">🎧 ${b.partCount} Episode${b.partCount===1?'':'s'}${b.totalDuration?` · ${formatDuration(b.totalDuration)}`:''}</div></div></div>`;
+      <div class="group-part-badge">${icon} ${b.partCount} ${unit}${b.partCount===1?'':'s'}${b.totalDuration?` · ${formatDuration(b.totalDuration)}`:''}</div></div></div>`;
     }
     if(b.isAudio){
       const coverHtml=coverSrc?`<img class="book-card-cover" src="${coverSrc}" alt="" loading="lazy"/>`:`<div class="book-card-cover-ph"><div class="ph-icon">🎧</div><div class="ph-title">${esc(b.title)}</div><div class="ph-author">${esc(b.author)}</div></div>`;
@@ -4301,6 +4384,7 @@ document.getElementById('deskBookGrid').addEventListener('click',e=>{
     updateBulkBar();return;
   }
   if(card.classList.contains('group-tile')){ 
+    if(card.classList.contains('recipe-tile')){ toggleSeriesGroupExpanded(card.dataset.groupkey); return; }
     const allBooks = dedupe([...library, ...communityLib]);
     const seriesTitle = allBooks.find(b => b.id === id)?.series || card.dataset.groupkey;
     showSeriesEpisodesModal(seriesTitle); 
@@ -4561,6 +4645,7 @@ async function showBookById(id){
   document.getElementById('drawerCoverReadBtn').onclick=()=>{
     closeDrawer();
     if(book.isAudio){ playAudioTrack(book._audioTrack); return; }
+    if(book.isRecipe){ openRecipeCookMode(book._recipe); return; }
     readCurrentBook();
   };
 
@@ -4662,17 +4747,19 @@ function renderDetailActionRows(peekContainer, moreContainer, book, isMine){
   // ═══════════════════════════════════════════════════════════════════════
   // PEEK — visible the moment the sheet opens: primary actions + Lists
   // ═══════════════════════════════════════════════════════════════════════
-  let peekHtml = `<div style="display:flex;gap:.5rem;margin-bottom:.7rem;flex-wrap:wrap;">
-    ${book.isAudio
+  let peekHtml = `<div style="display:flex;gap:.5rem;margin-bottom:.4rem;flex-wrap:wrap;">
+    ${book.isRecipe
+      ? bigBtn('🍲', 'Open', 'read','#3d7a96','var(--gold)')
+      : book.isAudio
       ? bigBtn('🎧', hasStarted ? 'Continue Listening' : 'Listen', 'read','#3d7a96','var(--gold)')
       : bigBtn('📖', hasStarted ? 'Continue Reading' : 'Read', 'read','#3d7a96','var(--gold)')}
-    ${book.isAudio ? '' : bigBtn('🔲','Send to Kobo','sendtokobo','var(--teal)','var(--gold)')}
+    ${(book.isAudio || book.isRecipe) ? '' : bigBtn('🔲','Send to Kobo','sendtokobo','var(--teal)','var(--gold)')}
   </div>`;
 
   const hasCustomLists = _userLists.some(l => !l.system);
 
   peekHtml += `<div class="mob-list-section">
-    ${hasCustomLists ? `<div class="mob-list-section-label">🗂️ Lists</div>
+    ${hasCustomLists ? `<div class="mob-list-section-label">Lists</div>
     <div class="mob-list-row" style="margin-bottom:.5rem;">
       <button class="mob-list-other-btn" data-action="otherlists" id="mobOtherListsBtn">Other Lists ▾</button>
     </div>` : ''}
@@ -4724,20 +4811,22 @@ function renderDetailActionRows(peekContainer, moreContainer, book, isMine){
   // with them) — not just books they uploaded themselves.
   const canManage = isMine || isAdmin;
 
-  // ── "Share" — visibility (Public/Restricted/Private) plus Share
-  // Privately stay owner-or-admin; Copy Link and Download are available to
-  // anyone viewing the book, but grouped here with the rest of sharing.
-  // This is the one place in the app a book's visibility gets set — admins
-  // manage any book's restriction/publication from here too, on the book
-  // itself, rather than through a separate admin list.
+  // ── "Visibility" — Public/Restricted/Private as a segmented triple-toggle,
+  // same interaction as the Want to Read/Reading/Finished control above.
+  // Owner-or-admin only; a plain viewer never sees or sets this.
+  const visibilitySegmentHtml = () => {
+    const vis = book.visibility === 'public' ? 'public' : book.visibility === 'restricted' ? 'restricted' : 'private';
+    const segs = [{ key:'private', label:'🔏 Private' }];
+    if(isAdmin || hasRestrictedAccess) segs.push({ key:'restricted', label:'🔒 Restricted' });
+    segs.push({ key:'public', label:'🌐 Public' });
+    const seg = s => `<button class="mob-stage-seg" data-action="setvisseg" data-vis="${s.key}"
+      style="${vis === s.key ? 'background:var(--teal);color:var(--warm-white);' : ''}">${s.label}</button>`;
+    return `<div class="mob-stage-row">${segs.map(seg).join('')}</div>`;
+  };
+
+  // ── "Share" — Share Privately stays owner-only; Copy Link and Download
+  // are available to anyone viewing the book.
   const shareOpts = [];
-  if(canManage){
-    shareOpts.push({ icon:'🌐', label:'Public', action:'setvis', vis:'public' });
-    if(isAdmin || hasRestrictedAccess){
-      shareOpts.push({ icon:'🔒', label:'Restricted', action:'setvis', vis:'restricted' });
-    }
-    shareOpts.push({ icon:'🔏', label:'Private', action:'setvis', vis:'private' });
-  }
   if(isMine){
     shareOpts.push({ icon:'🔗', label:'Share Privately', action:'shareprivate' });
   }
@@ -4747,8 +4836,8 @@ function renderDetailActionRows(peekContainer, moreContainer, book, isMine){
   // ── "Edit" — owner or admin ───────────────────────────────────────────
   const editOpts = [];
   if(canManage){
-    editOpts.push({ icon:'✎', label:'Edit Details', action:'editmeta' });
-    if(!book.isAudio) editOpts.push({ icon:'📑', label:'Edit Contents', action:'chapters' });
+    editOpts.push({ icon:'✎', label:'Edit Details', action: book.isRecipe ? 'editrecipe' : 'editmeta' });
+    if(!book.isAudio && !book.isRecipe) editOpts.push({ icon:'📑', label:'Edit Contents', action:'chapters' });
   }
 
   // ── Recommend/Unrecommend — its own toggle, not tucked in a dropdown ────
@@ -4758,9 +4847,13 @@ function renderDetailActionRows(peekContainer, moreContainer, book, isMine){
       <span style="font-size:.78rem;line-height:1">${book.recommended?'⭐':'☆'}</span><span>${book.recommended?'Recommended':'Recommend'}</span>
     </button>`;
 
-  const shareLabel = canManage
-    ? (book.visibility === 'public' ? '🌐 Public' : book.visibility === 'restricted' ? '🔒 Restricted' : '🔏 Private')
-    : 'Share';
+  const shareLabel = '🔗 Share';
+
+  if(canManage){
+    html += `<div class="mob-taxonomy-card" style="margin-top:.5rem;">
+      ${visibilitySegmentHtml()}
+    </div>`;
+  }
 
   html += `<div style="display:flex;flex-wrap:wrap;gap:.4rem;padding:.6rem 0 .3rem;border-top:1px solid var(--border);margin-top:.4rem;">
     ${pillSelect('detailShareSelect', shareLabel, shareOpts)}
@@ -4772,7 +4865,7 @@ function renderDetailActionRows(peekContainer, moreContainer, book, isMine){
   // the dropdowns since one is an audit trail and the other is destructive;
   // neither belongs to "share" or "edit" and both are rare enough not to
   // need their own group.
-  const bottomBtns = [];
+  const bottomBtns = [smBtn('🐞','Report Bug','reportbug')];
   if(isAdmin) bottomBtns.push(smBtn('📋','History','history'));
   if(isMine)  bottomBtns.push(smBtn('✕','Delete','delete',{danger:true}));
   if(bottomBtns.length){
@@ -4782,10 +4875,23 @@ function renderDetailActionRows(peekContainer, moreContainer, book, isMine){
   moreContainer.innerHTML = html;
   moreContainer.querySelectorAll('[data-action]').forEach(b => b.addEventListener('click', handleAction));
 
-  wirePillSelect(moreContainer, 'detailShareSelect', shareOpts, {
-    isSelected: it => it.action === 'setvis' && it.vis === (book.visibility || 'private'),
-    onSelect: it => it.action === 'setvis' ? setBookVisibilityFromDrawer(it.vis) : runDetailAction(it.action),
-  });
+  // Computing this requires downloading and parsing the whole EPUB, so it
+  // never blocks the sheet opening — the hero line already shows a
+  // "Calculating…" placeholder (or the cached number, if this book's
+  // already had it computed once — see mob_showBook) and gets filled in
+  // once ready.
+  if (!book.isAudio && !book.isRecipe && !book.wordCount) {
+    getOrComputeStandardPages(book).then(({ wordCount }) => {
+      const el = document.getElementById('mobDetailCatPages');
+      if (el && book.category) el.textContent = `${catIcon(book.category)} ${book.category} · ${_formatStandardPages(wordCount)}`;
+    }).catch(e => {
+      console.warn('Failed to compute standard page count for', book.title, e);
+      const el = document.getElementById('mobDetailCatPages');
+      if (el && book.category) el.textContent = `${catIcon(book.category)} ${book.category}`;
+    });
+  }
+
+  wirePillSelect(moreContainer, 'detailShareSelect', shareOpts);
   wirePillSelect(moreContainer, 'detailEditSelect', editOpts);
 }
 
@@ -4912,13 +5018,13 @@ function buildDrawerIconBar(book, isMine){
   const isFav = !!_userLists.find(l => l.id === 'favourites')?.bookIds?.includes(book.id);
 
   let html = `
-    <!-- Primary: Read/Listen (+ Continue variants) + Send to Kobo -->
+    <!-- Primary: Read/Listen/Open (+ Continue variants) + Send to Kobo -->
     <div style="display:flex;gap:.5rem;padding:.65rem 1.5rem .5rem;border-bottom:1px solid var(--border);">
       <button class="btn-action btn-read" style="flex:1;justify-content:center;padding:.6rem 1rem;font-size:.83rem;border-radius:24px;gap:.4rem;" data-action="read">
-        <span style="font-size:1rem;line-height:1;">${book.isAudio ? '🎧' : '📖'}</span>
-        <span>${book.isAudio ? (hasStarted ? 'Continue Listening' : 'Listen') : (hasStarted ? 'Continue Reading' : 'Read')}</span>
+        <span style="font-size:1rem;line-height:1;">${book.isRecipe ? '🍲' : book.isAudio ? '🎧' : '📖'}</span>
+        <span>${book.isRecipe ? 'Open' : book.isAudio ? (hasStarted ? 'Continue Listening' : 'Listen') : (hasStarted ? 'Continue Reading' : 'Read')}</span>
       </button>
-      ${book.isAudio ? '' : `<button class="btn-action btn-kobo" style="flex:1;justify-content:center;padding:.6rem 1rem;font-size:.83rem;border-radius:24px;gap:.4rem;" data-action="sendtokobo">
+      ${(book.isAudio || book.isRecipe) ? '' : `<button class="btn-action btn-kobo" style="flex:1;justify-content:center;padding:.6rem 1rem;font-size:.83rem;border-radius:24px;gap:.4rem;" data-action="sendtokobo">
         <span style="font-size:1rem;line-height:1;">🔲</span>
         <span>Send to Kobo</span>
       </button>`}
@@ -4926,7 +5032,7 @@ function buildDrawerIconBar(book, isMine){
 
     <!-- Lists: Favourites quick-toggle + reading-stage segmented control -->
     <div style="padding:.55rem 1.5rem .45rem;border-bottom:1px solid var(--border);">
-      <div style="font-size:.58rem;letter-spacing:.15em;text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:.4rem;">🗂️ Lists</div>
+      <div style="font-size:.58rem;letter-spacing:.15em;text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:.4rem;">Lists</div>
       <div style="display:flex;flex-wrap:wrap;gap:.4rem;margin-bottom:.5rem;">
         <button class="mob-list-quickbtn ${isFav?'active':''}" data-list="favourites" data-action="quicklist">
           <span class="lq-icon">${isFav?'❤️':'🤍'}</span><span>Favourites</span>
@@ -4948,6 +5054,7 @@ function buildDrawerIconBar(book, isMine){
         </button>
         <button class="drawer-icon-btn" data-action="download"><span class="di-icon">⬇</span><span class="di-label">Download</span></button>
         <button class="drawer-icon-btn" data-action="link"><span class="di-icon">📎</span><span class="di-label">Copy Link</span></button>
+        <button class="drawer-icon-btn" data-action="reportbug"><span class="di-icon">🐞</span><span class="di-label">Report Bug</span></button>
         ${isAdmin ? `<button class="drawer-icon-btn" data-action="history"><span class="di-icon">📋</span><span class="di-label">History</span></button>` : ''}
       </div>
     </div>`;
@@ -5005,12 +5112,19 @@ function handleAction(e){
   const a=btn.dataset.action;
   if(a==='quicklist'){ handleQuickListToggle(btn); return; }
   if(a==='stage'){ handleReadingStageClick(btn); return; }
+  if(a==='setvisseg'){
+    const book=[...library,...communityLib].find(b=>b.id===currentId);
+    const current = book ? (book.visibility||'private') : null;
+    if(book && btn.dataset.vis !== current) setBookVisibilityFromDrawer(btn.dataset.vis);
+    return;
+  }
   runDetailAction(a);
 }
 function runDetailAction(a){
   if(a==='read'){
     const book=[...library,...communityLib].find(b=>b.id===currentId);
     if(book?.isAudio){ playAudioTrack(book._audioTrack); closeMobBookSheet(); closeDrawer(); return; }
+    if(book?.isRecipe){ openRecipeCookMode(book._recipe); closeMobBookSheet(); closeDrawer(); return; }
     readCurrentBook();
     return;
   }
@@ -5018,6 +5132,7 @@ function runDetailAction(a){
   if(a==='shareprivate') showPrivateShare();
   if(a==='link')         showDirectLink();
   if(a==='editmeta')     showEditMeta();
+  if(a==='editrecipe'){ const book=[...library,...communityLib].find(b=>b.id===currentId); if(book?._recipe) showRecipeEditor(book._recipe); }
   if(a==='chapters')     openChapterManager();
   if(a==='recommend')    toggleRecommended();
   if(a==='tags')         showTagsModal();
@@ -5028,6 +5143,10 @@ function runDetailAction(a){
   if(a==='otherlists') toggleOtherListsDropdown();
   if(a==='category')     showQuickCategoryModal();
   if(a==='markfinished')  doMarkFinishedFromDetail();
+  if(a==='reportbug') {
+    const book = [...library, ...communityLib].find(b => b.id === currentId);
+    openBugReportModal({ bookId: currentId, bookTitle: book?.title, location: 'book_detail' });
+  }
 }
 
 // ── UNPUBLISH and DELETE functions ─────────────────────────────────────────────────────────────────
@@ -5168,9 +5287,10 @@ document.getElementById('btnConfirmPrivateShare').addEventListener('click',async
     const allowed=[...(book.allowedUsers||[])];
     if(!allowed.includes(uid))allowed.push(uid);
     // Audiobooks live in `audioFiles`, not `books`.
-    await updateDoc(doc(db, book.isAudio ? 'audioFiles' : 'books', currentId),{allowedUsers:allowed,updatedAt:serverTimestamp()});
+    await updateDoc(doc(db, collectionForBook(book), currentId),{allowedUsers:allowed,updatedAt:serverTimestamp()});
     book.allowedUsers=allowed;
     if(book.isAudio && book._audioTrack) book._audioTrack.allowedUsers=allowed;
+    if(book.isRecipe && book._recipe) book._recipe.allowedUsers=allowed;
     hideLoading();
     const recipientName = document.getElementById('privateShareUserSelect').selectedOptions[0]?.textContent;
     notifyBookShared(uid, book, recipientName);
@@ -5288,7 +5408,7 @@ document.getElementById('btnSaveEditMeta').addEventListener('click',async()=>{
   try{
     // Audiobooks are stored in `audioFiles`, not `books` — same shape of
     // edit, different collection.
-    await updateDoc(doc(db, book.isAudio ? 'audioFiles' : 'books', currentId),updates);
+    await updateDoc(doc(db, collectionForBook(book), currentId),updates);
     Object.assign(book,updates);
     if(book.isAudio && book._audioTrack) Object.assign(book._audioTrack,updates);
     hideLoading();renderAll();showBookById(currentId);showToast('Details saved ✓');
@@ -5357,9 +5477,16 @@ async function mob_showBook(id, opts={}){
   coverEl.style.cursor='pointer';
   coverEl.onclick=()=>{ const b=[...library,...communityLib].find(x=>x.id===currentId); if(b?.isAudio){ playAudioTrack(b._audioTrack); return; } readCurrentBook(); };
 
-  document.getElementById('mobDetailCat').textContent=book.category?`${catIcon(book.category)} ${book.category}`:'';
   document.getElementById('mobDetailTitle').textContent=book.title||'';
   document.getElementById('mobDetailAuthor').textContent=book.author||'';
+
+  const catPagesEl = document.getElementById('mobDetailCatPages');
+  if(book.category){
+    catPagesEl.style.display='block';
+    catPagesEl.textContent = `${catIcon(book.category)} ${book.category}${(!book.isAudio && !book.isRecipe) ? ` · ${book.wordCount ? _formatStandardPages(book.wordCount) : 'Calculating\u2026'}` : ''}`;
+  } else {
+    catPagesEl.style.display='none';
+  }
 
   const mobSeriesEl=document.getElementById('mobDetailSeries');
   if(book.series){
@@ -5503,6 +5630,7 @@ const MOB_SORT_OPTIONS   = [
   { id:'title',  label:'Title',  icon:'🔤' },
   { id:'author', label:'Author', icon:'✍️' },
   { id:'rating', label:'Rating', icon:'⭐' },
+  { id:'pages',  label:'Pages',  icon:'📄' },
 ];
 const MOB_SOURCE_OPTIONS = [
   { id:'all',     label:'All' },
@@ -5511,9 +5639,10 @@ const MOB_SOURCE_OPTIONS = [
   { id:'shared',  label:'Shared with Me' },
 ];
 const FORMAT_OPTIONS = [
-  { id:'all',   label:'Format', icon:'📚' },
-  { id:'book',  label:'Ebook',  icon:'📖' },
-  { id:'audio', label:'Audio',  icon:'🎧' },
+  { id:'all',    label:'Format', icon:'📚' },
+  { id:'book',   label:'Ebook',  icon:'📖' },
+  { id:'audio',  label:'Audio',  icon:'🎧' },
+  { id:'recipe', label:'Recipe', icon:'🍲' },
 ];
 
 function getAllMobTags() {
@@ -5584,9 +5713,16 @@ function openMobFilterPicker({ anchor, title, items, isSelected, onSelect, multi
 
   scrim.addEventListener('click', () => { scrim.remove(); dd.remove(); });
   dd.querySelectorAll('[data-idx]').forEach(el => {
-    el.addEventListener('click', () => {
+    el.addEventListener('click', async () => {
       const item = items[+el.dataset.idx];
-      onSelect(item);
+      // Awaited even though onSelect (e.g. setBookVisibilityFromDrawer)
+      // isn't always async itself — a plain return value awaits fine. The
+      // point is making sure the whole chain, including whatever refresh
+      // onSelect kicks off, actually finishes before this dropdown closes
+      // and the sheet is interactive again — otherwise a fast second tap
+      // right after selecting something could land while that refresh is
+      // still rebuilding the sheet's buttons, racing it.
+      await onSelect(item);
       if (onAfterSelect) onAfterSelect(); else { updateMobFilterPillLabels(); renderMobLibrary(); }
       if (multi) el.classList.toggle('selected', isSelected(item));
       else { scrim.remove(); dd.remove(); }
@@ -5685,8 +5821,10 @@ function getMobLibBooks() {
   // Category filter
   if (mobLibCat !== 'All') src = src.filter(b => (b.category || 'Uncategorised') === mobLibCat);
   // Format filter
-  if (mobLibFormat === 'book') src = src.filter(b => !b.isAudio);
+  if (mobLibFormat === 'book') src = src.filter(b => !b.isAudio && !b.isRecipe);
   if (mobLibFormat === 'audio') src = src.filter(b => b.isAudio);
+  if (mobLibFormat === 'recipe') src = src.filter(b => b.isRecipe);
+  else src = src.filter(b => !b.isRecipe); // recipes are opt-in via the Format filter, not shown by default
   // Tags filter (book must match every selected tag — AND logic)
   if (mobActiveTags.size) src = src.filter(b => [...mobActiveTags].every(t => (b.tags || []).includes(t)));
   // Search
@@ -5718,7 +5856,7 @@ function renderMobLibrary() {
     </div>`;
     return;
   }
-  const gridBooks = collapseAudioSeriesForGrid(books);
+  const gridBooks = collapseAudioSeriesForGrid(collapseRecipesByCategoryForGrid(books));
   reconcileGrid(grid, gridBooks, b => b.id, b => {
     const isComm = communityLib.some(x => x.id === b.id);
     return bookCardHtml(b, isComm);
@@ -5789,6 +5927,7 @@ document.getElementById('mobGridLibrary').addEventListener('click', e => {
     return;
   }
   if(card.classList.contains('group-tile')){ 
+    if(card.classList.contains('recipe-tile')){ toggleSeriesGroupExpanded(card.dataset.groupkey); return; }
     const allBooks = dedupe([...library, ...communityLib]);
     const seriesTitle = allBooks.find(b => b.id === id)?.series || card.dataset.groupkey;
     showSeriesEpisodesModal(seriesTitle); 
@@ -5820,17 +5959,18 @@ function exitMobSelectMode(){
 }
 
 function renderMobLibrarySelectMode(){
-  const books = collapseAudioSeriesForGrid(getMobLibBooks());
+  const books = collapseAudioSeriesForGrid(collapseRecipesByCategoryForGrid(getMobLibBooks()));
   const grid = document.getElementById('mobGridLibrary');
   grid.classList.add('select-mode');
   reconcileGrid(grid, books, b => b.id, b => {
     const coverSrc = getCoverSrc(b);
     if(b.isGroup){
+      const icon = b.icon||(b.isRecipe?'🍲':'🎧'), unit = b.isRecipe?'Recipe':'Episode';
       const isSelected = b.groupIds.every(gid => mobSelectedIds.has(gid));
       const coverHtml = coverSrc
         ? `<img class="book-card-cover" src="${coverSrc}" alt="" loading="lazy"/>`
-        : `<div class="book-card-cover-ph"><div class="ph-icon">🎧</div><div class="ph-title">${esc(b.title)}</div><div class="ph-author">${esc(b.author)}</div></div>`;
-      return `<div class="book-card audio-tile group-tile ${isSelected?'selected':''}" data-bookid="${b.id}" data-groupids="${b.groupIds.join(',')}" style="user-select:none">
+        : `<div class="book-card-cover-ph"><div class="ph-icon">${icon}</div><div class="ph-title">${esc(b.title)}</div><div class="ph-author">${esc(b.author)}</div></div>`;
+      return `<div class="book-card ${b.isRecipe?'recipe-tile':'audio-tile'} group-tile ${isSelected?'selected':''}" data-bookid="${b.id}" data-groupids="${b.groupIds.join(',')}" style="user-select:none">
         <div style="position:relative">
           <div class="group-stack-edge e2"></div>
           <div class="group-stack-edge e1"></div>
@@ -5840,15 +5980,15 @@ function renderMobLibrarySelectMode(){
         <div class="book-card-body">
           <div class="book-card-title">${esc(b.title)}</div>
           <div class="book-card-author">${esc(b.author)}</div>
-          <div class="group-part-badge">🎧 ${b.partCount} Episode${b.partCount===1?'':'s'}${b.totalDuration?` · ${formatDuration(b.totalDuration)}`:''}</div>
+          <div class="group-part-badge">${icon} ${b.partCount} ${unit}${b.partCount===1?'':'s'}${b.totalDuration?` · ${formatDuration(b.totalDuration)}`:''}</div>
         </div>
       </div>`;
     }
     const isSelected = mobSelectedIds.has(b.id);
     const coverHtml = coverSrc
       ? `<img class="book-card-cover" src="${coverSrc}" alt="" loading="lazy"/>`
-      : `<div class="book-card-cover-ph"><div class="ph-icon">${b.isAudio?'🎧':'📖'}</div><div class="ph-title">${esc(b.title)}</div><div class="ph-author">${esc(b.author)}</div></div>`;
-    return `<div class="book-card ${b.isAudio?'audio-tile':''} ${isSelected?'selected':''}" data-bookid="${b.id}" style="user-select:none">
+      : `<div class="book-card-cover-ph"><div class="ph-icon">${b.isRecipe?'🍲':b.isAudio?'🎧':'📖'}</div><div class="ph-title">${esc(b.title)}</div><div class="ph-author">${esc(b.author)}</div></div>`;
+    return `<div class="book-card ${b.isAudio?'audio-tile':''}${b.isRecipe?'recipe-tile':''} ${isSelected?'selected':''}" data-bookid="${b.id}" style="user-select:none">
       <div style="position:relative">${coverHtml}</div>
       <div class="select-check" style="display:flex">${isSelected?'✓':''}</div>
       <div class="book-card-body">
@@ -5962,9 +6102,10 @@ async function handleMobBulkAction(action){
     try{
       for(const id of ids){
         const book = library.find(b=>b.id===id); if(!book) continue;
-        await updateDoc(doc(db,book.isAudio?'audioFiles':'books',id),{visibility:'public',updatedAt:serverTimestamp()});
+        await updateDoc(doc(db,collectionForBook(book),id),{visibility:'public',updatedAt:serverTimestamp()});
         book.visibility='public';
         if(book.isAudio && book._audioTrack) book._audioTrack.visibility='public';
+        if(book.isRecipe && book._recipe) book._recipe.visibility='public';
         if(!communityLib.find(b=>b.id===id)) communityLib.push(book);
       }
       if (currentUser && ledgerState.loaded) _ledgerUnlockAchievement('sharer', ids[0]);
@@ -5980,9 +6121,10 @@ async function handleMobBulkAction(action){
     try{
       for(const id of ids){
         const book = library.find(b=>b.id===id); if(!book) continue;
-        await updateDoc(doc(db,book.isAudio?'audioFiles':'books',id),{visibility:'private',updatedAt:serverTimestamp()});
+        await updateDoc(doc(db,collectionForBook(book),id),{visibility:'private',updatedAt:serverTimestamp()});
         book.visibility='private';
         if(book.isAudio && book._audioTrack) book._audioTrack.visibility='private';
+        if(book.isRecipe && book._recipe) book._recipe.visibility='private';
         communityLib = communityLib.filter(b=>b.id!==id);
       }
       hideLoading(); exitMobSelectMode(); renderAll(); showToast('Unpublished ✓');
@@ -5994,7 +6136,7 @@ async function handleMobBulkAction(action){
     const ids = [...mobSelectedIds].filter(id => { const b=library.find(x=>x.id===id); return b&&!b.recommended; });
     showLoading('Updating…');
     try{
-      for(const id of ids){ const b=library.find(x=>x.id===id); if(!b)continue; await updateDoc(doc(db,b.isAudio?'audioFiles':'books',id),{recommended:true,recommendedAt:serverTimestamp(),updatedAt:serverTimestamp()}); b.recommended=true; b.recommendedAt=new Date(); }
+      for(const id of ids){ const b=library.find(x=>x.id===id); if(!b)continue; await updateDoc(doc(db,collectionForBook(b),id),{recommended:true,recommendedAt:serverTimestamp(),updatedAt:serverTimestamp()}); b.recommended=true; b.recommendedAt=new Date(); }
       hideLoading(); exitMobSelectMode(); renderAll(); showToast('Marked recommended ✓');
     }catch(e){ hideLoading(); showToast('Failed: '+e.message); }
     return;
@@ -6004,7 +6146,7 @@ async function handleMobBulkAction(action){
     const ids = [...mobSelectedIds].filter(id => { const b=library.find(x=>x.id===id); return b&&b.recommended; });
     showLoading('Updating…');
     try{
-      for(const id of ids){ const b=library.find(x=>x.id===id); if(!b)continue; await updateDoc(doc(db,b.isAudio?'audioFiles':'books',id),{recommended:false,recommendedAt:null,updatedAt:serverTimestamp()}); b.recommended=false; b.recommendedAt=null; }
+      for(const id of ids){ const b=library.find(x=>x.id===id); if(!b)continue; await updateDoc(doc(db,collectionForBook(b),id),{recommended:false,recommendedAt:null,updatedAt:serverTimestamp()}); b.recommended=false; b.recommendedAt=null; }
       hideLoading(); exitMobSelectMode(); renderAll(); showToast('Unrecommended ✓');
     }catch(e){ hideLoading(); showToast('Failed: '+e.message); }
     return;
@@ -6078,9 +6220,10 @@ function showMobBulkCategoryPicker(){
       try{
         for(const id of ids){
           const book = library.find(b=>b.id===id); if(!book) continue;
-          await updateDoc(doc(db,book.isAudio?'audioFiles':'books',id),{category:newCat,updatedAt:serverTimestamp()});
+          await updateDoc(doc(db,collectionForBook(book),id),{category:newCat,updatedAt:serverTimestamp()});
           book.category=newCat;
           if(book.isAudio && book._audioTrack) book._audioTrack.category=newCat;
+          if(book.isRecipe && book._recipe) book._recipe.chapterName=newCat;
         }
         hideLoading(); exitMobSelectMode(); renderAll();
         showToast(`Genre updated for ${ids.length} book${ids.length!==1?'s':''} ✓`);
@@ -6176,9 +6319,10 @@ function showMobBulkTagsPicker(){
       for(const id of ids){
         const book = library.find(b=>b.id===id); if(!book) continue;
         const tags = [...new Set([...(book.tags||[]), ...newTags])];
-        await updateDoc(doc(db,book.isAudio?'audioFiles':'books',id),{tags,updatedAt:serverTimestamp()});
+        await updateDoc(doc(db,collectionForBook(book),id),{tags,updatedAt:serverTimestamp()});
         book.tags = tags;
         if(book.isAudio && book._audioTrack) book._audioTrack.tags = tags;
+        if(book.isRecipe && book._recipe) book._recipe.tags = tags;
       }
       hideLoading(); exitMobSelectMode(); renderAll();
       showToast(`Tags added to ${ids.length} book${ids.length!==1?'s':''} ✓`);
@@ -6229,7 +6373,7 @@ function showMobBulkSeriesPicker(){
     try{
       for(const id of ids){
         const book = library.find(b=>b.id===id); if(!book) continue;
-        await updateDoc(doc(db,book.isAudio?'audioFiles':'books',id),{series,seriesIndex,updatedAt:serverTimestamp()});
+        await updateDoc(doc(db,collectionForBook(book),id),{series,seriesIndex,updatedAt:serverTimestamp()});
         book.series = series; book.seriesIndex = seriesIndex;
         if(book.isAudio && book._audioTrack){ book._audioTrack.series = series; book._audioTrack.seriesIndex = seriesIndex; }
       }
@@ -6738,8 +6882,9 @@ function reconcileGrid(grid, items, keyFn, htmlFn) {
 
 function bookCardHtml(b, isComm, showProgress=false){
   if(b.isGroupHeader){
+    const icon=b.icon||(b.isRecipe?'🍲':'🎧'), unit=b.isRecipe?'recipe':'episode';
     return `<div class="group-header-tile tile-pop-in" data-groupheader="1" data-groupkey="${esc(b.groupKey)}">
-      <span><span class="group-header-title">🎧 ${esc(b.title)}</span><span class="group-header-count">${b.partCount} episodes${b.totalDuration?' · '+formatDuration(b.totalDuration):''}</span></span>
+      <span><span class="group-header-title">${icon} ${esc(b.title)}</span><span class="group-header-count">${b.partCount} ${unit}${b.partCount===1?'':'s'}${b.totalDuration?' · '+formatDuration(b.totalDuration):''}</span></span>
       <span class="group-header-collapse">⌃ Collapse</span>
     </div>`;
   }
@@ -6747,7 +6892,7 @@ function bookCardHtml(b, isComm, showProgress=false){
   const coverHtml = coverSrc
     ? `<img class="book-card-cover" src="${coverSrc}" alt="" loading="lazy"/>`
     : `<div class="book-card-cover-ph">
-        <div class="ph-icon">${b.isAudio ? '🎧' : '📖'}</div>
+        <div class="ph-icon">${b.isRecipe ? '🍲' : b.isAudio ? '🎧' : '📖'}</div>
         <div class="ph-title">${esc(b.title)}</div>
         <div class="ph-author">${esc(b.author)}</div>
        </div>`;
@@ -6761,7 +6906,8 @@ function bookCardHtml(b, isComm, showProgress=false){
        </div>` : '';
 
   if(b.isGroup){
-    return `<div class="book-card audio-tile group-tile" data-bookid="${b.id}" data-groupids="${b.groupIds.join(',')}" data-groupkey="${esc(b.groupKey)}">
+    const icon=b.icon||(b.isRecipe?'🍲':'🎧'), unit=b.isRecipe?'Recipe':'Episode';
+    return `<div class="book-card ${b.isRecipe?'recipe-tile':'audio-tile'} group-tile" data-bookid="${b.id}" data-groupids="${b.groupIds.join(',')}" data-groupkey="${esc(b.groupKey)}">
       <div style="position:relative">
         <div class="group-stack-edge e2"></div>
         <div class="group-stack-edge e1"></div>
@@ -6770,7 +6916,7 @@ function bookCardHtml(b, isComm, showProgress=false){
       <div class="book-card-body">
         <div class="book-card-title">${esc(b.title)}</div>
         <div class="book-card-author">${esc(b.author)}</div>
-        <div class="group-part-badge">🎧 ${b.partCount} Episode${b.partCount===1?'':'s'}${b.totalDuration?` · ${formatDuration(b.totalDuration)}`:''}</div>
+        <div class="group-part-badge">${icon} ${b.partCount} ${unit}${b.partCount===1?'':'s'}${b.totalDuration?` · ${formatDuration(b.totalDuration)}`:''}</div>
       </div>
     </div>`;
   }
@@ -6966,6 +7112,11 @@ document.getElementById('btnToggleReaderSettings').addEventListener('click', e =
   document.getElementById('readerSettingsBar').classList.toggle('open');
   // PATCH: settings bar floats over the text now, so opening/closing it
   // no longer needs to resize/repaginate reader-content.
+});
+document.getElementById('btnReaderReportBug').addEventListener('click', e => {
+  e.stopPropagation();
+  const book = [...library, ...communityLib].find(b => b.id === currentId);
+  openBugReportModal({ bookId: currentId, bookTitle: book?.title, location: 'reader' });
 });
 document.getElementById('btnToggleChapters').addEventListener('click',()=>{
   document.getElementById('readerBookmarkListPanel').classList.remove('open');
@@ -8827,6 +8978,53 @@ let _expandedSeriesGroups = new Set();
 // a slim header tile (series name + a collapse control) followed by each
 // part as its own normal tile, so tapping the stack expands it in place
 // rather than jumping straight to a detail view.
+// Groups recipes by category into the same collapsible group-header/group-tile
+// UI already built for audio series (collapseAudioSeriesForGrid below) — same
+// _expandedSeriesGroups set and CSS classes, just keyed by category instead
+// of series. Non-recipe items pass through untouched. Unlike audio series,
+// every category gets a group — even one with a single recipe in it — so
+// browsing is always organised by category. The group's icon is whatever
+// icon that category has been assigned (recipeCatIcon(), same shared
+// per-category icon map the rest of the library uses), falling back to a
+// generic 🍲 rather than the folder icon catIcon() uses for other content.
+function recipeCatIcon(cat) { return _categoryIcons[cat] || '🍲'; }
+
+function collapseRecipesByCategoryForGrid(books) {
+  const recipes = books.filter(b => b.isRecipe);
+  if (!recipes.length) return books;
+  const others = books.filter(b => !b.isRecipe);
+  const byCat = new Map();
+  recipes.forEach(r => {
+    const cat = r.category || 'Uncategorised';
+    if (!byCat.has(cat)) byCat.set(cat, []);
+    byCat.get(cat).push(r);
+  });
+  const out = [...others];
+  [...byCat.keys()].sort((a, b) => a.localeCompare(b)).forEach(cat => {
+    const group = byCat.get(cat);
+    const key = 'recipecat:' + cat.toLowerCase();
+    const icon = recipeCatIcon(cat);
+    if (_expandedSeriesGroups.has(key)) {
+      out.push({ id: '__grouphdr_' + key, isGroupHeader: true, groupKey: key, title: cat, partCount: group.length, isRecipe: true, icon });
+      group.forEach(r => out.push({ ...r, _groupExpanded: true }));
+    } else {
+      out.push({
+        id: group[0].id,
+        isGroup: true,
+        groupIds: group.map(r => r.id),
+        groupKey: key,
+        title: cat,
+        author: '',
+        coverUrl: group.find(r => r.coverUrl)?.coverUrl || null,
+        isRecipe: true,
+        partCount: group.length,
+        icon,
+      });
+    }
+  });
+  return out;
+}
+
 function collapseAudioSeriesForGrid(books) {
   const out = [];
   let i = 0;
@@ -8920,7 +9118,7 @@ function showSeriesEpisodesModal(seriesTitle) {
     let bulkOpen = false;
     editAllBtn.addEventListener('click', () => {
       bulkOpen = !bulkOpen;
-      bulkBody.style.maxHeight = bulkOpen ? '300px' : '0';
+      bulkBody.style.maxHeight = bulkOpen ? '560px' : '0';
       bulkBody.style.opacity = bulkOpen ? '1' : '0';
       editAllBtn.textContent = bulkOpen ? '✕ Done' : '✎ Edit All';
     });
@@ -8949,6 +9147,41 @@ function showSeriesEpisodesModal(seriesTitle) {
 
     const bulkInner = document.createElement('div');
     bulkInner.style.cssText = 'padding-bottom:1rem;display:flex;flex-direction:column;gap:.6rem;';
+
+    // Title (series name) row — renames the shared `series` field on every
+    // owned episode. This is the value the group tile shows as its title,
+    // so renaming it here is what "editing the series' title" means.
+    const titleFieldRow = document.createElement('div');
+    titleFieldRow.style.cssText = 'display:flex;gap:.5rem;align-items:center;';
+    const titleFieldInput = document.createElement('input');
+    titleFieldInput.type = 'text';
+    titleFieldInput.placeholder = 'Series title — apply to all episodes';
+    titleFieldInput.value = seriesTitle || '';
+    titleFieldInput.style.cssText = 'flex:1;padding:.55rem .8rem;border:1px solid var(--border);'
+      + 'border-radius:8px;font-family:"Lato",sans-serif;font-size:.88rem;'
+      + 'background:var(--cream);color:var(--navy);outline:none;min-width:0;';
+    const titleFieldSave = document.createElement('button');
+    titleFieldSave.className = 'btn-save';
+    titleFieldSave.style.cssText = 'padding:.42rem 1rem;font-size:.68rem;white-space:nowrap;flex-shrink:0;';
+    titleFieldSave.textContent = 'Apply';
+    titleFieldSave.addEventListener('click', async () => {
+      const newTitle = titleFieldInput.value.trim();
+      if (!newTitle) { showToast('Enter a series title'); return; }
+      showLoading('Renaming series…');
+      try {
+        for (const ep of myEpisodes) {
+          if (ep.ownerId !== currentUser?.uid) continue;
+          await updateDoc(doc(db, 'audioFiles', ep.id), { series: newTitle, updatedAt: serverTimestamp() });
+          ep.series = newTitle;
+          if (ep._audioTrack) ep._audioTrack.series = newTitle;
+        }
+        hideLoading(); overlay.remove(); renderAll();
+        showToast(`Series renamed ✓`);
+      } catch (err) { hideLoading(); showToast('Failed: ' + err.message); }
+    });
+    titleFieldRow.appendChild(titleFieldInput);
+    titleFieldRow.appendChild(titleFieldSave);
+    bulkInner.appendChild(titleFieldRow);
 
     // Author row
     const authorRow = document.createElement('div');
@@ -8982,6 +9215,74 @@ function showSeriesEpisodesModal(seriesTitle) {
     authorRow.appendChild(authorInput);
     authorRow.appendChild(authorSave);
     bulkInner.appendChild(authorRow);
+
+    // Genre row
+    const genreRow = document.createElement('div');
+    genreRow.style.cssText = 'display:flex;gap:.5rem;align-items:center;';
+    const genreSelect = document.createElement('select');
+    genreSelect.style.cssText = 'flex:1;padding:.55rem .8rem;border:1px solid var(--border);'
+      + 'border-radius:8px;font-family:"Lato",sans-serif;font-size:.88rem;'
+      + 'background:var(--cream);color:var(--navy);outline:none;min-width:0;-webkit-appearance:none;appearance:none;';
+    genreSelect.innerHTML = _categories.map(c =>
+      `<option value="${esc(c)}" ${(myEpisodes[0]?.category||'Uncategorised')===c?'selected':''}>${catIcon(c)} ${esc(c)}</option>`
+    ).join('');
+    const genreSave = document.createElement('button');
+    genreSave.className = 'btn-save';
+    genreSave.style.cssText = 'padding:.42rem 1rem;font-size:.68rem;white-space:nowrap;flex-shrink:0;';
+    genreSave.textContent = 'Apply';
+    genreSave.addEventListener('click', async () => {
+      const category = genreSelect.value;
+      showLoading('Updating genre…');
+      try {
+        for (const ep of myEpisodes) {
+          if (ep.ownerId !== currentUser?.uid) continue;
+          await updateDoc(doc(db, 'audioFiles', ep.id), { category, updatedAt: serverTimestamp() });
+          ep.category = category;
+          if (ep._audioTrack) ep._audioTrack.category = category;
+        }
+        hideLoading(); renderAll();
+        showToast(`Genre updated ✓`);
+      } catch (err) { hideLoading(); showToast('Failed: ' + err.message); }
+    });
+    genreRow.appendChild(genreSelect);
+    genreRow.appendChild(genreSave);
+    bulkInner.appendChild(genreRow);
+
+    // Tags row — comma-separated, added to each episode's existing tags
+    // (same convention as the admin bulk-edit modal for regular books).
+    const tagsRow = document.createElement('div');
+    tagsRow.style.cssText = 'display:flex;gap:.5rem;align-items:center;';
+    const tagsInput = document.createElement('input');
+    tagsInput.type = 'text';
+    tagsInput.placeholder = 'Tags — comma-separated, added to existing';
+    tagsInput.style.cssText = 'flex:1;padding:.55rem .8rem;border:1px solid var(--border);'
+      + 'border-radius:8px;font-family:"Lato",sans-serif;font-size:.88rem;'
+      + 'background:var(--cream);color:var(--navy);outline:none;min-width:0;';
+    const tagsSave = document.createElement('button');
+    tagsSave.className = 'btn-save';
+    tagsSave.style.cssText = 'padding:.42rem 1rem;font-size:.68rem;white-space:nowrap;flex-shrink:0;';
+    tagsSave.textContent = 'Apply';
+    tagsSave.addEventListener('click', async () => {
+      const raw = tagsInput.value.trim();
+      const newTags = raw ? raw.split(',').map(t => t.trim()).filter(Boolean) : [];
+      if (!newTags.length) { showToast('Enter one or more tags'); return; }
+      showLoading('Updating tags…');
+      try {
+        for (const ep of myEpisodes) {
+          if (ep.ownerId !== currentUser?.uid) continue;
+          const tags = [...new Set([...(ep.tags || []), ...newTags])];
+          await updateDoc(doc(db, 'audioFiles', ep.id), { tags, updatedAt: serverTimestamp() });
+          ep.tags = tags;
+          if (ep._audioTrack) ep._audioTrack.tags = tags;
+        }
+        hideLoading(); renderAll();
+        tagsInput.value = '';
+        showToast(`Tags updated ✓`);
+      } catch (err) { hideLoading(); showToast('Failed: ' + err.message); }
+    });
+    tagsRow.appendChild(tagsInput);
+    tagsRow.appendChild(tagsSave);
+    bulkInner.appendChild(tagsRow);
 
     // Cover row
     const coverRow = document.createElement('div');
@@ -9324,22 +9625,57 @@ let appNotifUnsub = null;
 let appNotifRepliesUnsub = null;
 let currentNotifThreadId = null;
 let notifComposeType = 'book_request';
-let _broadcastModalShownThisSession = false;
+// Tracks which notif ids have already popped up this session — a Set keyed
+// by id (not a single boolean) so every new broadcast or book-shared notif
+// still gets its own popup, even after an earlier one was already shown and
+// dismissed in the same session.
+let _popupNotifShownIds = new Set();
 
+// Broadcasts AND book-shared notifications are meant to be seen right away,
+// not just sit in the notification center — so both pop up as a modal the
+// moment they're unread. If more than one is waiting, they queue one after
+// another (each dismissal re-checks for the next).
 function maybeShowBroadcastModal() {
-  if (_broadcastModalShownThisSession || !currentUser) return;
+  if (!currentUser) return;
   const unread = appNotifications.find(n =>
-    n.type === 'broadcast' && !(n.readBy || []).includes(currentUser.uid)
+    (n.type === 'broadcast' || n.type === 'book_shared') &&
+    !(n.readBy || []).includes(currentUser.uid) &&
+    !_popupNotifShownIds.has(n.id)
   );
   if (!unread) return;
-  _broadcastModalShownThisSession = true;
-  document.getElementById('broadcastModalTitle').textContent = '📢 ' + (unread.title || 'Announcement');
-  document.getElementById('broadcastModalBody').textContent = unread.body || '';
-  document.getElementById('broadcastModal').style.display = 'flex';
-  document.getElementById('btnBroadcastModalOk').onclick = () => {
-    document.getElementById('broadcastModal').style.display = 'none';
+  _popupNotifShownIds.add(unread.id);
+
+  const tileWrap = document.getElementById('broadcastModalBookTile');
+  const okBtn = document.getElementById('btnBroadcastModalOk');
+  const dismissBtn = document.getElementById('btnBroadcastModalDismiss');
+  const advance = () => {
+    document.getElementById('broadcastModal').classList.remove('open');
     markNotifRead(unread.id);
+    maybeShowBroadcastModal();
   };
+
+  if (unread.type === 'book_shared') {
+    const book = [...library, ...communityLib].find(b => b.id === unread.bookId);
+    document.getElementById('broadcastModalTitle').textContent = '🎁 Book Shared';
+    document.getElementById('broadcastModalBody').textContent = unread.body || '';
+    document.getElementById('broadcastModalBookCover').src = (book && getCoverSrc(book)) || 'icon-192.png';
+    tileWrap.style.display = 'flex';
+    dismissBtn.style.display = 'inline-block';
+    okBtn.textContent = 'Open Book';
+    dismissBtn.onclick = advance;
+    okBtn.onclick = () => {
+      advance();
+      if (window.innerWidth > 768) showBookById(unread.bookId); else mob_showBook(unread.bookId);
+    };
+  } else {
+    document.getElementById('broadcastModalTitle').textContent = '📢 ' + (unread.title || 'Announcement');
+    document.getElementById('broadcastModalBody').textContent = unread.body || '';
+    tileWrap.style.display = 'none';
+    dismissBtn.style.display = 'none';
+    okBtn.textContent = 'Got it';
+    okBtn.onclick = advance;
+  }
+  document.getElementById('broadcastModal').classList.add('open');
 }
 const notifThreadInlineEl = document.getElementById('notifThreadInline');
 function startAppNotifListener() {
@@ -9442,6 +9778,11 @@ function notifTypeIconHTML(n) {
   if(n.type === 'seasonal_bookmark' && n.bmTemplate) {
     return renderBookmarkSVG(n.bmTemplate, 22, 34, 'notif' + n.id, false, true);
   }
+  if(n.type === 'book_shared' && n.bookId) {
+    const book = [...library, ...communityLib].find(b => b.id === n.bookId);
+    const src = book && getCoverSrc(book);
+    if(src) return `<img src="${esc(src)}" alt="" style="width:26px;height:38px;object-fit:cover;border-radius:3px;background:var(--navy2);display:block;box-shadow:0 2px 6px rgba(15,26,46,.2);">`;
+  }
   return `<span class="notif-emoji">${notifTypeEmoji(n.type)}</span>`;
 }
 
@@ -9473,14 +9814,19 @@ function renderNotifList() {
   const visible = [], archived = [];
   withAge.forEach(({ n, ts }, i) => {
     const unread = currentUser && !(n.readBy||[]).includes(currentUser.uid);
+    // A user can archive any notification themselves (archivedBy) to clear it
+    // out of their main list, on top of the existing auto-archive-when-old
+    // behaviour below.
+    const manuallyArchived = currentUser && (n.archivedBy||[]).includes(currentUser.uid);
     const isOld = (now - ts) > TWO_WEEKS || i >= 10;
-    if(!unread && isOld) archived.push(n); else visible.push(n);
+    if(manuallyArchived || (!unread && isOld)) archived.push(n); else visible.push(n);
   });
 
   const list = notifShowArchived ? withAge.map(x => x.n) : visible;
 
   const rowHTML = n => {
     const unread = currentUser && !(n.readBy||[]).includes(currentUser.uid);
+    const isArchived = currentUser && (n.archivedBy||[]).includes(currentUser.uid);
     const when = n.createdAt?.toDate ? timeAgo(n.createdAt.toDate()) : '';
     return `<div class="notif-list-item ${unread?'unread':''}" data-notifid="${n.id}">
       <div class="notif-emoji-wrap">
@@ -9492,14 +9838,32 @@ function renderNotifList() {
         <div class="notif-preview">${esc(n.body||'')}</div>
         <div class="notif-meta">${esc(n.creatorName||'Someone')} · ${when}</div>
       </div>
+      <button class="notif-archive-btn" data-archiveid="${n.id}" data-archived="${isArchived?'1':'0'}"
+        title="${isArchived?'Unarchive':'Archive'}"
+        style="align-self:flex-start;flex-shrink:0;background:none;border:none;cursor:pointer;font-size:.85rem;opacity:.4;padding:.25rem;line-height:1;">${isArchived?'↩':'🗄'}</button>
     </div>`;
   };
 
   listEl.innerHTML = list.map(rowHTML).join('') +
     (archived.length ? `<button id="btnNotifToggleArchive" style="width:100%;background:none;border:none;color:var(--muted);font-size:.7rem;font-weight:700;letter-spacing:.03em;padding:.6rem 0;cursor:pointer;">${notifShowArchived ? 'Hide archived' : `Archived (${archived.length})`}</button>` : '');
 
+  // Book-shared notifications jump straight to the book's detail slider —
+  // the point of that notification IS the book, so there's no reason to
+  // make the user open a thread first to find an "Open Book" link inside it.
+  // Every other type still opens the inline thread as before.
   listEl.querySelectorAll('[data-notifid]').forEach(el => {
-    el.addEventListener('click', () => openNotifThread(el.dataset.notifid));
+    el.addEventListener('click', () => {
+      const id = el.dataset.notifid;
+      const n = appNotifications.find(x => x.id === id);
+      if(n && n.type === 'book_shared' && n.bookId) openSharedBookNotif(n);
+      else openNotifThread(id);
+    });
+  });
+  listEl.querySelectorAll('[data-archiveid]').forEach(btn => {
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      toggleNotifArchive(btn.dataset.archiveid, btn.dataset.archived === '1');
+    });
   });
   document.getElementById('btnNotifToggleArchive')?.addEventListener('click', () => {
     notifShowArchived = !notifShowArchived;
@@ -9526,6 +9890,29 @@ async function markNotifRead(notifId) {
   try {
     await updateDoc(doc(db, 'app_notifications', notifId), { readBy: arrayUnion(currentUser.uid) });
   } catch(e) { console.warn('markNotifRead:', e); }
+}
+
+// Archiving is per-user (archivedBy), same shape as readBy — it just clears
+// the notification out of that one user's list, not everyone's. Archiving
+// also counts as reading it, so it can't inflate the unread badge.
+async function toggleNotifArchive(notifId, isArchived) {
+  if(!currentUser) return;
+  try {
+    await updateDoc(doc(db, 'app_notifications', notifId), {
+      archivedBy: isArchived ? arrayRemove(currentUser.uid) : arrayUnion(currentUser.uid),
+      readBy: arrayUnion(currentUser.uid)
+    });
+  } catch(e) { showToast('Archive failed'); }
+}
+
+// Book-shared notifications skip the thread panel entirely and go straight
+// to the book's detail slider — same mobile/desktop branching used
+// everywhere else book detail is opened.
+function openSharedBookNotif(n) {
+  if(currentUser && !(n.readBy||[]).includes(currentUser.uid)) markNotifRead(n.id);
+  closeNotifFullList();
+  if(window.innerWidth > 768) showBookById(n.bookId);
+  else mob_showBook(n.bookId);
 }
 
 async function openNotifThread(notifId) {
@@ -9569,6 +9956,23 @@ async function openNotifThread(notifId) {
       if(window.innerWidth > 768) showBookById(n.bookId);
       else mob_showBook(n.bookId);
     });
+  }
+  if(n.type === 'bug' && (n.bugLocation || n.bugScope || n.bookTitle)) {
+    bodyEl.style.display = '';
+    const rows = [];
+    if(n.bugLocation) rows.push(`<div><strong>Where:</strong> ${esc(n.bugLocation)}</div>`);
+    if(n.bugScope) rows.push(`<div><strong>Affects:</strong> ${esc(n.bugScope)}</div>`);
+    if(n.bookTitle) rows.push(`<div><strong>Book:</strong> ${esc(n.bookTitle)}</div>`);
+    bodyEl.innerHTML = `<div style="font-size:.75rem;color:var(--muted);line-height:1.7;margin-bottom:.5rem;">${rows.join('')}</div>` +
+      (n.bookId ? `<div><a href="${esc(getDirectLink(n.bookId))}" id="notifOpenBugBook" class="notif-btn notif-btn-fill" style="display:inline-block;text-decoration:none;">📖 Open Book</a></div>` : '');
+    if(n.bookId) {
+      document.getElementById('notifOpenBugBook').addEventListener('click', (e) => {
+        e.preventDefault();
+        closeNotifFullList();
+        if(window.innerWidth > 768) showBookById(n.bookId);
+        else mob_showBook(n.bookId);
+      });
+    }
   }
   document.getElementById('btnNotifThreadDelete').style.display =
     (currentUser && n.creatorId === currentUser.uid && n.type !== 'book_shared') ? 'inline-block' : 'none';
@@ -9725,9 +10129,85 @@ document.getElementById('btnNotifNew').addEventListener('click', () => {
 });
 document.querySelectorAll('#notifComposeInline [data-notiftype]').forEach(chip => {
   chip.addEventListener('click', () => {
+    // Bug reports get their own structured modal (location + scope fields)
+    // instead of the plain title/body composer used by the other types.
+    if(chip.dataset.notiftype === 'bug') {
+      closeNotifCompose();
+      openBugReportModal();
+      return;
+    }
     notifComposeType = chip.dataset.notiftype;
     document.querySelectorAll('#notifComposeInline [data-notiftype]').forEach(c => c.classList.toggle('active', c === chip));
   });
+});
+
+// ── Bug report modal ────────────────────────────────────────────────────────
+// ctx: { bookId, bookTitle, location } — location pre-selects the "Where did
+// this happen?" field based on the entry point (reader vs book detail vs the
+// generic bell composer), and the user can still change it. When opened with
+// a book in context, "Just this book" is offered and pre-selected; otherwise
+// the scope options assume no single book is involved.
+let _bugReportCtx = {};
+function openBugReportModal(ctx = {}) {
+  _bugReportCtx = ctx;
+  document.getElementById('bugReportTitle').value = '';
+  document.getElementById('bugReportDetails').value = '';
+  const locationDefaults = { reader: 'reader', kobo: 'kobo', book_detail: 'other' };
+  document.getElementById('bugReportLocation').value = locationDefaults[ctx.location] || 'other';
+
+  const scopeSel = document.getElementById('bugReportScope');
+  const bookRow = document.getElementById('bugReportBookRow');
+  if(ctx.bookId) {
+    bookRow.style.display = '';
+    document.getElementById('bugReportBookName').textContent = ctx.bookTitle || 'Untitled';
+    scopeSel.innerHTML = `
+      <option value="this_book">Just this book</option>
+      <option value="multiple_books">Multiple books</option>
+      <option value="app_wide">Not book-related (app-wide)</option>`;
+    scopeSel.value = 'this_book';
+  } else {
+    bookRow.style.display = 'none';
+    scopeSel.innerHTML = `
+      <option value="multiple_books">Multiple books</option>
+      <option value="app_wide">Not book-related (app-wide)</option>`;
+    scopeSel.value = 'app_wide';
+  }
+  document.getElementById('bugReportModal').classList.add('open');
+}
+function closeBugReportModal() {
+  document.getElementById('bugReportModal').classList.remove('open');
+}
+document.getElementById('btnBugReportCancel').addEventListener('click', closeBugReportModal);
+document.getElementById('btnBugReportSend').addEventListener('click', async () => {
+  const title = document.getElementById('bugReportTitle').value.trim();
+  const details = document.getElementById('bugReportDetails').value.trim();
+  const bugLocation = document.getElementById('bugReportLocation').value;
+  const bugScope = document.getElementById('bugReportScope').value;
+  if(!title) { showToast('Please add a short summary'); return; }
+  if(!currentUser) return;
+  const locationLabel = { reader:'In the Reader', kobo:'On my Kobo', naming:'Naming / metadata issue', other:'Somewhere else in the app' }[bugLocation] || bugLocation;
+  const scopeLabel = { this_book:'Just this book', multiple_books:'Multiple books', app_wide:'Not book-related (app-wide)' }[bugScope] || bugScope;
+  try {
+    const oneYearMs = 365*24*60*60*1000;
+    await addDoc(collection(db, 'app_notifications'), {
+      type: 'bug',
+      title,
+      body: details,
+      bugLocation: locationLabel,
+      bugScope: scopeLabel,
+      bookId: _bugReportCtx.bookId || null,
+      bookTitle: _bugReportCtx.bookTitle || null,
+      creatorId: currentUser.uid,
+      creatorName: currentUser.displayName || currentUser.email || 'Someone',
+      creatorPhoto: currentUser.photoURL || null,
+      createdAt: serverTimestamp(),
+      readBy: [currentUser.uid],
+      expireAt: Timestamp.fromMillis(Date.now() + oneYearMs),
+      deleted: false
+    });
+    closeBugReportModal();
+    showToast('Bug reported — thanks! 🐞');
+  } catch(e) { showToast('Report failed'); }
 });
 document.getElementById('btnNotifComposeSend').addEventListener('click', async () => {
   const title = document.getElementById('notifComposeTitle').value.trim();
@@ -10241,7 +10721,7 @@ function _showLookupBadge() {
   const content = document.getElementById('readerContent');
   const b = document.createElement('button');
   b.id = 'readerLookupBadge';
-  b.innerHTML = '<span style="font-size:.85em;line-height:1">✕</span><span>Tap a word to look it up</span>';
+  b.innerHTML = '<span style="font-size:.85em;line-height:1">✕</span><span>Press & hold a word for your device\u2019s lookup menu</span>';
   b.style.cssText = `position:absolute;top:8px;left:50%;transform:translateX(-50%);
     display:flex;align-items:center;gap:.35em;
     background:rgba(42,124,138,.94);color:#fff;font-size:.68rem;font-weight:700;
@@ -10256,6 +10736,23 @@ function setReaderLookupMode(on) {
   readerLookupMode = on;
   document.getElementById('btnToggleLookupMode')?.classList.toggle('active', on);
   if (on && readerSelectMode) setReaderSelectMode(false);
+
+  // The page-turn overlay normally intercepts every touch (needed for
+  // reliable tap-to-turn-page) — but a native long-press-and-drag
+  // selection, and with it the OS's own "Look Up"/definition menu, only
+  // ever appears for a touch the OS tracked from the very start. A touch
+  // that's already had preventDefault() called on it (which the overlay
+  // always does) can't retroactively get that treatment. So: while Lookup
+  // Mode is on, let touches skip the overlay entirely and land directly on
+  // the page content, where the browser's own long-press selection can
+  // take over normally. Touch-only — desktop's overlay is already
+  // permanently pass-through (see _attachReaderTapHandlers), so leave it
+  // alone there rather than fighting that with `on ? 'none' : ''`.
+  const isTouchDevice = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
+  if (isTouchDevice) {
+    const overlay = document.getElementById('readerTouchOverlay');
+    if (overlay) overlay.style.pointerEvents = on ? 'none' : '';
+  }
 
   if (on) {
     _showLookupBadge();
@@ -10585,6 +11082,14 @@ function _attachReaderTapHandlers(doc) {
     return;
   }
 
+  // This overlay is rebuilt fresh on every chapter load — if Lookup Mode
+  // was already on (e.g. the reader navigated to a new chapter without
+  // leaving lookup mode), the new overlay needs the same pass-through
+  // treatment setReaderLookupMode() applied to the previous one, or a
+  // long-press right after a page turn would silently fall back to being
+  // captured by the overlay instead of reaching native selection.
+  if (readerLookupMode) overlay.style.pointerEvents = 'none';
+
   // ── MOBILE: this overlay always catches every tap/swipe on the page —
   // reliable page-turning and toolbar-toggling took priority after real
   // native long-press selection proved too unreliable to combine with them
@@ -10607,14 +11112,19 @@ function _attachReaderTapHandlers(doc) {
     e.preventDefault();
     tx0 = e.touches[0].clientX;
     ty0 = e.touches[0].clientY;
-    // Long-press (500 ms, no drag) → enter lookup mode and look up that word
+    // Long-press (500 ms, no drag) → arm lookup mode. This touch has
+    // already had preventDefault() called on it (needed so the timer below
+    // gets priority over the browser's own gesture handling), so it can't
+    // retroactively become a native selection itself — it just switches the
+    // overlay to pass-through (see setReaderLookupMode) so the NEXT
+    // press-and-hold, a real uninterrupted one, reaches the page directly
+    // and can trigger the device's own native selection/Look Up.
     clearTimeout(_lpTimer);
     _lpFired = false;
     _lpTimer = setTimeout(() => {
       _lpTimer = null;
       _lpFired = true;
       if (!readerLookupMode) setReaderLookupMode(true);
-      _handleWordLookupTap(doc, tx0, ty0);
     }, 500);
   }, { passive: false });
 
@@ -10626,8 +11136,8 @@ function _attachReaderTapHandlers(doc) {
   overlay.addEventListener('touchend', e => {
     clearTimeout(_lpTimer); _lpTimer = null; // short tap: cancel long-press timer
     if (_lpFired) {
-      // The long-press already opened the lookup popup during this touch —
-      // don't let the matching touchend immediately act on/close it too.
+      // The long-press already armed lookup mode during this touch —
+      // don't let the matching touchend act on it a second time.
       _lpFired = false;
       return;
     }
@@ -10659,11 +11169,14 @@ function _attachReaderTapHandlers(doc) {
         // Swipe (handled above) is still how you turn pages in both modes.
         if (readerSelectMode) {
           _handleSentenceTap(doc, x, e.changedTouches[0].clientY);
-        } else if (_wordLookupPopup) {
-          // Tap anywhere outside the popup while it's open → dismiss + exit mode
+        } else if (readerLookupMode) {
+          // Shouldn't normally fire — once lookup mode is on, the overlay
+          // is pointer-events:none and doesn't receive touchend at all; a
+          // real long-press-and-drag on the page content itself is what
+          // triggers native selection now. Kept as a safety fallback in
+          // case this is somehow still reached: exit lookup mode rather
+          // than doing nothing.
           setReaderLookupMode(false);
-        } else {
-          _handleWordLookupTap(doc, x, e.changedTouches[0].clientY);
         }
       }
       return;
@@ -12147,8 +12660,8 @@ async function doMarkFinishedFromDetail(){
     await markBookFinished(currentId);
     hideLoading();
     showToast('Marked as Finished ✓');
-    if(window.innerWidth > 768) showBookById(currentId);
-    else mob_showBook(currentId, { preserveState: true });
+    if(window.innerWidth > 768) await showBookById(currentId);
+    else await mob_showBook(currentId, { preserveState: true });
   } catch(e) {
     hideLoading();
     showToast('Failed: ' + e.message);
@@ -13075,17 +13588,31 @@ async function _forceStoredMimetype(zip){
 // koboSpan wrapping, no book-columns/book-inner wrapper) rather than
 // converted. Two separate rounds of on-device testing showed
 // image-containing chapters rendering as a full-screen image with no
-// visible text — the image's native size didn't match what was actually
-// rendering, pointing at some interaction with Nickel's own
-// image/page-layout handling that isn't reproducible in this sandbox (no
-// physical device to test against). A custom CSS override was tried
-// first and removed again — Nickel already inserts its own max-width/
-// max-height CSS for images by default, per Kobo's own documentation to
-// content creators, so the override was likely redundant and is the
-// most non-standard thing in this output compared to real kepubify's.
-// Text-only chapters still get the full conversion; this is the safe
-// fallback for the ones that don't, at the cost of those chapters not
-// getting kepub's footnote-popup/pagination benefits.
+// visible text when the image itself ended up inside a book-inner wrapper —
+// the image's native size didn't match what was actually rendering, pointing
+// at some interaction with Nickel's own image/page-layout handling that
+// isn't reproducible in this sandbox (no physical device to test against).
+// A custom CSS override was tried first and removed again — Nickel already
+// inserts its own max-width/max-height CSS for images by default, per
+// Kobo's own documentation to content creators, so the override was likely
+// redundant.
+//
+// This does mean chapters converted this way can clip their own content
+// short right after the image, since they sit unconverted inside an
+// otherwise-kepub file and Nickel's kepub-aware pagination doesn't seem to
+// know what to do with a spine item that doesn't have the book-inner
+// structure it expects.
+//
+// Two later attempts tried to fix that clipping — splitting a chapter
+// around its images so surrounding text still gets koboSpan-wrapped while
+// only the image itself stays untouched, and a variant of that with
+// uniquely-numbered book-inner ids to rule out a duplicate-ID theory.
+// Both were tested on a real device and came back WORSE than this version
+// (blank chapters, image-only chapters) — reverted. This whole-chapter-skip
+// approach, clipping-after-image limitation and all, is the one that's
+// actually held up best across real testing, so it's what ships. If a
+// better fix for the clipping surfaces later, it needs the same on-device
+// verification before replacing this again.
 function _kepubifyXhtml(raw){
   let {before, body, after} = _splitXhtmlShell(raw);
   if(/id=["']book-inner["']/.test(body))return raw; // already converted — don't double-wrap
@@ -13155,6 +13682,31 @@ async function toKepub(blob){
     .filter(it=>it&&/application\/xhtml\+xml|text\/html/i.test(it.mediaType||''))
     .map(it=>it.href);
   if(!htmlHrefs.length)throw new Error('toKepub: no spine HTML content found');
+
+  // Neutralize publisher <a> link styling (color/underline) across every
+  // stylesheet in the book. Real-world publisher CSS resets almost always
+  // style links with something like `a{color:#4c7aa9;text-decoration:
+  // underline}` — completely normal for a browser, but on Kobo this becomes
+  // visible whenever a chapter is rendered through Nickel's plain-EPUB
+  // fallback pipeline rather than its native kepub one, which is exactly
+  // what happens to any chapter containing an image (see the note on
+  // _kepubifyXhtml below — those chapters are deliberately left
+  // unconverted). Rather than touch that fragile per-chapter DOM logic
+  // again, this appends one CSS override to every stylesheet — cheap,
+  // reversible, and it fixes the *visible* symptom (faint/blue/underlined
+  // text) regardless of which rendering pipeline a given chapter ends up
+  // going through. `!important` is necessary since it has to beat whatever
+  // specificity the publisher's own reset used.
+  const cssHrefs = Object.values(manifestMap)
+    .filter(it => /text\/css/i.test(it.mediaType || ''))
+    .map(it => it.href);
+  const LINK_RESET_CSS = '\n/* injected by eLibrary\u2019s KEPUB conversion: neutralize publisher link styling that renders oddly on Kobo\u2019s plain-EPUB fallback pipeline */\na,a:link,a:visited{color:inherit!important;text-decoration:none!important;}\n';
+  for (const href of cssHrefs) {
+    const fullPath = opfDir + href;
+    const cssRaw = await zip.file(fullPath)?.async('string');
+    if (cssRaw === undefined) continue;
+    zip.file(fullPath, cssRaw + LINK_RESET_CSS);
+  }
 
   // A cap on how much markup we'll run the DOM-walking transform on for a
   // single chapter. Scraped/converted books (exactly the kind in this
@@ -13348,6 +13900,9 @@ function dataUrlToBlob(dataUrl){const[header,data]=dataUrl.split(',');const mime
 [document.getElementById('btnHeaderUpload'),document.getElementById('btnSideUpload'),document.getElementById('btnMobUpload')].forEach(b=>b?.addEventListener('click',showUploadModal));
 document.getElementById('btnMobUploadAudio')?.addEventListener('click', showAudioUploadModal);
 [document.getElementById('btnHeaderUploadAudio'),document.getElementById('btnSideUploadAudio')].forEach(b=>b?.addEventListener('click',showAudioUploadModal));
+document.getElementById('btnMobAddRecipe')?.addEventListener('click', () => showRecipeEditor());
+[document.getElementById('btnHeaderAddRecipe'),document.getElementById('btnSideAddRecipe')].forEach(b=>b?.addEventListener('click',() => showRecipeEditor()));
+document.getElementById('btnSideImportERecipe')?.addEventListener('click', showImportERecipeModal);
 // Explicit user-triggered refresh — loadLibrary() itself stays silent since
 // it's also called on sign-in and after uploads, where a "refreshed" toast
 // would just be noise on top of feedback those flows already give.
@@ -13498,9 +14053,9 @@ document.getElementById('tagsInput').addEventListener('keydown',async e=>{
   if(e.key!=='Enter')return;const tag=e.target.value.trim();if(!tag)return;e.target.value='';
   const book=library.find(b=>b.id===currentId);if(!book)return;
   const tags=[...new Set([...(book.tags||[]),tag])];book.tags=tags;
-  await updateDoc(doc(db,book.isAudio?'audioFiles':'books',currentId),{tags,updatedAt:serverTimestamp()});renderTagsModal();
+  await updateDoc(doc(db,collectionForBook(book),currentId),{tags,updatedAt:serverTimestamp()});renderTagsModal();
 });
-async function removeTag(tag){const book=library.find(b=>b.id===currentId);if(!book)return;const tags=(book.tags||[]).filter(t=>t!==tag);book.tags=tags;await updateDoc(doc(db,book.isAudio?'audioFiles':'books',currentId),{tags,updatedAt:serverTimestamp()});renderTagsModal();}
+async function removeTag(tag){const book=library.find(b=>b.id===currentId);if(!book)return;const tags=(book.tags||[]).filter(t=>t!==tag);book.tags=tags;await updateDoc(doc(db,collectionForBook(book),currentId),{tags,updatedAt:serverTimestamp()});renderTagsModal();}
 function renderTagsModal(){
   const book=library.find(b=>b.id===currentId);if(!book)return;
   const current=book.tags||[];
@@ -13508,7 +14063,7 @@ function renderTagsModal(){
   document.getElementById('tagsCurrentWrap').querySelectorAll('.tag-pill-remove').forEach(el=>el.addEventListener('click',()=>removeTag(el.dataset.tag)));
   const allT=getAllTags().filter(t=>!current.includes(t));
   document.getElementById('tagsAllWrap').innerHTML=allT.length?allT.map(t=>`<span class="tag-pill" data-quicktag="${esc(t)}">${esc(t)}</span>`).join(''):'<span style="font-size:.75rem;color:var(--muted)">No other tags yet</span>';
-  document.getElementById('tagsAllWrap').querySelectorAll('[data-quicktag]').forEach(el=>el.addEventListener('click',async()=>{const book=library.find(b=>b.id===currentId);if(!book)return;const tags=[...new Set([...(book.tags||[]),el.dataset.quicktag])];book.tags=tags;await updateDoc(doc(db,book.isAudio?'audioFiles':'books',currentId),{tags,updatedAt:serverTimestamp()});renderTagsModal();}));
+  document.getElementById('tagsAllWrap').querySelectorAll('[data-quicktag]').forEach(el=>el.addEventListener('click',async()=>{const book=library.find(b=>b.id===currentId);if(!book)return;const tags=[...new Set([...(book.tags||[]),el.dataset.quicktag])];book.tags=tags;await updateDoc(doc(db,collectionForBook(book),currentId),{tags,updatedAt:serverTimestamp()});renderTagsModal();}));
 }
 
 // ── RECOMMENDED ───────────────────────────────────────────────────────────────
@@ -13521,7 +14076,7 @@ async function toggleRecommended() {
   book.recommended = rec;
   book.recommendedAt = rec ? new Date() : null;
   try {
-    await updateDoc(doc(db, book.isAudio?'audioFiles':'books', currentId), {
+    await updateDoc(doc(db, collectionForBook(book), currentId), {
       recommended: rec,
       recommendedAt: rec ? serverTimestamp() : null,
       updatedAt: serverTimestamp()
@@ -13531,8 +14086,8 @@ async function toggleRecommended() {
     renderAll();
     renderMobHome();
     renderDeskHome();
-    if(window.innerWidth > 768) showBookById(currentId);
-    else mob_showBook(currentId, { preserveState: true });
+    if(window.innerWidth > 768) await showBookById(currentId);
+    else await mob_showBook(currentId, { preserveState: true });
     showToast(rec ? 'Marked as Recommended ⭐' : 'Removed from Recommended');
   } catch(e) {
     // Roll back optimistic update if Firestore write failed
@@ -13748,7 +14303,7 @@ document.getElementById('btnSaveBulkEdit').addEventListener('click',async()=>{
   document.getElementById('bulkEditModal').classList.remove('open');
   showLoading(`Updating ${ids.length} book${ids.length!==1?'s':''}…`);
   try{
-    for(const id of ids){const book=library.find(b=>b.id===id);if(!book)continue;const bookUpdates={...updates};if(newTags.length)bookUpdates.tags=[...new Set([...(book.tags||[]),...newTags])];await updateDoc(doc(db,book.isAudio?'audioFiles':'books',id),bookUpdates);Object.assign(book,bookUpdates);if(book.isAudio&&book._audioTrack)Object.assign(book._audioTrack,bookUpdates);}
+    for(const id of ids){const book=library.find(b=>b.id===id);if(!book)continue;const bookUpdates={...updates};if(newTags.length)bookUpdates.tags=[...new Set([...(book.tags||[]),...newTags])];await updateDoc(doc(db,collectionForBook(book),id),bookUpdates);Object.assign(book,bookUpdates);if(book.isAudio&&book._audioTrack)Object.assign(book._audioTrack,bookUpdates);if(book.isRecipe&&book._recipe)Object.assign(book._recipe,bookUpdates);}
     hideLoading();toggleSelectMode();renderAll();
     showToast(skipped
       ? `${ids.length} book${ids.length!==1?'s':''} updated ✓ (${skipped} skipped — not yours)`
@@ -13767,12 +14322,13 @@ document.getElementById('bulkBtnPublish').addEventListener('click', async () => 
     for (const id of ids) {
       const book = library.find(b => b.id === id);
       if (!book) continue;
-      await updateDoc(doc(db, book.isAudio ? 'audioFiles' : 'books', id), {
+      await updateDoc(doc(db, collectionForBook(book), id), {
         visibility: 'public',
         updatedAt: serverTimestamp()
       });
       book.visibility = 'public';
       if (book.isAudio && book._audioTrack) book._audioTrack.visibility = 'public';
+      if (book.isRecipe && book._recipe) book._recipe.visibility = 'public';
       if (!communityLib.find(b => b.id === id)) communityLib.push(book);
     }
     if (currentUser && ledgerState.loaded) _ledgerUnlockAchievement('sharer', ids[0]);
@@ -13798,12 +14354,13 @@ document.getElementById('bulkBtnUnpublish').addEventListener('click', async () =
     for (const id of ids) {
       const book = library.find(b => b.id === id);
       if (!book) continue;
-      await updateDoc(doc(db, book.isAudio ? 'audioFiles' : 'books', id), {
+      await updateDoc(doc(db, collectionForBook(book), id), {
         visibility: 'private',
         updatedAt: serverTimestamp()
       });
       book.visibility = 'private';
       if (book.isAudio && book._audioTrack) book._audioTrack.visibility = 'private';
+      if (book.isRecipe && book._recipe) book._recipe.visibility = 'private';
       communityLib = communityLib.filter(b => b.id !== id);
     }
     hideLoading();
@@ -13834,12 +14391,12 @@ document.getElementById('bulkBtnCheckout').addEventListener('click',async()=>{
 });
 document.getElementById('bulkBtnRec').addEventListener('click',async()=>{
   const ids=[...selectedIds].filter(id=>{const b=library.find(x=>x.id===id);return b&&!b.recommended;});if(!ids.length)return;showLoading('Updating…');
-  try{for(const id of ids){const b=library.find(x=>x.id===id);if(!b)continue;await updateDoc(doc(db,b.isAudio?'audioFiles':'books',id),{recommended:true,recommendedAt:serverTimestamp(),updatedAt:serverTimestamp()});b.recommended=true;b.recommendedAt=new Date();}hideLoading();toggleSelectMode();renderAll();showToast(`${ids.length} marked recommended ✓`);}
+  try{for(const id of ids){const b=library.find(x=>x.id===id);if(!b)continue;await updateDoc(doc(db,collectionForBook(b),id),{recommended:true,recommendedAt:serverTimestamp(),updatedAt:serverTimestamp()});b.recommended=true;b.recommendedAt=new Date();}hideLoading();toggleSelectMode();renderAll();showToast(`${ids.length} marked recommended ✓`);}
   catch(e){hideLoading();showToast('Failed: '+e.message);}
 });
 document.getElementById('bulkBtnUnrec').addEventListener('click',async()=>{
   const ids=[...selectedIds].filter(id=>{const b=library.find(x=>x.id===id);return b&&b.recommended;});if(!ids.length)return;showLoading('Updating…');
-  try{for(const id of ids){const b=library.find(x=>x.id===id);if(!b)continue;await updateDoc(doc(db,b.isAudio?'audioFiles':'books',id),{recommended:false,recommendedAt:null,updatedAt:serverTimestamp()});b.recommended=false;b.recommendedAt=null;}hideLoading();toggleSelectMode();renderAll();showToast(`${ids.length} unrecommended ✓`);}
+  try{for(const id of ids){const b=library.find(x=>x.id===id);if(!b)continue;await updateDoc(doc(db,collectionForBook(b),id),{recommended:false,recommendedAt:null,updatedAt:serverTimestamp()});b.recommended=false;b.recommendedAt=null;}hideLoading();toggleSelectMode();renderAll();showToast(`${ids.length} unrecommended ✓`);}
   catch(e){hideLoading();showToast('Failed: '+e.message);}
 });
 document.getElementById('bulkBtnCancel').addEventListener('click',toggleSelectMode);
@@ -14743,9 +15300,7 @@ async function checkAdminStatus() {
       || (data.isAdmin === true ? 'admin' : (data.restrictedAccess === true ? 'elevated' : 'standard'));
     isAdmin = accessLevel === 'admin';
     hasRestrictedAccess = accessLevel === 'elevated' || accessLevel === 'admin';
-    if(isAdmin){
-      document.getElementById('mobAdminSettingsCard').style.display = '';
-    }
+    document.getElementById('mobAdminSettingsCard').style.display = isAdmin ? '' : 'none';
   } catch(e) {
     console.warn('Admin check failed:', e);
   }
@@ -15535,13 +16090,14 @@ function showQuickCategoryModal() {
       showLoading('Saving…', book.coverUrl);
       try {
         // Audiobooks live in `audioFiles`, not `books`.
-        await updateDoc(doc(db, book.isAudio ? 'audioFiles' : 'books', currentId), { category: newCat, updatedAt: serverTimestamp() });
+        await updateDoc(doc(db, collectionForBook(book), currentId), { category: newCat, updatedAt: serverTimestamp() });
         book.category = newCat;
         if(book.isAudio && book._audioTrack) book._audioTrack.category = newCat;
+        if(book.isRecipe && book._recipe) book._recipe.chapterName = newCat;
         hideLoading();
         renderAll();
-        if(window.innerWidth > 768) showBookById(currentId);
-        else mob_showBook(currentId, { preserveState: true });
+        if(window.innerWidth > 768) await showBookById(currentId);
+        else await mob_showBook(currentId, { preserveState: true });
         showToast('Genre updated ✓');
       } catch(e) {
         hideLoading();
@@ -16232,8 +16788,9 @@ function showTagsModal() {
         book.tags = tags;
         item.classList.toggle('selected');
         // Audiobooks live in `audioFiles`, not `books`.
-        await updateDoc(doc(db, book.isAudio ? 'audioFiles' : 'books', currentId), { tags, updatedAt: serverTimestamp() });
+        await updateDoc(doc(db, collectionForBook(book), currentId), { tags, updatedAt: serverTimestamp() });
         if(book.isAudio && book._audioTrack) book._audioTrack.tags = tags;
+        if(book.isRecipe && book._recipe) book._recipe.tags = tags;
         renderAll();
       });
     });
@@ -16247,8 +16804,9 @@ function showTagsModal() {
       const tags = [...new Set([...(book.tags || []), tag])];
       book.tags = tags;
       // Audiobooks live in `audioFiles`, not `books`.
-      await updateDoc(doc(db, book.isAudio ? 'audioFiles' : 'books', currentId), { tags, updatedAt: serverTimestamp() });
+      await updateDoc(doc(db, collectionForBook(book), currentId), { tags, updatedAt: serverTimestamp() });
       if(book.isAudio && book._audioTrack) book._audioTrack.tags = tags;
+      if(book.isRecipe && book._recipe) book._recipe.tags = tags;
       // Add to global tag list if new
       if(!_globalTags.includes(tag)) {
         _globalTags.push(tag);
@@ -17060,8 +17618,98 @@ function manualReadAsBook(manualId) {
            coverUrl: r.coverUrl || null, pages: r.pages || null, isManual: true };
 }
 
+// Standard page length used to turn a book's total word count into a
+// device/font-independent page count. Counting actual page TURNS in the
+// reader (readerPageCount) moves with whatever font size the reader
+// currently has set — a larger font means fewer words per page, so the
+// same amount of actual reading racks up more "pages" than it would at a
+// smaller font. This number never changes: 250 words/page is the
+// long-standing publishing-industry reference figure (a double-spaced,
+// 12pt Courier manuscript page holds ~250 words) and is still the figure
+// most commonly cited as "the" standard page length — modern print
+// paperbacks run closer to 300, and Amazon's own KENPC (used to measure
+// actual Kindle reading) lands lower still, around 180-200, but 250 is
+// the most broadly recognized round number and a reasonable middle
+// ground between those two.
+const STANDARD_WORDS_PER_PAGE = 250;
+
+function _stripHtmlToText(html) {
+  return html
+    .replace(/<(script|style)[^>]*>[\s\S]*?<\/\1>/gi, ' ')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&[a-z#0-9]+;/gi, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function _formatStandardPages(wordCount) {
+  const pages = Math.round(wordCount / STANDARD_WORDS_PER_PAGE);
+  return `${pages.toLocaleString()} pages`;
+}
+
+// Computes a book's total word count by extracting and stripping every
+// spine XHTML file's text content. Same OPF/manifest/spine parsing used
+// throughout this file (toKepub, the reader's own chapter loader, etc.),
+// but kept fully independent of the reader's own state (readerZip/
+// readerSpine) so this can run without the book being open — it's called
+// from the book details sheet, which may be showing a book that isn't
+// the one currently in the reader.
+async function computeBookWordCount(book) {
+  const bytes = await getBytes(storageRef(storage, book.storagePath));
+  const zip = await JSZip.loadAsync(bytes);
+  const container = await zip.file('META-INF/container.xml')?.async('string');
+  const opfPath = container?.match(/full-path="([^"]+\.opf)"/i)?.[1];
+  if (!opfPath) throw new Error('computeBookWordCount: no OPF found');
+  const opfXml = await zip.file(opfPath)?.async('string');
+  if (!opfXml) throw new Error('computeBookWordCount: could not read OPF');
+  const opfDir = opfPath.includes('/') ? opfPath.replace(/\/[^/]+$/, '/') : '';
+
+  const manifestMap = {};
+  const mRe = /<item\s+([^>]+)\/?>/gi; let m;
+  while ((m = mRe.exec(opfXml)) !== null) {
+    const a = m[1];
+    const id = a.match(/\bid="([^"]+)"/)?.[1];
+    const href = a.match(/\bhref="([^"]+)"/)?.[1];
+    const mt = a.match(/\bmedia-type="([^"]+)"/)?.[1];
+    if (id && href) manifestMap[id] = { href, mediaType: mt };
+  }
+  const spineIds = [...opfXml.matchAll(/<itemref\s+[^>]*idref="([^"]+)"[^>]*\/?>/gi)].map(x => x[1]);
+  const htmlHrefs = spineIds
+    .map(id => manifestMap[id])
+    .filter(it => it && /application\/xhtml\+xml|text\/html/i.test(it.mediaType || ''))
+    .map(it => it.href);
+
+  let wordCount = 0;
+  for (const href of htmlHrefs) {
+    const raw = await zip.file(opfDir + href)?.async('string');
+    if (!raw) continue;
+    const text = _stripHtmlToText(raw);
+    if (text) wordCount += text.split(' ').filter(Boolean).length;
+  }
+  return wordCount;
+}
+
+// Returns a book's word count, computing it once and caching the result
+// into Firestore so it's only ever done the first time this book's
+// details are viewed — every book uploaded before this feature existed
+// won't have it yet, and this backfills them lazily rather than needing
+// a one-time migration over the whole library.
+async function getOrComputeStandardPages(book) {
+  if (book.wordCount) return { wordCount: book.wordCount };
+  const wordCount = await computeBookWordCount(book);
+  try {
+    await updateDoc(doc(db, collectionForBook(book), book.id), { wordCount });
+    book.wordCount = wordCount; // keep the in-memory library entry in sync so re-opening this sheet doesn't recompute
+  } catch (e) {
+    console.warn('Failed to cache word count for', book.title, e);
+  }
+  return { wordCount };
+}
+
 function estimatePages(book) {
   if(book?.pages) return book.pages;
+  if(book?.wordCount) return Math.round(book.wordCount / STANDARD_WORDS_PER_PAGE);
   const map = {
     'Short Stories': 180, 'Poetry': 120, "Children's": 150, 'Young Adult': 280,
     'Graphic Novel': 160,
@@ -17784,6 +18432,113 @@ function mergeAudioIntoLibrary() {
   library.push(..._audioTracks.map(audioTrackToBookLike));
 }
 
+// ═══════════════════════════════════════════════════════════════════════════
+// RECIPES — own `recipes` collection, wrapped as book-like objects for the
+// existing grid/card/filter code, same pattern as audioTrackToBookLike above.
+// ═══════════════════════════════════════════════════════════════════════════
+
+let _recipes = [];
+
+async function loadRecipes() {
+  if (!currentUser) return;
+  // Swallows its own errors (most likely: the `recipes` collection has no
+  // Firestore security rules yet, so this comes back permission-denied).
+  // This function is awaited inside loadLibrary()'s Promise.all alongside
+  // the books/audio queries — if it threw instead, that single rejection
+  // would cascade and take down the ENTIRE initial load, books and audio
+  // included, since Promise.all rejects as soon as any one promise does.
+  // Recipes failing to load should only mean an empty recipes shelf, never
+  // a blank library.
+  try {
+    // No orderBy here on purpose — combining it with the ownerId equality
+    // filter would need a composite index (ownerId + createdAt) that
+    // Firestore has to build per-collection. Sorting the small result set
+    // client-side avoids that setup step entirely.
+    const q = query(
+      collection(db, 'recipes'),
+      where('ownerId', '==', currentUser.uid)
+    );
+    const snap = await getDocs(q);
+    _recipes = snap.docs
+      .map(d => ({ id: d.id, ...d.data() }))
+      .sort((a, b) => (b.createdAt?.toMillis?.() || 0) - (a.createdAt?.toMillis?.() || 0));
+  } catch (e) {
+    console.warn('Recipes failed to load (check Firestore security rules for the `recipes` collection):', e);
+    _recipes = [];
+  }
+}
+
+// Mirrors loadCommunityAudioTracks() — public/shared/restricted queries
+// against `recipes` instead of `audioFiles`.
+async function loadCommunityRecipes() {
+  if (!currentUser) return [];
+  const pubQ = query(
+    collection(db, 'recipes'),
+    where('visibility', '==', 'public')
+  );
+  const sharedQ = query(
+    collection(db, 'recipes'),
+    where('allowedUsers', 'array-contains', currentUser.uid)
+  );
+  const restrictedPromise = (isAdmin || hasRestrictedAccess)
+    ? getDocs(query(collection(db, 'recipes'), where('visibility', '==', 'restricted')))
+    : Promise.resolve({ docs: [] });
+
+  const [pubR, sharedR, restrictedR] = await Promise.allSettled([getDocs(pubQ), getDocs(sharedQ), restrictedPromise]);
+  const toBookLike = d => recipeToBookLike({ id: d.id, ...d.data() });
+  if (pubR.status === 'rejected') console.warn('Public recipes failed to load:', pubR.reason);
+  if (sharedR.status === 'rejected') console.warn('Shared recipes failed to load:', sharedR.reason);
+  if (restrictedR.status === 'rejected') console.warn('Restricted recipes failed to load:', restrictedR.reason);
+  const pub = pubR.status === 'fulfilled' ? pubR.value.docs.map(toBookLike) : [];
+  const shared = sharedR.status === 'fulfilled' ? sharedR.value.docs.map(toBookLike).filter(b => b.ownerId !== currentUser.uid) : [];
+  const restricted = restrictedR.status === 'fulfilled' ? restrictedR.value.docs.map(toBookLike).filter(b => b.ownerId !== currentUser.uid) : [];
+  return [...pub, ...shared, ...restricted];
+}
+
+// Wraps a recipe doc in the same shape the grid renders, tagged with
+// isRecipe (parallel to isAudio) so cards pick the right icon/tile and
+// clicks open cook-mode instead of the reader/player.
+// Field names match eRecipe's data.js model: title, desc, ingredients[],
+// steps[] (plain strings, ":"-suffixed lines are sub-headings), tip,
+// createdByName. eRecipe's chapterId/chapterName (its "chapters" are
+// really categories — Breakfast, Cakes, etc.) maps to eLibrary's category.
+function recipeToBookLike(r) {
+  return {
+    id: r.id,
+    title: r.title || 'Untitled Recipe',
+    author: r.createdByName || '',
+    category: r.chapterName || r.category || 'Uncategorised',
+    language: r.language || '',
+    description: r.desc || '',
+    series: null,
+    seriesIndex: null,
+    tags: r.tags || [],
+    visibility: r.visibility || 'private',
+    ownerId: r.ownerId || currentUser?.uid,
+    createdAt: r.createdAt,
+    coverUrl: r.coverUrl || null,
+    isRecipe: true,
+    _recipe: r,
+  };
+}
+
+function mergeRecipesIntoLibrary() {
+  library = library.filter(b => !b.isRecipe);
+  library.push(..._recipes.map(recipeToBookLike));
+}
+
+// Resolves which Firestore collection a book-like object's doc actually
+// lives in. Hoisted (function declaration), so it's usable anywhere in this
+// module regardless of source order — every edit/share/delete call site that
+// used to branch `book.isAudio ? 'audioFiles' : 'books'` now calls this
+// instead, so recipes route to 'recipes' the same way audiobooks route to
+// 'audioFiles'.
+function collectionForBook(book) {
+  if (book?.isAudio) return 'audioFiles';
+  if (book?.isRecipe) return 'recipes';
+  return 'books';
+}
+
 // ── render the audio panel ────────────────────────────────────────────────────
 
 async function renderAudioPanel() {
@@ -18008,6 +18763,670 @@ function updateTrackNavButtons(track) {
     label.style.display = '';
     const epDuration = formatDurationTotal(track.durationSec || 0);
     label.textContent = `Episode ${idx + 1} of ${siblings.length} · ${epDuration} — ${track.series}`;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// COOK MODE — full-screen overlay reader for recipes, ported from eRecipe.
+// Self-contained (builds its own DOM/CSS on first use) rather than wired
+// into the mob-sheet/drawer system, so it doesn't disturb book/audio layout.
+// ═══════════════════════════════════════════════════════════════════════════
+
+// ── sectioned list renderer (ingredients / steps) ───────────────────────────
+// Ported verbatim from eRecipe's js/render.js. Lines ending in ":" become
+// sub-headings; otherwise normal list items. Numbered for steps (tag='ol').
+function renderSectionedList(lines, tag) {
+  let html    = `<${tag}>`;
+  let open    = true;
+  let stepNum = 0;
+  for (const line of (lines || [])) {
+    const t = line.trim();
+    if (!t) continue;
+    if (t.endsWith(':')) {
+      if (open) { html += `</${tag}>`; open = false; }
+      html += `<li style="list-style:none;font-weight:700;margin-top:.7em;margin-left:0">${esc(t.slice(0, -1))}</li>`;
+      open = true;
+      if (tag === 'ol') stepNum = 0;
+    } else if (tag === 'ol') {
+      stepNum++;
+      html += `<li><span class="cm-step-num">${stepNum}</span><span>${esc(t)}</span></li>`;
+    } else {
+      html += `<li>${esc(t)}</li>`;
+    }
+  }
+  if (open) html += `</${tag}>`;
+  return html;
+}
+
+// ── inline timer buttons in step text ────────────────────────────────────
+// Ported from eRecipe's js/timers.js. Turns "bake 25 minutes" into
+// "bake 25 minutes [⏱ Start]" with a button that calls cmTimerAdd().
+const CM_TIME_RE = /(\d+(?:[.,½¼¾]\d*)?(?:\s*-\s*\d+(?:[.,½¼¾]\d*)?)?)\s*(hours?|hrs?|minutes?|mins?)/gi;
+function linkifyTimers(text) {
+  return text.replace(CM_TIME_RE, (match, num, unit, offset, string) => {
+    const lastNum = num.split('-').pop().trim();
+    let n = parseFloat(lastNum.replace(',', '.').replace('½', '.5').replace('¼', '.25').replace('¾', '.75'));
+    if (isNaN(n)) return match;
+    const isHour = /^h/i.test(unit);
+    const mins = isHour ? Math.round(n * 60) : Math.round(n);
+    if (mins < 1 || mins > 600) return match;
+
+    const before = string.slice(0, offset);
+    const after = string.slice(offset + match.length);
+    const sentStart = Math.max(before.lastIndexOf('.'), before.lastIndexOf('\n')) + 1;
+    const sentEnd = after.search(/[.\n]|$/);
+    const rawSentence = (before.slice(sentStart) + match + after.slice(0, sentEnd)).replace(/<[^>]+>/g, '').trim();
+    let context = rawSentence.replace(match, '').replace(/^\s*\d+[.)]?\s*/, '').replace(/\s+/g, ' ').trim();
+    if (context.length > 60) context = context.slice(0, 57).trim() + '...';
+    const safeCtx = context.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+    const label = match.trim();
+    return `${match}<button class="inline-timer-btn" onclick="cmTimerAdd(${mins}, '${label}', '${safeCtx}')">⏱ Start</button>`;
+  });
+}
+
+// ── timer engine ──────────────────────────────────────────────────────────
+// Ported from eRecipe's js/timers.js, renamed with a cm (cook-mode) prefix
+// to avoid clashing with eLibrary's own globals. Renders into the cook-mode
+// overlay's timer tray (#cmTimerList) built in openRecipeCookMode().
+let _cmAudioCtx = null;
+function cmEnsureAudioCtx() {
+  try {
+    if (!_cmAudioCtx) _cmAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (_cmAudioCtx.state === 'suspended') _cmAudioCtx.resume().catch(() => {});
+  } catch (e) { /* ignore */ }
+  return _cmAudioCtx;
+}
+let cmTimers = [];
+let cmTimerNextId = 1;
+function cmTimerFmt(secs) {
+  const h = Math.floor(secs / 3600), m = Math.floor((secs % 3600) / 60), s = secs % 60;
+  if (h > 0) return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+  return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+}
+function cmTimerAdd(minutes, label, context) {
+  cmEnsureAudioCtx();
+  const id = cmTimerNextId++;
+  const t = { id, label: context || label, timeLabel: label, totalSecs: minutes * 60, endsAt: Date.now() + minutes * 60 * 1000, interval: null, done: false };
+  cmTimers.push(t);
+  t.interval = setInterval(() => cmTimerTick(id), 1000);
+  showToast(`⏱ ${context || label} — ${label}`);
+  cmTimerRender();
+  const tray = document.getElementById('cmTimerTray');
+  if (tray) tray.style.display = 'block';
+}
+function cmTimerTick(id) {
+  const t = cmTimers.find(x => x.id === id);
+  if (!t || t.done) return;
+  const remaining = Math.round((t.endsAt - Date.now()) / 1000);
+  if (remaining <= 0) { t.done = true; clearInterval(t.interval); cmTimerNotify(t.label); }
+  cmTimerRender();
+}
+function cmTimerNotify(label) {
+  try {
+    const ctx = cmEnsureAudioCtx();
+    if (ctx && ctx.state === 'running') {
+      const beep = (freq, start, dur) => {
+        const o = ctx.createOscillator(), g = ctx.createGain();
+        o.connect(g); g.connect(ctx.destination);
+        o.frequency.value = freq; o.type = 'sine';
+        g.gain.setValueAtTime(0.6, ctx.currentTime + start);
+        g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + start + dur);
+        o.start(ctx.currentTime + start); o.stop(ctx.currentTime + start + dur);
+      };
+      beep(880, 0, .3); beep(880, .35, .3); beep(880, .7, .5);
+    }
+  } catch (e) { /* ignore */ }
+  if (navigator.vibrate) navigator.vibrate([400, 200, 400, 200, 400]);
+  showToast('⏱ ' + label + ' — done!');
+}
+function cmTimerRemove(id) {
+  const t = cmTimers.find(x => x.id === id);
+  if (t && t.interval) clearInterval(t.interval);
+  cmTimers = cmTimers.filter(x => x.id !== id);
+  cmTimerRender();
+}
+function cmTimerReset(id) {
+  const t = cmTimers.find(x => x.id === id);
+  if (!t) return;
+  if (t.interval) clearInterval(t.interval);
+  t.endsAt = Date.now() + t.totalSecs * 1000;
+  t.done = false;
+  t.interval = setInterval(() => cmTimerTick(id), 1000);
+  cmTimerRender();
+}
+function cmTimerRender() {
+  const list = document.getElementById('cmTimerList');
+  if (!list) return;
+  list.innerHTML = cmTimers.map(t => {
+    const remaining = Math.round((t.endsAt - Date.now()) / 1000);
+    return `<div style="display:flex;align-items:center;gap:.6rem;padding:.5rem .7rem;border-bottom:1px solid var(--border);">
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:.85rem;font-weight:700;color:var(--navy);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(t.label)}</div>
+        <div style="font-size:.68rem;color:var(--muted);">${esc(t.timeLabel)}</div>
+      </div>
+      <div style="font-variant-numeric:tabular-nums;font-weight:700;color:${t.done ? 'var(--rust)' : 'var(--teal-dark)'};">${t.done ? 'Done!' : cmTimerFmt(Math.max(0, remaining))}</div>
+      ${t.done ? `<button onclick="cmTimerReset(${t.id})" style="border:none;background:none;font-size:1rem;cursor:pointer;color:var(--teal-dark);">↺</button>` : ''}
+      <button onclick="cmTimerRemove(${t.id})" style="border:none;background:none;font-size:1rem;cursor:pointer;color:var(--muted);">✕</button>
+    </div>`;
+  }).join('');
+  const tray = document.getElementById('cmTimerTray');
+  if (tray && !cmTimers.length) tray.style.display = 'none';
+}
+
+// ── overlay shell (built once, reused across recipes) ────────────────────
+function _cmEnsureOverlay() {
+  if (document.getElementById('cookModeOverlay')) return;
+  const el = document.createElement('div');
+  el.id = 'cookModeOverlay';
+  el.style.cssText = 'position:fixed;inset:0;z-index:500;background:var(--cream);display:none;flex-direction:column;';
+  el.innerHTML = `
+    <div style="flex-shrink:0;display:flex;align-items:center;gap:.8rem;padding:.9rem 1rem;background:var(--warm-white);border-bottom:1px solid var(--border);">
+      <button onclick="closeRecipeCookMode()" style="border:none;background:none;font-size:1.3rem;cursor:pointer;color:var(--navy);line-height:1;">←</button>
+      <div style="flex:1;min-width:0;">
+        <div id="cmCategory" style="font-size:.72rem;color:var(--teal-dark);font-weight:700;letter-spacing:.03em;"></div>
+        <div id="cmTitle" style="font-family:'Playfair Display',serif;font-size:1.15rem;color:var(--navy);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"></div>
+      </div>
+      <button onclick="document.getElementById('cmTimerTray').style.display=document.getElementById('cmTimerTray').style.display==='none'?'block':'none';" style="border:none;background:none;font-size:1.25rem;cursor:pointer;">⏱</button>
+      <button id="cmEditBtn" style="display:none;border:none;background:none;font-size:1.15rem;cursor:pointer;">✎</button>
+    </div>
+    <div id="cmTimerTray" style="display:none;flex-shrink:0;max-height:35vh;overflow-y:auto;background:var(--panel);border-bottom:1px solid var(--border);">
+      <div id="cmTimerList"></div>
+    </div>
+    <div style="flex:1;overflow-y:auto;padding:1.2rem 1.2rem 3rem;max-width:720px;margin:0 auto;width:100%;box-sizing:border-box;">
+      <img id="cmCoverImg" style="display:none;width:100%;max-height:280px;object-fit:cover;border-radius:10px;margin-bottom:1rem;"/>
+      <div id="cmByline" style="font-size:.8rem;color:var(--muted);margin-bottom:.6rem;display:none;"></div>
+      <div id="cmDesc" style="font-size:.92rem;color:var(--navy);margin-bottom:1.2rem;line-height:1.5;"></div>
+      <h3 style="font-family:'Playfair Display',serif;color:var(--rust);border-bottom:2px solid var(--gold);padding-bottom:.3rem;margin-bottom:.6rem;">Ingredients</h3>
+      <div id="cmIngredients" style="margin-bottom:1.6rem;line-height:1.7;"></div>
+      <h3 style="font-family:'Playfair Display',serif;color:var(--rust);border-bottom:2px solid var(--gold);padding-bottom:.3rem;margin-bottom:.6rem;">Steps</h3>
+      <div id="cmSteps" style="line-height:1.9;"></div>
+      <div id="cmTip" style="display:none;margin-top:1.4rem;padding:.8rem 1rem;background:var(--teal-light);border-radius:8px;font-size:.85rem;color:var(--teal-dark);"></div>
+    </div>`;
+  document.body.appendChild(el);
+
+  const style = document.createElement('style');
+  style.textContent = `
+    .cm-step-num{display:inline-flex;align-items:center;justify-content:center;width:1.6em;height:1.6em;border-radius:50%;background:var(--gold);color:#fff;font-size:.75em;font-weight:700;margin-right:.5em;flex-shrink:0;}
+    #cmSteps ol,#cmIngredients ul{list-style:none;margin:0;padding:0;}
+    #cmSteps li{display:flex;align-items:flex-start;margin-bottom:.7em;}
+    #cmIngredients li{padding:.25em 0;border-bottom:1px dashed var(--border);}
+    .inline-timer-btn{border:1px solid var(--gold);background:var(--warm-white);color:var(--teal-dark);border-radius:12px;font-size:.72rem;padding:.15em .6em;margin-left:.4em;cursor:pointer;white-space:nowrap;}`;
+  document.head.appendChild(style);
+}
+
+// ── screen wake lock — keep the display on while a recipe is open, since
+// hands are often busy/messy mid-cook and the screen dimming/locking mid-step
+// is exactly the wrong moment. Falls back to doing nothing on browsers that
+// don't support the Wake Lock API rather than erroring.
+let _cmWakeLock = null;
+async function _cmAcquireWakeLock() {
+  if (!('wakeLock' in navigator)) return;
+  try {
+    _cmWakeLock = await navigator.wakeLock.request('screen');
+    _cmWakeLock.addEventListener('release', () => { _cmWakeLock = null; });
+  } catch (e) {
+    console.warn('Wake lock request failed:', e);
+  }
+}
+function _cmReleaseWakeLock() {
+  if (_cmWakeLock) { _cmWakeLock.release().catch(() => {}); _cmWakeLock = null; }
+}
+// The API auto-releases the lock whenever the tab loses visibility (switching
+// apps, screen off) — re-acquire it once the tab is visible again, but only
+// if cook mode is still actually open.
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible'
+      && document.getElementById('cookModeOverlay')?.style.display === 'flex') {
+    _cmAcquireWakeLock();
+  }
+});
+
+function openRecipeCookMode(recipe) {
+  _cmEnsureOverlay();
+  document.getElementById('cmCategory').textContent = recipe.chapterName || recipe.category || '';
+  document.getElementById('cmTitle').textContent = recipe.title || 'Untitled Recipe';
+  const coverImg = document.getElementById('cmCoverImg');
+  if (recipe.coverUrl) { coverImg.src = recipe.coverUrl; coverImg.style.display = 'block'; }
+  else { coverImg.style.display = 'none'; }
+  const bylineEl = document.getElementById('cmByline');
+  if (recipe.createdByName) { bylineEl.textContent = `Recipe by ${recipe.createdByName}`; bylineEl.style.display = 'block'; }
+  else { bylineEl.style.display = 'none'; }
+  document.getElementById('cmDesc').innerHTML = esc(recipe.desc || '');
+  document.getElementById('cmIngredients').innerHTML = renderSectionedList(recipe.ingredients, 'ul');
+  document.getElementById('cmSteps').innerHTML = linkifyTimers(renderSectionedList(recipe.steps, 'ol'));
+  const tipEl = document.getElementById('cmTip');
+  if (recipe.tip) { tipEl.innerHTML = esc(recipe.tip); tipEl.style.display = 'block'; }
+  else { tipEl.style.display = 'none'; }
+  const editBtn = document.getElementById('cmEditBtn');
+  const isMine = recipe.ownerId === currentUser?.uid;
+  editBtn.style.display = isMine ? 'block' : 'none';
+  editBtn.onclick = () => showRecipeEditor(recipe);
+  document.getElementById('cookModeOverlay').style.display = 'flex';
+  _cmAcquireWakeLock();
+}
+
+function closeRecipeCookMode() {
+  const el = document.getElementById('cookModeOverlay');
+  if (el) el.style.display = 'none';
+  _cmReleaseWakeLock();
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// RECIPE EDITOR — add/edit form, self-built overlay like cook mode.
+// Ingredients/steps are entered one-per-line to match eRecipe's storage
+// format (plain strings; a line ending in ":" becomes a sub-heading).
+// ═══════════════════════════════════════════════════════════════════════════
+
+function _reEnsureEditor() {
+  if (document.getElementById('recipeEditorOverlay')) return;
+  const el = document.createElement('div');
+  el.id = 'recipeEditorOverlay';
+  el.style.cssText = 'position:fixed;inset:0;z-index:510;background:var(--cream);display:none;flex-direction:column;';
+  el.innerHTML = `
+    <div style="flex-shrink:0;display:flex;align-items:center;gap:.8rem;padding:.9rem 1rem;background:var(--warm-white);border-bottom:1px solid var(--border);">
+      <button onclick="closeRecipeEditor()" style="border:none;background:none;font-size:1.3rem;cursor:pointer;color:var(--navy);line-height:1;">←</button>
+      <div id="reHeaderTitle" style="flex:1;font-family:'Playfair Display',serif;font-size:1.1rem;color:var(--navy);">Add Recipe</div>
+      <button id="reDeleteBtn" style="display:none;border:none;background:none;font-size:.85rem;color:var(--danger);cursor:pointer;">Delete</button>
+      <button id="reSaveBtn" style="border:none;background:var(--teal);color:var(--warm-white);font-weight:700;font-size:.85rem;padding:.5rem 1.1rem;border-radius:20px;cursor:pointer;">Save</button>
+    </div>
+    <div style="flex:1;overflow-y:auto;padding:1.2rem 1.2rem 3rem;max-width:640px;margin:0 auto;width:100%;box-sizing:border-box;">
+      <label class="re-lbl">Cover Image <span class="re-hint">(optional)</span></label>
+      <div style="display:flex;align-items:center;gap:.8rem;">
+        <div id="reCoverPreviewWrap" style="width:64px;height:64px;border-radius:8px;overflow:hidden;flex-shrink:0;background:var(--panel);display:flex;align-items:center;justify-content:center;border:1px solid var(--border);">
+          <span id="reCoverPh" style="font-size:1.6rem;">🍲</span>
+          <img id="reCoverPreview" style="width:100%;height:100%;object-fit:cover;display:none;"/>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:.4rem;">
+          <button id="reCoverBtn" type="button" style="border:1px solid var(--border);background:var(--warm-white);border-radius:20px;padding:.4rem 1rem;font-size:.8rem;cursor:pointer;color:var(--teal-dark);width:fit-content;">📷 Upload Cover</button>
+          <button id="reCoverRemoveBtn" type="button" style="display:none;border:none;background:none;font-size:.75rem;cursor:pointer;color:var(--muted);text-align:left;padding:0;width:fit-content;">Remove cover</button>
+        </div>
+        <input id="reCoverFile" type="file" accept="image/*" style="display:none;"/>
+      </div>
+
+      <label class="re-lbl">Title</label>
+      <input id="reTitle" class="re-input" type="text" placeholder="Cowboy Coffee Cake"/>
+
+      <label class="re-lbl">Category</label>
+      <input id="reCategory" class="re-input" type="text" list="reCategoryList" placeholder="Breakfast Foods, Cakes, Mains…"/>
+      <datalist id="reCategoryList"></datalist>
+
+      <label class="re-lbl">Description</label>
+      <textarea id="reDesc" class="re-input" rows="2" placeholder="A rustic, hearty coffee cake with a thick brown sugar crumble."></textarea>
+
+      <label class="re-lbl">Ingredients <span class="re-hint">(one per line — end a line with ":" for a sub-heading)</span></label>
+      <textarea id="reIngredients" class="re-input re-mono" rows="8" placeholder="2 cups all-purpose flour&#10;3/4 cup brown sugar, packed&#10;1/2 tsp salt"></textarea>
+
+      <label class="re-lbl">Steps <span class="re-hint">(one per line — end a line with ":" for a sub-heading)</span></label>
+      <textarea id="reSteps" class="re-input re-mono" rows="8" placeholder="Preheat oven to 375F (190C).&#10;Bake 25-30 minutes until golden."></textarea>
+
+      <label class="re-lbl">Tip <span class="re-hint">(optional)</span></label>
+      <textarea id="reTip" class="re-input" rows="2" placeholder="No buttermilk? Add 1 tbsp vinegar to 1 cup regular milk and let sit 5 minutes."></textarea>
+
+      <label class="re-lbl">Visibility</label>
+      <div style="display:flex;gap:.5rem;">
+        <button id="reVisPrivate" class="re-vis-btn" data-vis="private">🔒 Private</button>
+        <button id="reVisPublic" class="re-vis-btn" data-vis="public">🌐 Public</button>
+      </div>
+    </div>`;
+  document.body.appendChild(el);
+
+  const style = document.createElement('style');
+  style.textContent = `
+    .re-lbl{display:block;font-size:.78rem;font-weight:700;color:var(--teal-dark);margin:1rem 0 .3rem;}
+    .re-hint{font-weight:400;color:var(--muted);font-size:.72rem;}
+    .re-input{width:100%;box-sizing:border-box;border:1px solid var(--border);border-radius:8px;padding:.6rem .7rem;font-family:'Lato',sans-serif;font-size:.88rem;color:var(--navy);background:var(--warm-white);resize:vertical;}
+    .re-mono{font-family:ui-monospace,Menlo,monospace;font-size:.82rem;line-height:1.5;}
+    .re-vis-btn{flex:1;border:1px solid var(--border);background:var(--warm-white);border-radius:20px;padding:.5rem;font-size:.82rem;cursor:pointer;color:var(--muted);}
+    .re-vis-btn.active{border-color:var(--teal);background:var(--teal-light);color:var(--teal-dark);font-weight:700;}`;
+  document.head.appendChild(style);
+
+  document.getElementById('reVisPrivate').addEventListener('click', () => _reSetVis('private'));
+  document.getElementById('reVisPublic').addEventListener('click', () => _reSetVis('public'));
+  document.getElementById('reSaveBtn').addEventListener('click', saveRecipeFromEditor);
+  document.getElementById('reDeleteBtn').addEventListener('click', deleteRecipeFromEditor);
+  document.getElementById('reCoverBtn').addEventListener('click', () => document.getElementById('reCoverFile').click());
+  document.getElementById('reCoverFile').addEventListener('change', _reHandleCoverFile);
+  document.getElementById('reCoverRemoveBtn').addEventListener('click', () => {
+    document.getElementById('recipeEditorOverlay').dataset.pendingCoverUrl = '';
+    _reRenderCoverPreview();
+  });
+}
+
+function _reRenderCoverPreview() {
+  const url = document.getElementById('recipeEditorOverlay').dataset.pendingCoverUrl || '';
+  const img = document.getElementById('reCoverPreview');
+  const ph = document.getElementById('reCoverPh');
+  const removeBtn = document.getElementById('reCoverRemoveBtn');
+  if (url) {
+    img.src = url; img.style.display = 'block'; ph.style.display = 'none';
+    removeBtn.style.display = 'block';
+  } else {
+    img.style.display = 'none'; ph.style.display = 'block';
+    removeBtn.style.display = 'none';
+  }
+}
+
+// Uploads immediately to Firebase Storage on selection (same pattern as the
+// audio cover uploader) rather than deferring to save time — this way the
+// preview reflects the real hosted image right away, and saveRecipeFromEditor
+// just needs to write whatever URL is currently in pendingCoverUrl, whether
+// this is a brand-new recipe or an edit.
+async function _reHandleCoverFile(e) {
+  const file = e.target.files[0];
+  e.target.value = ''; // allow re-selecting the same file later
+  if (!file || !currentUser) return;
+  const btn = document.getElementById('reCoverBtn');
+  const prevLabel = btn.textContent;
+  btn.textContent = 'Uploading…'; btn.disabled = true;
+  try {
+    const safeName = `${Date.now()}_${file.name.replace(/[^a-zA-Z0-9._\-]/g, '_')}`;
+    const coverRef = storageRef(storage, `recipe_covers/${currentUser.uid}/${safeName}`);
+    await uploadBytes(coverRef, file);
+    const coverUrl = await getDownloadURL(coverRef);
+    document.getElementById('recipeEditorOverlay').dataset.pendingCoverUrl = coverUrl;
+    _reRenderCoverPreview();
+  } catch (err) {
+    console.error('Recipe cover upload failed:', err);
+    showToast('Cover upload failed: ' + err.message);
+  } finally {
+    btn.textContent = prevLabel; btn.disabled = false;
+  }
+}
+
+function _reSetVis(vis) {
+  document.getElementById('recipeEditorOverlay').dataset.vis = vis;
+  document.getElementById('reVisPrivate').classList.toggle('active', vis === 'private');
+  document.getElementById('reVisPublic').classList.toggle('active', vis === 'public');
+}
+
+// Pass an existing eRecipe-shaped recipe object to edit it; omit to create new.
+function showRecipeEditor(recipe) {
+  if (!currentUser) { showToast('Please sign in first'); return; }
+  _reEnsureEditor();
+  const overlay = document.getElementById('recipeEditorOverlay');
+  overlay.dataset.editId = recipe?.id || '';
+
+  document.getElementById('reHeaderTitle').textContent = recipe ? 'Edit Recipe' : 'Add Recipe';
+  document.getElementById('reDeleteBtn').style.display = recipe ? 'block' : 'none';
+  document.getElementById('reTitle').value = recipe?.title || '';
+  document.getElementById('reCategory').value = recipe?.chapterName || recipe?.category || '';
+  document.getElementById('reDesc').value = recipe?.desc || '';
+  document.getElementById('reIngredients').value = (recipe?.ingredients || []).join('\n');
+  document.getElementById('reSteps').value = (recipe?.steps || []).join('\n');
+  document.getElementById('reTip').value = recipe?.tip || '';
+  _reSetVis(recipe?.visibility || 'private');
+
+  overlay.dataset.pendingCoverUrl = recipe?.coverUrl || '';
+  _reRenderCoverPreview();
+
+  // Category suggestions: the same shared, admin-managed genre list used
+  // for books/audio (getCategoryList()) — this is what makes it a "proper"
+  // category system rather than something recipes track separately — plus
+  // any category already in use on a recipe that hasn't been added to that
+  // shared list yet (e.g. one that came in through the eRecipe import tool).
+  // No icon prefix here: a <datalist> option's value has to be the plain
+  // category name (that's what actually gets saved), and giving the option
+  // a *different* visible label than its value is exactly what makes some
+  // browsers show the name twice in the suggestion list. Icons still show
+  // everywhere it's actually useful to see them at a glance — group tiles,
+  // the Admin genre manager — just not in this free-text picker.
+  const recipeOnlyCats = _recipes.map(r => r.chapterName || r.category).filter(Boolean);
+  const cats = [...new Set([...getCategoryList(), ...recipeOnlyCats])].sort((a, b) => a.localeCompare(b));
+  document.getElementById('reCategoryList').innerHTML = cats.map(c => `<option value="${esc(c)}"></option>`).join('');
+
+  overlay.style.display = 'flex';
+}
+
+function closeRecipeEditor() {
+  const el = document.getElementById('recipeEditorOverlay');
+  if (el) el.style.display = 'none';
+}
+
+async function saveRecipeFromEditor() {
+  const overlay = document.getElementById('recipeEditorOverlay');
+  const title = document.getElementById('reTitle').value.trim();
+  if (!title) { showToast('Please enter a title'); return; }
+  const ingredients = document.getElementById('reIngredients').value.split('\n').map(l => l.trim()).filter(Boolean);
+  const steps = document.getElementById('reSteps').value.split('\n').map(l => l.trim()).filter(Boolean);
+  if (!ingredients.length) { showToast('Please add at least one ingredient'); return; }
+  if (!steps.length) { showToast('Please add at least one step'); return; }
+
+  const payload = {
+    title,
+    chapterName: document.getElementById('reCategory').value.trim() || 'Uncategorised',
+    desc: document.getElementById('reDesc').value.trim(),
+    ingredients,
+    steps,
+    tip: document.getElementById('reTip').value.trim(),
+    visibility: overlay.dataset.vis || 'private',
+    coverUrl: overlay.dataset.pendingCoverUrl || null,
+    updatedAt: serverTimestamp(),
+  };
+
+  // A category typed in that isn't in the shared list yet (books/audio use
+  // the same list) gets registered the same way the Admin "add genre" flow
+  // does — same collection, same default-icon fallback — so it immediately
+  // becomes a first-class, icon-assignable category rather than a one-off
+  // string that only this recipe knows about.
+  if (payload.chapterName !== 'Uncategorised' && !_categories.includes(payload.chapterName)) {
+    _categories.push(payload.chapterName);
+    _categories.sort((a, b) => a.localeCompare(b));
+    try { await setDoc(doc(db, 'config', 'categories'), { list: _categories }); }
+    catch (e) { console.warn('Failed to register new category:', e); }
+  }
+
+  const saveBtn = document.getElementById('reSaveBtn');
+  saveBtn.disabled = true; saveBtn.textContent = 'Saving…';
+  try {
+    const editId = overlay.dataset.editId;
+    if (editId) {
+      await updateDoc(doc(db, 'recipes', editId), payload);
+    } else {
+      await addDoc(collection(db, 'recipes'), {
+        ...payload,
+        ownerId: currentUser.uid,
+        createdByName: currentUser.displayName || currentUser.email || '',
+        allowedUsers: [],
+        createdAt: serverTimestamp(),
+      });
+    }
+    await loadRecipes();
+    mergeRecipesIntoLibrary();
+    renderAll();
+    closeRecipeEditor();
+    showToast(editId ? 'Recipe updated' : 'Recipe added');
+  } catch (e) {
+    console.error('Failed to save recipe:', e);
+    showToast('Failed to save recipe: ' + e.message);
+  } finally {
+    saveBtn.disabled = false; saveBtn.textContent = 'Save';
+  }
+}
+
+async function deleteRecipeFromEditor() {
+  const overlay = document.getElementById('recipeEditorOverlay');
+  const editId = overlay.dataset.editId;
+  if (!editId) return;
+  if (!confirm('Delete this recipe? This cannot be undone.')) return;
+  try {
+    await deleteDoc(doc(db, 'recipes', editId));
+    await loadRecipes();
+    mergeRecipesIntoLibrary();
+    renderAll();
+    closeRecipeEditor();
+    closeRecipeCookMode();
+    showToast('Recipe deleted');
+  } catch (e) {
+    console.error('Failed to delete recipe:', e);
+    showToast('Failed to delete recipe: ' + e.message);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// IMPORT FROM eRECIPE — one-time tool. eLibrary and eRecipe are separate
+// origins/apps, so there's no live cross-origin read; the person exports
+// eRecipe's local `data` object (matching js/data.js: {chapters:[...],
+// recipes:[...]}) and pastes/uploads the JSON here. Idempotent: re-running
+// skips recipes already imported (matched by title + sourceApp tag), so
+// it's safe to run again after adding a few more recipes in eRecipe.
+// ═══════════════════════════════════════════════════════════════════════════
+
+function _ieEnsureModal() {
+  if (document.getElementById('importERecipeOverlay')) return;
+  const el = document.createElement('div');
+  el.id = 'importERecipeOverlay';
+  el.style.cssText = 'position:fixed;inset:0;z-index:520;background:rgba(15,26,46,.55);display:none;align-items:center;justify-content:center;padding:1rem;';
+  el.innerHTML = `
+    <div style="background:var(--warm-white);border-radius:12px;max-width:560px;width:100%;max-height:88vh;overflow-y:auto;padding:1.4rem;box-sizing:border-box;">
+      <div style="display:flex;align-items:center;gap:.6rem;margin-bottom:.6rem;">
+        <div style="font-family:'Playfair Display',serif;font-size:1.15rem;color:var(--navy);flex:1;">Import from eRecipe</div>
+        <button onclick="closeImportERecipeModal()" style="border:none;background:none;font-size:1.2rem;cursor:pointer;color:var(--muted);">✕</button>
+      </div>
+      <div style="font-size:.82rem;color:var(--muted);line-height:1.5;margin-bottom:1rem;">
+        In eRecipe, open the browser console (F12) and run:
+        <div style="background:var(--panel);border-radius:6px;padding:.5rem .7rem;margin:.4rem 0;font-family:ui-monospace,Menlo,monospace;font-size:.78rem;user-select:all;">copy(JSON.stringify(data))</div>
+        This copies your chapters and recipes to the clipboard. Paste it below, or upload the file if you exported one instead.
+      </div>
+      <textarea id="ieJsonInput" class="re-input re-mono" rows="6" placeholder='{"chapters":[...],"recipes":[...]}'></textarea>
+      <div style="display:flex;align-items:center;gap:.6rem;margin-top:.6rem;">
+        <label for="ieFileInput" style="border:1px solid var(--border);border-radius:20px;padding:.4rem 1rem;font-size:.8rem;cursor:pointer;color:var(--teal-dark);">📄 Upload JSON file</label>
+        <input id="ieFileInput" type="file" accept="application/json,.json" style="display:none;"/>
+        <span id="ieFileName" style="font-size:.78rem;color:var(--muted);"></span>
+      </div>
+      <div id="ieResults" style="margin-top:1rem;max-height:200px;overflow-y:auto;font-size:.8rem;"></div>
+      <div style="display:flex;justify-content:flex-end;gap:.6rem;margin-top:1.2rem;">
+        <button onclick="closeImportERecipeModal()" style="border:1px solid var(--border);background:none;border-radius:20px;padding:.5rem 1.1rem;font-size:.85rem;cursor:pointer;color:var(--muted);">Cancel</button>
+        <button id="ieImportBtn" style="border:none;background:var(--teal);color:var(--warm-white);font-weight:700;font-size:.85rem;padding:.5rem 1.2rem;border-radius:20px;cursor:pointer;">Import</button>
+      </div>
+    </div>`;
+  document.body.appendChild(el);
+
+  document.getElementById('ieFileInput').addEventListener('change', e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    document.getElementById('ieFileName').textContent = file.name;
+    const reader = new FileReader();
+    reader.onload = () => { document.getElementById('ieJsonInput').value = reader.result; };
+    reader.readAsText(file);
+  });
+  document.getElementById('ieImportBtn').addEventListener('click', runImportFromERecipe);
+}
+
+function showImportERecipeModal() {
+  if (!currentUser) { showToast('Please sign in first'); return; }
+  _ieEnsureModal();
+  document.getElementById('ieJsonInput').value = '';
+  document.getElementById('ieFileName').textContent = '';
+  document.getElementById('ieResults').innerHTML = '';
+  document.getElementById('importERecipeOverlay').style.display = 'flex';
+}
+
+function closeImportERecipeModal() {
+  const el = document.getElementById('importERecipeOverlay');
+  if (el) el.style.display = 'none';
+}
+
+// This script runs as type="module", so top-level function declarations are
+// module-scoped, not attached to `window` — unlike a classic <script>. Every
+// function below is called from an inline onclick="..." attribute inside
+// HTML built with innerHTML (cook mode, the recipe editor, the import
+// modal), and the browser resolves those attribute handlers against the
+// global scope, not module scope. Without this, clicking any of these
+// throws "X is not defined". (Buttons wired via addEventListener don't need
+// this — they hold a direct reference to the function already.)
+window.closeRecipeCookMode = closeRecipeCookMode;
+window.cmTimerAdd = cmTimerAdd;
+window.cmTimerReset = cmTimerReset;
+window.cmTimerRemove = cmTimerRemove;
+window.closeRecipeEditor = closeRecipeEditor;
+window.closeImportERecipeModal = closeImportERecipeModal;
+
+function _ieLog(msg, color) {
+  const results = document.getElementById('ieResults');
+  results.insertAdjacentHTML('beforeend', `<div style="padding:.15rem 0;color:${color || 'var(--navy)'};">${esc(msg)}</div>`);
+  results.scrollTop = results.scrollHeight;
+}
+
+async function runImportFromERecipe() {
+  const raw = document.getElementById('ieJsonInput').value.trim();
+  if (!raw) { showToast('Paste or upload eRecipe\'s exported JSON first'); return; }
+
+  let parsed;
+  try { parsed = JSON.parse(raw); }
+  catch (e) { showToast('That doesn\'t look like valid JSON'); return; }
+
+  const chapters = Array.isArray(parsed.chapters) ? parsed.chapters : [];
+  const recipes = Array.isArray(parsed.recipes) ? parsed.recipes : [];
+  if (!recipes.length) { showToast('No recipes found in that data'); return; }
+
+  const chapterName = id => chapters.find(c => c.id === id)?.name || 'Uncategorised';
+
+  // Register every eRecipe chapter name that isn't already a known category
+  // (books/audio share this same list) — one batched write rather than one
+  // per recipe, so importing 30 recipes across 5 chapters only touches
+  // config/categories once.
+  const newCats = [...new Set(chapters.map(c => c.name).filter(Boolean))]
+    .filter(name => name !== 'Uncategorised' && !_categories.includes(name));
+  if (newCats.length) {
+    _categories.push(...newCats);
+    _categories.sort((a, b) => a.localeCompare(b));
+    try { await setDoc(doc(db, 'config', 'categories'), { list: _categories }); }
+    catch (e) { console.warn('Failed to register imported categories:', e); }
+  }
+
+  // Idempotency: skip anything already imported with the same title, so
+  // re-running after adding a few new recipes in eRecipe doesn't duplicate
+  // what's already here. Requires this user's own recipes to be loaded.
+  await loadRecipes();
+  const alreadyImported = new Set(
+    _recipes.filter(r => r.sourceApp === 'eRecipe').map(r => r.title)
+  );
+
+  const btn = document.getElementById('ieImportBtn');
+  btn.disabled = true; btn.textContent = 'Importing…';
+  document.getElementById('ieResults').innerHTML = '';
+
+  let imported = 0, skipped = 0, failed = 0;
+  for (const r of recipes) {
+    const title = r.title || 'Untitled Recipe';
+    if (alreadyImported.has(title)) {
+      _ieLog(`⏭ Skipped "${title}" (already imported)`, 'var(--muted)');
+      skipped++;
+      continue;
+    }
+    try {
+      await addDoc(collection(db, 'recipes'), {
+        title,
+        chapterName: chapterName(r.chapterId),
+        desc: r.desc || '',
+        ingredients: Array.isArray(r.ingredients) ? r.ingredients : [],
+        steps: Array.isArray(r.steps) ? r.steps : [],
+        tip: r.tip || '',
+        visibility: 'private',
+        ownerId: currentUser.uid,
+        createdByName: r.createdByName || currentUser.displayName || currentUser.email || '',
+        allowedUsers: [],
+        sourceApp: 'eRecipe',
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      });
+      _ieLog(`✓ Imported "${title}"`, '#2a7a4a');
+      imported++;
+    } catch (e) {
+      console.error('Failed to import recipe:', title, e);
+      _ieLog(`✕ Failed "${title}": ${e.message}`, 'var(--danger)');
+      failed++;
+    }
+  }
+
+  btn.disabled = false; btn.textContent = 'Import';
+  _ieLog(`── Done: ${imported} imported, ${skipped} skipped, ${failed} failed ──`, 'var(--navy)');
+  showToast(`Imported ${imported} recipe${imported === 1 ? '' : 's'}${skipped ? `, skipped ${skipped}` : ''}`);
+
+  if (imported > 0) {
+    await loadRecipes();
+    mergeRecipesIntoLibrary();
+    renderAll();
   }
 }
 
