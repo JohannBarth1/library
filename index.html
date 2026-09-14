@@ -380,6 +380,14 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 }
 .book-card.group-tile .group-stack-edge.e1{top:6px;transform:scale(.96);z-index:1;filter:brightness(.85);}
 .book-card.group-tile .group-stack-edge.e2{top:11px;transform:scale(.92);z-index:0;filter:brightness(.7);}
+.cat-cover-edit-btn{
+  position:absolute;bottom:6px;right:6px;z-index:3;
+  width:26px;height:26px;border-radius:50%;border:none;
+  background:rgba(15,26,46,.65);color:var(--warm-white);
+  font-size:.8rem;line-height:1;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+}
+.cat-cover-edit-btn:active{background:rgba(15,26,46,.85);}
 .group-part-badge{
   font-size:.62rem;color:var(--teal-dark);font-weight:600;white-space:nowrap;overflow:hidden;
   text-overflow:ellipsis;margin-top:.15rem;display:flex;align-items:center;gap:.2rem;
@@ -3201,6 +3209,7 @@ let _userLists = [];
 let _categories = [];
 let _globalTags = [];
 let _categoryIcons = {};   // { "Fiction": "📖", ... } — per-item emoji, editable in Admin
+let _categoryImages = {};  // { "Desserts": "https://...", ... } — custom cover image for a recipe category's group tile, uploaded from the library grid
 let _tagIcons = {};        // { "Favourite": "❤️", ... } — per-item emoji, editable in Admin
 
 // Reader state
@@ -4382,6 +4391,7 @@ function renderGrid(gridId){
         <div class="group-stack-edge e2"></div>
         <div class="group-stack-edge e1"></div>
         ${coverSrc?`<img class="book-card-cover" src="${coverSrc}" alt="" loading="lazy"/>`:`<div class="book-card-cover-ph"><div class="ph-icon">${icon}</div><div class="ph-title">${esc(b.title)}</div><div class="ph-author">${esc(b.author)}</div></div>`}
+        ${b.isRecipe?`<button type="button" class="cat-cover-edit-btn" data-action="editcatcover" data-cat="${esc(b.category)}" title="Change category image">📷</button>`:''}
       </div><div class="select-check">✓</div>
       <div class="book-card-body"><div class="book-card-title">${esc(b.title)}</div>
       <div class="book-card-author">${esc(b.author)}</div>
@@ -4409,6 +4419,8 @@ function renderGrid(gridId){
 }
 
 document.getElementById('deskBookGrid').addEventListener('click',e=>{
+  const catCoverBtn=e.target.closest('[data-action="editcatcover"]');
+  if(catCoverBtn && !selectMode){ pickCategoryImage(catCoverBtn.dataset.cat); return; }
   const header=e.target.closest('.group-header-tile[data-groupkey]');
   if(header && !selectMode){ toggleSeriesGroupExpanded(header.dataset.groupkey); return; }
   const card=e.target.closest('.book-card[data-bookid]');if(!card)return;
@@ -4472,7 +4484,7 @@ function updateDeskFilterPillLabels() {
 }
 
 document.getElementById('deskPillCat').addEventListener('click', (e) => {
-  const srcForCats = activeBooks();
+  const srcForCats = activeBooks().filter(b => !b.isRecipe);
   const cats = {};
   srcForCats.forEach(b => { const c = b.category || 'Uncategorised'; cats[c] = (cats[c] || 0) + 1; });
   const items = [
@@ -5775,7 +5787,7 @@ function openMobFilterPicker({ anchor, title, items, isSelected, onSelect, multi
 }
 
 document.getElementById('mfpCat').addEventListener('click', (e) => {
-  const srcForCats = getMobLibSourceBooks();
+  const srcForCats = getMobLibSourceBooks().filter(b => !b.isRecipe);
   const cats = {};
   srcForCats.forEach(b => { const c = b.category || 'Uncategorised'; cats[c] = (cats[c] || 0) + 1; });
   const items = [
@@ -5881,7 +5893,7 @@ function renderMobLibrary() {
   document.getElementById('mobGridLibrary').classList.remove('select-mode');
   // Category chips (legacy hidden chip row — kept in sync so nothing errors
   // if it's ever shown again; the live UI is the mfpCat picker below)
-  const srcForCats = getMobLibSourceBooks();
+  const srcForCats = getMobLibSourceBooks().filter(b => !b.isRecipe);
   const cats = {};
   srcForCats.forEach(b => { const c = b.category || 'Uncategorised'; cats[c] = (cats[c] || 0) + 1; });
   document.getElementById('mobLibCatChips').innerHTML =
@@ -5952,6 +5964,8 @@ document.getElementById('mobGridLibrary').addEventListener('touchstart', e => {
   }, {passive: true});
 
 document.getElementById('mobGridLibrary').addEventListener('click', e => {
+  const catCoverBtn = e.target.closest('[data-action="editcatcover"]');
+  if(catCoverBtn && !mobSelectMode){ pickCategoryImage(catCoverBtn.dataset.cat); return; }
   const header = e.target.closest('.group-header-tile[data-groupkey]');
   if(header && !mobSelectMode){ toggleSeriesGroupExpanded(header.dataset.groupkey); return; }
   const card = e.target.closest('.book-card[data-bookid]');
@@ -6956,6 +6970,7 @@ function bookCardHtml(b, isComm, showProgress=false){
         <div class="group-stack-edge e2"></div>
         <div class="group-stack-edge e1"></div>
         ${coverHtml}
+        ${b.isRecipe?`<button type="button" class="cat-cover-edit-btn" data-action="editcatcover" data-cat="${esc(b.category)}" title="Change category image">📷</button>`:''}
       </div>
       <div class="book-card-body">
         <div class="book-card-title">${esc(b.title)}</div>
@@ -9033,6 +9048,43 @@ let _expandedSeriesGroups = new Set();
 // generic 🍲 rather than the folder icon catIcon() uses for other content.
 function recipeCatIcon(cat) { return _categoryIcons[cat] || '🍲'; }
 
+// Lets an owner/admin set a custom cover image for a recipe category's group
+// tile (the 📷 button on the tile itself), overriding the "first recipe with
+// a cover" fallback in collapseRecipesByCategoryForGrid below. Same
+// upload-immediately-to-Storage pattern as the recipe cover uploader
+// (_reHandleCoverFile) — a fresh, throwaway file input rather than a modal,
+// since this is a single one-shot action off the grid.
+function pickCategoryImage(cat) {
+  if (!currentUser) { showToast('Please sign in first'); return; }
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = 'image/*';
+  input.style.display = 'none';
+  document.body.appendChild(input);
+  input.addEventListener('change', async () => {
+    const file = input.files[0];
+    input.remove();
+    if (!file) return;
+    showLoading('Uploading…');
+    try {
+      const safeName = `${Date.now()}_${file.name.replace(/[^a-zA-Z0-9._\-]/g, '_')}`;
+      const safeCat = cat.replace(/[^a-zA-Z0-9._\-]/g, '_');
+      const imgRef = storageRef(storage, `category_covers/${safeCat}/${safeName}`);
+      await uploadBytes(imgRef, file);
+      const url = await getDownloadURL(imgRef);
+      await setCategoryImage(cat, url);
+      hideLoading();
+      renderAll();
+      renderMobLibrary();
+      showToast('Category image updated ✓');
+    } catch (e) {
+      hideLoading();
+      showToast('Upload failed: ' + e.message);
+    }
+  });
+  input.click();
+}
+
 function collapseRecipesByCategoryForGrid(books) {
   const recipes = books.filter(b => b.isRecipe);
   if (!recipes.length) return books;
@@ -9058,8 +9110,9 @@ function collapseRecipesByCategoryForGrid(books) {
         groupIds: group.map(r => r.id),
         groupKey: key,
         title: cat,
+        category: cat,
         author: '',
-        coverUrl: group.find(r => r.coverUrl)?.coverUrl || null,
+        coverUrl: _categoryImages[cat] || group.find(r => r.coverUrl)?.coverUrl || null,
         isRecipe: true,
         partCount: group.length,
         icon,
@@ -16069,6 +16122,9 @@ async function loadConfig() {
       await setDoc(doc(db, 'config', 'categoryIcons'), { map: _categoryIcons });
     }
 
+    const catImageSnap = await getDoc(doc(db, 'config', 'categoryImages'));
+    _categoryImages = catImageSnap.exists() ? catImageSnap.data().map || {} : {};
+
     const tagIconSnap = await getDoc(doc(db, 'config', 'tagIcons'));
     _tagIcons = tagIconSnap.exists()
       ? tagIconSnap.data().map || {}
@@ -16081,6 +16137,7 @@ async function loadConfig() {
     _categories = [...SYSTEM_CATEGORIES];
     _globalTags = [...SYSTEM_TAGS];
     _categoryIcons = { ...DEFAULT_CATEGORY_ICONS };
+    _categoryImages = {};
     _tagIcons = { ...DEFAULT_TAG_ICONS };
   }
 }
@@ -16094,6 +16151,10 @@ function tagIcon(name){ return _tagIcons[name] || '🏷️'; }
 async function setCatIcon(name, icon){
   _categoryIcons[name] = icon;
   await setDoc(doc(db, 'config', 'categoryIcons'), { map: _categoryIcons });
+}
+async function setCategoryImage(name, url){
+  if(url) _categoryImages[name] = url; else delete _categoryImages[name];
+  await setDoc(doc(db, 'config', 'categoryImages'), { map: _categoryImages });
 }
 async function setTagIcon(name, icon){
   _tagIcons[name] = icon;
