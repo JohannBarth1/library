@@ -380,14 +380,6 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 }
 .book-card.group-tile .group-stack-edge.e1{top:6px;transform:scale(.96);z-index:1;filter:brightness(.85);}
 .book-card.group-tile .group-stack-edge.e2{top:11px;transform:scale(.92);z-index:0;filter:brightness(.7);}
-.cat-cover-edit-btn{
-  position:absolute;bottom:6px;right:6px;z-index:3;
-  width:26px;height:26px;border-radius:50%;border:none;
-  background:rgba(15,26,46,.65);color:var(--warm-white);
-  font-size:.8rem;line-height:1;cursor:pointer;
-  display:flex;align-items:center;justify-content:center;
-}
-.cat-cover-edit-btn:active{background:rgba(15,26,46,.85);}
 .group-part-badge{
   font-size:.62rem;color:var(--teal-dark);font-weight:600;white-space:nowrap;overflow:hidden;
   text-overflow:ellipsis;margin-top:.15rem;display:flex;align-items:center;gap:.2rem;
@@ -4391,7 +4383,6 @@ function renderGrid(gridId){
         <div class="group-stack-edge e2"></div>
         <div class="group-stack-edge e1"></div>
         ${coverSrc?`<img class="book-card-cover" src="${coverSrc}" alt="" loading="lazy"/>`:`<div class="book-card-cover-ph"><div class="ph-icon">${icon}</div><div class="ph-title">${esc(b.title)}</div><div class="ph-author">${esc(b.author)}</div></div>`}
-        ${b.isRecipe?`<button type="button" class="cat-cover-edit-btn" data-action="editcatcover" data-cat="${esc(b.category)}" title="Change category image">📷</button>`:''}
       </div><div class="select-check">✓</div>
       <div class="book-card-body"><div class="book-card-title">${esc(b.title)}</div>
       <div class="book-card-author">${esc(b.author)}</div>
@@ -4419,8 +4410,6 @@ function renderGrid(gridId){
 }
 
 document.getElementById('deskBookGrid').addEventListener('click',e=>{
-  const catCoverBtn=e.target.closest('[data-action="editcatcover"]');
-  if(catCoverBtn && !selectMode){ pickCategoryImage(catCoverBtn.dataset.cat); return; }
   const header=e.target.closest('.group-header-tile[data-groupkey]');
   if(header && !selectMode){ toggleSeriesGroupExpanded(header.dataset.groupkey); return; }
   const card=e.target.closest('.book-card[data-bookid]');if(!card)return;
@@ -5964,8 +5953,6 @@ document.getElementById('mobGridLibrary').addEventListener('touchstart', e => {
   }, {passive: true});
 
 document.getElementById('mobGridLibrary').addEventListener('click', e => {
-  const catCoverBtn = e.target.closest('[data-action="editcatcover"]');
-  if(catCoverBtn && !mobSelectMode){ pickCategoryImage(catCoverBtn.dataset.cat); return; }
   const header = e.target.closest('.group-header-tile[data-groupkey]');
   if(header && !mobSelectMode){ toggleSeriesGroupExpanded(header.dataset.groupkey); return; }
   const card = e.target.closest('.book-card[data-bookid]');
@@ -6970,7 +6957,6 @@ function bookCardHtml(b, isComm, showProgress=false){
         <div class="group-stack-edge e2"></div>
         <div class="group-stack-edge e1"></div>
         ${coverHtml}
-        ${b.isRecipe?`<button type="button" class="cat-cover-edit-btn" data-action="editcatcover" data-cat="${esc(b.category)}" title="Change category image">📷</button>`:''}
       </div>
       <div class="book-card-body">
         <div class="book-card-title">${esc(b.title)}</div>
@@ -9049,12 +9035,13 @@ let _expandedSeriesGroups = new Set();
 function recipeCatIcon(cat) { return _categoryIcons[cat] || '🍲'; }
 
 // Lets an owner/admin set a custom cover image for a recipe category's group
-// tile (the 📷 button on the tile itself), overriding the "first recipe with
-// a cover" fallback in collapseRecipesByCategoryForGrid below. Same
-// upload-immediately-to-Storage pattern as the recipe cover uploader
-// (_reHandleCoverFile) — a fresh, throwaway file input rather than a modal,
-// since this is a single one-shot action off the grid.
-function pickCategoryImage(cat) {
+// tile in the library grid, overriding the "first recipe with a cover"
+// fallback in collapseRecipesByCategoryForGrid below. Invoked from the
+// Admin panel's Recipe Categories section (adminLoadRecipeCategories).
+// Uses a fresh, throwaway file input rather than a modal, since this is a
+// single one-shot action; onDone lets the caller refresh its own UI once
+// the upload (or removal, when file is null) finishes.
+function pickCategoryImage(cat, onDone) {
   if (!currentUser) { showToast('Please sign in first'); return; }
   const input = document.createElement('input');
   input.type = 'file';
@@ -9077,6 +9064,7 @@ function pickCategoryImage(cat) {
       renderAll();
       renderMobLibrary();
       showToast('Category image updated ✓');
+      if (onDone) onDone();
     } catch (e) {
       hideLoading();
       showToast('Upload failed: ' + e.message);
@@ -17082,6 +17070,61 @@ async function adminLoadCategories() {
   addInput?.addEventListener('keydown', e => { if(e.key === 'Enter') doAdd(); });
 }
 
+async function adminLoadRecipeCategories() {
+  const el = document.getElementById('adminRecipeCatBody');
+  if(!el) return;
+  el.innerHTML = '<div style="color:var(--muted);font-size:.85rem">Loading…</div>';
+
+  const cats = Array.from(new Set([
+    ..._recipes.map(r => r.chapterName || r.category).filter(Boolean),
+    ...Object.keys(_categoryImages),
+  ])).sort();
+
+  if(!cats.length) {
+    el.innerHTML = '<div style="color:var(--muted);font-size:.85rem">No recipe categories yet — add a category while editing a recipe.</div>';
+    return;
+  }
+
+  el.innerHTML = `
+    <div id="adminRecipeCatList">
+      ${cats.map((c, i) => `
+        <div class="cat-admin-row" data-recipecatidx="${i}">
+          ${_categoryImages[c]
+            ? `<img src="${esc(_categoryImages[c])}" alt="" style="width:2.1rem;height:2.1rem;object-fit:cover;border-radius:6px;border:1px solid var(--border);"/>`
+            : `<span style="width:2.1rem;height:2.1rem;display:flex;align-items:center;justify-content:center;font-size:.95rem;border:1px solid var(--border);border-radius:6px;background:var(--cream);">${recipeCatIcon(c)}</span>`}
+          <span class="cat-admin-name">${esc(c)}</span>
+          <button class="admin-copy-btn" data-recipecat-upload="${i}">${_categoryImages[c] ? '✎' : '+ Image'}</button>
+          ${_categoryImages[c] ? `<button class="admin-copy-btn" style="color:var(--danger);border-color:#e0b0b0;" data-recipecat-remove="${i}">✕</button>` : ''}
+        </div>`).join('')}
+    </div>`;
+
+  el.querySelectorAll('[data-recipecat-upload]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const cat = cats[parseInt(btn.dataset.recipecatUpload)];
+      pickCategoryImage(cat, adminLoadRecipeCategories);
+    });
+  });
+
+  el.querySelectorAll('[data-recipecat-remove]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const cat = cats[parseInt(btn.dataset.recipecatRemove)];
+      if(!confirm(`Remove the custom image for "${cat}"?`)) return;
+      showLoading('Removing…');
+      try {
+        await setCategoryImage(cat, null);
+        hideLoading();
+        renderAll();
+        renderMobLibrary();
+        showToast('Image removed ✓');
+        adminLoadRecipeCategories();
+      } catch(e) {
+        hideLoading();
+        showToast('Failed: ' + e.message);
+      }
+    });
+  });
+}
+
 async function adminLoadTags() {
   const el = document.getElementById('adminTagBody');
   if(!el) return;
@@ -17296,6 +17339,16 @@ function buildAdminSections() {
       </div>
     </div>
 
+    <div class="admin-section">
+      <div class="admin-section-header" data-admin-section="recipecats">
+        <span class="admin-section-title">🍲 Recipe Categories</span>
+        <span class="admin-section-chevron">▾</span>
+      </div>
+      <div class="admin-section-body" id="adminRecipeCatBody">
+        <div style="color:var(--muted);font-size:.85rem">Open to load…</div>
+      </div>
+    </div>
+
         <div class="admin-section">
       <div class="admin-section-header" data-admin-section="tags">
         <span class="admin-section-title">🏷 Tags</span>
@@ -17328,6 +17381,7 @@ function buildAdminSections() {
         if(section === 'kobo')        adminLoadKoboDevices();
         if(section === 'users')       adminLoadUsers();
         if(section === 'categories')  adminLoadCategories();
+        if(section === 'recipecats')  adminLoadRecipeCategories();
         if(section === 'bookmarks')   adminLoadBookmarks();
         if(section === 'tags')        adminLoadTags();
       }
