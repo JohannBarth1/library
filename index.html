@@ -4230,8 +4230,8 @@ async function setBookVisibilityFromDrawer(vis) {
     }
     hideLoading();
     renderAll();
-    await showBookById(currentId);
-    await mob_showBook(currentId, { preserveState: true });
+    if(window.innerWidth > 768) await showBookById(currentId);
+    else await mob_showBook(currentId, { preserveState: true });
     const label = vis === 'public' ? 'published' : vis === 'restricted' ? 'set to Restricted' : 'set to Private';
     showToast(`"${book.title}" ${label} ✓`);
   } catch(e) {
@@ -5452,7 +5452,10 @@ document.getElementById('btnSaveEditMeta').addEventListener('click',async()=>{
     await updateDoc(doc(db, collectionForBook(book), currentId),updates);
     Object.assign(book,updates);
     if(book.isAudio && book._audioTrack) Object.assign(book._audioTrack,updates);
-    hideLoading();renderAll();showBookById(currentId);showToast('Details saved ✓');
+    hideLoading();renderAll();
+    if(window.innerWidth > 768) showBookById(currentId);
+    else mob_showBook(currentId, { preserveState: true });
+    showToast('Details saved ✓');
   }catch(e){hideLoading();showToast('Save failed: '+e.message);}
 });
 
