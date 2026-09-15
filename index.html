@@ -4343,6 +4343,13 @@ function renderSkeleton(gridId,count=12){
   grid.innerHTML=Array.from({length:count},()=>`<div class="skeleton-card"><div class="skeleton-cover"></div><div class="skeleton-body"><div class="skeleton-line"></div><div class="skeleton-line short"></div></div></div>`).join('');
 }
 function renderAll(){
+  // The open recipe folder is global state shared by the desktop and mobile
+  // grids, so it must be validated against the whole library here — never
+  // from inside a per-grid render, where one surface's filters would clobber
+  // the other's (that's what broke opening a category on mobile).
+  if(_openRecipeCategory && !dedupe([...library,...communityLib]).some(b=>b.isRecipe&&(b.category||'Uncategorised')===_openRecipeCategory)){
+    _openRecipeCategory = null;
+  }
   updateDeskFilterPillLabels();
   document.getElementById('deskBookGrid').classList.toggle('select-mode',selectMode);
   renderGrid('deskBookGrid');renderMobLibrary();renderMobHome();
@@ -4372,7 +4379,6 @@ function renderGrid(gridId){
   const grid=document.getElementById(gridId);if(!grid)return;
   const books=filteredBooks();
   if(!books.length){
-    _openRecipeCategory = null;
     renderRecipeFolderBar(grid, 'deskRecipeFolderBar', 0);
     const isEmpty=activeBooks().length===0;
     const canUpload=deskLibFilter==='all'||deskLibFilter==='private';
@@ -5915,8 +5921,7 @@ function renderMobLibrary() {
   const books = getMobLibBooks();
   const grid = document.getElementById('mobGridLibrary');
   if (!books.length) {
-    _openRecipeCategory = null;
-    renderRecipeFolderBar(grid, 'deskRecipeFolderBar', 0);
+    renderRecipeFolderBar(grid, 'mobRecipeFolderBar', 0);
     grid.innerHTML = `<div style="grid-column:1/-1;padding:3rem 1rem;text-align:center;color:var(--muted)">
       <div style="font-size:2.5rem;opacity:.2;margin-bottom:.8rem">📚</div>
       <div style="font-size:.88rem">${mobLibSearch ? 'No books match your search' : 'No books here yet'}</div>
@@ -5924,7 +5929,7 @@ function renderMobLibrary() {
     return;
   }
   const gridBooks = collapseAudioSeriesForGrid(collapseRecipesByCategoryForGrid(books));
-  renderRecipeFolderBar(grid, 'deskRecipeFolderBar', gridBooks.filter(b=>b.isRecipe&&!b.isGroup).length);
+  renderRecipeFolderBar(grid, 'mobRecipeFolderBar', gridBooks.filter(b=>b.isRecipe&&!b.isGroup).length);
   reconcileGrid(grid, gridBooks, b => b.id, b => {
     const isComm = communityLib.some(x => x.id === b.id);
     return bookCardHtml(b, isComm);
@@ -9113,7 +9118,7 @@ function pickCategoryImage(cat, onDone) {
 
 function collapseRecipesByCategoryForGrid(books) {
   const recipes = books.filter(b => b.isRecipe);
-  if (!recipes.length) { _openRecipeCategory = null; return books; }
+  if (!recipes.length) return books;
   const others = books.filter(b => !b.isRecipe);
   const byCat = new Map();
   recipes.forEach(r => {
@@ -9124,12 +9129,8 @@ function collapseRecipesByCategoryForGrid(books) {
   // Drilled into a category: show only its recipes, flat — no folder tiles,
   // no inline header row. The persistent breadcrumb bar (renderRecipeFolderBar)
   // is what tells the person where they are; going "back" is closeRecipeCategory().
-  if (_openRecipeCategory) {
-    if (byCat.has(_openRecipeCategory)) return [...others, ...byCat.get(_openRecipeCategory)];
-    // The open category emptied out (last recipe moved/deleted) or was
-    // renamed while open — fall back to the folder grid instead of showing
-    // a dead end.
-    _openRecipeCategory = null;
+  if (_openRecipeCategory && byCat.has(_openRecipeCategory)) {
+    return [...others, ...byCat.get(_openRecipeCategory)];
   }
   const out = [...others];
   [...byCat.keys()].sort((a, b) => a.localeCompare(b)).forEach(cat => {
