@@ -368,8 +368,13 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .book-card.audio-tile .book-card-cover,
 .book-card.audio-tile .book-card-cover-ph{aspect-ratio:1/1;}
 .book-card.audio-tile .book-card-cover-ph{background:linear-gradient(145deg,var(--rust,#8a4a3a),#5c2f26);}
-.book-card-cover-ph.recipe-cat-ph{padding:0;}
-.book-card-cover-ph.recipe-cat-ph .cat-emoji-big{font-size:3.4rem;opacity:.9;line-height:1;}
+/* Recipe category (folder) tiles get their own consistent gold treatment,
+   distinct from the navy "missing cover" placeholder used for books, so a
+   folder reads as a folder rather than a book without a cover. Same accent
+   for every category — the icon is what tells them apart, not the colour. */
+.book-card-cover-ph.recipe-cat-ph{padding:0;background:linear-gradient(145deg,var(--gold),var(--gold2));}
+.book-card-cover-ph.recipe-cat-ph .cat-emoji-big{font-size:3.4rem;opacity:.95;line-height:1;filter:drop-shadow(0 1px 1px rgba(0,0,0,.15));}
+.book-card.group-tile.recipe-tile .group-stack-edge{background:linear-gradient(145deg,var(--gold),var(--gold2));}
 /* Collapsed multi-part audio series — a stacked-card look (peeking edges
    behind the front cover) plus a part-count badge, so a whole series reads
    as one tile instead of N. */
@@ -400,6 +405,15 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .group-header-count{font-size:.72rem;color:var(--muted);margin-left:.5rem;font-weight:400;font-family:'Lato',sans-serif;}
 .group-header-collapse{font-size:.68rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--gold);white-space:nowrap;}
 .book-card.group-member{box-shadow:0 0 0 2px rgba(200,149,42,.3);}
+/* Persistent breadcrumb shown above the grid while a recipe category
+   ("folder") is open — see renderRecipeFolderBar / openRecipeCategory /
+   closeRecipeCategory. Inserted as a sibling of the grid, not a grid item. */
+.recipe-folder-bar{display:flex;align-items:center;gap:.7rem;padding:.6rem .9rem;margin:0 0 .8rem;background:var(--warm-white);border:1px solid rgba(200,149,42,.35);border-radius:10px;position:sticky;top:0;z-index:5;}
+.recipe-folder-bar .rfb-back{width:32px;height:32px;flex-shrink:0;border-radius:50%;border:1px solid rgba(200,149,42,.4);background:transparent;color:var(--gold);font-size:1rem;line-height:1;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:background .15s;}
+.recipe-folder-bar .rfb-back:hover{background:rgba(200,149,42,.14);}
+.recipe-folder-bar .rfb-icon{width:34px;height:34px;flex-shrink:0;border-radius:8px;background:linear-gradient(145deg,var(--gold),var(--gold2));display:flex;align-items:center;justify-content:center;font-size:1.15rem;}
+.recipe-folder-bar .rfb-title{font-family:'Playfair Display',serif;font-weight:700;font-size:.95rem;color:var(--navy2);line-height:1.25;}
+.recipe-folder-bar .rfb-count{font-size:.72rem;color:var(--muted);margin-top:1px;}
 .audio-tile .book-card-body{height:84px;}
 .book-card-duration{font-size:.62rem;color:var(--teal-dark);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:.15rem;}
 @keyframes tilePopIn{from{opacity:0;transform:scale(.9) translateY(4px);}to{opacity:1;transform:scale(1) translateY(0);}}
@@ -4358,6 +4372,8 @@ function renderGrid(gridId){
   const grid=document.getElementById(gridId);if(!grid)return;
   const books=filteredBooks();
   if(!books.length){
+    _openRecipeCategory = null;
+    renderRecipeFolderBar(grid, 'deskRecipeFolderBar', 0);
     const isEmpty=activeBooks().length===0;
     const canUpload=deskLibFilter==='all'||deskLibFilter==='private';
     grid.innerHTML=`<div style="grid-column:1/-1;padding:3rem 1rem;text-align:center;color:var(--muted)"><div style="font-size:2.5rem;opacity:.25;margin-bottom:.8rem">📚</div><div style="font-family:'Playfair Display',serif;font-size:1.1rem;color:var(--navy2);margin-bottom:.4rem">${isEmpty?'Your library is empty':'No books match'}</div><div style="font-size:.85rem">${isEmpty?'Upload a book or audiobook to get started':'Try a different search or filter'}</div>${isEmpty&&canUpload?`<div style="margin-top:1rem;display:flex;gap:.5rem;justify-content:center;flex-wrap:wrap"><button class="hbtn hbtn-upload" id="emptyStateUploadBtn">📤 Upload</button><button class="hbtn hbtn-upload" id="emptyStateUploadAudioBtn">🎧 Upload Audio</button><button class="hbtn hbtn-upload" id="emptyStateAddRecipeBtn">🍲 Add Recipe</button></div>`:''}</div>`;
@@ -4369,6 +4385,7 @@ function renderGrid(gridId){
     return;
   }
   const gridBooks = collapseAudioSeriesForGrid(collapseRecipesByCategoryForGrid(books));
+  renderRecipeFolderBar(grid, 'deskRecipeFolderBar', gridBooks.filter(b=>b.isRecipe&&!b.isGroup).length);
   reconcileGrid(grid, gridBooks, b => b.id, b => {
     const coverSrc=getCoverSrc(b);
     const isSelected=selectedIds.has(b.id);
@@ -4381,7 +4398,7 @@ function renderGrid(gridId){
     }
     if(b.isGroup){
       const icon=b.icon||(b.isRecipe?'🍲':'🎧'), unit=b.isRecipe?'Recipe':'Episode';
-      return `<div class="book-card ${b.isRecipe?'recipe-tile':'audio-tile'} group-tile ${isSelected?'selected':''}" data-bookid="${b.id}" data-groupids="${b.groupIds.join(',')}" data-groupkey="${esc(b.groupKey)}">
+      return `<div class="book-card ${b.isRecipe?'recipe-tile':'audio-tile'} group-tile ${isSelected?'selected':''}" data-bookid="${b.id}" data-groupids="${b.groupIds.join(',')}" data-groupkey="${esc(b.groupKey)}" ${b.isRecipe?`data-cat="${esc(b.category)}"`:''}>
       <div style="position:relative">
         <div class="group-stack-edge e2"></div>
         <div class="group-stack-edge e1"></div>
@@ -4401,10 +4418,10 @@ function renderGrid(gridId){
     const isComm=communityLib.some(x=>x.id===b.id);
     const avg=isComm?getAvgRating(b):0;
     const starsHtml=isComm?[1,2,3,4,5].map(n=>`<span class="bcs ${n<=Math.round(avg)?'filled':''}">★</span>`).join(''):'';
-    const coverHtml=coverSrc?`<img class="book-card-cover" src="${coverSrc}" alt="" loading="lazy"/>`:`<div class="book-card-cover-ph"><div class="ph-icon">📖</div><div class="ph-title">${esc(b.title)}</div><div class="ph-author">${esc(b.author)}</div></div>`;
+    const coverHtml=coverSrc?`<img class="book-card-cover" src="${coverSrc}" alt="" loading="lazy"/>`:`<div class="book-card-cover-ph${b.isRecipe?' recipe-cat-ph':''}"><div class="${b.isRecipe?'cat-emoji-big':'ph-icon'}">${b.isRecipe?'🍲':'📖'}</div>${b.isRecipe?'':`<div class="ph-title">${esc(b.title)}</div><div class="ph-author">${esc(b.author)}</div>`}</div>`;
     // PATCH 4: hide "Shared" badge when browsing the public/community shelf
     const isMyPublicBook=b.ownerId===currentUser?.uid&&b.visibility==='public';
-    return `<div class="book-card ${isSelected?'selected':''}" data-bookid="${b.id}">${coverHtml}<div class="select-check">✓</div>${isMyPublicBook?'<span class="community-badge">Public</span>':''}
+    return `<div class="book-card ${b.isRecipe?'recipe-tile':''} ${isSelected?'selected':''}" data-bookid="${b.id}">${coverHtml}<div class="select-check">✓</div>${isMyPublicBook?'<span class="community-badge">Public</span>':''}
     <div class="book-card-body"><div class="book-card-title">${esc(_seriesTilePrefix(b)+b.title)}</div>
     <div class="book-card-author">${esc(b.author)}</div>
     ${isComm&&b.ownerId!==currentUser?.uid&&b.allowedUsers?.includes(currentUser?.uid)?`<div class="book-card-shared-by">Shared by ${esc(b.ownerName||'')}</div>`:''}
@@ -4429,7 +4446,7 @@ document.getElementById('deskBookGrid').addEventListener('click',e=>{
     updateBulkBar();return;
   }
   if(card.classList.contains('group-tile')){ 
-    if(card.classList.contains('recipe-tile')){ toggleSeriesGroupExpanded(card.dataset.groupkey); return; }
+    if(card.classList.contains('recipe-tile')){ openRecipeCategory(card.dataset.cat); return; }
     const allBooks = dedupe([...library, ...communityLib]);
     const seriesTitle = allBooks.find(b => b.id === id)?.series || card.dataset.groupkey;
     showSeriesEpisodesModal(seriesTitle); 
@@ -5898,6 +5915,8 @@ function renderMobLibrary() {
   const books = getMobLibBooks();
   const grid = document.getElementById('mobGridLibrary');
   if (!books.length) {
+    _openRecipeCategory = null;
+    renderRecipeFolderBar(grid, 'mobRecipeFolderBar', 0);
     grid.innerHTML = `<div style="grid-column:1/-1;padding:3rem 1rem;text-align:center;color:var(--muted)">
       <div style="font-size:2.5rem;opacity:.2;margin-bottom:.8rem">📚</div>
       <div style="font-size:.88rem">${mobLibSearch ? 'No books match your search' : 'No books here yet'}</div>
@@ -5905,6 +5924,7 @@ function renderMobLibrary() {
     return;
   }
   const gridBooks = collapseAudioSeriesForGrid(collapseRecipesByCategoryForGrid(books));
+  renderRecipeFolderBar(grid, 'mobRecipeFolderBar', gridBooks.filter(b=>b.isRecipe&&!b.isGroup).length);
   reconcileGrid(grid, gridBooks, b => b.id, b => {
     const isComm = communityLib.some(x => x.id === b.id);
     return bookCardHtml(b, isComm);
@@ -5975,7 +5995,7 @@ document.getElementById('mobGridLibrary').addEventListener('click', e => {
     return;
   }
   if(card.classList.contains('group-tile')){ 
-    if(card.classList.contains('recipe-tile')){ toggleSeriesGroupExpanded(card.dataset.groupkey); return; }
+    if(card.classList.contains('recipe-tile')){ openRecipeCategory(card.dataset.cat); return; }
     const allBooks = dedupe([...library, ...communityLib]);
     const seriesTitle = allBooks.find(b => b.id === id)?.series || card.dataset.groupkey;
     showSeriesEpisodesModal(seriesTitle); 
@@ -6953,7 +6973,7 @@ function bookCardHtml(b, isComm, showProgress=false){
 
   if(b.isGroup){
     const icon=b.icon||(b.isRecipe?'🍲':'🎧'), unit=b.isRecipe?'Recipe':'Episode';
-    return `<div class="book-card ${b.isRecipe?'recipe-tile':'audio-tile'} group-tile" data-bookid="${b.id}" data-groupids="${b.groupIds.join(',')}" data-groupkey="${esc(b.groupKey)}">
+    return `<div class="book-card ${b.isRecipe?'recipe-tile':'audio-tile'} group-tile" data-bookid="${b.id}" data-groupids="${b.groupIds.join(',')}" data-groupkey="${esc(b.groupKey)}" ${b.isRecipe?`data-cat="${esc(b.category)}"`:''}>
       <div style="position:relative">
         <div class="group-stack-edge e2"></div>
         <div class="group-stack-edge e1"></div>
@@ -6991,7 +7011,7 @@ function bookCardHtml(b, isComm, showProgress=false){
         ${renderBookmarkSVG(_bmTpl, 20, 32, 'card'+b.id, true)}
        </div>` : '';
 
-  return `<div class="book-card" data-bookid="${b.id}">
+  return `<div class="book-card ${b.isRecipe?'recipe-tile':''}" data-bookid="${b.id}">
     <div style="position:relative">
       ${coverHtml}
       ${b.recommended ? '<span class="rec-badge">⭐ Pick</span>' : ''}
@@ -9011,6 +9031,13 @@ function _seriesTilePrefix(b) {
 // the whole group.
 let _expandedSeriesGroups = new Set();
 
+// Recipe category the person has drilled into (its raw, original-case name),
+// or null when browsing the folder grid itself. Unlike audio series' inline
+// expand (_expandedSeriesGroups), opening a recipe category swaps the whole
+// grid over to that category's recipes — see collapseRecipesByCategoryForGrid
+// and openRecipeCategory/closeRecipeCategory below.
+let _openRecipeCategory = null;
+
 // ── Collapsed multi-part audio series tiles (grid display only) ────────────
 // Folds consecutive audio entries that share a `series` value (2+ of them)
 // into a single stacked "group" tile, so a long multi-part audiobook takes
@@ -9086,7 +9113,7 @@ function pickCategoryImage(cat, onDone) {
 
 function collapseRecipesByCategoryForGrid(books) {
   const recipes = books.filter(b => b.isRecipe);
-  if (!recipes.length) return books;
+  if (!recipes.length) { _openRecipeCategory = null; return books; }
   const others = books.filter(b => !b.isRecipe);
   const byCat = new Map();
   recipes.forEach(r => {
@@ -9094,31 +9121,77 @@ function collapseRecipesByCategoryForGrid(books) {
     if (!byCat.has(cat)) byCat.set(cat, []);
     byCat.get(cat).push(r);
   });
+  // Drilled into a category: show only its recipes, flat — no folder tiles,
+  // no inline header row. The persistent breadcrumb bar (renderRecipeFolderBar)
+  // is what tells the person where they are; going "back" is closeRecipeCategory().
+  if (_openRecipeCategory) {
+    if (byCat.has(_openRecipeCategory)) return [...others, ...byCat.get(_openRecipeCategory)];
+    // The open category emptied out (last recipe moved/deleted) or was
+    // renamed while open — fall back to the folder grid instead of showing
+    // a dead end.
+    _openRecipeCategory = null;
+  }
   const out = [...others];
   [...byCat.keys()].sort((a, b) => a.localeCompare(b)).forEach(cat => {
     const group = byCat.get(cat);
     const key = 'recipecat:' + cat.toLowerCase();
     const icon = recipeCatIcon(cat);
-    if (_expandedSeriesGroups.has(key)) {
-      out.push({ id: '__grouphdr_' + key, isGroupHeader: true, groupKey: key, title: cat, partCount: group.length, isRecipe: true, icon });
-      group.forEach(r => out.push({ ...r, _groupExpanded: true }));
-    } else {
-      out.push({
-        id: group[0].id,
-        isGroup: true,
-        groupIds: group.map(r => r.id),
-        groupKey: key,
-        title: cat,
-        category: cat,
-        author: '',
-        coverUrl: _categoryImages[cat] || null,
-        isRecipe: true,
-        partCount: group.length,
-        icon,
-      });
-    }
+    out.push({
+      id: group[0].id,
+      isGroup: true,
+      groupIds: group.map(r => r.id),
+      groupKey: key,
+      title: cat,
+      category: cat,
+      author: '',
+      coverUrl: _categoryImages[cat] || null,
+      isRecipe: true,
+      partCount: group.length,
+      icon,
+    });
   });
   return out;
+}
+
+// Drill into / back out of a recipe category folder. Shared by desktop and
+// mobile — renderAll() refreshes both.
+function openRecipeCategory(cat) {
+  if (!cat) return;
+  _openRecipeCategory = cat;
+  renderAll();
+}
+function closeRecipeCategory() {
+  _openRecipeCategory = null;
+  renderAll();
+}
+
+// Builds (or updates) the persistent breadcrumb bar shown above the grid
+// while a recipe category is open — back arrow, category icon, name and
+// recipe count. Inserted as a sibling right before `grid` rather than as a
+// grid item, so it isn't part of reconcileGrid's diffing and always spans
+// full width regardless of the grid's column count. `count` is however many
+// recipe cards the caller is about to render for this category.
+function renderRecipeFolderBar(grid, barId, count) {
+  let bar = document.getElementById(barId);
+  if (!_openRecipeCategory) {
+    if (bar) bar.style.display = 'none';
+    return;
+  }
+  if (!bar) {
+    bar = document.createElement('div');
+    bar.id = barId;
+    bar.className = 'recipe-folder-bar';
+    grid.insertAdjacentElement('beforebegin', bar);
+    bar.addEventListener('click', e => {
+      if (e.target.closest('.rfb-back')) closeRecipeCategory();
+    });
+  }
+  bar.style.display = '';
+  const cat = _openRecipeCategory;
+  const icon = recipeCatIcon(cat);
+  bar.innerHTML = `<button class="rfb-back" aria-label="Back to recipe categories">←</button>
+    <div class="rfb-icon">${icon}</div>
+    <div><div class="rfb-title">${esc(cat)}</div><div class="rfb-count">${count} recipe${count===1?'':'s'}</div></div>`;
 }
 
 function collapseAudioSeriesForGrid(books) {
