@@ -5916,7 +5916,7 @@ function renderMobLibrary() {
   const grid = document.getElementById('mobGridLibrary');
   if (!books.length) {
     _openRecipeCategory = null;
-    renderRecipeFolderBar(grid, 'mobRecipeFolderBar', 0);
+    renderRecipeFolderBar(grid, 'deskRecipeFolderBar', 0);
     grid.innerHTML = `<div style="grid-column:1/-1;padding:3rem 1rem;text-align:center;color:var(--muted)">
       <div style="font-size:2.5rem;opacity:.2;margin-bottom:.8rem">📚</div>
       <div style="font-size:.88rem">${mobLibSearch ? 'No books match your search' : 'No books here yet'}</div>
@@ -5924,7 +5924,7 @@ function renderMobLibrary() {
     return;
   }
   const gridBooks = collapseAudioSeriesForGrid(collapseRecipesByCategoryForGrid(books));
-  renderRecipeFolderBar(grid, 'mobRecipeFolderBar', gridBooks.filter(b=>b.isRecipe&&!b.isGroup).length);
+  renderRecipeFolderBar(grid, 'deskRecipeFolderBar', gridBooks.filter(b=>b.isRecipe&&!b.isGroup).length);
   reconcileGrid(grid, gridBooks, b => b.id, b => {
     const isComm = communityLib.some(x => x.id === b.id);
     return bookCardHtml(b, isComm);
