@@ -368,6 +368,8 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .book-card.audio-tile .book-card-cover,
 .book-card.audio-tile .book-card-cover-ph{aspect-ratio:1/1;}
 .book-card.audio-tile .book-card-cover-ph{background:linear-gradient(145deg,var(--rust,#8a4a3a),#5c2f26);}
+.book-card-cover-ph.recipe-cat-ph{padding:0;}
+.book-card-cover-ph.recipe-cat-ph .cat-emoji-big{font-size:3.4rem;opacity:.9;line-height:1;}
 /* Collapsed multi-part audio series — a stacked-card look (peeking edges
    behind the front cover) plus a part-count badge, so a whole series reads
    as one tile instead of N. */
@@ -4382,7 +4384,7 @@ function renderGrid(gridId){
       <div style="position:relative">
         <div class="group-stack-edge e2"></div>
         <div class="group-stack-edge e1"></div>
-        ${coverSrc?`<img class="book-card-cover" src="${coverSrc}" alt="" loading="lazy"/>`:`<div class="book-card-cover-ph"><div class="ph-icon">${icon}</div><div class="ph-title">${esc(b.title)}</div><div class="ph-author">${esc(b.author)}</div></div>`}
+        ${groupTileCoverHtml(b, coverSrc, icon)}
       </div><div class="select-check">✓</div>
       <div class="book-card-body"><div class="book-card-title">${esc(b.title)}</div>
       <div class="book-card-author">${esc(b.author)}</div>
@@ -6012,9 +6014,7 @@ function renderMobLibrarySelectMode(){
     if(b.isGroup){
       const icon = b.icon||(b.isRecipe?'🍲':'🎧'), unit = b.isRecipe?'Recipe':'Episode';
       const isSelected = b.groupIds.every(gid => mobSelectedIds.has(gid));
-      const coverHtml = coverSrc
-        ? `<img class="book-card-cover" src="${coverSrc}" alt="" loading="lazy"/>`
-        : `<div class="book-card-cover-ph"><div class="ph-icon">${icon}</div><div class="ph-title">${esc(b.title)}</div><div class="ph-author">${esc(b.author)}</div></div>`;
+      const coverHtml = groupTileCoverHtml(b, coverSrc, icon);
       return `<div class="book-card ${b.isRecipe?'recipe-tile':'audio-tile'} group-tile ${isSelected?'selected':''}" data-bookid="${b.id}" data-groupids="${b.groupIds.join(',')}" style="user-select:none">
         <div style="position:relative">
           <div class="group-stack-edge e2"></div>
@@ -6956,7 +6956,7 @@ function bookCardHtml(b, isComm, showProgress=false){
       <div style="position:relative">
         <div class="group-stack-edge e2"></div>
         <div class="group-stack-edge e1"></div>
-        ${coverHtml}
+        ${groupTileCoverHtml(b, coverSrc, icon)}
       </div>
       <div class="book-card-body">
         <div class="book-card-title">${esc(b.title)}</div>
@@ -9034,6 +9034,16 @@ let _expandedSeriesGroups = new Set();
 // generic 🍲 rather than the folder icon catIcon() uses for other content.
 function recipeCatIcon(cat) { return _categoryIcons[cat] || '🍲'; }
 
+// Cover markup for a group tile (collapsed recipe category or audio series).
+// Recipe category tiles are emoji-first: no custom image set -> a big emoji
+// fills the tile instead of the small icon+title+author placeholder used
+// everywhere else (the category name already shows below the tile).
+function groupTileCoverHtml(b, coverSrc, icon) {
+  if (coverSrc) return `<img class="book-card-cover" src="${coverSrc}" alt="" loading="lazy"/>`;
+  if (b.isRecipe) return `<div class="book-card-cover-ph recipe-cat-ph"><div class="cat-emoji-big">${icon}</div></div>`;
+  return `<div class="book-card-cover-ph"><div class="ph-icon">${icon}</div><div class="ph-title">${esc(b.title)}</div><div class="ph-author">${esc(b.author)}</div></div>`;
+}
+
 // Lets an owner/admin set a custom cover image for a recipe category's group
 // tile in the library grid, overriding the "first recipe with a cover"
 // fallback in collapseRecipesByCategoryForGrid below. Invoked from the
@@ -9100,7 +9110,7 @@ function collapseRecipesByCategoryForGrid(books) {
         title: cat,
         category: cat,
         author: '',
-        coverUrl: _categoryImages[cat] || group.find(r => r.coverUrl)?.coverUrl || null,
+        coverUrl: _categoryImages[cat] || null,
         isRecipe: true,
         partCount: group.length,
         icon,
@@ -17089,14 +17099,35 @@ async function adminLoadRecipeCategories() {
     <div id="adminRecipeCatList">
       ${cats.map((c, i) => `
         <div class="cat-admin-row" data-recipecatidx="${i}">
-          ${_categoryImages[c]
-            ? `<img src="${esc(_categoryImages[c])}" alt="" style="width:2.1rem;height:2.1rem;object-fit:cover;border-radius:6px;border:1px solid var(--border);"/>`
-            : `<span style="width:2.1rem;height:2.1rem;display:flex;align-items:center;justify-content:center;font-size:.95rem;border:1px solid var(--border);border-radius:6px;background:var(--cream);">${recipeCatIcon(c)}</span>`}
+          <input class="cat-admin-icon" data-recipecat-icon="${i}" value="${esc(recipeCatIcon(c))}"
+            maxlength="4" title="Emoji for this category"
+            style="width:2.1rem;text-align:center;padding:.25rem 0;font-size:.95rem;
+                   border:1px solid var(--border);border-radius:6px;background:var(--cream);"/>
           <span class="cat-admin-name">${esc(c)}</span>
-          <button class="admin-copy-btn" data-recipecat-upload="${i}">${_categoryImages[c] ? '✎' : '+ Image'}</button>
+          ${_categoryImages[c]
+            ? `<img src="${esc(_categoryImages[c])}" alt="" style="width:1.8rem;height:1.8rem;object-fit:cover;border-radius:5px;border:1px solid var(--border);"/>`
+            : ''}
+          <button class="admin-copy-btn" data-recipecat-upload="${i}">${_categoryImages[c] ? 'Change image' : '+ Image'}</button>
           ${_categoryImages[c] ? `<button class="admin-copy-btn" style="color:var(--danger);border-color:#e0b0b0;" data-recipecat-remove="${i}">✕</button>` : ''}
         </div>`).join('')}
+    </div>
+    <div style="color:var(--muted);font-size:.78rem;margin-top:.6rem;">
+      A category's emoji shows full-size on its tile in the library unless you set an image above.
     </div>`;
+
+  // Icon change — same pattern as Genres, into the same shared icon map
+  el.querySelectorAll('[data-recipecat-icon]').forEach(input => {
+    input.addEventListener('change', async () => {
+      const idx = parseInt(input.dataset.recipecatIcon);
+      const name = cats[idx];
+      const icon = input.value.trim() || '🍲';
+      input.value = icon;
+      await setCatIcon(name, icon);
+      renderAll();
+      renderMobLibrary();
+      showToast('Icon updated ✓');
+    });
+  });
 
   el.querySelectorAll('[data-recipecat-upload]').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -17108,7 +17139,7 @@ async function adminLoadRecipeCategories() {
   el.querySelectorAll('[data-recipecat-remove]').forEach(btn => {
     btn.addEventListener('click', async () => {
       const cat = cats[parseInt(btn.dataset.recipecatRemove)];
-      if(!confirm(`Remove the custom image for "${cat}"?`)) return;
+      if(!confirm(`Remove the custom image for "${cat}"? It'll show its emoji instead.`)) return;
       showLoading('Removing…');
       try {
         await setCategoryImage(cat, null);
