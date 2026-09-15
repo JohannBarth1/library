@@ -9056,7 +9056,7 @@ function pickCategoryImage(cat, onDone) {
     try {
       const safeName = `${Date.now()}_${file.name.replace(/[^a-zA-Z0-9._\-]/g, '_')}`;
       const safeCat = cat.replace(/[^a-zA-Z0-9._\-]/g, '_');
-      const imgRef = storageRef(storage, `category_covers/${safeCat}/${safeName}`);
+      const imgRef = storageRef(storage, `recipe_covers/${currentUser.uid}/categories/${safeCat}/${safeName}`);
       await uploadBytes(imgRef, file);
       const url = await getDownloadURL(imgRef);
       await setCategoryImage(cat, url);
