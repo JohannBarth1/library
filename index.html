@@ -3201,6 +3201,7 @@ let myCheckedOutIds=new Set();
 let koboDevices = [];
 let _userLists = [];
 let _categories = [];
+let _recipeCategories = [];  // config/recipeCategories — persisted so an Admin-added category with no recipes yet doesn't disappear
 let _globalTags = [];
 let _categoryIcons = {};   // { "Fiction": "📖", ... } — per-item emoji, editable in Admin
 let _categoryImages = {};  // { "Desserts": "https://...", ... } — custom cover image for a recipe category's group tile, uploaded from the library grid
@@ -16104,6 +16105,9 @@ async function loadConfig() {
       await setDoc(doc(db, 'config', 'categories'), { list: _categories });
     }
 
+    const recipeCatSnap = await getDoc(doc(db, 'config', 'recipeCategories'));
+    _recipeCategories = recipeCatSnap.exists() ? recipeCatSnap.data().list || [] : [];
+
     const tagSnap = await getDoc(doc(db, 'config', 'tags'));
     _globalTags = tagSnap.exists()
       ? tagSnap.data().list || []
@@ -16133,6 +16137,7 @@ async function loadConfig() {
   } catch(e) {
     console.warn('loadConfig:', e);
     _categories = [...SYSTEM_CATEGORIES];
+    _recipeCategories = [];
     _globalTags = [...SYSTEM_TAGS];
     _categoryIcons = { ...DEFAULT_CATEGORY_ICONS };
     _categoryImages = {};
@@ -17085,37 +17090,74 @@ async function adminLoadRecipeCategories() {
   if(!el) return;
   el.innerHTML = '<div style="color:var(--muted);font-size:.85rem">Loading…</div>';
 
+  // Recipe categories have their own persisted registry (config/recipeCategories)
+  // so an Admin-added category with zero recipes yet still shows up here —
+  // plus anything actually in use on a recipe or carrying a custom image,
+  // as a safety net for names that predate this registry (e.g. eRecipe
+  // imports, or categories typed directly in the recipe editor).
   const cats = Array.from(new Set([
+    ..._recipeCategories,
     ..._recipes.map(r => r.chapterName || r.category).filter(Boolean),
     ...Object.keys(_categoryImages),
-  ])).sort();
+  ])).sort((a, b) => a.localeCompare(b));
 
-  if(!cats.length) {
-    el.innerHTML = '<div style="color:var(--muted);font-size:.85rem">No recipe categories yet — add a category while editing a recipe.</div>';
-    return;
-  }
+  const renderRows = () => cats.map((c, i) => `
+      <div class="cat-admin-row" data-recipecatidx="${i}">
+        <input class="cat-admin-icon" data-recipecat-icon="${i}" value="${esc(recipeCatIcon(c))}"
+          maxlength="4" title="Emoji for this category"
+          style="width:2.1rem;text-align:center;padding:.25rem 0;font-size:.95rem;
+                 border:1px solid var(--border);border-radius:6px;background:var(--cream);"/>
+        <span class="cat-admin-name">${esc(c)}</span>
+        ${_categoryImages[c]
+          ? `<img src="${esc(_categoryImages[c])}" alt="" style="width:1.8rem;height:1.8rem;object-fit:cover;border-radius:5px;border:1px solid var(--border);"/>`
+          : ''}
+        <button class="admin-copy-btn" data-recipecat-upload="${i}">${_categoryImages[c] ? 'Change image' : '+ Image'}</button>
+        ${_categoryImages[c] ? `<button class="admin-copy-btn" data-recipecat-removeimg="${i}">✕ img</button>` : ''}
+        <button class="admin-copy-btn" data-recipecat-edit="${i}">✎</button>
+        <button class="admin-copy-btn" style="color:var(--danger);border-color:#e0b0b0;"
+          data-recipecat-delete="${i}">✕</button>
+      </div>`).join('');
 
-  el.innerHTML = `
-    <div id="adminRecipeCatList">
-      ${cats.map((c, i) => `
-        <div class="cat-admin-row" data-recipecatidx="${i}">
-          <input class="cat-admin-icon" data-recipecat-icon="${i}" value="${esc(recipeCatIcon(c))}"
-            maxlength="4" title="Emoji for this category"
-            style="width:2.1rem;text-align:center;padding:.25rem 0;font-size:.95rem;
-                   border:1px solid var(--border);border-radius:6px;background:var(--cream);"/>
-          <span class="cat-admin-name">${esc(c)}</span>
-          ${_categoryImages[c]
-            ? `<img src="${esc(_categoryImages[c])}" alt="" style="width:1.8rem;height:1.8rem;object-fit:cover;border-radius:5px;border:1px solid var(--border);"/>`
-            : ''}
-          <button class="admin-copy-btn" data-recipecat-upload="${i}">${_categoryImages[c] ? 'Change image' : '+ Image'}</button>
-          ${_categoryImages[c] ? `<button class="admin-copy-btn" style="color:var(--danger);border-color:#e0b0b0;" data-recipecat-remove="${i}">✕</button>` : ''}
-        </div>`).join('')}
+  el.innerHTML = cats.length ? `
+    <div id="adminRecipeCatList">${renderRows()}</div>
+    <div style="color:var(--muted);font-size:.78rem;margin:.5rem 0 .6rem;">
+      A category's emoji shows full-size on its tile in the library unless you set an image.
     </div>
-    <div style="color:var(--muted);font-size:.78rem;margin-top:.6rem;">
-      A category's emoji shows full-size on its tile in the library unless you set an image above.
+    <div style="display:flex;gap:.4rem;">
+      <input id="adminRecipeCatNewInput" type="text" placeholder="New recipe category…"
+        class="filter-search" style="flex:1;font-size:.82rem;"/>
+      <button class="btn-save" style="font-size:.72rem;padding:.4rem .8rem;"
+        id="adminRecipeCatAddBtn">+ Add</button>
+    </div>`
+    : `
+    <div style="color:var(--muted);font-size:.85rem;margin-bottom:.7rem;">No recipe categories yet.</div>
+    <div style="display:flex;gap:.4rem;">
+      <input id="adminRecipeCatNewInput" type="text" placeholder="New recipe category…"
+        class="filter-search" style="flex:1;font-size:.82rem;"/>
+      <button class="btn-save" style="font-size:.72rem;padding:.4rem .8rem;"
+        id="adminRecipeCatAddBtn">+ Add</button>
     </div>`;
 
-  // Icon change — same pattern as Genres, into the same shared icon map
+  // Moves every recipe filed under `orig` (by either field name it might be
+  // stored under — chapterName is current, category is legacy eRecipe-import
+  // fallback, see recipeToBookLike) over to `newVal`. Used by both rename
+  // and delete (delete just passes 'Uncategorised' as newVal).
+  async function reassignRecipeCategory(orig, newVal) {
+    let n = 0;
+    const q1 = query(collection(db, 'recipes'), where('chapterName', '==', orig));
+    const snap1 = await getDocs(q1);
+    for(const d of snap1.docs) { await updateDoc(d.ref, { chapterName: newVal, updatedAt: serverTimestamp() }); n++; }
+    const q2 = query(collection(db, 'recipes'), where('category', '==', orig));
+    const snap2 = await getDocs(q2);
+    for(const d of snap2.docs) {
+      if(snap1.docs.some(x => x.id === d.id)) continue;
+      await updateDoc(d.ref, { category: newVal, updatedAt: serverTimestamp() });
+      n++;
+    }
+    return n;
+  }
+
+  // Icon change — into the same shared icon map Genres uses
   el.querySelectorAll('[data-recipecat-icon]').forEach(input => {
     input.addEventListener('change', async () => {
       const idx = parseInt(input.dataset.recipecatIcon);
@@ -17136,9 +17178,9 @@ async function adminLoadRecipeCategories() {
     });
   });
 
-  el.querySelectorAll('[data-recipecat-remove]').forEach(btn => {
+  el.querySelectorAll('[data-recipecat-removeimg]').forEach(btn => {
     btn.addEventListener('click', async () => {
-      const cat = cats[parseInt(btn.dataset.recipecatRemove)];
+      const cat = cats[parseInt(btn.dataset.recipecatRemoveimg)];
       if(!confirm(`Remove the custom image for "${cat}"? It'll show its emoji instead.`)) return;
       showLoading('Removing…');
       try {
@@ -17154,6 +17196,123 @@ async function adminLoadRecipeCategories() {
       }
     });
   });
+
+  // Rename — same inline swap pattern as Genres
+  el.querySelectorAll('[data-recipecat-edit]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const idx = parseInt(btn.dataset.recipecatEdit);
+      const row = btn.closest('.cat-admin-row');
+      const nameEl = row.querySelector('.cat-admin-name');
+      const orig = nameEl.textContent;
+      row.innerHTML = `
+        <input class="cat-admin-input" value="${esc(orig)}" id="recipeCatEditInput_${idx}"/>
+        <button class="btn-save" style="font-size:.7rem;padding:.3rem .6rem;"
+          id="recipeCatEditSave_${idx}">✓</button>
+        <button class="btn-cancel" style="font-size:.7rem;padding:.3rem .6rem;"
+          id="recipeCatEditCancel_${idx}">✕</button>`;
+
+      document.getElementById(`recipeCatEditCancel_${idx}`).addEventListener('click', adminLoadRecipeCategories);
+      document.getElementById(`recipeCatEditSave_${idx}`).addEventListener('click', async () => {
+        const newName = document.getElementById(`recipeCatEditInput_${idx}`).value.trim();
+        if(!newName || newName === orig) { adminLoadRecipeCategories(); return; }
+        showLoading('Updating category…');
+        try {
+          const catIdx = _categories.indexOf(orig);
+          if(catIdx !== -1) _categories[catIdx] = newName; else _categories.push(newName);
+          _categories.sort((a, b) => a.localeCompare(b));
+          await setDoc(doc(db, 'config', 'categories'), { list: _categories });
+          const rcIdx = _recipeCategories.indexOf(orig);
+          if(rcIdx !== -1) _recipeCategories[rcIdx] = newName; else _recipeCategories.push(newName);
+          _recipeCategories.sort((a, b) => a.localeCompare(b));
+          await setDoc(doc(db, 'config', 'recipeCategories'), { list: _recipeCategories });
+          if(_categoryIcons[orig]) {
+            _categoryIcons[newName] = _categoryIcons[orig];
+            delete _categoryIcons[orig];
+            await setDoc(doc(db, 'config', 'categoryIcons'), { map: _categoryIcons });
+          }
+          if(_categoryImages[orig]) {
+            _categoryImages[newName] = _categoryImages[orig];
+            delete _categoryImages[orig];
+            await setDoc(doc(db, 'config', 'categoryImages'), { map: _categoryImages });
+          }
+          const n = await reassignRecipeCategory(orig, newName);
+          await loadRecipes();
+          mergeRecipesIntoLibrary();
+          hideLoading();
+          showToast(`"${orig}" renamed to "${newName}" — ${n} recipe${n === 1 ? '' : 's'} updated ✓`);
+          adminLoadRecipeCategories();
+          renderAll();
+          renderMobLibrary();
+        } catch(e) {
+          hideLoading();
+          showToast('Failed: ' + e.message);
+        }
+      });
+    });
+  });
+
+  // Delete
+  el.querySelectorAll('[data-recipecat-delete]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const idx = parseInt(btn.dataset.recipecatDelete);
+      const name = cats[idx];
+      if(!confirm(`Delete category "${name}"?\n\nRecipes in this category will be moved to Uncategorised.`)) return;
+      showLoading('Deleting category…');
+      try {
+        const catIdx = _categories.indexOf(name);
+        if(catIdx !== -1) {
+          _categories.splice(catIdx, 1);
+          await setDoc(doc(db, 'config', 'categories'), { list: _categories });
+        }
+        const rcIdx = _recipeCategories.indexOf(name);
+        if(rcIdx !== -1) {
+          _recipeCategories.splice(rcIdx, 1);
+          await setDoc(doc(db, 'config', 'recipeCategories'), { list: _recipeCategories });
+        }
+        if(_categoryIcons[name]) {
+          delete _categoryIcons[name];
+          await setDoc(doc(db, 'config', 'categoryIcons'), { map: _categoryIcons });
+        }
+        if(_categoryImages[name]) {
+          delete _categoryImages[name];
+          await setDoc(doc(db, 'config', 'categoryImages'), { map: _categoryImages });
+        }
+        const n = await reassignRecipeCategory(name, 'Uncategorised');
+        await loadRecipes();
+        mergeRecipesIntoLibrary();
+        hideLoading();
+        showToast(`"${name}" deleted — ${n} recipe${n === 1 ? '' : 's'} moved to Uncategorised ✓`);
+        adminLoadRecipeCategories();
+        renderAll();
+        renderMobLibrary();
+      } catch(e) {
+        hideLoading();
+        showToast('Failed: ' + e.message);
+      }
+    });
+  });
+
+  // Add new
+  const addBtn = document.getElementById('adminRecipeCatAddBtn');
+  const addInput = document.getElementById('adminRecipeCatNewInput');
+  const doAdd = async () => {
+    const name = addInput.value.trim();
+    if(!name) return;
+    if(_recipeCategories.includes(name)) { showToast('Category already exists'); return; }
+    if(!_categories.includes(name)) {
+      _categories.push(name);
+      _categories.sort((a, b) => a.localeCompare(b));
+      await setDoc(doc(db, 'config', 'categories'), { list: _categories });
+    }
+    _recipeCategories.push(name);
+    _recipeCategories.sort((a, b) => a.localeCompare(b));
+    addInput.value = '';
+    await setDoc(doc(db, 'config', 'recipeCategories'), { list: _recipeCategories });
+    showToast(`"${name}" added ✓`);
+    adminLoadRecipeCategories();
+  };
+  addBtn?.addEventListener('click', doAdd);
+  addInput?.addEventListener('keydown', e => { if(e.key === 'Enter') doAdd(); });
 }
 
 async function adminLoadTags() {
@@ -19397,12 +19556,21 @@ async function saveRecipeFromEditor() {
   // the same list) gets registered the same way the Admin "add genre" flow
   // does — same collection, same default-icon fallback — so it immediately
   // becomes a first-class, icon-assignable category rather than a one-off
-  // string that only this recipe knows about.
+  // string that only this recipe knows about. It's also registered into the
+  // dedicated recipe category registry (config/recipeCategories) so it keeps
+  // showing up in Admin's Recipe Categories manager even if this recipe is
+  // later deleted or recategorised.
   if (payload.chapterName !== 'Uncategorised' && !_categories.includes(payload.chapterName)) {
     _categories.push(payload.chapterName);
     _categories.sort((a, b) => a.localeCompare(b));
     try { await setDoc(doc(db, 'config', 'categories'), { list: _categories }); }
     catch (e) { console.warn('Failed to register new category:', e); }
+  }
+  if (payload.chapterName !== 'Uncategorised' && !_recipeCategories.includes(payload.chapterName)) {
+    _recipeCategories.push(payload.chapterName);
+    _recipeCategories.sort((a, b) => a.localeCompare(b));
+    try { await setDoc(doc(db, 'config', 'recipeCategories'), { list: _recipeCategories }); }
+    catch (e) { console.warn('Failed to register new recipe category:', e); }
   }
 
   const saveBtn = document.getElementById('reSaveBtn');
@@ -19554,7 +19722,8 @@ async function runImportFromERecipe() {
   // Register every eRecipe chapter name that isn't already a known category
   // (books/audio share this same list) — one batched write rather than one
   // per recipe, so importing 30 recipes across 5 chapters only touches
-  // config/categories once.
+  // config/categories once. Also registered into the dedicated recipe
+  // category registry so they show up in Admin's Recipe Categories manager.
   const newCats = [...new Set(chapters.map(c => c.name).filter(Boolean))]
     .filter(name => name !== 'Uncategorised' && !_categories.includes(name));
   if (newCats.length) {
@@ -19562,6 +19731,14 @@ async function runImportFromERecipe() {
     _categories.sort((a, b) => a.localeCompare(b));
     try { await setDoc(doc(db, 'config', 'categories'), { list: _categories }); }
     catch (e) { console.warn('Failed to register imported categories:', e); }
+  }
+  const newRecipeCats = [...new Set(chapters.map(c => c.name).filter(Boolean))]
+    .filter(name => name !== 'Uncategorised' && !_recipeCategories.includes(name));
+  if (newRecipeCats.length) {
+    _recipeCategories.push(...newRecipeCats);
+    _recipeCategories.sort((a, b) => a.localeCompare(b));
+    try { await setDoc(doc(db, 'config', 'recipeCategories'), { list: _recipeCategories }); }
+    catch (e) { console.warn('Failed to register imported recipe categories:', e); }
   }
 
   // Idempotency: skip anything already imported with the same title, so
