@@ -4966,6 +4966,16 @@ function renderDetailActionRows(peekContainer, moreContainer, book, isMine){
 
   const shareLabel = '🔗 Share';
 
+  // Recipes only ever have one edit destination (the recipe editor, no
+  // separate "Edit Contents"), so a dropdown pill with a single option in
+  // it is more fiddly than useful — a plain button that opens the editor
+  // directly, same as the old pencil icon in the recipe viewer used to.
+  // Books/audio keep the dropdown since Edit Details vs Edit Contents is a
+  // real choice there.
+  const editControlHtml = book.isRecipe
+    ? (canManage ? `<button type="button" data-action="editrecipe" class="mfp detail-pill-select"><span>✎ Edit</span></button>` : '')
+    : pillSelect('detailEditSelect', 'Edit', editOpts);
+
   if(canManage){
     html += `<div class="mob-list-section" style="margin-top:.5rem;">
       ${visibilitySegmentHtml()}
@@ -4974,7 +4984,7 @@ function renderDetailActionRows(peekContainer, moreContainer, book, isMine){
 
   html += `<div style="display:flex;flex-wrap:wrap;gap:.4rem;padding:.6rem 0 .3rem;border-top:1px solid var(--border);margin-top:.4rem;">
     ${pillSelect('detailShareSelect', shareLabel, shareOpts)}
-    ${pillSelect('detailEditSelect', 'Edit', editOpts)}
+    ${editControlHtml}
     ${recToggle}
   </div>`;
 
@@ -4983,7 +4993,9 @@ function renderDetailActionRows(peekContainer, moreContainer, book, isMine){
   // neither belongs to "share" or "edit" and both are rare enough not to
   // need their own group.
   const bottomBtns = [smBtn('🐞','Report Bug','reportbug')];
-  if(isAdmin) bottomBtns.push(smBtn('📋','History','history'));
+  // Checkout/reading history is meaningless for a recipe — there's nothing
+  // to "check out".
+  if(isAdmin && !book.isRecipe) bottomBtns.push(smBtn('📋','History','history'));
   if(isMine)  bottomBtns.push(smBtn('✕','Delete','delete',{danger:true}));
   if(bottomBtns.length){
     html += `<div style="display:flex;flex-wrap:wrap;gap:.35rem;padding-top:.5rem;">${bottomBtns.join('')}</div>`;
@@ -5289,6 +5301,14 @@ function runDetailAction(a){
         stopAudioPlayback();
         document.getElementById('audioPersistentPlayer')?.classList.remove('open');
       }
+    } else if(book.isRecipe){
+      // Same trap as audio, different collection — recipes live in
+      // `recipes` (see collectionForBook), not `books`. Same delete +
+      // refresh sequence deleteRecipeFromEditor already used, now reachable
+      // straight from the bottom sheet instead of only via the editor.
+      await deleteDoc(doc(db,'recipes',currentId));
+      await loadRecipes();
+      mergeRecipesIntoLibrary();
     } else {
       await deleteDoc(doc(db,'books',currentId));
     }
@@ -5296,9 +5316,10 @@ function runDetailAction(a){
     communityLib=communityLib.filter(b=>b.id!==currentId);
     currentId=null;
     closeDrawer();
+    closeMobBookSheet();
     hideLoading();
     renderAll();
-    showToast('Book deleted');
+    showToast(book.isRecipe ? 'Recipe deleted' : 'Book deleted');
   }catch(e){
     hideLoading();
     showToast('Delete failed: '+e.message);
@@ -9771,15 +9792,9 @@ function renderRelatedBooks(containerEl, book) {
     </div>`;
   }
   if(authorMatches.length){
-    // "By this author" reads oddly for recipes — the author is often just
-    // whichever site an import was pulled from, not a byline the person
-    // is following the way they'd follow a book author. Keeping the same
-    // author-based matching (still the most useful signal available —
-    // category is redundant here since that's the list they just came
-    // from, and recipes don't carry tags), just relabelled.
     html += `<div style="margin-top:1rem">
       <div style="font-size:.74rem;font-weight:700;letter-spacing:.04em;color:var(--muted);margin-bottom:.5rem">
-        ${book.isRecipe ? 'SIMILAR RECIPES' : 'MORE BY THIS AUTHOR'}
+        MORE BY THIS AUTHOR
       </div>
       ${_relatedBookRow(authorMatches)}
     </div>`;
@@ -19469,7 +19484,6 @@ function _cmEnsureOverlay() {
         <div id="cmTitle" style="font-family:'Playfair Display',serif;font-size:1.15rem;color:var(--navy);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"></div>
       </div>
       <button onclick="document.getElementById('cmTimerTray').style.display=document.getElementById('cmTimerTray').style.display==='none'?'block':'none';" style="border:none;background:none;font-size:1.25rem;cursor:pointer;">⏱</button>
-      <button id="cmEditBtn" style="display:none;border:none;background:none;font-size:1.15rem;cursor:pointer;">✎</button>
     </div>
     <div id="cmTimerTray" style="display:none;flex-shrink:0;max-height:35vh;overflow-y:auto;background:var(--panel);border-bottom:1px solid var(--border);">
       <div id="cmTimerList"></div>
@@ -19539,10 +19553,9 @@ function openRecipeCookMode(recipe) {
   const tipEl = document.getElementById('cmTip');
   if (recipe.tip) { tipEl.innerHTML = esc(recipe.tip); tipEl.style.display = 'block'; }
   else { tipEl.style.display = 'none'; }
-  const editBtn = document.getElementById('cmEditBtn');
-  const isMine = recipe.ownerId === currentUser?.uid;
-  editBtn.style.display = isMine ? 'block' : 'none';
-  editBtn.onclick = () => showRecipeEditor(recipe);
+  // Editing (and deleting) a recipe now happens only from the bottom sheet's
+  // Edit / Delete buttons — this viewer used to have its own pencil icon
+  // here that did the same thing through a second path.
   document.getElementById('cookModeOverlay').style.display = 'flex';
   _cmAcquireWakeLock();
 }
