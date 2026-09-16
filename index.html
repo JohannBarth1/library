@@ -990,6 +990,36 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .mfp-format.mfp-active{background:var(--rust);border-color:var(--rust);}
 .mfp.mfp-active .mfp-caret{opacity:.8;}
 
+/* Library MODE toggle — Ebook / Audio / Recipes. A persistent 3-way switch,
+   not a dropdown filter, so all three segments are always visible and one is
+   always active (see LIB_MODE_OPTIONS / renderLibModeToggle). */
+.lib-mode-toggle{display:flex;gap:.2rem;background:var(--panel);border-radius:18px;
+  padding:.22rem;flex-shrink:0;width:100%;}
+.lib-mode-seg{flex:1;border:none;background:transparent;border-radius:14px;padding:.36rem .5rem;
+  font-size:.74rem;font-weight:700;cursor:pointer;white-space:nowrap;display:inline-flex;
+  align-items:center;justify-content:center;gap:.3rem;font-family:'Lato',sans-serif;color:var(--muted);
+  transition:all .15s;-webkit-tap-highlight-color:transparent;}
+.lib-mode-seg.active{color:#fff;}
+.lib-mode-seg:active{transform:scale(.95);}
+
+/* Own row for the mode toggle, above the other filter pills — mobile and
+   desktop both had it inline with Genre/Tags/etc before, which pushed it
+   into the horizontally-scrollable pill row on mobile ("swipe to see it"). */
+.mob-mode-row{padding:.15rem .9rem .35rem;flex-shrink:0;}
+.desk-mode-row{padding:.55rem 1rem 0;}
+
+/* Auto-hide the mobile Library panel's search/mode/filter block on scroll:
+   collapses on scroll-down, reappears on scroll-up (see the scroll listener
+   on #mobLibGridScroll). max-height (not display) so the collapse animates;
+   300px comfortably covers the block's real height at any screen width. */
+#mobLibTop{overflow:hidden;max-height:300px;transition:max-height .25s ease,opacity .2s ease;flex-shrink:0;}
+#mobLibTop.mob-top-hidden{max-height:0;opacity:0;}
+
+/* Genre/Tags/Sort don't apply to Recipes mode (recipes are browsed via their
+   own category folders instead) — hidden rather than removed so state (e.g.
+   an active tag filter) isn't lost when switching back out of Recipes mode. */
+.lib-pill-hidden{display:none !important;}
+
 /* Library filter/sort dropdowns — anchored directly under their pill button,
    NOT a centered modal, and deliberately dark so they read as distinct from
    the light .mob-picker-card used for editing lists/categories elsewhere. */
@@ -2059,6 +2089,9 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
         <!-- Same 4-pill filter system as mobile (mfpCat/mfpTags/mfpSource/mfpSort) —
              same colors, same anchored-dropdown behavior, just its own ids/state
              so it filters the desktop grid instead of the mobile one. -->
+        <div class="desk-mode-row">
+          <div class="lib-mode-toggle" id="deskModeToggle" role="tablist" aria-label="Library mode"></div>
+        </div>
         <div class="desk-filter-bar" id="deskFilterBar">
           <button class="mfp mfp-cat" id="deskPillCat" aria-label="Filter by genre">
             <span id="deskPillCatLabel">Genre</span>
@@ -2068,15 +2101,11 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
             <span id="deskPillTagsLabel">Tags</span>
             <span class="mfp-caret">▾</span>
           </button>
-          <button class="mfp mfp-format" id="deskPillFormat" aria-label="Filter by format">
-            <span id="deskPillFormatLabel">Format</span>
-            <span class="mfp-caret">▾</span>
-          </button>
           <button class="mfp mfp-source" id="deskPillSource" aria-label="Filter by source">
             <span id="deskPillSourceLabel">All</span>
             <span class="mfp-caret">▾</span>
           </button>
-          <div class="mfp-divider" aria-hidden="true"></div>
+          <div class="mfp-divider" id="deskSortDivider" aria-hidden="true"></div>
           <button class="mfp mfp-sort" id="deskPillSort" aria-label="Sort">
             <span id="deskPillSortLabel">Recent</span>
             <span class="mfp-caret">▾</span>
@@ -2129,7 +2158,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 
   <!-- ── LIBRARY PANEL (all books: private + public + shared) ── -->
   <div class="mob-panel" id="mobPanelLibrary">
-    <div class="mob-lib-top">
+    <div class="mob-lib-top" id="mobLibTop">
       <!-- Row 1: Search -->
       <div class="mob-search-bar">
         <div class="search-input-wrap" style="flex:1;">
@@ -2137,7 +2166,12 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
           <button type="button" class="search-clear-btn" id="mobSearchClear" aria-label="Clear search">✕</button>
         </div>
       </div>
-      <!-- Row 2: Colour-coded filter pills -->
+      <!-- Row 2: Mode toggle (Ebook / Audio / Recipes) — its own row so it
+           never gets pushed into the horizontally-scrolling pill row below. -->
+      <div class="mob-mode-row">
+        <div class="lib-mode-toggle" id="mobModeToggle" role="tablist" aria-label="Library mode"></div>
+      </div>
+      <!-- Row 3: Colour-coded filter pills -->
       <div class="mob-filter-bar" id="mobFilterBar">
         <button class="mfp mfp-cat" id="mfpCat" aria-label="Filter by genre">
           <span id="mfpCatLabel">Genre</span>
@@ -2147,15 +2181,11 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
           <span id="mfpTagsLabel">Tags</span>
           <span class="mfp-caret">▾</span>
         </button>
-        <button class="mfp mfp-format" id="mfpFormat" aria-label="Filter by format">
-          <span id="mfpFormatLabel">Format</span>
-          <span class="mfp-caret">▾</span>
-        </button>
         <button class="mfp mfp-source" id="mfpSource" aria-label="Filter by source">
           <span id="mfpSourceLabel">All</span>
           <span class="mfp-caret">▾</span>
         </button>
-        <div class="mfp-divider" aria-hidden="true"></div>
+        <div class="mfp-divider" id="mfpSortDivider" aria-hidden="true"></div>
         <button class="mfp mfp-sort" id="mfpSort" aria-label="Sort" style="margin-left:auto;">
           <span id="mfpSortLabel">Recent</span>
           <span class="mfp-caret">▾</span>
@@ -2180,7 +2210,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
     <!-- Floating panels (injected into body by JS, anchored to pills) -->
     <!-- Scrim to dismiss any open panel -->
     <div class="mob-filter-scrim" id="mobFilterScrim"></div>
-    <div class="mob-grid-scroll">
+    <div class="mob-grid-scroll" id="mobLibGridScroll">
       <div class="mob-book-grid" id="mobGridLibrary"></div>
     </div>
   </div>
@@ -2281,13 +2311,13 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
       </div>
       <!-- ── PEEK: primary actions + Lists — visible the moment the sheet opens ── -->
       <div class="mob-detail-actions" id="mobDetailActions"></div>
+      <p class="mob-detail-desc" id="mobDetailDesc" style="margin-bottom:1rem;"></p>
 
-      <!-- ── REVEALED ON SWIPE-UP: tags/categories, description, highlights, more ── -->
+      <!-- ── REVEALED ON SWIPE-UP: tags/categories, highlights, related, more ── -->
       <div class="mob-sheet-more" id="mobSheetMore">
         <div class="mob-detail-more-actions" id="mobDetailMoreActions"></div>
         <hr style="border:none;border-top:1px solid var(--border);margin:.5rem 0 1rem"/>
         <div id="mobDetailRelated" style="display:none;"></div>
-        <p class="mob-detail-desc" id="mobDetailDesc"></p>
         <div id="mobDetailHighlights" style="display:none;"></div>
       </div>
     </div>
@@ -2299,7 +2329,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
          sits above the safe-area inset regardless of browser chrome ── -->
     <div class="mob-sheet-handle" id="mobSheetHandle">
       <div class="mob-sheet-handle-bar"></div>
-      <div class="mob-sheet-handle-label" id="mobSheetHandleLabel">▲ Swipe up for tags, description &amp; more</div>
+      <div class="mob-sheet-handle-label" id="mobSheetHandleLabel">▲ Swipe up for tags &amp; more</div>
     </div>
   </div>
 
@@ -3133,7 +3163,7 @@ const fns=getFunctions(app,'us-central1');
 const COVER_CACHE_NAME = 'elib-cover-cache-v1'; // hoisted above primeCoverCache()'s call site below — it's a const, so it must be initialized before that call runs
 let mobLibFilter = 'all';
 let mobLibCat    = 'All';
-let mobLibFormat = 'all';   // 'all' | 'book' | 'audio' — format filter, mobile Library
+let mobLibFormat = new Set(['book']);  // library MODE, mobile — a Set so eBooks and Audio can both be active at once; 'recipe' is exclusive of both (see toggleLibFormat)
 let mobLibSearch = '';
 let mobLibSort   = 'series-recent';
 let mobPrevPanel = 'mobPanelLibrary';
@@ -3146,7 +3176,7 @@ let _coverCachePrimed = primeCoverCache();
 // (mobLibFilter/mobLibCat/mobActiveTags/mobLibSort below), just its own copy
 // so each surface renders and filters independently.
 let deskLibFilter='all',deskLibCat='All',deskLibSort='series-recent',searchQ='';
-let deskLibFormat='all';         // 'all' | 'book' | 'audio' — format filter, desktop Library
+let deskLibFormat = new Set(['book']);  // library MODE, desktop — see mobLibFormat above for the Set rationale
 let deskActiveTags = new Set();   // tag-filter picker selections, desktop Library
 let mobActiveTags = new Set();    // tag-filter picker selections, mobile Library
 let selectMode=false,selectedIds=new Set(),deskView='library';
@@ -4274,10 +4304,13 @@ function filteredBooks(){
     books=dedupe([...library,...communityLib]).filter(b=>ids.has(b.id));
   }
   if(deskLibCat!=='All')books=books.filter(b=>(b.category||'Uncategorised')===deskLibCat);
-  if(deskLibFormat==='book')books=books.filter(b=>!b.isAudio&&!b.isRecipe);
-  if(deskLibFormat==='audio')books=books.filter(b=>b.isAudio);
-  if(deskLibFormat==='recipe')books=books.filter(b=>b.isRecipe);
-  else books=books.filter(b=>!b.isRecipe); // recipes are opt-in via the Format filter, not shown by default
+  if(deskLibFormat.has('recipe')){
+    books=books.filter(b=>b.isRecipe);
+  } else {
+    // eBooks and Audio filter independently and can both be active — see
+    // toggleLibFormat. Recipes stay opt-in only via that exclusive mode.
+    books=books.filter(b=>!b.isRecipe && ((b.isAudio && deskLibFormat.has('audio')) || (!b.isAudio && deskLibFormat.has('book'))));
+  }
   if(searchQ)books=books.filter(b=>b.title?.toLowerCase().includes(searchQ)||b.author?.toLowerCase().includes(searchQ)||b.category?.toLowerCase().includes(searchQ));
   if(deskActiveTags.size)books=books.filter(b=>(b.tags||[]).some(t=>deskActiveTags.has(t)));
   return sortBooks(books,deskLibSort);
@@ -4366,7 +4399,7 @@ function renderAll(){
   const titleEl   = document.getElementById('deskGridTitle');
   if(_deskListFilter){
     const list = _userLists.find(l=>l.id===_deskListFilter);
-    const systemLabels = {'favourites':'Favourites','want-to-read':'Want to Read',
+    const systemLabels = {'favourites':'Favourites','favourite-recipes':'Favourite Recipes','want-to-read':'Want to Read',
       'currently-reading':'Currently Reading','finished':'Finished'};
     const name = list ? (systemLabels[list.id] || list.name) : 'List';
     titleEl.textContent = 'Library';
@@ -4383,7 +4416,7 @@ function renderGrid(gridId){
   const grid=document.getElementById(gridId);if(!grid)return;
   const books=filteredBooks();
   if(!books.length){
-    renderRecipeFolderBar(grid, 'deskRecipeFolderBar', 0);
+    renderRecipeFolderBar(grid, 'deskRecipeFolderBar', 0, deskLibFormat.has('recipe'));
     const isEmpty=activeBooks().length===0;
     const canUpload=deskLibFilter==='all'||deskLibFilter==='private';
     grid.innerHTML=`<div style="grid-column:1/-1;padding:3rem 1rem;text-align:center;color:var(--muted)"><div style="font-size:2.5rem;opacity:.25;margin-bottom:.8rem">📚</div><div style="font-family:'Playfair Display',serif;font-size:1.1rem;color:var(--navy2);margin-bottom:.4rem">${isEmpty?'Your library is empty':'No books match'}</div><div style="font-size:.85rem">${isEmpty?'Upload a book or audiobook to get started':'Try a different search or filter'}</div>${isEmpty&&canUpload?`<div style="margin-top:1rem;display:flex;gap:.5rem;justify-content:center;flex-wrap:wrap"><button class="hbtn hbtn-upload" id="emptyStateUploadBtn">📤 Upload</button><button class="hbtn hbtn-upload" id="emptyStateUploadAudioBtn">🎧 Upload Audio</button><button class="hbtn hbtn-upload" id="emptyStateAddRecipeBtn">🍲 Add Recipe</button></div>`:''}</div>`;
@@ -4395,7 +4428,7 @@ function renderGrid(gridId){
     return;
   }
   const gridBooks = collapseAudioSeriesForGrid(collapseRecipesByCategoryForGrid(books));
-  renderRecipeFolderBar(grid, 'deskRecipeFolderBar', gridBooks.filter(b=>b.isRecipe&&!b.isGroup).length);
+  renderRecipeFolderBar(grid, 'deskRecipeFolderBar', gridBooks.filter(b=>b.isRecipe&&!b.isGroup).length, deskLibFormat.has('recipe'));
   reconcileGrid(grid, gridBooks, b => b.id, b => {
     const coverSrc=getCoverSrc(b);
     const isSelected=selectedIds.has(b.id);
@@ -4482,6 +4515,16 @@ document.getElementById('deskSearchClear').addEventListener('click',()=>{
 // .mfp-dd) and option lists, just reading/writing desk state and re-rendering
 // the desktop grid instead of the mobile one.
 function updateDeskFilterPillLabels() {
+  renderLibModeToggle('deskModeToggle', deskLibFormat);
+
+  // Genre, Tags and Sort don't apply in Recipes mode — recipes are browsed
+  // via their own category folders instead (see openRecipeCategory).
+  const isRecipeMode = deskLibFormat.has('recipe');
+  document.getElementById('deskPillCat')?.classList.toggle('lib-pill-hidden', isRecipeMode);
+  document.getElementById('deskPillTags')?.classList.toggle('lib-pill-hidden', isRecipeMode);
+  document.getElementById('deskPillSort')?.classList.toggle('lib-pill-hidden', isRecipeMode);
+  document.getElementById('deskSortDivider')?.classList.toggle('lib-pill-hidden', isRecipeMode);
+
   const catLabel = document.getElementById('deskPillCatLabel');
   if (catLabel) catLabel.textContent = deskLibCat === 'All' ? 'Genre' : deskLibCat;
   document.getElementById('deskPillCat')?.classList.toggle('mfp-active', deskLibCat !== 'All');
@@ -4489,10 +4532,6 @@ function updateDeskFilterPillLabels() {
   const tagsLabel = document.getElementById('deskPillTagsLabel');
   if (tagsLabel) tagsLabel.textContent = deskActiveTags.size ? `Tags (${deskActiveTags.size})` : 'Tags';
   document.getElementById('deskPillTags')?.classList.toggle('mfp-active', deskActiveTags.size > 0);
-
-  const formatLabel = document.getElementById('deskPillFormatLabel');
-  if (formatLabel) formatLabel.textContent = (FORMAT_OPTIONS.find(o => o.id === deskLibFormat) || FORMAT_OPTIONS[0]).label;
-  document.getElementById('deskPillFormat')?.classList.toggle('mfp-active', deskLibFormat !== 'all');
 
   const sortLabel = document.getElementById('deskPillSortLabel');
   if (sortLabel) sortLabel.textContent = (MOB_SORT_OPTIONS.find(o => o.id === deskLibSort) || MOB_SORT_OPTIONS[0]).label;
@@ -4503,7 +4542,7 @@ function updateDeskFilterPillLabels() {
 }
 
 document.getElementById('deskPillCat').addEventListener('click', (e) => {
-  const srcForCats = activeBooks().filter(b => !b.isRecipe);
+  const srcForCats = activeBooks().filter(b => !b.isRecipe && ((b.isAudio && deskLibFormat.has('audio')) || (!b.isAudio && deskLibFormat.has('book'))));
   const cats = {};
   srcForCats.forEach(b => { const c = b.category || 'Uncategorised'; cats[c] = (cats[c] || 0) + 1; });
   const items = [
@@ -4538,15 +4577,14 @@ document.getElementById('deskPillTags').addEventListener('click', (e) => {
   });
 });
 
-document.getElementById('deskPillFormat').addEventListener('click', (e) => {
-  openMobFilterPicker({
-    anchor: e.currentTarget,
-    title: '🎧 Format',
-    items: FORMAT_OPTIONS,
-    isSelected: it => deskLibFormat === it.id,
-    onSelect: it => { deskLibFormat = it.id; },
-    onAfterSelect: renderAll,
-  });
+document.getElementById('deskModeToggle')?.addEventListener('click', (e) => {
+  const btn = e.target.closest('.lib-mode-seg');
+  if (!btn) return;
+  toggleLibFormat(deskLibFormat, btn.dataset.mode);
+  // Leaving Recipes closes the open folder, so coming back lands on the
+  // folder grid rather than silently resuming inside a category.
+  if (!deskLibFormat.has('recipe')) _openRecipeCategory = null;
+  renderAll();
 });
 
 document.getElementById('deskPillSort').addEventListener('click', (e) => {
@@ -4649,9 +4687,10 @@ function renderDeskSidebar() {
   // way whether you're filtering it here or browsing it there. Desktop has
   // no "Current Reads"-strip equivalent for Recently Viewed the way mobile's
   // home tab does, so it's added here as its own filterable row instead.
-  const systemOrder = ['favourites', 'want-to-read', 'currently-reading', 'finished', 'viewed'];
+  const systemOrder = ['favourites', 'favourite-recipes', 'want-to-read', 'currently-reading', 'finished', 'viewed'];
   const systemMeta = {
     'favourites':        { icon: '❤️',  label: 'Favourites',        color: '#e11d48', soft: 'rgba(225,29,72,.1)' },
+    'favourite-recipes': { icon: '🧡', label: 'Favourite Recipes',  color: '#b84c1a', soft: 'rgba(184,76,26,.1)' },
     'want-to-read':      { icon: '🔖', label: 'Want to Read',       color: '#7c3aed', soft: 'rgba(124,58,237,.1)' },
     'currently-reading': { icon: '📖', label: 'Currently Reading',  color: '#c8952a', soft: 'rgba(200,149,42,.1)' },
     'finished':          { icon: '✓',  label: 'Finished',          color: '#276749', soft: 'rgba(39,103,73,.1)' },
@@ -4829,14 +4868,20 @@ function renderDetailActionRows(peekContainer, moreContainer, book, isMine){
   </div>`;
 
   const hasCustomLists = _userLists.some(l => !l.system);
+  // Recipes aren't read front-to-back, so the Want to Read/Reading/Finished
+  // stage toggle doesn't apply (buildDrawerIconBar already guards this the
+  // same way). Without it the whole section can end up empty, so drop it.
+  const stageHtml = book.isRecipe ? '' : readingStageSegmentHtml(book.id);
 
-  peekHtml += `<div class="mob-list-section">
-    ${hasCustomLists ? `<div class="mob-list-section-label">Lists</div>
-    <div class="mob-list-row" style="margin-bottom:.5rem;">
-      <button class="mob-list-other-btn" data-action="otherlists" id="mobOtherListsBtn">Other Lists ▾</button>
-    </div>` : ''}
-    ${readingStageSegmentHtml(book.id)}
-  </div>`;
+  if (hasCustomLists || stageHtml) {
+    peekHtml += `<div class="mob-list-section">
+      ${hasCustomLists ? `<div class="mob-list-section-label">Lists</div>
+      <div class="mob-list-row" style="margin-bottom:.5rem;">
+        <button class="mob-list-other-btn" data-action="otherlists" id="mobOtherListsBtn">Other Lists ▾</button>
+      </div>` : ''}
+      ${stageHtml}
+    </div>`;
+  }
 
   peekContainer.innerHTML = peekHtml;
   peekContainer.querySelectorAll('[data-action]').forEach(b => b.addEventListener('click', handleAction));
@@ -4845,7 +4890,10 @@ function renderDetailActionRows(peekContainer, moreContainer, book, isMine){
   // REVEALED ON SWIPE-UP — Tags/Categories (visually separate card), then
   // secondary actions and the "More options" collapse.
   // ═══════════════════════════════════════════════════════════════════════
-  let html = `<div class="mob-taxonomy-card">
+  // Genre/Tags are book-and-audio taxonomy. A recipe's category is set in the
+  // recipe editor (and drives the folder grid), and recipes don't carry tags,
+  // so the whole card is dropped rather than shown with dead controls.
+  let html = book.isRecipe ? '' : `<div class="mob-taxonomy-card">
     <div style="display:flex;gap:.4rem;">
       ${medBtn('📚','Genre','category','var(--gold)','rgba(200,149,42,.4)')}
       ${medBtn('🏷','Tags','tags','var(--teal)','var(--teal)')}
@@ -4921,6 +4969,16 @@ function renderDetailActionRows(peekContainer, moreContainer, book, isMine){
 
   const shareLabel = '🔗 Share';
 
+  // Recipes only ever have one edit destination (the recipe editor, no
+  // separate "Edit Contents"), so a dropdown pill with a single option in
+  // it is more fiddly than useful — a plain button that opens the editor
+  // directly, same as the old pencil icon in the recipe viewer used to.
+  // Books/audio keep the dropdown since Edit Details vs Edit Contents is a
+  // real choice there.
+  const editControlHtml = book.isRecipe
+    ? (canManage ? `<button type="button" data-action="editrecipe" class="mfp detail-pill-select"><span>✎ Edit</span></button>` : '')
+    : pillSelect('detailEditSelect', 'Edit', editOpts);
+
   if(canManage){
     html += `<div class="mob-list-section" style="margin-top:.5rem;">
       ${visibilitySegmentHtml()}
@@ -4929,7 +4987,7 @@ function renderDetailActionRows(peekContainer, moreContainer, book, isMine){
 
   html += `<div style="display:flex;flex-wrap:wrap;gap:.4rem;padding:.6rem 0 .3rem;border-top:1px solid var(--border);margin-top:.4rem;">
     ${pillSelect('detailShareSelect', shareLabel, shareOpts)}
-    ${pillSelect('detailEditSelect', 'Edit', editOpts)}
+    ${editControlHtml}
     ${recToggle}
   </div>`;
 
@@ -4938,7 +4996,9 @@ function renderDetailActionRows(peekContainer, moreContainer, book, isMine){
   // neither belongs to "share" or "edit" and both are rare enough not to
   // need their own group.
   const bottomBtns = [smBtn('🐞','Report Bug','reportbug')];
-  if(isAdmin) bottomBtns.push(smBtn('📋','History','history'));
+  // Checkout/reading history is meaningless for a recipe — there's nothing
+  // to "check out".
+  if(isAdmin && !book.isRecipe) bottomBtns.push(smBtn('📋','History','history'));
   if(isMine)  bottomBtns.push(smBtn('✕','Delete','delete',{danger:true}));
   if(bottomBtns.length){
     html += `<div style="display:flex;flex-wrap:wrap;gap:.35rem;padding-top:.5rem;">${bottomBtns.join('')}</div>`;
@@ -4976,7 +5036,7 @@ async function handleQuickListToggle(btn){
   const nowIn = (_userLists.find(l => l.id === listId)?.bookIds || []).includes(currentId);
   btn.classList.toggle('active', nowIn);
   const iconEl = btn.querySelector('.lq-icon');
-  if(listId === 'favourites' && iconEl) iconEl.textContent = nowIn ? '❤️' : '🤍';
+  if((listId === 'favourites' || listId === 'favourite-recipes') && iconEl) iconEl.textContent = nowIn ? '❤️' : '🤍';
   renderMobHome();
   renderDeskHome();
 }
@@ -5035,7 +5095,7 @@ function mobSheetSetExpanded(expanded){
   sheet.classList.toggle('full', expanded);
   more.classList.toggle('expanded', expanded);
   handle.classList.toggle('expanded', expanded);
-  if(label) label.textContent = expanded ? '▾ Show less' : '▲ Swipe up for tags, description & more';
+  if(label) label.textContent = expanded ? '▾ Show less' : '▲ Swipe up for tags & more';
   if(scroller) scroller.scrollTop = 0;
 }
 (function initMobSheetHandle(){
@@ -5086,8 +5146,10 @@ function buildDrawerIconBar(book, isMine){
     ? _audioCurrentId === book._audioTrack?.id
     : !!readingPosBm && (readingPosBm.progress || 0) > 0;
 
-  // Quick-list state
-  const isFav = !!_userLists.find(l => l.id === 'favourites')?.bookIds?.includes(book.id);
+  // Quick-list state — recipes get their own Favourites list, separate from
+  // the one used for books/audiobooks.
+  const favListId = book.isRecipe ? 'favourite-recipes' : 'favourites';
+  const isFav = !!_userLists.find(l => l.id === favListId)?.bookIds?.includes(book.id);
 
   let html = `
     <!-- Primary: Read/Listen/Open (+ Continue variants) + Send to Kobo -->
@@ -5106,20 +5168,20 @@ function buildDrawerIconBar(book, isMine){
     <div style="padding:.55rem 1.5rem .45rem;border-bottom:1px solid var(--border);">
       <div style="font-size:.58rem;letter-spacing:.15em;text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:.4rem;">Lists</div>
       <div style="display:flex;flex-wrap:wrap;gap:.4rem;margin-bottom:.5rem;">
-        <button class="mob-list-quickbtn ${isFav?'active':''}" data-list="favourites" data-action="quicklist">
-          <span class="lq-icon">${isFav?'❤️':'🤍'}</span><span>Favourites</span>
+        <button class="mob-list-quickbtn ${isFav?'active':''}" data-list="${favListId}" data-action="quicklist">
+          <span class="lq-icon">${isFav?'❤️':'🤍'}</span><span>${book.isRecipe ? 'Favourite Recipes' : 'Favourites'}</span>
         </button>
         <button class="mob-list-other-btn" data-action="addtolist">Other Lists ▾</button>
       </div>
-      ${readingStageSegmentHtml(book.id)}
+      ${book.isRecipe ? '' : readingStageSegmentHtml(book.id)}
     </div>
 
     <!-- Secondary global actions -->
     <div style="padding:.4rem 1.5rem .3rem;border-bottom:1px solid var(--border);">
       <div style="font-size:.58rem;letter-spacing:.15em;text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:.35rem;">Actions</div>
       <div style="display:flex;gap:.4rem;flex-wrap:wrap;">
-        <button class="drawer-icon-btn" data-action="category"><span class="di-icon">📚</span><span class="di-label">Genre</span></button>
-        <button class="drawer-icon-btn" data-action="tags"><span class="di-icon">🏷</span><span class="di-label">Tags</span></button>
+        ${book.isRecipe ? '' : `<button class="drawer-icon-btn" data-action="category"><span class="di-icon">📚</span><span class="di-label">Genre</span></button>
+        <button class="drawer-icon-btn" data-action="tags"><span class="di-icon">🏷</span><span class="di-label">Tags</span></button>`}
         <button class="drawer-icon-btn" data-action="recommend">
           <span class="di-icon">${book.recommended?'☆':'⭐'}</span>
           <span class="di-label">${book.recommended?'Unrec':'Rec'}</span>
@@ -5204,7 +5266,14 @@ function runDetailAction(a){
   if(a==='shareprivate') showPrivateShare();
   if(a==='link')         showDirectLink();
   if(a==='editmeta')     showEditMeta();
-  if(a==='editrecipe'){ const book=[...library,...communityLib].find(b=>b.id===currentId); if(book?._recipe) showRecipeEditor(book._recipe); }
+  if(a==='editrecipe'){
+    // The recipe editor overlay (z-index:510) sits *below* the bottom sheet
+    // (z-index:520) — unlike editmeta's modal, which is a .modal-overlay at
+    // 530 and so naturally covers the sheet without needing it closed. Close
+    // it explicitly here, same as Read already does for audio/recipes.
+    const book=[...library,...communityLib].find(b=>b.id===currentId);
+    if(book?._recipe){ closeMobBookSheet(); showRecipeEditor(book._recipe); }
+  }
   if(a==='chapters')     openChapterManager();
   if(a==='recommend')    toggleRecommended();
   if(a==='tags')         showTagsModal();
@@ -5242,6 +5311,14 @@ function runDetailAction(a){
         stopAudioPlayback();
         document.getElementById('audioPersistentPlayer')?.classList.remove('open');
       }
+    } else if(book.isRecipe){
+      // Same trap as audio, different collection — recipes live in
+      // `recipes` (see collectionForBook), not `books`. Same delete +
+      // refresh sequence deleteRecipeFromEditor already used, now reachable
+      // straight from the bottom sheet instead of only via the editor.
+      await deleteDoc(doc(db,'recipes',currentId));
+      await loadRecipes();
+      mergeRecipesIntoLibrary();
     } else {
       await deleteDoc(doc(db,'books',currentId));
     }
@@ -5249,9 +5326,10 @@ function runDetailAction(a){
     communityLib=communityLib.filter(b=>b.id!==currentId);
     currentId=null;
     closeDrawer();
+    closeMobBookSheet();
     hideLoading();
     renderAll();
-    showToast('Book deleted');
+    showToast(book.isRecipe ? 'Recipe deleted' : 'Book deleted');
   }catch(e){
     hideLoading();
     showToast('Delete failed: '+e.message);
@@ -5525,11 +5603,14 @@ async function mob_showBook(id, opts={}){
   const isMine=book.ownerId===currentUser?.uid;
   const isComm=communityLib.some(b=>b.id===id);
 
-  const favList = _userLists.find(l => l.id === 'favourites');
+  const favListId = book.isRecipe ? 'favourite-recipes' : 'favourites';
+  const favList = _userLists.find(l => l.id === favListId);
   book.__isFav = !!(favList?.bookIds || []).includes(id);
 
   const coverFavBtn = document.getElementById('mobCoverFavBtn');
   if(coverFavBtn){
+    coverFavBtn.dataset.list = favListId;
+    coverFavBtn.setAttribute('aria-label', book.isRecipe ? 'Toggle favourite recipe' : 'Toggle favourite');
     coverFavBtn.classList.toggle('active', book.__isFav);
     coverFavBtn.querySelector('.lq-icon').textContent = book.__isFav ? '❤️' : '🤍';
   }
@@ -5577,7 +5658,16 @@ async function mob_showBook(id, opts={}){
   else if(!isMine&&mobIsPrivatelyShared){mobSharedByEl.textContent='Shared with you by '+(book.ownerName||'Anonymous');mobSharedByEl.style.display='block';}
   else mobSharedByEl.style.display='none';
 
-  document.getElementById('mobDetailDesc').textContent=stripHtml(book.description||'');
+  // Now that the description sits in the always-visible peek area rather
+  // than behind the swipe-up, an empty one needs to collapse away entirely
+  // (display:none) instead of just being empty text with margin still
+  // reserved, or every book/recipe without one shows a blank gap.
+  {
+    const descText = stripHtml(book.description||'');
+    const descEl = document.getElementById('mobDetailDesc');
+    descEl.textContent = descText;
+    descEl.style.display = descText ? '' : 'none';
+  }
 
   renderDetailActionRows(document.getElementById('mobDetailActions'), document.getElementById('mobDetailMoreActions'), book, isMine);
 
@@ -5713,12 +5803,44 @@ const MOB_SOURCE_OPTIONS = [
   { id:'public',  label:'Public' },
   { id:'shared',  label:'Shared with Me' },
 ];
-const FORMAT_OPTIONS = [
-  { id:'all',    label:'Format', icon:'📚' },
-  { id:'book',   label:'Ebook',  icon:'📖' },
-  { id:'audio',  label:'Audio',  icon:'🎧' },
-  { id:'recipe', label:'Recipe', icon:'🍲' },
+// Library MODE — Ebook / Audio / Recipes. This used to be a "Format" dropdown
+// filter (with an "all" option); it's now a persistent 3-way toggle, so there's
+// always exactly one active mode and no "all". `color` is the toggle segment's
+// active-state background.
+const LIB_MODE_OPTIONS = [
+  { id:'book',   label:'Ebook',   icon:'📖', color:'var(--navy2)' },
+  { id:'audio',  label:'Audio',   icon:'🎧', color:'var(--rust)' },
+  { id:'recipe', label:'Recipes', icon:'🍲', color:'var(--teal)' },
 ];
+
+// Toggles one library-mode segment (see LIB_MODE_OPTIONS) in place. eBooks
+// and Audio toggle independently — picking one never affects the other.
+// Recipes is exclusive: picking it clears everything else, and picking
+// eBooks/Audio while Recipes is active drops Recipes and starts a fresh
+// book/audio selection rather than adding to it. Never left empty — toggling
+// off the last remaining book/audio format is a no-op, same as a radio
+// group not letting you deselect the only checked option.
+function toggleLibFormat(formatSet, mode) {
+  if (mode === 'recipe') { formatSet.clear(); formatSet.add('recipe'); return; }
+  if (formatSet.has('recipe')) { formatSet.clear(); formatSet.add(mode); return; }
+  if (formatSet.has(mode)) { if (formatSet.size > 1) formatSet.delete(mode); }
+  else formatSet.add(mode);
+}
+
+// Renders the 3-way mode toggle into either #deskModeToggle or #mobModeToggle.
+// Click handling is delegated once on the container (see the two
+// addEventListener calls near updateDeskFilterPillLabels/updateMobFilterPillLabels)
+// rather than re-bound here, since this can be called on every render pass.
+function renderLibModeToggle(containerId, currentMode) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  el.innerHTML = LIB_MODE_OPTIONS.map(o => {
+    const active = currentMode.has(o.id);
+    return `<button type="button" class="lib-mode-seg${active ? ' active' : ''}" data-mode="${o.id}"
+      role="tab" aria-selected="${active}" style="${active ? `background:${o.color};` : ''}">
+      <span>${o.icon}</span><span>${o.label}</span></button>`;
+  }).join('');
+}
 
 function getAllMobTags() {
   const set = new Set();
@@ -5729,6 +5851,16 @@ function getAllMobTags() {
 // Keeps each pill's label + "active" (filled) state in sync with the
 // current filter/sort values — called after render and after any change.
 function updateMobFilterPillLabels() {
+  renderLibModeToggle('mobModeToggle', mobLibFormat);
+
+  // Genre, Tags and Sort don't apply in Recipes mode — recipes are browsed
+  // via their own category folders instead (see openRecipeCategory).
+  const isRecipeMode = mobLibFormat.has('recipe');
+  document.getElementById('mfpCat')?.classList.toggle('lib-pill-hidden', isRecipeMode);
+  document.getElementById('mfpTags')?.classList.toggle('lib-pill-hidden', isRecipeMode);
+  document.getElementById('mfpSort')?.classList.toggle('lib-pill-hidden', isRecipeMode);
+  document.getElementById('mfpSortDivider')?.classList.toggle('lib-pill-hidden', isRecipeMode);
+
   const catLabel = document.getElementById('mfpCatLabel');
   if (catLabel) catLabel.textContent = mobLibCat === 'All' ? 'Genre' : mobLibCat;
   document.getElementById('mfpCat')?.classList.toggle('mfp-active', mobLibCat !== 'All');
@@ -5736,10 +5868,6 @@ function updateMobFilterPillLabels() {
   const tagsLabel = document.getElementById('mfpTagsLabel');
   if (tagsLabel) tagsLabel.textContent = mobActiveTags.size ? `Tags (${mobActiveTags.size})` : 'Tags';
   document.getElementById('mfpTags')?.classList.toggle('mfp-active', mobActiveTags.size > 0);
-
-  const formatLabel = document.getElementById('mfpFormatLabel');
-  if (formatLabel) formatLabel.textContent = (FORMAT_OPTIONS.find(o => o.id === mobLibFormat) || FORMAT_OPTIONS[0]).label;
-  document.getElementById('mfpFormat')?.classList.toggle('mfp-active', mobLibFormat !== 'all');
 
   const sortLabel = document.getElementById('mfpSortLabel');
   if (sortLabel) sortLabel.textContent = (MOB_SORT_OPTIONS.find(o => o.id === mobLibSort) || MOB_SORT_OPTIONS[0]).label;
@@ -5806,7 +5934,7 @@ function openMobFilterPicker({ anchor, title, items, isSelected, onSelect, multi
 }
 
 document.getElementById('mfpCat').addEventListener('click', (e) => {
-  const srcForCats = getMobLibSourceBooks().filter(b => !b.isRecipe);
+  const srcForCats = getMobLibSourceBooks().filter(b => !b.isRecipe && ((b.isAudio && mobLibFormat.has('audio')) || (!b.isAudio && mobLibFormat.has('book'))));
   const cats = {};
   srcForCats.forEach(b => { const c = b.category || 'Uncategorised'; cats[c] = (cats[c] || 0) + 1; });
   const items = [
@@ -5839,15 +5967,34 @@ document.getElementById('mfpTags').addEventListener('click', (e) => {
   });
 });
 
-document.getElementById('mfpFormat').addEventListener('click', (e) => {
-  openMobFilterPicker({
-    anchor: e.currentTarget,
-    title: '🎧 Format',
-    items: FORMAT_OPTIONS,
-    isSelected: it => mobLibFormat === it.id,
-    onSelect: it => { mobLibFormat = it.id; },
-  });
+document.getElementById('mobModeToggle')?.addEventListener('click', (e) => {
+  const btn = e.target.closest('.lib-mode-seg');
+  if (!btn) return;
+  toggleLibFormat(mobLibFormat, btn.dataset.mode);
+  if (!mobLibFormat.has('recipe')) _openRecipeCategory = null;
+  updateMobFilterPillLabels();
+  renderMobLibrary();
 });
+
+// Auto-hide the search/mode/filter block as the grid scrolls down, and bring
+// it back the moment the user scrolls back up — so it's out of the way while
+// browsing but never more than a small upward swipe away.
+(function initMobLibTopAutoHide(){
+  const scrollEl = document.getElementById('mobLibGridScroll');
+  const topEl = document.getElementById('mobLibTop');
+  if (!scrollEl || !topEl) return;
+  let lastY = 0;
+  scrollEl.addEventListener('scroll', () => {
+    const y = scrollEl.scrollTop;
+    const delta = y - lastY;
+    // Ignore tiny jitters (momentum/rubber-banding noise), and don't collapse
+    // until scrolled a little way down, so it doesn't flicker near the top.
+    if (Math.abs(delta) < 4) return;
+    if (delta > 0 && y > 40) topEl.classList.add('mob-top-hidden');
+    else if (delta < 0) topEl.classList.remove('mob-top-hidden');
+    lastY = y;
+  }, { passive: true });
+})();
 
 document.getElementById('mfpSort').addEventListener('click', (e) => {
   openMobFilterPicker({
@@ -5895,11 +6042,13 @@ function getMobLibBooks() {
   let src = getMobLibSourceBooks();
   // Category filter
   if (mobLibCat !== 'All') src = src.filter(b => (b.category || 'Uncategorised') === mobLibCat);
-  // Format filter
-  if (mobLibFormat === 'book') src = src.filter(b => !b.isAudio && !b.isRecipe);
-  if (mobLibFormat === 'audio') src = src.filter(b => b.isAudio);
-  if (mobLibFormat === 'recipe') src = src.filter(b => b.isRecipe);
-  else src = src.filter(b => !b.isRecipe); // recipes are opt-in via the Format filter, not shown by default
+  // Format filter — eBooks and Audio filter independently and can both be
+  // active (see toggleLibFormat); Recipes stays an exclusive mode.
+  if (mobLibFormat.has('recipe')) {
+    src = src.filter(b => b.isRecipe);
+  } else {
+    src = src.filter(b => !b.isRecipe && ((b.isAudio && mobLibFormat.has('audio')) || (!b.isAudio && mobLibFormat.has('book'))));
+  }
   // Tags filter (book must match every selected tag — AND logic)
   if (mobActiveTags.size) src = src.filter(b => [...mobActiveTags].every(t => (b.tags || []).includes(t)));
   // Search
@@ -5912,7 +6061,7 @@ function renderMobLibrary() {
   document.getElementById('mobGridLibrary').classList.remove('select-mode');
   // Category chips (legacy hidden chip row — kept in sync so nothing errors
   // if it's ever shown again; the live UI is the mfpCat picker below)
-  const srcForCats = getMobLibSourceBooks().filter(b => !b.isRecipe);
+  const srcForCats = getMobLibSourceBooks().filter(b => !b.isRecipe && ((b.isAudio && mobLibFormat.has('audio')) || (!b.isAudio && mobLibFormat.has('book'))));
   const cats = {};
   srcForCats.forEach(b => { const c = b.category || 'Uncategorised'; cats[c] = (cats[c] || 0) + 1; });
   document.getElementById('mobLibCatChips').innerHTML =
@@ -5925,7 +6074,7 @@ function renderMobLibrary() {
   const books = getMobLibBooks();
   const grid = document.getElementById('mobGridLibrary');
   if (!books.length) {
-    renderRecipeFolderBar(grid, 'mobRecipeFolderBar', 0);
+    renderRecipeFolderBar(grid, 'mobRecipeFolderBar', 0, mobLibFormat.has('recipe'));
     grid.innerHTML = `<div style="grid-column:1/-1;padding:3rem 1rem;text-align:center;color:var(--muted)">
       <div style="font-size:2.5rem;opacity:.2;margin-bottom:.8rem">📚</div>
       <div style="font-size:.88rem">${mobLibSearch ? 'No books match your search' : 'No books here yet'}</div>
@@ -5933,7 +6082,7 @@ function renderMobLibrary() {
     return;
   }
   const gridBooks = collapseAudioSeriesForGrid(collapseRecipesByCategoryForGrid(books));
-  renderRecipeFolderBar(grid, 'mobRecipeFolderBar', gridBooks.filter(b=>b.isRecipe&&!b.isGroup).length);
+  renderRecipeFolderBar(grid, 'mobRecipeFolderBar', gridBooks.filter(b=>b.isRecipe&&!b.isGroup).length, mobLibFormat.has('recipe'));
   reconcileGrid(grid, gridBooks, b => b.id, b => {
     const isComm = communityLib.some(x => x.id === b.id);
     return bookCardHtml(b, isComm);
@@ -6747,6 +6896,7 @@ function recommendedSection(books) {
   const finBooks    = resolve(_userLists.find(l => l.id === 'finished')?.bookIds || []);
   const wtrBooks    = resolve(_userLists.find(l => l.id === 'want-to-read')?.bookIds || []);
   const favBooks    = resolve(_userLists.find(l => l.id === 'favourites')?.bookIds || []);
+  const favRecipeBooks = resolve(_userLists.find(l => l.id === 'favourite-recipes')?.bookIds || []);
   const viewedBooks = resolve([...(_userLists.find(l => l.id === 'viewed')?.bookIds || [])].reverse().slice(0, 20));
   const recBooks    = dedupe([...library, ...communityLib]).filter(b => b.recommended)
     .sort((a,b) => {
@@ -6774,6 +6924,7 @@ function recommendedSection(books) {
   addSection('home_sec_bookmarks', bookmarksSection());
   addSection('home_sec_recommended', recommendedSection(recBooks));
   addSection('home_fav', shelfSection('home_fav', 'Favourites', '❤️', '#e11d48', favBooks, {defaultOpen:false, showAddTile:true, listId:'favourites', alwaysShow:true}));
+  addSection('home_fav_recipes', shelfSection('home_fav_recipes', 'Favourite Recipes', '🧡', '#b84c1a', favRecipeBooks, {defaultOpen:false, alwaysShow:true}));
   addSection('home_wtr', shelfSection('home_wtr', 'Want to read', '🔖', '#7c3aed', wtrBooks, {defaultOpen:false, showAddTile:true, listId:'want-to-read', alwaysShow:true}));
   addSection('home_shared', shelfSection('home_shared', 'Shared with Me', '🔒', '#5a48b0', sharedBooks, {defaultOpen:false}));
   customLists.forEach(l => {
@@ -9176,9 +9327,13 @@ function closeRecipeCategory() {
 // grid item, so it isn't part of reconcileGrid's diffing and always spans
 // full width regardless of the grid's column count. `count` is however many
 // recipe cards the caller is about to render for this category.
-function renderRecipeFolderBar(grid, barId, count) {
+// `isRecipeMode` is whether THIS surface (desktop or mobile) is currently
+// showing recipes. The two surfaces keep independent format state, so the bar
+// has to be hidden per-surface — otherwise switching to eBooks/Audio on one
+// leaves a stale "back to <category>" bar sitting above a grid of books.
+function renderRecipeFolderBar(grid, barId, count, isRecipeMode) {
   let bar = document.getElementById(barId);
-  if (!_openRecipeCategory) {
+  if (!_openRecipeCategory || !isRecipeMode) {
     if (bar) bar.style.display = 'none';
     return;
   }
@@ -16301,6 +16456,7 @@ const SYSTEM_LISTS = [
   { id: 'currently-reading', name: 'Currently Reading',  icon: '🔖', system: true  },
   { id: 'finished',          name: 'Finished',           icon: '✓',  system: true  },
   { id: 'favourites',        name: 'Favourites',         icon: '❤️', system: true  },
+  { id: 'favourite-recipes', name: 'Favourite Recipes',  icon: '🧡', system: true  },
 ];
 
 async function loadUserLists() {
@@ -18933,7 +19089,7 @@ function recipeToBookLike(r) {
   return {
     id: r.id,
     title: r.title || 'Untitled Recipe',
-    author: r.createdByName || '',
+    author: r.author || r.createdByName || '',
     category: r.chapterName || r.category || 'Uncategorised',
     language: r.language || '',
     description: r.desc || '',
@@ -19354,7 +19510,6 @@ function _cmEnsureOverlay() {
         <div id="cmTitle" style="font-family:'Playfair Display',serif;font-size:1.15rem;color:var(--navy);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"></div>
       </div>
       <button onclick="document.getElementById('cmTimerTray').style.display=document.getElementById('cmTimerTray').style.display==='none'?'block':'none';" style="border:none;background:none;font-size:1.25rem;cursor:pointer;">⏱</button>
-      <button id="cmEditBtn" style="display:none;border:none;background:none;font-size:1.15rem;cursor:pointer;">✎</button>
     </div>
     <div id="cmTimerTray" style="display:none;flex-shrink:0;max-height:35vh;overflow-y:auto;background:var(--panel);border-bottom:1px solid var(--border);">
       <div id="cmTimerList"></div>
@@ -19424,10 +19579,9 @@ function openRecipeCookMode(recipe) {
   const tipEl = document.getElementById('cmTip');
   if (recipe.tip) { tipEl.innerHTML = esc(recipe.tip); tipEl.style.display = 'block'; }
   else { tipEl.style.display = 'none'; }
-  const editBtn = document.getElementById('cmEditBtn');
-  const isMine = recipe.ownerId === currentUser?.uid;
-  editBtn.style.display = isMine ? 'block' : 'none';
-  editBtn.onclick = () => showRecipeEditor(recipe);
+  // Editing (and deleting) a recipe now happens only from the bottom sheet's
+  // Edit / Delete buttons — this viewer used to have its own pencil icon
+  // here that did the same thing through a second path.
   document.getElementById('cookModeOverlay').style.display = 'flex';
   _cmAcquireWakeLock();
 }
@@ -19482,6 +19636,9 @@ function _reEnsureEditor() {
       <label class="re-lbl">Title</label>
       <input id="reTitle" class="re-input" type="text" placeholder="Cowboy Coffee Cake"/>
 
+      <label class="re-lbl">Author <span class="re-hint">(who wrote it — filled in from the source on import)</span></label>
+      <input id="reAuthor" class="re-input" type="text" placeholder="BBC Good Food, Nigella Lawson…"/>
+
       <label class="re-lbl">Category</label>
       <input id="reCategory" class="re-input" type="text" list="reCategoryList" placeholder="Breakfast Foods, Cakes, Mains…"/>
       <datalist id="reCategoryList"></datalist>
@@ -19510,8 +19667,11 @@ function _reEnsureEditor() {
   style.textContent = `
     .re-lbl{display:block;font-size:.78rem;font-weight:700;color:var(--teal-dark);margin:1rem 0 .3rem;}
     .re-hint{font-weight:400;color:var(--muted);font-size:.72rem;}
-    .re-input{width:100%;box-sizing:border-box;border:1px solid var(--border);border-radius:8px;padding:.6rem .7rem;font-family:'Lato',sans-serif;font-size:.88rem;color:var(--navy);background:var(--warm-white);resize:vertical;}
-    .re-mono{font-family:ui-monospace,Menlo,monospace;font-size:.82rem;line-height:1.5;}
+    /* 16px is the threshold below which iOS Safari zooms in on focus. Both
+       rules must stay at/above it — .re-mono comes after .re-input and would
+       otherwise re-introduce the zoom on the ingredients/steps boxes. */
+    .re-input{width:100%;box-sizing:border-box;border:1px solid var(--border);border-radius:8px;padding:.6rem .7rem;font-family:'Lato',sans-serif;font-size:16px;color:var(--navy);background:var(--warm-white);resize:vertical;}
+    .re-mono{font-family:ui-monospace,Menlo,monospace;font-size:16px;line-height:1.5;}
     .re-vis-btn{flex:1;border:1px solid var(--border);background:var(--warm-white);border-radius:20px;padding:.5rem;font-size:.82rem;cursor:pointer;color:var(--muted);}
     .re-vis-btn.active{border-color:var(--teal);background:var(--teal-light);color:var(--teal-dark);font-weight:700;}`;
   document.head.appendChild(style);
@@ -19587,6 +19747,16 @@ function _reSetVis(vis) {
 // saveRecipeFromEditor() path still owns validation and category registration.
 const _importRecipeCallable = httpsCallable(fns, 'importRecipeFromUrl', { timeout: 120000 });
 
+// Last-resort author credit for an imported recipe: the source site's domain,
+// stripped of www./m. and capitalised. Returns '' on anything unparseable so
+// the caller's `||` chain just leaves the field alone.
+function _hostnameToAuthor(url) {
+  try {
+    const h = new URL(url).hostname.replace(/^(www|m)\./i, '');
+    return h ? h.charAt(0).toUpperCase() + h.slice(1) : '';
+  } catch { return ''; }
+}
+
 async function importRecipeFromLink() {
   const urlEl = document.getElementById('reImportUrl');
   const btn = document.getElementById('reImportBtn');
@@ -19609,6 +19779,10 @@ async function importRecipeFromLink() {
     // recipe isn't wiped by an import that came back thin.
     const setIfEmptyOrNew = (id, val) => { if (val) document.getElementById(id).value = val; };
     setIfEmptyOrNew('reTitle', r.title);
+    // The importer may name the author outright; if it doesn't, fall back to
+    // the publication/site name, and failing that the source domain tidied up
+    // (www.bbcgoodfood.com → Bbcgoodfood.com), so the credit is never blank.
+    setIfEmptyOrNew('reAuthor', r.author || r.siteName || _hostnameToAuthor(url));
     setIfEmptyOrNew('reCategory', r.chapterName);
     setIfEmptyOrNew('reDesc', r.desc);
     setIfEmptyOrNew('reIngredients', (r.ingredients || []).join('\n'));
@@ -19646,6 +19820,9 @@ function showRecipeEditor(recipe) {
   document.getElementById('reHeaderTitle').textContent = recipe ? 'Edit Recipe' : 'Add Recipe';
   document.getElementById('reDeleteBtn').style.display = recipe ? 'block' : 'none';
   document.getElementById('reTitle').value = recipe?.title || '';
+  // Falls back to createdByName so recipes saved before the author field
+  // existed show whoever added them rather than an empty box.
+  document.getElementById('reAuthor').value = recipe?.author || recipe?.createdByName || '';
   document.getElementById('reCategory').value = recipe?.chapterName || recipe?.category || '';
   document.getElementById('reDesc').value = recipe?.desc || '';
   document.getElementById('reIngredients').value = (recipe?.ingredients || []).join('\n');
@@ -19698,6 +19875,7 @@ async function saveRecipeFromEditor() {
 
   const payload = {
     title,
+    author: document.getElementById('reAuthor').value.trim(),
     chapterName: document.getElementById('reCategory').value.trim() || 'Uncategorised',
     desc: document.getElementById('reDesc').value.trim(),
     ingredients,
