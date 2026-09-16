@@ -994,13 +994,26 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
    not a dropdown filter, so all three segments are always visible and one is
    always active (see LIB_MODE_OPTIONS / renderLibModeToggle). */
 .lib-mode-toggle{display:flex;gap:.2rem;background:var(--panel);border-radius:18px;
-  padding:.22rem;flex-shrink:0;}
-.lib-mode-seg{border:none;background:transparent;border-radius:14px;padding:.3rem .62rem;
-  font-size:.71rem;font-weight:700;cursor:pointer;white-space:nowrap;display:inline-flex;
-  align-items:center;gap:.3rem;font-family:'Lato',sans-serif;color:var(--muted);
+  padding:.22rem;flex-shrink:0;width:100%;}
+.lib-mode-seg{flex:1;border:none;background:transparent;border-radius:14px;padding:.36rem .5rem;
+  font-size:.74rem;font-weight:700;cursor:pointer;white-space:nowrap;display:inline-flex;
+  align-items:center;justify-content:center;gap:.3rem;font-family:'Lato',sans-serif;color:var(--muted);
   transition:all .15s;-webkit-tap-highlight-color:transparent;}
 .lib-mode-seg.active{color:#fff;}
 .lib-mode-seg:active{transform:scale(.95);}
+
+/* Own row for the mode toggle, above the other filter pills — mobile and
+   desktop both had it inline with Genre/Tags/etc before, which pushed it
+   into the horizontally-scrollable pill row on mobile ("swipe to see it"). */
+.mob-mode-row{padding:.15rem .9rem .35rem;flex-shrink:0;}
+.desk-mode-row{padding:.55rem 1rem 0;}
+
+/* Auto-hide the mobile Library panel's search/mode/filter block on scroll:
+   collapses on scroll-down, reappears on scroll-up (see the scroll listener
+   on #mobLibGridScroll). max-height (not display) so the collapse animates;
+   300px comfortably covers the block's real height at any screen width. */
+#mobLibTop{overflow:hidden;max-height:300px;transition:max-height .25s ease,opacity .2s ease;flex-shrink:0;}
+#mobLibTop.mob-top-hidden{max-height:0;opacity:0;}
 
 /* Genre/Tags/Sort don't apply to Recipes mode (recipes are browsed via their
    own category folders instead) — hidden rather than removed so state (e.g.
@@ -2076,8 +2089,10 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
         <!-- Same 4-pill filter system as mobile (mfpCat/mfpTags/mfpSource/mfpSort) —
              same colors, same anchored-dropdown behavior, just its own ids/state
              so it filters the desktop grid instead of the mobile one. -->
-        <div class="desk-filter-bar" id="deskFilterBar">
+        <div class="desk-mode-row">
           <div class="lib-mode-toggle" id="deskModeToggle" role="tablist" aria-label="Library mode"></div>
+        </div>
+        <div class="desk-filter-bar" id="deskFilterBar">
           <button class="mfp mfp-cat" id="deskPillCat" aria-label="Filter by genre">
             <span id="deskPillCatLabel">Genre</span>
             <span class="mfp-caret">▾</span>
@@ -2143,7 +2158,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 
   <!-- ── LIBRARY PANEL (all books: private + public + shared) ── -->
   <div class="mob-panel" id="mobPanelLibrary">
-    <div class="mob-lib-top">
+    <div class="mob-lib-top" id="mobLibTop">
       <!-- Row 1: Search -->
       <div class="mob-search-bar">
         <div class="search-input-wrap" style="flex:1;">
@@ -2151,9 +2166,13 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
           <button type="button" class="search-clear-btn" id="mobSearchClear" aria-label="Clear search">✕</button>
         </div>
       </div>
-      <!-- Row 2: Colour-coded filter pills -->
-      <div class="mob-filter-bar" id="mobFilterBar">
+      <!-- Row 2: Mode toggle (Ebook / Audio / Recipes) — its own row so it
+           never gets pushed into the horizontally-scrolling pill row below. -->
+      <div class="mob-mode-row">
         <div class="lib-mode-toggle" id="mobModeToggle" role="tablist" aria-label="Library mode"></div>
+      </div>
+      <!-- Row 3: Colour-coded filter pills -->
+      <div class="mob-filter-bar" id="mobFilterBar">
         <button class="mfp mfp-cat" id="mfpCat" aria-label="Filter by genre">
           <span id="mfpCatLabel">Genre</span>
           <span class="mfp-caret">▾</span>
@@ -2191,7 +2210,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
     <!-- Floating panels (injected into body by JS, anchored to pills) -->
     <!-- Scrim to dismiss any open panel -->
     <div class="mob-filter-scrim" id="mobFilterScrim"></div>
-    <div class="mob-grid-scroll">
+    <div class="mob-grid-scroll" id="mobLibGridScroll">
       <div class="mob-book-grid" id="mobGridLibrary"></div>
     </div>
   </div>
@@ -5134,8 +5153,8 @@ function buildDrawerIconBar(book, isMine){
     <div style="padding:.4rem 1.5rem .3rem;border-bottom:1px solid var(--border);">
       <div style="font-size:.58rem;letter-spacing:.15em;text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:.35rem;">Actions</div>
       <div style="display:flex;gap:.4rem;flex-wrap:wrap;">
-        <button class="drawer-icon-btn" data-action="category"><span class="di-icon">📚</span><span class="di-label">Genre</span></button>
-        <button class="drawer-icon-btn" data-action="tags"><span class="di-icon">🏷</span><span class="di-label">Tags</span></button>
+        ${book.isRecipe ? '' : `<button class="drawer-icon-btn" data-action="category"><span class="di-icon">📚</span><span class="di-label">Genre</span></button>
+        <button class="drawer-icon-btn" data-action="tags"><span class="di-icon">🏷</span><span class="di-label">Tags</span></button>`}
         <button class="drawer-icon-btn" data-action="recommend">
           <span class="di-icon">${book.recommended?'☆':'⭐'}</span>
           <span class="di-label">${book.recommended?'Unrec':'Rec'}</span>
@@ -5889,6 +5908,26 @@ document.getElementById('mobModeToggle')?.addEventListener('click', (e) => {
   updateMobFilterPillLabels();
   renderMobLibrary();
 });
+
+// Auto-hide the search/mode/filter block as the grid scrolls down, and bring
+// it back the moment the user scrolls back up — so it's out of the way while
+// browsing but never more than a small upward swipe away.
+(function initMobLibTopAutoHide(){
+  const scrollEl = document.getElementById('mobLibGridScroll');
+  const topEl = document.getElementById('mobLibTop');
+  if (!scrollEl || !topEl) return;
+  let lastY = 0;
+  scrollEl.addEventListener('scroll', () => {
+    const y = scrollEl.scrollTop;
+    const delta = y - lastY;
+    // Ignore tiny jitters (momentum/rubber-banding noise), and don't collapse
+    // until scrolled a little way down, so it doesn't flicker near the top.
+    if (Math.abs(delta) < 4) return;
+    if (delta > 0 && y > 40) topEl.classList.add('mob-top-hidden');
+    else if (delta < 0) topEl.classList.remove('mob-top-hidden');
+    lastY = y;
+  }, { passive: true });
+})();
 
 document.getElementById('mfpSort').addEventListener('click', (e) => {
   openMobFilterPicker({
