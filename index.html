@@ -4413,7 +4413,7 @@ function renderGrid(gridId){
   const grid=document.getElementById(gridId);if(!grid)return;
   const books=filteredBooks();
   if(!books.length){
-    renderRecipeFolderBar(grid, 'deskRecipeFolderBar', 0);
+    renderRecipeFolderBar(grid, 'deskRecipeFolderBar', 0, deskLibFormat==='recipe');
     const isEmpty=activeBooks().length===0;
     const canUpload=deskLibFilter==='all'||deskLibFilter==='private';
     grid.innerHTML=`<div style="grid-column:1/-1;padding:3rem 1rem;text-align:center;color:var(--muted)"><div style="font-size:2.5rem;opacity:.25;margin-bottom:.8rem">📚</div><div style="font-family:'Playfair Display',serif;font-size:1.1rem;color:var(--navy2);margin-bottom:.4rem">${isEmpty?'Your library is empty':'No books match'}</div><div style="font-size:.85rem">${isEmpty?'Upload a book or audiobook to get started':'Try a different search or filter'}</div>${isEmpty&&canUpload?`<div style="margin-top:1rem;display:flex;gap:.5rem;justify-content:center;flex-wrap:wrap"><button class="hbtn hbtn-upload" id="emptyStateUploadBtn">📤 Upload</button><button class="hbtn hbtn-upload" id="emptyStateUploadAudioBtn">🎧 Upload Audio</button><button class="hbtn hbtn-upload" id="emptyStateAddRecipeBtn">🍲 Add Recipe</button></div>`:''}</div>`;
@@ -4425,7 +4425,7 @@ function renderGrid(gridId){
     return;
   }
   const gridBooks = collapseAudioSeriesForGrid(collapseRecipesByCategoryForGrid(books));
-  renderRecipeFolderBar(grid, 'deskRecipeFolderBar', gridBooks.filter(b=>b.isRecipe&&!b.isGroup).length);
+  renderRecipeFolderBar(grid, 'deskRecipeFolderBar', gridBooks.filter(b=>b.isRecipe&&!b.isGroup).length, deskLibFormat==='recipe');
   reconcileGrid(grid, gridBooks, b => b.id, b => {
     const coverSrc=getCoverSrc(b);
     const isSelected=selectedIds.has(b.id);
@@ -4578,6 +4578,9 @@ document.getElementById('deskModeToggle')?.addEventListener('click', (e) => {
   const btn = e.target.closest('.lib-mode-seg');
   if (!btn) return;
   deskLibFormat = btn.dataset.mode;
+  // Leaving Recipes closes the open folder, so coming back lands on the
+  // folder grid rather than silently resuming inside a category.
+  if (deskLibFormat !== 'recipe') _openRecipeCategory = null;
   renderAll();
 });
 
@@ -5905,6 +5908,7 @@ document.getElementById('mobModeToggle')?.addEventListener('click', (e) => {
   const btn = e.target.closest('.lib-mode-seg');
   if (!btn) return;
   mobLibFormat = btn.dataset.mode;
+  if (mobLibFormat !== 'recipe') _openRecipeCategory = null;
   updateMobFilterPillLabels();
   renderMobLibrary();
 });
@@ -6005,7 +6009,7 @@ function renderMobLibrary() {
   const books = getMobLibBooks();
   const grid = document.getElementById('mobGridLibrary');
   if (!books.length) {
-    renderRecipeFolderBar(grid, 'mobRecipeFolderBar', 0);
+    renderRecipeFolderBar(grid, 'mobRecipeFolderBar', 0, mobLibFormat==='recipe');
     grid.innerHTML = `<div style="grid-column:1/-1;padding:3rem 1rem;text-align:center;color:var(--muted)">
       <div style="font-size:2.5rem;opacity:.2;margin-bottom:.8rem">📚</div>
       <div style="font-size:.88rem">${mobLibSearch ? 'No books match your search' : 'No books here yet'}</div>
@@ -6013,7 +6017,7 @@ function renderMobLibrary() {
     return;
   }
   const gridBooks = collapseAudioSeriesForGrid(collapseRecipesByCategoryForGrid(books));
-  renderRecipeFolderBar(grid, 'mobRecipeFolderBar', gridBooks.filter(b=>b.isRecipe&&!b.isGroup).length);
+  renderRecipeFolderBar(grid, 'mobRecipeFolderBar', gridBooks.filter(b=>b.isRecipe&&!b.isGroup).length, mobLibFormat==='recipe');
   reconcileGrid(grid, gridBooks, b => b.id, b => {
     const isComm = communityLib.some(x => x.id === b.id);
     return bookCardHtml(b, isComm);
@@ -9258,9 +9262,13 @@ function closeRecipeCategory() {
 // grid item, so it isn't part of reconcileGrid's diffing and always spans
 // full width regardless of the grid's column count. `count` is however many
 // recipe cards the caller is about to render for this category.
-function renderRecipeFolderBar(grid, barId, count) {
+// `isRecipeMode` is whether THIS surface (desktop or mobile) is currently
+// showing recipes. The two surfaces keep independent format state, so the bar
+// has to be hidden per-surface — otherwise switching to eBooks/Audio on one
+// leaves a stale "back to <category>" bar sitting above a grid of books.
+function renderRecipeFolderBar(grid, barId, count, isRecipeMode) {
   let bar = document.getElementById(barId);
-  if (!_openRecipeCategory) {
+  if (!_openRecipeCategory || !isRecipeMode) {
     if (bar) bar.style.display = 'none';
     return;
   }
@@ -19016,7 +19024,7 @@ function recipeToBookLike(r) {
   return {
     id: r.id,
     title: r.title || 'Untitled Recipe',
-    author: r.createdByName || '',
+    author: r.author || r.createdByName || '',
     category: r.chapterName || r.category || 'Uncategorised',
     language: r.language || '',
     description: r.desc || '',
@@ -19565,6 +19573,9 @@ function _reEnsureEditor() {
       <label class="re-lbl">Title</label>
       <input id="reTitle" class="re-input" type="text" placeholder="Cowboy Coffee Cake"/>
 
+      <label class="re-lbl">Author <span class="re-hint">(who wrote it — filled in from the source on import)</span></label>
+      <input id="reAuthor" class="re-input" type="text" placeholder="BBC Good Food, Nigella Lawson…"/>
+
       <label class="re-lbl">Category</label>
       <input id="reCategory" class="re-input" type="text" list="reCategoryList" placeholder="Breakfast Foods, Cakes, Mains…"/>
       <datalist id="reCategoryList"></datalist>
@@ -19593,8 +19604,11 @@ function _reEnsureEditor() {
   style.textContent = `
     .re-lbl{display:block;font-size:.78rem;font-weight:700;color:var(--teal-dark);margin:1rem 0 .3rem;}
     .re-hint{font-weight:400;color:var(--muted);font-size:.72rem;}
-    .re-input{width:100%;box-sizing:border-box;border:1px solid var(--border);border-radius:8px;padding:.6rem .7rem;font-family:'Lato',sans-serif;font-size:.88rem;color:var(--navy);background:var(--warm-white);resize:vertical;}
-    .re-mono{font-family:ui-monospace,Menlo,monospace;font-size:.82rem;line-height:1.5;}
+    /* 16px is the threshold below which iOS Safari zooms in on focus. Both
+       rules must stay at/above it — .re-mono comes after .re-input and would
+       otherwise re-introduce the zoom on the ingredients/steps boxes. */
+    .re-input{width:100%;box-sizing:border-box;border:1px solid var(--border);border-radius:8px;padding:.6rem .7rem;font-family:'Lato',sans-serif;font-size:16px;color:var(--navy);background:var(--warm-white);resize:vertical;}
+    .re-mono{font-family:ui-monospace,Menlo,monospace;font-size:16px;line-height:1.5;}
     .re-vis-btn{flex:1;border:1px solid var(--border);background:var(--warm-white);border-radius:20px;padding:.5rem;font-size:.82rem;cursor:pointer;color:var(--muted);}
     .re-vis-btn.active{border-color:var(--teal);background:var(--teal-light);color:var(--teal-dark);font-weight:700;}`;
   document.head.appendChild(style);
@@ -19670,6 +19684,16 @@ function _reSetVis(vis) {
 // saveRecipeFromEditor() path still owns validation and category registration.
 const _importRecipeCallable = httpsCallable(fns, 'importRecipeFromUrl', { timeout: 120000 });
 
+// Last-resort author credit for an imported recipe: the source site's domain,
+// stripped of www./m. and capitalised. Returns '' on anything unparseable so
+// the caller's `||` chain just leaves the field alone.
+function _hostnameToAuthor(url) {
+  try {
+    const h = new URL(url).hostname.replace(/^(www|m)\./i, '');
+    return h ? h.charAt(0).toUpperCase() + h.slice(1) : '';
+  } catch { return ''; }
+}
+
 async function importRecipeFromLink() {
   const urlEl = document.getElementById('reImportUrl');
   const btn = document.getElementById('reImportBtn');
@@ -19692,6 +19716,10 @@ async function importRecipeFromLink() {
     // recipe isn't wiped by an import that came back thin.
     const setIfEmptyOrNew = (id, val) => { if (val) document.getElementById(id).value = val; };
     setIfEmptyOrNew('reTitle', r.title);
+    // The importer may name the author outright; if it doesn't, fall back to
+    // the publication/site name, and failing that the source domain tidied up
+    // (www.bbcgoodfood.com → Bbcgoodfood.com), so the credit is never blank.
+    setIfEmptyOrNew('reAuthor', r.author || r.siteName || _hostnameToAuthor(url));
     setIfEmptyOrNew('reCategory', r.chapterName);
     setIfEmptyOrNew('reDesc', r.desc);
     setIfEmptyOrNew('reIngredients', (r.ingredients || []).join('\n'));
@@ -19729,6 +19757,9 @@ function showRecipeEditor(recipe) {
   document.getElementById('reHeaderTitle').textContent = recipe ? 'Edit Recipe' : 'Add Recipe';
   document.getElementById('reDeleteBtn').style.display = recipe ? 'block' : 'none';
   document.getElementById('reTitle').value = recipe?.title || '';
+  // Falls back to createdByName so recipes saved before the author field
+  // existed show whoever added them rather than an empty box.
+  document.getElementById('reAuthor').value = recipe?.author || recipe?.createdByName || '';
   document.getElementById('reCategory').value = recipe?.chapterName || recipe?.category || '';
   document.getElementById('reDesc').value = recipe?.desc || '';
   document.getElementById('reIngredients').value = (recipe?.ingredients || []).join('\n');
@@ -19781,6 +19812,7 @@ async function saveRecipeFromEditor() {
 
   const payload = {
     title,
+    author: document.getElementById('reAuthor').value.trim(),
     chapterName: document.getElementById('reCategory').value.trim() || 'Uncategorised',
     desc: document.getElementById('reDesc').value.trim(),
     ingredients,
