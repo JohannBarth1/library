@@ -3098,6 +3098,8 @@ import { getFirestore, collection, addDoc, getDocs, getDoc, doc,
   from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 import { getStorage, ref as storageRef, uploadBytes, getDownloadURL, getBytes, deleteObject }
   from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js';
+import { getFunctions, httpsCallable }
+  from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-functions.js';
 
 // ── PWA ──────────────────────────────────────────────────────────────────────
 // manifest.json is now a real static file (see /manifest.json) rather than a
@@ -3124,6 +3126,8 @@ window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredIns
 // ── FIREBASE ─────────────────────────────────────────────────────────────────
 const app=initializeApp({apiKey:'AIzaSyA1hCS7-C_W0VS7_JVcPIPdJ4aluDuL_-Q',authDomain:'elibrary-c0074.firebaseapp.com',projectId:'elibrary-c0074',storageBucket:'elibrary-c0074.firebasestorage.app',messagingSenderId:'310807052995',appId:'1:310807052995:web:a06dbe84f3924731749876'});
 const auth=getAuth(app),db=getFirestore(app),storage=getStorage(app),gprovider=new GoogleAuthProvider();
+// Region must match the `region` set on the function in functions/index.js.
+const fns=getFunctions(app,'us-central1');
 
 // ── STATE ─────────────────────────────────────────────────────────────────────
 const COVER_CACHE_NAME = 'elib-cover-cache-v1'; // hoisted above primeCoverCache()'s call site below — it's a const, so it must be initialized before that call runs
@@ -19453,6 +19457,15 @@ function _reEnsureEditor() {
       <button id="reSaveBtn" style="border:none;background:var(--teal);color:var(--warm-white);font-weight:700;font-size:.85rem;padding:.5rem 1.1rem;border-radius:20px;cursor:pointer;">Save</button>
     </div>
     <div style="flex:1;overflow-y:auto;padding:1.2rem 1.2rem 3rem;max-width:640px;margin:0 auto;width:100%;box-sizing:border-box;">
+      <div id="reImportBox" style="border:1px dashed var(--border);border-radius:10px;padding:.85rem;margin-bottom:1.3rem;background:var(--panel);">
+        <label class="re-lbl" style="margin-top:0;">✨ Import from a link <span class="re-hint">(optional)</span></label>
+        <div style="display:flex;gap:.5rem;align-items:center;">
+          <input id="reImportUrl" class="re-input" type="url" inputmode="url" autocomplete="off" placeholder="https://…" style="flex:1;margin:0;"/>
+          <button id="reImportBtn" type="button" style="flex-shrink:0;border:none;background:var(--teal);color:var(--warm-white);font-weight:700;font-size:.8rem;padding:.55rem 1rem;border-radius:20px;cursor:pointer;">Fetch</button>
+        </div>
+        <div id="reImportStatus" style="font-size:.75rem;color:var(--muted);margin-top:.45rem;min-height:1em;">Paste a recipe page and the fields below will be filled in for you to check.</div>
+      </div>
+
       <label class="re-lbl">Cover Image <span class="re-hint">(optional)</span></label>
       <div style="display:flex;align-items:center;gap:.8rem;">
         <div id="reCoverPreviewWrap" style="width:64px;height:64px;border-radius:8px;overflow:hidden;flex-shrink:0;background:var(--panel);display:flex;align-items:center;justify-content:center;border:1px solid var(--border);">
@@ -19509,6 +19522,10 @@ function _reEnsureEditor() {
   document.getElementById('reDeleteBtn').addEventListener('click', deleteRecipeFromEditor);
   document.getElementById('reCoverBtn').addEventListener('click', () => document.getElementById('reCoverFile').click());
   document.getElementById('reCoverFile').addEventListener('change', _reHandleCoverFile);
+  document.getElementById('reImportBtn').addEventListener('click', importRecipeFromLink);
+  document.getElementById('reImportUrl').addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.preventDefault(); importRecipeFromLink(); }
+  });
   document.getElementById('reCoverRemoveBtn').addEventListener('click', () => {
     document.getElementById('recipeEditorOverlay').dataset.pendingCoverUrl = '';
     _reRenderCoverPreview();
@@ -19562,6 +19579,63 @@ function _reSetVis(vis) {
   document.getElementById('reVisPublic').classList.toggle('active', vis === 'public');
 }
 
+// ── AI import from a recipe URL ──────────────────────────────────────────────
+// Calls the importRecipeFromUrl Cloud Function (the page fetch and the model
+// call both have to happen server-side: CORS blocks the first, and the API key
+// can't live in this file). The result only *prefills* the editor — nothing is
+// written until the user reviews it and hits Save, so the normal
+// saveRecipeFromEditor() path still owns validation and category registration.
+const _importRecipeCallable = httpsCallable(fns, 'importRecipeFromUrl', { timeout: 120000 });
+
+async function importRecipeFromLink() {
+  const urlEl = document.getElementById('reImportUrl');
+  const btn = document.getElementById('reImportBtn');
+  const status = document.getElementById('reImportStatus');
+  const url = urlEl.value.trim();
+
+  if (!url) { status.textContent = 'Paste a link first.'; return; }
+  if (!/^https?:\/\//i.test(url)) { status.textContent = 'The link needs to start with http:// or https://.'; return; }
+
+  const prevLabel = btn.textContent;
+  btn.disabled = true; btn.textContent = 'Reading…';
+  urlEl.disabled = true;
+  status.style.color = 'var(--muted)';
+  status.textContent = 'Fetching the page and reading the recipe — this can take up to a minute…';
+
+  try {
+    const { data: r } = await _importRecipeCallable({ url });
+
+    // Only overwrite fields the import actually produced, so a half-typed
+    // recipe isn't wiped by an import that came back thin.
+    const setIfEmptyOrNew = (id, val) => { if (val) document.getElementById(id).value = val; };
+    setIfEmptyOrNew('reTitle', r.title);
+    setIfEmptyOrNew('reCategory', r.chapterName);
+    setIfEmptyOrNew('reDesc', r.desc);
+    setIfEmptyOrNew('reIngredients', (r.ingredients || []).join('\n'));
+    setIfEmptyOrNew('reSteps', (r.steps || []).join('\n'));
+    setIfEmptyOrNew('reTip', r.tip);
+
+    // The cover comes back as the source site's own image URL. It's only a
+    // preview here — uploading a local file still replaces it as before.
+    if (r.coverUrl) {
+      document.getElementById('recipeEditorOverlay').dataset.pendingCoverUrl = r.coverUrl;
+      _reRenderCoverPreview();
+    }
+
+    status.style.color = 'var(--teal-dark)';
+    status.textContent = `Imported ${(r.ingredients || []).length} ingredients and ${(r.steps || []).length} steps — please check them before saving.`;
+    showToast('Recipe imported — review and save');
+  } catch (e) {
+    console.warn('Recipe import failed:', e);
+    status.style.color = 'var(--danger)';
+    // Callable errors carry the message set by HttpsError on the server.
+    status.textContent = (e && e.message) ? e.message : 'Import failed — try another link.';
+  } finally {
+    btn.disabled = false; btn.textContent = prevLabel;
+    urlEl.disabled = false;
+  }
+}
+
 // Pass an existing eRecipe-shaped recipe object to edit it; omit to create new.
 function showRecipeEditor(recipe) {
   if (!currentUser) { showToast('Please sign in first'); return; }
@@ -19578,6 +19652,14 @@ function showRecipeEditor(recipe) {
   document.getElementById('reSteps').value = (recipe?.steps || []).join('\n');
   document.getElementById('reTip').value = recipe?.tip || '';
   _reSetVis(recipe?.visibility || 'private');
+
+  const impUrl = document.getElementById('reImportUrl');
+  const impStatus = document.getElementById('reImportStatus');
+  if (impUrl) impUrl.value = '';
+  if (impStatus) {
+    impStatus.style.color = 'var(--muted)';
+    impStatus.textContent = 'Paste a recipe page and the fields below will be filled in for you to check.';
+  }
 
   overlay.dataset.pendingCoverUrl = recipe?.coverUrl || '';
   _reRenderCoverPreview();
