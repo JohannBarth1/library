@@ -3163,7 +3163,7 @@ const fns=getFunctions(app,'us-central1');
 const COVER_CACHE_NAME = 'elib-cover-cache-v1'; // hoisted above primeCoverCache()'s call site below — it's a const, so it must be initialized before that call runs
 let mobLibFilter = 'all';
 let mobLibCat    = 'All';
-let mobLibFormat = 'book';  // 'book' | 'audio' | 'recipe' — library MODE, mobile (no 'all': always one of the three)
+let mobLibFormat = new Set(['book']);  // library MODE, mobile — a Set so eBooks and Audio can both be active at once; 'recipe' is exclusive of both (see toggleLibFormat)
 let mobLibSearch = '';
 let mobLibSort   = 'series-recent';
 let mobPrevPanel = 'mobPanelLibrary';
@@ -3176,7 +3176,7 @@ let _coverCachePrimed = primeCoverCache();
 // (mobLibFilter/mobLibCat/mobActiveTags/mobLibSort below), just its own copy
 // so each surface renders and filters independently.
 let deskLibFilter='all',deskLibCat='All',deskLibSort='series-recent',searchQ='';
-let deskLibFormat='book';        // 'book' | 'audio' | 'recipe' — library MODE, desktop (no 'all': always one of the three)
+let deskLibFormat = new Set(['book']);  // library MODE, desktop — see mobLibFormat above for the Set rationale
 let deskActiveTags = new Set();   // tag-filter picker selections, desktop Library
 let mobActiveTags = new Set();    // tag-filter picker selections, mobile Library
 let selectMode=false,selectedIds=new Set(),deskView='library';
@@ -4304,10 +4304,13 @@ function filteredBooks(){
     books=dedupe([...library,...communityLib]).filter(b=>ids.has(b.id));
   }
   if(deskLibCat!=='All')books=books.filter(b=>(b.category||'Uncategorised')===deskLibCat);
-  if(deskLibFormat==='book')books=books.filter(b=>!b.isAudio&&!b.isRecipe);
-  if(deskLibFormat==='audio')books=books.filter(b=>b.isAudio);
-  if(deskLibFormat==='recipe')books=books.filter(b=>b.isRecipe);
-  else books=books.filter(b=>!b.isRecipe); // recipes are opt-in via the Format filter, not shown by default
+  if(deskLibFormat.has('recipe')){
+    books=books.filter(b=>b.isRecipe);
+  } else {
+    // eBooks and Audio filter independently and can both be active — see
+    // toggleLibFormat. Recipes stay opt-in only via that exclusive mode.
+    books=books.filter(b=>!b.isRecipe && ((b.isAudio && deskLibFormat.has('audio')) || (!b.isAudio && deskLibFormat.has('book'))));
+  }
   if(searchQ)books=books.filter(b=>b.title?.toLowerCase().includes(searchQ)||b.author?.toLowerCase().includes(searchQ)||b.category?.toLowerCase().includes(searchQ));
   if(deskActiveTags.size)books=books.filter(b=>(b.tags||[]).some(t=>deskActiveTags.has(t)));
   return sortBooks(books,deskLibSort);
@@ -4413,7 +4416,7 @@ function renderGrid(gridId){
   const grid=document.getElementById(gridId);if(!grid)return;
   const books=filteredBooks();
   if(!books.length){
-    renderRecipeFolderBar(grid, 'deskRecipeFolderBar', 0, deskLibFormat==='recipe');
+    renderRecipeFolderBar(grid, 'deskRecipeFolderBar', 0, deskLibFormat.has('recipe'));
     const isEmpty=activeBooks().length===0;
     const canUpload=deskLibFilter==='all'||deskLibFilter==='private';
     grid.innerHTML=`<div style="grid-column:1/-1;padding:3rem 1rem;text-align:center;color:var(--muted)"><div style="font-size:2.5rem;opacity:.25;margin-bottom:.8rem">📚</div><div style="font-family:'Playfair Display',serif;font-size:1.1rem;color:var(--navy2);margin-bottom:.4rem">${isEmpty?'Your library is empty':'No books match'}</div><div style="font-size:.85rem">${isEmpty?'Upload a book or audiobook to get started':'Try a different search or filter'}</div>${isEmpty&&canUpload?`<div style="margin-top:1rem;display:flex;gap:.5rem;justify-content:center;flex-wrap:wrap"><button class="hbtn hbtn-upload" id="emptyStateUploadBtn">📤 Upload</button><button class="hbtn hbtn-upload" id="emptyStateUploadAudioBtn">🎧 Upload Audio</button><button class="hbtn hbtn-upload" id="emptyStateAddRecipeBtn">🍲 Add Recipe</button></div>`:''}</div>`;
@@ -4425,7 +4428,7 @@ function renderGrid(gridId){
     return;
   }
   const gridBooks = collapseAudioSeriesForGrid(collapseRecipesByCategoryForGrid(books));
-  renderRecipeFolderBar(grid, 'deskRecipeFolderBar', gridBooks.filter(b=>b.isRecipe&&!b.isGroup).length, deskLibFormat==='recipe');
+  renderRecipeFolderBar(grid, 'deskRecipeFolderBar', gridBooks.filter(b=>b.isRecipe&&!b.isGroup).length, deskLibFormat.has('recipe'));
   reconcileGrid(grid, gridBooks, b => b.id, b => {
     const coverSrc=getCoverSrc(b);
     const isSelected=selectedIds.has(b.id);
@@ -4516,7 +4519,7 @@ function updateDeskFilterPillLabels() {
 
   // Genre, Tags and Sort don't apply in Recipes mode — recipes are browsed
   // via their own category folders instead (see openRecipeCategory).
-  const isRecipeMode = deskLibFormat === 'recipe';
+  const isRecipeMode = deskLibFormat.has('recipe');
   document.getElementById('deskPillCat')?.classList.toggle('lib-pill-hidden', isRecipeMode);
   document.getElementById('deskPillTags')?.classList.toggle('lib-pill-hidden', isRecipeMode);
   document.getElementById('deskPillSort')?.classList.toggle('lib-pill-hidden', isRecipeMode);
@@ -4539,7 +4542,7 @@ function updateDeskFilterPillLabels() {
 }
 
 document.getElementById('deskPillCat').addEventListener('click', (e) => {
-  const srcForCats = activeBooks().filter(b => !b.isRecipe);
+  const srcForCats = activeBooks().filter(b => !b.isRecipe && ((b.isAudio && deskLibFormat.has('audio')) || (!b.isAudio && deskLibFormat.has('book'))));
   const cats = {};
   srcForCats.forEach(b => { const c = b.category || 'Uncategorised'; cats[c] = (cats[c] || 0) + 1; });
   const items = [
@@ -4577,10 +4580,10 @@ document.getElementById('deskPillTags').addEventListener('click', (e) => {
 document.getElementById('deskModeToggle')?.addEventListener('click', (e) => {
   const btn = e.target.closest('.lib-mode-seg');
   if (!btn) return;
-  deskLibFormat = btn.dataset.mode;
+  toggleLibFormat(deskLibFormat, btn.dataset.mode);
   // Leaving Recipes closes the open folder, so coming back lands on the
   // folder grid rather than silently resuming inside a category.
-  if (deskLibFormat !== 'recipe') _openRecipeCategory = null;
+  if (!deskLibFormat.has('recipe')) _openRecipeCategory = null;
   renderAll();
 });
 
@@ -5810,6 +5813,20 @@ const LIB_MODE_OPTIONS = [
   { id:'recipe', label:'Recipes', icon:'🍲', color:'var(--teal)' },
 ];
 
+// Toggles one library-mode segment (see LIB_MODE_OPTIONS) in place. eBooks
+// and Audio toggle independently — picking one never affects the other.
+// Recipes is exclusive: picking it clears everything else, and picking
+// eBooks/Audio while Recipes is active drops Recipes and starts a fresh
+// book/audio selection rather than adding to it. Never left empty — toggling
+// off the last remaining book/audio format is a no-op, same as a radio
+// group not letting you deselect the only checked option.
+function toggleLibFormat(formatSet, mode) {
+  if (mode === 'recipe') { formatSet.clear(); formatSet.add('recipe'); return; }
+  if (formatSet.has('recipe')) { formatSet.clear(); formatSet.add(mode); return; }
+  if (formatSet.has(mode)) { if (formatSet.size > 1) formatSet.delete(mode); }
+  else formatSet.add(mode);
+}
+
 // Renders the 3-way mode toggle into either #deskModeToggle or #mobModeToggle.
 // Click handling is delegated once on the container (see the two
 // addEventListener calls near updateDeskFilterPillLabels/updateMobFilterPillLabels)
@@ -5818,7 +5835,7 @@ function renderLibModeToggle(containerId, currentMode) {
   const el = document.getElementById(containerId);
   if (!el) return;
   el.innerHTML = LIB_MODE_OPTIONS.map(o => {
-    const active = currentMode === o.id;
+    const active = currentMode.has(o.id);
     return `<button type="button" class="lib-mode-seg${active ? ' active' : ''}" data-mode="${o.id}"
       role="tab" aria-selected="${active}" style="${active ? `background:${o.color};` : ''}">
       <span>${o.icon}</span><span>${o.label}</span></button>`;
@@ -5838,7 +5855,7 @@ function updateMobFilterPillLabels() {
 
   // Genre, Tags and Sort don't apply in Recipes mode — recipes are browsed
   // via their own category folders instead (see openRecipeCategory).
-  const isRecipeMode = mobLibFormat === 'recipe';
+  const isRecipeMode = mobLibFormat.has('recipe');
   document.getElementById('mfpCat')?.classList.toggle('lib-pill-hidden', isRecipeMode);
   document.getElementById('mfpTags')?.classList.toggle('lib-pill-hidden', isRecipeMode);
   document.getElementById('mfpSort')?.classList.toggle('lib-pill-hidden', isRecipeMode);
@@ -5917,7 +5934,7 @@ function openMobFilterPicker({ anchor, title, items, isSelected, onSelect, multi
 }
 
 document.getElementById('mfpCat').addEventListener('click', (e) => {
-  const srcForCats = getMobLibSourceBooks().filter(b => !b.isRecipe);
+  const srcForCats = getMobLibSourceBooks().filter(b => !b.isRecipe && ((b.isAudio && mobLibFormat.has('audio')) || (!b.isAudio && mobLibFormat.has('book'))));
   const cats = {};
   srcForCats.forEach(b => { const c = b.category || 'Uncategorised'; cats[c] = (cats[c] || 0) + 1; });
   const items = [
@@ -5953,8 +5970,8 @@ document.getElementById('mfpTags').addEventListener('click', (e) => {
 document.getElementById('mobModeToggle')?.addEventListener('click', (e) => {
   const btn = e.target.closest('.lib-mode-seg');
   if (!btn) return;
-  mobLibFormat = btn.dataset.mode;
-  if (mobLibFormat !== 'recipe') _openRecipeCategory = null;
+  toggleLibFormat(mobLibFormat, btn.dataset.mode);
+  if (!mobLibFormat.has('recipe')) _openRecipeCategory = null;
   updateMobFilterPillLabels();
   renderMobLibrary();
 });
@@ -6025,11 +6042,13 @@ function getMobLibBooks() {
   let src = getMobLibSourceBooks();
   // Category filter
   if (mobLibCat !== 'All') src = src.filter(b => (b.category || 'Uncategorised') === mobLibCat);
-  // Format filter
-  if (mobLibFormat === 'book') src = src.filter(b => !b.isAudio && !b.isRecipe);
-  if (mobLibFormat === 'audio') src = src.filter(b => b.isAudio);
-  if (mobLibFormat === 'recipe') src = src.filter(b => b.isRecipe);
-  else src = src.filter(b => !b.isRecipe); // recipes are opt-in via the Format filter, not shown by default
+  // Format filter — eBooks and Audio filter independently and can both be
+  // active (see toggleLibFormat); Recipes stays an exclusive mode.
+  if (mobLibFormat.has('recipe')) {
+    src = src.filter(b => b.isRecipe);
+  } else {
+    src = src.filter(b => !b.isRecipe && ((b.isAudio && mobLibFormat.has('audio')) || (!b.isAudio && mobLibFormat.has('book'))));
+  }
   // Tags filter (book must match every selected tag — AND logic)
   if (mobActiveTags.size) src = src.filter(b => [...mobActiveTags].every(t => (b.tags || []).includes(t)));
   // Search
@@ -6042,7 +6061,7 @@ function renderMobLibrary() {
   document.getElementById('mobGridLibrary').classList.remove('select-mode');
   // Category chips (legacy hidden chip row — kept in sync so nothing errors
   // if it's ever shown again; the live UI is the mfpCat picker below)
-  const srcForCats = getMobLibSourceBooks().filter(b => !b.isRecipe);
+  const srcForCats = getMobLibSourceBooks().filter(b => !b.isRecipe && ((b.isAudio && mobLibFormat.has('audio')) || (!b.isAudio && mobLibFormat.has('book'))));
   const cats = {};
   srcForCats.forEach(b => { const c = b.category || 'Uncategorised'; cats[c] = (cats[c] || 0) + 1; });
   document.getElementById('mobLibCatChips').innerHTML =
@@ -6055,7 +6074,7 @@ function renderMobLibrary() {
   const books = getMobLibBooks();
   const grid = document.getElementById('mobGridLibrary');
   if (!books.length) {
-    renderRecipeFolderBar(grid, 'mobRecipeFolderBar', 0, mobLibFormat==='recipe');
+    renderRecipeFolderBar(grid, 'mobRecipeFolderBar', 0, mobLibFormat.has('recipe'));
     grid.innerHTML = `<div style="grid-column:1/-1;padding:3rem 1rem;text-align:center;color:var(--muted)">
       <div style="font-size:2.5rem;opacity:.2;margin-bottom:.8rem">📚</div>
       <div style="font-size:.88rem">${mobLibSearch ? 'No books match your search' : 'No books here yet'}</div>
@@ -6063,7 +6082,7 @@ function renderMobLibrary() {
     return;
   }
   const gridBooks = collapseAudioSeriesForGrid(collapseRecipesByCategoryForGrid(books));
-  renderRecipeFolderBar(grid, 'mobRecipeFolderBar', gridBooks.filter(b=>b.isRecipe&&!b.isGroup).length, mobLibFormat==='recipe');
+  renderRecipeFolderBar(grid, 'mobRecipeFolderBar', gridBooks.filter(b=>b.isRecipe&&!b.isGroup).length, mobLibFormat.has('recipe'));
   reconcileGrid(grid, gridBooks, b => b.id, b => {
     const isComm = communityLib.some(x => x.id === b.id);
     return bookCardHtml(b, isComm);
