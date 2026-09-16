@@ -2311,13 +2311,13 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
       </div>
       <!-- ── PEEK: primary actions + Lists — visible the moment the sheet opens ── -->
       <div class="mob-detail-actions" id="mobDetailActions"></div>
+      <p class="mob-detail-desc" id="mobDetailDesc" style="margin-bottom:1rem;"></p>
 
-      <!-- ── REVEALED ON SWIPE-UP: tags/categories, description, highlights, more ── -->
+      <!-- ── REVEALED ON SWIPE-UP: tags/categories, highlights, related, more ── -->
       <div class="mob-sheet-more" id="mobSheetMore">
         <div class="mob-detail-more-actions" id="mobDetailMoreActions"></div>
         <hr style="border:none;border-top:1px solid var(--border);margin:.5rem 0 1rem"/>
         <div id="mobDetailRelated" style="display:none;"></div>
-        <p class="mob-detail-desc" id="mobDetailDesc"></p>
         <div id="mobDetailHighlights" style="display:none;"></div>
       </div>
     </div>
@@ -2329,7 +2329,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
          sits above the safe-area inset regardless of browser chrome ── -->
     <div class="mob-sheet-handle" id="mobSheetHandle">
       <div class="mob-sheet-handle-bar"></div>
-      <div class="mob-sheet-handle-label" id="mobSheetHandleLabel">▲ Swipe up for tags, description &amp; more</div>
+      <div class="mob-sheet-handle-label" id="mobSheetHandleLabel">▲ Swipe up for tags &amp; more</div>
     </div>
   </div>
 
@@ -4865,14 +4865,20 @@ function renderDetailActionRows(peekContainer, moreContainer, book, isMine){
   </div>`;
 
   const hasCustomLists = _userLists.some(l => !l.system);
+  // Recipes aren't read front-to-back, so the Want to Read/Reading/Finished
+  // stage toggle doesn't apply (buildDrawerIconBar already guards this the
+  // same way). Without it the whole section can end up empty, so drop it.
+  const stageHtml = book.isRecipe ? '' : readingStageSegmentHtml(book.id);
 
-  peekHtml += `<div class="mob-list-section">
-    ${hasCustomLists ? `<div class="mob-list-section-label">Lists</div>
-    <div class="mob-list-row" style="margin-bottom:.5rem;">
-      <button class="mob-list-other-btn" data-action="otherlists" id="mobOtherListsBtn">Other Lists ▾</button>
-    </div>` : ''}
-    ${readingStageSegmentHtml(book.id)}
-  </div>`;
+  if (hasCustomLists || stageHtml) {
+    peekHtml += `<div class="mob-list-section">
+      ${hasCustomLists ? `<div class="mob-list-section-label">Lists</div>
+      <div class="mob-list-row" style="margin-bottom:.5rem;">
+        <button class="mob-list-other-btn" data-action="otherlists" id="mobOtherListsBtn">Other Lists ▾</button>
+      </div>` : ''}
+      ${stageHtml}
+    </div>`;
+  }
 
   peekContainer.innerHTML = peekHtml;
   peekContainer.querySelectorAll('[data-action]').forEach(b => b.addEventListener('click', handleAction));
@@ -4881,7 +4887,10 @@ function renderDetailActionRows(peekContainer, moreContainer, book, isMine){
   // REVEALED ON SWIPE-UP — Tags/Categories (visually separate card), then
   // secondary actions and the "More options" collapse.
   // ═══════════════════════════════════════════════════════════════════════
-  let html = `<div class="mob-taxonomy-card">
+  // Genre/Tags are book-and-audio taxonomy. A recipe's category is set in the
+  // recipe editor (and drives the folder grid), and recipes don't carry tags,
+  // so the whole card is dropped rather than shown with dead controls.
+  let html = book.isRecipe ? '' : `<div class="mob-taxonomy-card">
     <div style="display:flex;gap:.4rem;">
       ${medBtn('📚','Genre','category','var(--gold)','rgba(200,149,42,.4)')}
       ${medBtn('🏷','Tags','tags','var(--teal)','var(--teal)')}
@@ -5071,7 +5080,7 @@ function mobSheetSetExpanded(expanded){
   sheet.classList.toggle('full', expanded);
   more.classList.toggle('expanded', expanded);
   handle.classList.toggle('expanded', expanded);
-  if(label) label.textContent = expanded ? '▾ Show less' : '▲ Swipe up for tags, description & more';
+  if(label) label.textContent = expanded ? '▾ Show less' : '▲ Swipe up for tags & more';
   if(scroller) scroller.scrollTop = 0;
 }
 (function initMobSheetHandle(){
@@ -5618,7 +5627,16 @@ async function mob_showBook(id, opts={}){
   else if(!isMine&&mobIsPrivatelyShared){mobSharedByEl.textContent='Shared with you by '+(book.ownerName||'Anonymous');mobSharedByEl.style.display='block';}
   else mobSharedByEl.style.display='none';
 
-  document.getElementById('mobDetailDesc').textContent=stripHtml(book.description||'');
+  // Now that the description sits in the always-visible peek area rather
+  // than behind the swipe-up, an empty one needs to collapse away entirely
+  // (display:none) instead of just being empty text with margin still
+  // reserved, or every book/recipe without one shows a blank gap.
+  {
+    const descText = stripHtml(book.description||'');
+    const descEl = document.getElementById('mobDetailDesc');
+    descEl.textContent = descText;
+    descEl.style.display = descText ? '' : 'none';
+  }
 
   renderDetailActionRows(document.getElementById('mobDetailActions'), document.getElementById('mobDetailMoreActions'), book, isMine);
 
@@ -9753,9 +9771,15 @@ function renderRelatedBooks(containerEl, book) {
     </div>`;
   }
   if(authorMatches.length){
+    // "By this author" reads oddly for recipes — the author is often just
+    // whichever site an import was pulled from, not a byline the person
+    // is following the way they'd follow a book author. Keeping the same
+    // author-based matching (still the most useful signal available —
+    // category is redundant here since that's the list they just came
+    // from, and recipes don't carry tags), just relabelled.
     html += `<div style="margin-top:1rem">
       <div style="font-size:.74rem;font-weight:700;letter-spacing:.04em;color:var(--muted);margin-bottom:.5rem">
-        MORE BY THIS AUTHOR
+        ${book.isRecipe ? 'SIMILAR RECIPES' : 'MORE BY THIS AUTHOR'}
       </div>
       ${_relatedBookRow(authorMatches)}
     </div>`;
