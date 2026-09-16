@@ -5263,7 +5263,14 @@ function runDetailAction(a){
   if(a==='shareprivate') showPrivateShare();
   if(a==='link')         showDirectLink();
   if(a==='editmeta')     showEditMeta();
-  if(a==='editrecipe'){ const book=[...library,...communityLib].find(b=>b.id===currentId); if(book?._recipe) showRecipeEditor(book._recipe); }
+  if(a==='editrecipe'){
+    // The recipe editor overlay (z-index:510) sits *below* the bottom sheet
+    // (z-index:520) — unlike editmeta's modal, which is a .modal-overlay at
+    // 530 and so naturally covers the sheet without needing it closed. Close
+    // it explicitly here, same as Read already does for audio/recipes.
+    const book=[...library,...communityLib].find(b=>b.id===currentId);
+    if(book?._recipe){ closeMobBookSheet(); showRecipeEditor(book._recipe); }
+  }
   if(a==='chapters')     openChapterManager();
   if(a==='recommend')    toggleRecommended();
   if(a==='tags')         showTagsModal();
