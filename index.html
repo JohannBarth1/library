@@ -998,17 +998,20 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .lib-mode-seg{flex:1;border:none;background:transparent;border-radius:14px;padding:.36rem .5rem;
   font-size:.74rem;font-weight:700;cursor:pointer;white-space:nowrap;display:inline-flex;
   align-items:center;justify-content:center;gap:.3rem;font-family:'Lato',sans-serif;color:var(--muted);
-  transition:all .15s;-webkit-tap-highlight-color:transparent;}
+  transition:all .15s;-webkit-tap-highlight-color:transparent;height:1.9rem;box-sizing:border-box;}
 .lib-mode-seg.active{color:#fff;}
 .lib-mode-seg:active{transform:scale(.95);}
 /* Each mode is [label pill] and, when active, a separate round "+" button on
-   the same colour as its pill, to the pill's right. */
-.lib-mode-item{flex:1;display:flex;gap:.2rem;min-width:0;}
+   the same colour as its pill, to the pill's right. The "+" is a FIXED
+   diameter (not aspect-ratio/stretch-derived) so it's always a true circle
+   regardless of container width; the label pill is the part that flexes and
+   resizes with the available screen width. */
+.lib-mode-item{flex:1;display:flex;gap:.2rem;min-width:0;align-items:center;}
 .lib-mode-item .lib-mode-seg{min-width:0;overflow:hidden;text-overflow:ellipsis;}
-.lib-mode-add{flex:none;align-self:stretch;aspect-ratio:1/1;border:none;border-radius:50%;padding:0;
+.lib-mode-add{flex:none;width:1.9rem;height:1.9rem;border:none;border-radius:50%;padding:0;
   background:var(--gold);color:#fff;font-size:1.05rem;font-weight:700;line-height:1;cursor:pointer;
   display:inline-flex;align-items:center;justify-content:center;font-family:'Lato',sans-serif;
-  transition:transform .08s,filter .15s;-webkit-tap-highlight-color:transparent;}
+  transition:transform .08s,filter .15s;-webkit-tap-highlight-color:transparent;box-sizing:border-box;}
 .lib-mode-add:active{transform:scale(.9);filter:brightness(.9);}
 
 /* Own row for the mode toggle, above the other filter pills — mobile and
@@ -4987,14 +4990,16 @@ function renderDetailActionRows(peekContainer, moreContainer, book, isMine){
   };
 
   // ── "Share" — Share Privately stays owner-only; Copy Link and Download
-  // are available to anyone viewing the book.
+  // are available to anyone viewing the book. Print used to live in here
+  // too for recipes, but it's a dedicated button now (see printToggle
+  // below), same as Recommend, since it opens its own Full Page/Recipe
+  // Card choice rather than firing an action directly.
   const shareOpts = [];
   if(isMine){
     shareOpts.push({ icon:'🔗', label:'Share Privately', action:'shareprivate' });
   }
   shareOpts.push({ icon:'📎', label:'Copy Link', action:'link' });
-  if(book.isRecipe) shareOpts.push({ icon:'🖨', label:'Print', action:'printrecipe' });
-  else shareOpts.push({ icon:'⬇', label:'Download', action:'download' });
+  if(!book.isRecipe) shareOpts.push({ icon:'⬇', label:'Download', action:'download' });
 
   // ── "Edit" — owner or admin ───────────────────────────────────────────
   const editOpts = [];
@@ -5009,6 +5014,14 @@ function renderDetailActionRows(peekContainer, moreContainer, book, isMine){
       ${book.recommended?'background:rgba(200,149,42,.1);':''}">
       <span style="font-size:.78rem;line-height:1">${book.recommended?'⭐':'☆'}</span><span>${book.recommended?'Recommended':'Recommend'}</span>
     </button>`;
+
+  // ── Print — recipes only, its own dedicated button (not a dropdown
+  // entry) since tapping it opens the Full Page/Recipe Card choice.
+  const printToggle = book.isRecipe
+    ? `<button type="button" class="detail-row-btn mob-pill-btn mob-pill-sm" data-action="printrecipe">
+        <span style="font-size:.78rem;line-height:1">🖨</span><span>Print</span>
+      </button>`
+    : '';
 
   const shareLabel = '🔗 Share';
 
