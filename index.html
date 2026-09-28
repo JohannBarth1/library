@@ -1001,6 +1001,11 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
   transition:all .15s;-webkit-tap-highlight-color:transparent;}
 .lib-mode-seg.active{color:#fff;}
 .lib-mode-seg:active{transform:scale(.95);}
+/* "+" add-record button — only rendered inside the ACTIVE segment(s) */
+.lib-mode-add{display:inline-flex;align-items:center;justify-content:center;width:1.15rem;height:1.15rem;
+  margin-left:.15rem;border-radius:50%;background:rgba(255,255,255,.28);color:#fff;font-size:.9rem;
+  font-weight:700;line-height:1;cursor:pointer;-webkit-tap-highlight-color:transparent;}
+.lib-mode-add:active{background:rgba(255,255,255,.5);transform:scale(.9);}
 
 /* Own row for the mode toggle, above the other filter pills — mobile and
    desktop both had it inline with Genre/Tags/etc before, which pushed it
@@ -1012,8 +1017,18 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
    collapses on scroll-down, reappears on scroll-up (see the scroll listener
    on #mobLibGridScroll). max-height (not display) so the collapse animates;
    300px comfortably covers the block's real height at any screen width. */
-#mobLibTop{overflow:hidden;max-height:300px;transition:max-height .25s ease,opacity .2s ease;flex-shrink:0;}
-#mobLibTop.mob-top-hidden{max-height:0;opacity:0;}
+/* The block is an OVERLAY that slides away with a transform, not a flex row
+   that collapses. Collapsing max-height resized the scroll container, which
+   clamped scrollTop and fired more scroll events, which re-toggled the block
+   (the bounce at the bottom of the list). With the header out of the layout
+   the scroller's size never changes, so hiding it can't feed back into the
+   scroll position. The scroller's top padding (--mob-lib-top-h, kept in sync
+   by JS) reserves the header's space so the first row isn't underneath it. */
+#mobPanelLibrary{position:relative;}
+#mobLibTop{position:absolute;top:0;left:0;right:0;z-index:5;background:var(--cream);
+  transition:transform .25s ease,opacity .2s ease;will-change:transform;}
+#mobLibTop.mob-top-hidden{transform:translateY(-100%);opacity:0;pointer-events:none;}
+#mobLibGridScroll{padding-top:var(--mob-lib-top-h,0px);}
 
 /* Genre/Tags/Sort don't apply to Recipes mode (recipes are browsed via their
    own category folders instead) — hidden rather than removed so state (e.g.
@@ -1115,9 +1130,11 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
   transition:background .15s,border-color .15s,transform .08s;-webkit-tap-highlight-color:transparent;}
 .mob-cover-fav-btn:active{transform:scale(.9);}
 .mob-cover-fav-btn.active{background:#e11d48;border-color:#e11d48;}
+.mob-cover-fav-btn.active[data-list="favourite-recipes"]{background:#b84c1a;border-color:#b84c1a;}
 .mob-cover-fav-btn .lq-icon{font-size:1rem;line-height:1;}
 .mob-list-quickbtn .lq-icon{font-size:.9rem;line-height:1;}
 .mob-list-quickbtn.active[data-list="favourites"]{background:#e11d48;border-color:#e11d48;color:#fff;}
+.mob-list-quickbtn.active[data-list="favourite-recipes"]{background:#b84c1a;border-color:#b84c1a;color:#fff;}
 .mob-list-quickbtn.active[data-list="want-to-read"]{background:#7c3aed;border-color:#7c3aed;color:#fff;}
 .mob-list-other-btn{padding:.42rem .75rem;border-radius:18px;border:1.5px dashed var(--border);background:transparent;color:var(--muted);font-size:.72rem;font-weight:700;cursor:pointer;white-space:nowrap;}
 /* Other Lists: a small inline dropdown anchored under its button, not a
@@ -2037,7 +2054,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
     </div>
     <div class="header-user" id="headerUser">
       <div class="user-avatar-initials" id="userAvatarInitials">?</div>
-      <img class="user-avatar" id="userAvatarImg" src="" alt="" style="display:none"/>
+      <img class="user-avatar" id="userAvatarImg" src="" alt="" referrerpolicy="no-referrer" style="display:none"/>
       <span class="user-name" id="userNameDisplay"></span>
       <div class="user-dropdown" id="userDropdown">
         <div class="user-dropdown-email" id="userDropdownEmail"></div>
@@ -3163,7 +3180,24 @@ const fns=getFunctions(app,'us-central1');
 const COVER_CACHE_NAME = 'elib-cover-cache-v1'; // hoisted above primeCoverCache()'s call site below — it's a const, so it must be initialized before that call runs
 let mobLibFilter = 'all';
 let mobLibCat    = 'All';
-let mobLibFormat = new Set(['book']);  // library MODE, mobile — a Set so eBooks and Audio can both be active at once; 'recipe' is exclusive of both (see toggleLibFormat)
+// Remembered media-type selection (Ebooks / Audio / Recipes) — shared by the
+// mobile and desktop toggles. Default is Ebooks + Audio both on.
+const LIB_FORMAT_KEY = 'elib_lib_format';
+function loadLibFormat() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(LIB_FORMAT_KEY) || 'null');
+    if (Array.isArray(saved)) {
+      const valid = saved.filter(x => ['book','audio','recipe'].includes(x));
+      if (valid.includes('recipe')) return new Set(['recipe']);
+      if (valid.length) return new Set(valid);
+    }
+  } catch(e) {}
+  return new Set(['book','audio']);
+}
+function saveLibFormat(formatSet) {
+  try { localStorage.setItem(LIB_FORMAT_KEY, JSON.stringify([...formatSet])); } catch(e) {}
+}
+let mobLibFormat = loadLibFormat();  // library MODE, mobile — a Set so eBooks and Audio can both be active at once; 'recipe' is exclusive of both (see toggleLibFormat)
 let mobLibSearch = '';
 let mobLibSort   = 'series-recent';
 let mobPrevPanel = 'mobPanelLibrary';
@@ -3176,7 +3210,7 @@ let _coverCachePrimed = primeCoverCache();
 // (mobLibFilter/mobLibCat/mobActiveTags/mobLibSort below), just its own copy
 // so each surface renders and filters independently.
 let deskLibFilter='all',deskLibCat='All',deskLibSort='series-recent',searchQ='';
-let deskLibFormat = new Set(['book']);  // library MODE, desktop — see mobLibFormat above for the Set rationale
+let deskLibFormat = loadLibFormat();  // library MODE, desktop — see mobLibFormat above for the Set rationale
 let deskActiveTags = new Set();   // tag-filter picker selections, desktop Library
 let mobActiveTags = new Set();    // tag-filter picker selections, mobile Library
 let selectMode=false,selectedIds=new Set(),deskView='library';
@@ -3338,6 +3372,7 @@ onAuthStateChanged(auth, async user => {
       displayName: user.displayName||'',
       email: user.email,
       uid: user.uid,
+      photoURL: user.photoURL||null,
       lastSeen: serverTimestamp()
     }, {merge:true}).catch(e => console.warn(e));
 
@@ -4578,9 +4613,12 @@ document.getElementById('deskPillTags').addEventListener('click', (e) => {
 });
 
 document.getElementById('deskModeToggle')?.addEventListener('click', (e) => {
+  const addBtn = e.target.closest('.lib-mode-add');
+  if (addBtn) { addForLibMode(addBtn.dataset.add); return; }
   const btn = e.target.closest('.lib-mode-seg');
   if (!btn) return;
   toggleLibFormat(deskLibFormat, btn.dataset.mode);
+  saveLibFormat(deskLibFormat); mobLibFormat = new Set(deskLibFormat);
   // Leaving Recipes closes the open folder, so coming back lands on the
   // folder grid rather than silently resuming inside a category.
   if (!deskLibFormat.has('recipe')) _openRecipeCategory = null;
@@ -4951,7 +4989,8 @@ function renderDetailActionRows(peekContainer, moreContainer, book, isMine){
     shareOpts.push({ icon:'🔗', label:'Share Privately', action:'shareprivate' });
   }
   shareOpts.push({ icon:'📎', label:'Copy Link', action:'link' });
-  shareOpts.push({ icon:'⬇', label:'Download', action:'download' });
+  if(book.isRecipe) shareOpts.push({ icon:'🖨', label:'Print', action:'printrecipe' });
+  else shareOpts.push({ icon:'⬇', label:'Download', action:'download' });
 
   // ── "Edit" — owner or admin ───────────────────────────────────────────
   const editOpts = [];
@@ -5027,6 +5066,12 @@ function renderDetailActionRows(peekContainer, moreContainer, book, isMine){
   wirePillSelect(moreContainer, 'detailEditSelect', editOpts);
 }
 
+// Filled/empty favourite icon — recipes use the orange heart to match the
+// Favourite Recipes list on the Home tab; everything else stays red.
+function favIcon(listId, on) {
+  return on ? (listId === 'favourite-recipes' ? '🧡' : '❤️') : '🤍';
+}
+
 // Quick favourite / want-to-read toggle straight from the Lists row —
 // no need to open the full list picker for the two most common lists.
 async function handleQuickListToggle(btn){
@@ -5036,7 +5081,7 @@ async function handleQuickListToggle(btn){
   const nowIn = (_userLists.find(l => l.id === listId)?.bookIds || []).includes(currentId);
   btn.classList.toggle('active', nowIn);
   const iconEl = btn.querySelector('.lq-icon');
-  if((listId === 'favourites' || listId === 'favourite-recipes') && iconEl) iconEl.textContent = nowIn ? '❤️' : '🤍';
+  if((listId === 'favourites' || listId === 'favourite-recipes') && iconEl) iconEl.textContent = favIcon(listId, nowIn);
   renderMobHome();
   renderDeskHome();
 }
@@ -5169,7 +5214,7 @@ function buildDrawerIconBar(book, isMine){
       <div style="font-size:.58rem;letter-spacing:.15em;text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:.4rem;">Lists</div>
       <div style="display:flex;flex-wrap:wrap;gap:.4rem;margin-bottom:.5rem;">
         <button class="mob-list-quickbtn ${isFav?'active':''}" data-list="${favListId}" data-action="quicklist">
-          <span class="lq-icon">${isFav?'❤️':'🤍'}</span><span>${book.isRecipe ? 'Favourite Recipes' : 'Favourites'}</span>
+          <span class="lq-icon">${favIcon(favListId, isFav)}</span><span>${book.isRecipe ? 'Favourite Recipes' : 'Favourites'}</span>
         </button>
         <button class="mob-list-other-btn" data-action="addtolist">Other Lists ▾</button>
       </div>
@@ -5186,7 +5231,9 @@ function buildDrawerIconBar(book, isMine){
           <span class="di-icon">${book.recommended?'☆':'⭐'}</span>
           <span class="di-label">${book.recommended?'Unrec':'Rec'}</span>
         </button>
-        <button class="drawer-icon-btn" data-action="download"><span class="di-icon">⬇</span><span class="di-label">Download</span></button>
+        ${book.isRecipe
+          ? `<button class="drawer-icon-btn" data-action="printrecipe"><span class="di-icon">🖨</span><span class="di-label">Print</span></button>`
+          : `<button class="drawer-icon-btn" data-action="download"><span class="di-icon">⬇</span><span class="di-label">Download</span></button>`}
         <button class="drawer-icon-btn" data-action="link"><span class="di-icon">📎</span><span class="di-label">Copy Link</span></button>
         <button class="drawer-icon-btn" data-action="reportbug"><span class="di-icon">🐞</span><span class="di-label">Report Bug</span></button>
         ${isAdmin ? `<button class="drawer-icon-btn" data-action="history"><span class="di-icon">📋</span><span class="di-label">History</span></button>` : ''}
@@ -5263,6 +5310,7 @@ function runDetailAction(a){
     return;
   }
   if(a==='download')     downloadCurrentBook();
+  if(a==='printrecipe'){ const b=[...library,...communityLib].find(x=>x.id===currentId); if(b?._recipe) printRecipe(b._recipe); }
   if(a==='shareprivate') showPrivateShare();
   if(a==='link')         showDirectLink();
   if(a==='editmeta')     showEditMeta();
@@ -5612,7 +5660,7 @@ async function mob_showBook(id, opts={}){
     coverFavBtn.dataset.list = favListId;
     coverFavBtn.setAttribute('aria-label', book.isRecipe ? 'Toggle favourite recipe' : 'Toggle favourite');
     coverFavBtn.classList.toggle('active', book.__isFav);
-    coverFavBtn.querySelector('.lq-icon').textContent = book.__isFav ? '❤️' : '🤍';
+    coverFavBtn.querySelector('.lq-icon').textContent = favIcon(favListId, book.__isFav);
   }
 
   const img=document.getElementById('mobDetailCoverImg');
@@ -5808,7 +5856,7 @@ const MOB_SOURCE_OPTIONS = [
 // always exactly one active mode and no "all". `color` is the toggle segment's
 // active-state background.
 const LIB_MODE_OPTIONS = [
-  { id:'book',   label:'Ebook',   icon:'📖', color:'var(--navy2)' },
+  { id:'book',   label:'Ebooks',  icon:'📖', color:'var(--navy2)' },
   { id:'audio',  label:'Audio',   icon:'🎧', color:'var(--rust)' },
   { id:'recipe', label:'Recipes', icon:'🍲', color:'var(--teal)' },
 ];
@@ -5838,8 +5886,15 @@ function renderLibModeToggle(containerId, currentMode) {
     const active = currentMode.has(o.id);
     return `<button type="button" class="lib-mode-seg${active ? ' active' : ''}" data-mode="${o.id}"
       role="tab" aria-selected="${active}" style="${active ? `background:${o.color};` : ''}">
-      <span>${o.icon}</span><span>${o.label}</span></button>`;
+      <span>${o.icon}</span><span>${o.label}</span>${active ? `<span class="lib-mode-add" role="button" data-add="${o.id}" aria-label="Add ${o.label}" title="Add ${o.label}">+</span>` : ''}</button>`;
   }).join('');
+}
+
+// "+" inside an active mode segment — opens the matching add flow.
+function addForLibMode(mode) {
+  if (mode === 'book') showUploadModal();
+  else if (mode === 'audio') showAudioUploadModal();
+  else if (mode === 'recipe') showRecipeEditor();
 }
 
 function getAllMobTags() {
@@ -5968,9 +6023,12 @@ document.getElementById('mfpTags').addEventListener('click', (e) => {
 });
 
 document.getElementById('mobModeToggle')?.addEventListener('click', (e) => {
+  const addBtn = e.target.closest('.lib-mode-add');
+  if (addBtn) { addForLibMode(addBtn.dataset.add); return; }
   const btn = e.target.closest('.lib-mode-seg');
   if (!btn) return;
   toggleLibFormat(mobLibFormat, btn.dataset.mode);
+  saveLibFormat(mobLibFormat); deskLibFormat = new Set(mobLibFormat);
   if (!mobLibFormat.has('recipe')) _openRecipeCategory = null;
   updateMobFilterPillLabels();
   renderMobLibrary();
@@ -5982,17 +6040,37 @@ document.getElementById('mobModeToggle')?.addEventListener('click', (e) => {
 (function initMobLibTopAutoHide(){
   const scrollEl = document.getElementById('mobLibGridScroll');
   const topEl = document.getElementById('mobLibTop');
-  if (!scrollEl || !topEl) return;
+  const panelEl = document.getElementById('mobPanelLibrary');
+  if (!scrollEl || !topEl || !panelEl) return;
+
+  // Keep the scroller's top padding equal to the header's real height (it
+  // changes with Recipes mode hiding pills, wrapping, font scaling, etc.).
+  // offsetHeight is unaffected by the transform, so this stays stable while hidden.
+  const syncHeight = () => panelEl.style.setProperty('--mob-lib-top-h', topEl.offsetHeight + 'px');
+  syncHeight();
+  if ('ResizeObserver' in window) new ResizeObserver(syncHeight).observe(topEl);
+  else window.addEventListener('resize', syncHeight);
+
   let lastY = 0;
+  let run = 0;   // signed distance travelled since the direction last changed
   scrollEl.addEventListener('scroll', () => {
-    const y = scrollEl.scrollTop;
+    // Clamp to the real scroll range. iOS rubber-banding reports scrollTop
+    // below 0 or above max; without this, the bounce-back at the bottom reads
+    // as "scrolled up" and pops the header back in.
+    const max = Math.max(0, scrollEl.scrollHeight - scrollEl.clientHeight);
+    const y = Math.max(0, Math.min(scrollEl.scrollTop, max));
     const delta = y - lastY;
-    // Ignore tiny jitters (momentum/rubber-banding noise), and don't collapse
-    // until scrolled a little way down, so it doesn't flicker near the top.
-    if (Math.abs(delta) < 4) return;
-    if (delta > 0 && y > 40) topEl.classList.add('mob-top-hidden');
-    else if (delta < 0) topEl.classList.remove('mob-top-hidden');
     lastY = y;
+    if (delta === 0) return;
+
+    // Always show at the very top.
+    if (y <= 8) { run = 0; topEl.classList.remove('mob-top-hidden'); return; }
+
+    // Accumulate travel in one direction; a direction change starts over.
+    // Requiring ~12px of deliberate movement filters momentum jitter.
+    run = (Math.sign(run) === Math.sign(delta)) ? run + delta : delta;
+    if (run > 12 && y > 40) topEl.classList.add('mob-top-hidden');
+    else if (run < -12) topEl.classList.remove('mob-top-hidden');
   }, { passive: true });
 })();
 
@@ -6854,6 +6932,9 @@ function recommendedSection(books) {
         border-radius:4px;
         transition:transform .15s,box-shadow .15s;">
         ${coverContent}
+        ${b.isRecipe && src ? `<div style="font-size:.62rem;font-weight:700;color:var(--navy2);
+          line-height:1.25;margin-top:.3rem;text-align:center;display:-webkit-box;
+          -webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">${esc(b.title)}</div>` : ''}
       </div>`;
     }).join('');
 
@@ -10210,7 +10291,7 @@ function renderNotifList() {
 
 function notifAvatarHTML(name, photoURL) {
   const initials = (name||'?').trim().split(/\s+/).map(w=>w[0]).slice(0,2).join('').toUpperCase() || '?';
-  if(photoURL) return `<img class="notif-avatar" src="${esc(photoURL)}" alt="">`;
+  if(photoURL) return `<img class="notif-avatar" src="${esc(photoURL)}" alt="" referrerpolicy="no-referrer">`;
   return `<div class="notif-avatar">${esc(initials)}</div>`;
 }
 
@@ -15801,7 +15882,7 @@ function _adminUserCardHtml(u, checkoutsByUser, koboSendsByUser) {
 
     <div style="display:flex;align-items:center;gap:.6rem;padding:.6rem .8rem;">
       ${u.photoURL
-        ? `<img src="${u.photoURL}" style="width:32px;height:32px;border-radius:50%;
+        ? `<img src="${esc(u.photoURL)}" referrerpolicy="no-referrer" style="width:32px;height:32px;border-radius:50%;
             object-fit:cover;border:1px solid var(--border);flex-shrink:0"/>`
         : `<div style="width:32px;height:32px;border-radius:50%;background:var(--teal);
             color:#fff;display:flex;align-items:center;justify-content:center;
@@ -19006,6 +19087,8 @@ function audioTrackToBookLike(t) {
     ownerId: t.userId || currentUser?.uid,
     createdAt: t.uploadedAt,
     coverUrl: t.coverUrl || null,
+    recommended: !!t.recommended,
+    recommendedAt: t.recommendedAt || null,
     isAudio: true,
     _audioTrack: t,
   };
@@ -19100,6 +19183,8 @@ function recipeToBookLike(r) {
     ownerId: r.ownerId || currentUser?.uid,
     createdAt: r.createdAt,
     coverUrl: r.coverUrl || null,
+    recommended: !!r.recommended,
+    recommendedAt: r.recommendedAt || null,
     isRecipe: true,
     _recipe: r,
   };
@@ -19496,6 +19581,81 @@ function cmTimerRender() {
   if (tray && !cmTimers.length) tray.style.display = 'none';
 }
 
+// ── PRINT ────────────────────────────────────────────────────────────────
+// Builds a clean, single-purpose print document (no app chrome, no timer
+// buttons) in a hidden iframe and prints just that — so it works the same
+// from cook mode and from the detail sheet, on desktop and mobile.
+function _printSectioned(lines, ordered) {
+  const tag = ordered ? 'ol' : 'ul';
+  let html = '';
+  let items = '';
+  const flush = () => { if (items) { html += `<${tag}>${items}</${tag}>`; items = ''; } };
+  for (const line of (lines || [])) {
+    const t = String(line || '').trim();
+    if (!t) continue;
+    if (t.endsWith(':')) { flush(); html += `<h3>${esc(t.slice(0, -1))}</h3>`; }
+    else items += `<li>${esc(t)}</li>`;
+  }
+  flush();
+  return html;
+}
+
+async function printRecipe(recipe) {
+  if (!recipe) { showToast('No recipe to print'); return; }
+  const byline = recipe.author || recipe.createdByName || '';
+  const cat = recipe.chapterName || recipe.category || '';
+  const doc_ = `<!doctype html><html><head><meta charset="utf-8"><title>${esc(recipe.title || 'Recipe')}</title>
+<style>
+  @page{margin:16mm;}
+  *{box-sizing:border-box;}
+  body{font-family:Georgia,'Times New Roman',serif;color:#1a1a1a;line-height:1.5;font-size:11.5pt;margin:0;}
+  .cat{font-family:Helvetica,Arial,sans-serif;font-size:9pt;letter-spacing:.12em;text-transform:uppercase;color:#8a4a3a;font-weight:700;}
+  h1{font-size:24pt;margin:.15em 0 .1em;line-height:1.15;}
+  .by{font-style:italic;color:#555;margin-bottom:.6em;}
+  .cover{width:100%;max-height:70mm;object-fit:cover;border-radius:4px;margin:.4em 0 .8em;}
+  .desc{margin:.4em 0 1em;}
+  h2{font-size:13pt;margin:1.1em 0 .4em;padding-bottom:.15em;border-bottom:1.5px solid #c8952a;color:#8a4a3a;break-after:avoid;}
+  h3{font-size:11pt;margin:.9em 0 .25em;break-after:avoid;}
+  ul{list-style:none;margin:0;padding:0;}
+  ul li{padding:.15em 0;border-bottom:1px dotted #ccc;break-inside:avoid;}
+  ol{margin:0;padding-left:1.5em;}
+  ol li{margin-bottom:.5em;padding-left:.2em;break-inside:avoid;}
+  .tip{margin-top:1.2em;padding:.6em .8em;border:1px solid #ccc;border-left:3px solid #c8952a;font-size:10.5pt;break-inside:avoid;}
+  .foot{margin-top:1.6em;font-family:Helvetica,Arial,sans-serif;font-size:8pt;color:#888;text-align:center;}
+</style></head><body>
+  ${cat ? `<div class="cat">${esc(cat)}</div>` : ''}
+  <h1>${esc(recipe.title || 'Untitled Recipe')}</h1>
+  ${byline ? `<div class="by">By ${esc(byline)}</div>` : ''}
+  ${recipe.coverUrl ? `<img class="cover" src="${esc(recipe.coverUrl)}" alt="">` : ''}
+  ${recipe.desc ? `<div class="desc">${esc(recipe.desc)}</div>` : ''}
+  <h2>Ingredients</h2>${_printSectioned(recipe.ingredients, false)}
+  <h2>Method</h2>${_printSectioned(recipe.steps, true)}
+  ${recipe.tip ? `<div class="tip"><strong>Tip:</strong> ${esc(recipe.tip)}</div>` : ''}
+  <div class="foot">Printed from eLibrary</div>
+</body></html>`;
+
+  const frame = document.createElement('iframe');
+  frame.setAttribute('aria-hidden', 'true');
+  frame.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden;';
+  document.body.appendChild(frame);
+  const fdoc = frame.contentDocument || frame.contentWindow.document;
+  fdoc.open(); fdoc.write(doc_); fdoc.close();
+
+  // Let the cover image finish (or fail) before printing, capped at 4s so a
+  // slow/blocked image never leaves the button feeling dead.
+  const imgs = [...fdoc.images];
+  await Promise.race([
+    Promise.all(imgs.map(im => im.complete ? null : new Promise(r => { im.onload = im.onerror = r; }))),
+    new Promise(r => setTimeout(r, 4000)),
+  ]);
+  const win = frame.contentWindow;
+  const cleanup = () => setTimeout(() => frame.remove(), 500);
+  win.addEventListener('afterprint', cleanup);
+  win.focus();
+  win.print();
+  setTimeout(() => { if (frame.isConnected) frame.remove(); }, 120000); // safety net if afterprint never fires
+}
+
 // ── overlay shell (built once, reused across recipes) ────────────────────
 function _cmEnsureOverlay() {
   if (document.getElementById('cookModeOverlay')) return;
@@ -19509,6 +19669,7 @@ function _cmEnsureOverlay() {
         <div id="cmCategory" style="font-size:.72rem;color:var(--teal-dark);font-weight:700;letter-spacing:.03em;"></div>
         <div id="cmTitle" style="font-family:'Playfair Display',serif;font-size:1.15rem;color:var(--navy);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"></div>
       </div>
+      <button onclick="printRecipe(_cmCurrentRecipe)" title="Print recipe" aria-label="Print recipe" style="border:none;background:none;font-size:1.25rem;cursor:pointer;">🖨</button>
       <button onclick="document.getElementById('cmTimerTray').style.display=document.getElementById('cmTimerTray').style.display==='none'?'block':'none';" style="border:none;background:none;font-size:1.25rem;cursor:pointer;">⏱</button>
     </div>
     <div id="cmTimerTray" style="display:none;flex-shrink:0;max-height:35vh;overflow-y:auto;background:var(--panel);border-bottom:1px solid var(--border);">
@@ -19563,7 +19724,9 @@ document.addEventListener('visibilitychange', () => {
   }
 });
 
+let _cmCurrentRecipe = null;
 function openRecipeCookMode(recipe) {
+  _cmCurrentRecipe = recipe;
   _cmEnsureOverlay();
   document.getElementById('cmCategory').textContent = recipe.chapterName || recipe.category || '';
   document.getElementById('cmTitle').textContent = recipe.title || 'Untitled Recipe';
