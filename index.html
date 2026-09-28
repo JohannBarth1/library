@@ -1002,7 +1002,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .lib-mode-seg.active{color:#fff;}
 .lib-mode-seg:active{transform:scale(.95);}
 /* Each mode is [label pill] and, when active, a separate round "+" button on
-   its own gold background to the pill's right. */
+   the same colour as its pill, to the pill's right. */
 .lib-mode-item{flex:1;display:flex;gap:.2rem;min-width:0;}
 .lib-mode-item .lib-mode-seg{min-width:0;overflow:hidden;text-overflow:ellipsis;}
 .lib-mode-add{flex:none;align-self:stretch;aspect-ratio:1/1;border:none;border-radius:50%;padding:0;
@@ -5892,7 +5892,7 @@ function renderLibModeToggle(containerId, currentMode) {
       <button type="button" class="lib-mode-seg${active ? ' active' : ''}" data-mode="${o.id}"
         role="tab" aria-selected="${active}" style="${active ? `background:${o.color};` : ''}">
         <span>${o.icon}</span><span>${o.label}</span></button>${active
-        ? `<button type="button" class="lib-mode-add" data-add="${o.id}" aria-label="Add ${o.label}" title="Add ${o.label}">+</button>` : ''}
+        ? `<button type="button" class="lib-mode-add" data-add="${o.id}" style="background:${o.color};" aria-label="Add ${o.label}" title="Add ${o.label}">+</button>` : ''}
     </div>`;
   }).join('');
 }
