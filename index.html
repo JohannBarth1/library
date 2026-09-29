@@ -2436,6 +2436,18 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
         <p class="settings-card-note" id="mobInstallNote">Open in your browser's menu and choose "Add to Home Screen" to install.</p>
       </div>
 
+      <div class="settings-card">
+        <div class="settings-card-label">🔗 Share</div>
+        <button class="settings-row" id="mobShareAppBtn">
+          <span class="settings-row-icon" style="background:var(--teal);color:var(--gold)">📤</span>
+          <span class="settings-row-text">
+            <span class="settings-row-title">Share eLibrary</span>
+            <span class="settings-row-desc">Send the app to a friend</span>
+          </span>
+          <span class="settings-row-chevron">›</span>
+        </button>
+      </div>
+
       <div class="settings-card" id="mobAdminSettingsCard" style="display:none">
         <div class="settings-card-label">🔑 Admin</div>
         <button class="settings-row" id="btnMobOpenAdmin">
@@ -2533,6 +2545,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
   <h3 style="font-family:'Playfair Display',serif;font-size:1rem;color:var(--navy2);margin-bottom:.9rem;padding-bottom:.4rem;border-bottom:1px solid var(--border)">⚙ Settings</h3>
   <div style="font-size:.65rem;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:.4rem">Default genre for uploads</div>
   <input type="text" id="defaultCatInput" placeholder="e.g. Fiction" style="width:100%;padding:.5rem .7rem;font-size:.88rem;font-family:'Lato',sans-serif;border:1px solid var(--border);border-radius:3px;background:var(--cream);color:var(--navy);outline:none;margin-bottom:.8rem"/>
+  <button id="deskShareAppBtn" style="display:block;width:100%;padding:.45rem;font-size:.78rem;font-family:'Lato',sans-serif;font-weight:700;border-radius:3px;cursor:pointer;border:1px solid var(--teal);color:var(--teal);background:var(--cream);margin-bottom:.5rem">📤 Share eLibrary</button>
   <button id="deskInstallBtn" style="display:none;width:100%;padding:.45rem;font-size:.78rem;font-family:'Lato',sans-serif;font-weight:700;border-radius:3px;cursor:pointer;border:1px solid var(--teal);color:var(--teal);background:var(--cream);margin-bottom:.5rem">📲 Install eLibrary</button>
   <p style="font-size:.72rem;color:var(--muted);line-height:1.5;margin-bottom:.8rem" id="deskInstallNote">Use your browser's "Add to Home Screen" or "Install" option.</p>
   <button id="btnClearCache" style="width:100%;padding:.45rem;font-size:.72rem;font-family:'Lato',sans-serif;font-weight:700;border-radius:3px;cursor:pointer;border:1px solid #e0b0b0;color:var(--danger);background:var(--cream)">✕ Clear Cache</button>
@@ -14372,6 +14385,27 @@ document.getElementById('btnClearCache').addEventListener('click',()=>{if(!confi
 document.getElementById('deskInstallBtn').addEventListener('click',triggerInstall);
 document.getElementById('mobInstallBtn').addEventListener('click',triggerInstall);
 function triggerInstall(){if(deferredInstall){deferredInstall.prompt();deferredInstall.userChoice.then(()=>deferredInstall=null);}}
+
+// Share the app itself (not a specific book) — native share sheet where
+// available (mobile browsers, and some desktop browsers/OSes), falling back
+// to a clipboard copy + toast everywhere else.
+async function shareApp(){
+  const url = location.origin + location.pathname;
+  const shareData = { title:'eLibrary', text:'Check out eLibrary — my digital library app.', url };
+  if(navigator.share){
+    try{ await navigator.share(shareData); }
+    catch(e){ /* user backed out of the share sheet — nothing to report */ }
+    return;
+  }
+  try{
+    await navigator.clipboard.writeText(url);
+    showToast('Link copied to clipboard ✓');
+  }catch(e){
+    showToast('Could not copy link');
+  }
+}
+document.getElementById('mobShareAppBtn')?.addEventListener('click', shareApp);
+document.getElementById('deskShareAppBtn')?.addEventListener('click', shareApp);
 
 let toastTimer;
 let _loadingOverlayOpen = false;
