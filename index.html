@@ -5045,6 +5045,7 @@ function renderDetailActionRows(peekContainer, moreContainer, book, isMine){
     ${pillSelect('detailShareSelect', shareLabel, shareOpts)}
     ${editControlHtml}
     ${recToggle}
+    ${printToggle}
   </div>`;
 
   // ── History (admin) / Delete (owner) — small, always-visible, kept out of
@@ -5327,7 +5328,7 @@ function runDetailAction(a){
     return;
   }
   if(a==='download')     downloadCurrentBook();
-  if(a==='printrecipe'){ const b=[...library,...communityLib].find(x=>x.id===currentId); if(b?._recipe) printRecipe(b._recipe); }
+  if(a==='printrecipe'){ const b=[...library,...communityLib].find(x=>x.id===currentId); if(b?._recipe) promptRecipePrint(b._recipe); }
   if(a==='shareprivate') showPrivateShare();
   if(a==='link')         showDirectLink();
   if(a==='editmeta')     showEditMeta();
@@ -19681,6 +19682,163 @@ async function printRecipe(recipe) {
   setTimeout(() => { if (frame.isConnected) frame.remove(); }, 120000); // safety net if afterprint never fires
 }
 
+// ── Recipe card printing ──────────────────────────────────────────────────
+// Cut-out index-card layout (95×140mm, 2×2 grid on an A4 sheet, front +
+// back for duplex), ported from eRecipe's js/print.js buildCard()/
+// cardSectionedList()/printCards() so the card design matches the
+// established one exactly — same spine strip, same "Label:" sub-heading
+// convention in lists, same front/back split. Two adaptations for eLibrary:
+// (1) only this one recipe is placed on the sheet (the other 3 grid slots
+// are left empty rather than filled with eRecipe's dashed "reserved for the
+// next card" placeholder, since eLibrary always prints a single recipe at a
+// time here, not a whole batch); (2) the front card gets a cover image
+// (eRecipe's cards don't carry one), sized to fit without pushing the
+// ingredients list off the card.
+function _cardSectionedList(lines, tag) {
+  const open = () => `<${tag} style="padding-left:3.5mm;margin:0">`;
+  const close = () => `</${tag}>`;
+  let html = open(), isOpen = true;
+  for (const line of (lines || [])) {
+    const t = String(line || '').trim();
+    if (!t) continue;
+    if (t.endsWith(':')) {
+      if (isOpen) { html += close(); isOpen = false; }
+      html += `<li class="card-subhead">${esc(t.slice(0, -1))}</li>${open()}`;
+      isOpen = true;
+    } else {
+      html += `<li>${esc(t)}</li>`;
+    }
+  }
+  if (isOpen) html += close();
+  return html;
+}
+
+function _buildRecipeCardFace(recipe, side) {
+  const byline = recipe.author || recipe.createdByName || '';
+  const cat = recipe.chapterName || recipe.category || '';
+  const titleText = recipe.title || 'Untitled Recipe';
+  const metaText = (cat ? cat + ' · ' : '') + byline;
+
+  const spine = `<svg class="card-spine-svg" xmlns="http://www.w3.org/2000/svg"
+    width="100%" height="100%" viewBox="0 0 20 544" preserveAspectRatio="none">
+    <rect width="20" height="544" fill="#c8952a"/>
+    <text x="10" y="525" font-family="Georgia,serif" font-size="14.5" font-weight="bold"
+          fill="#1a1208" text-anchor="start" dominant-baseline="central"
+          transform="rotate(-90,10,525)">${esc(titleText)}</text>
+    <text x="10" y="20" font-family="Georgia,serif" font-size="8.5" font-weight="600"
+          fill="#1a1208" text-anchor="end" dominant-baseline="central"
+          transform="rotate(-90,10,20)">${esc(metaText)}</text>
+  </svg>`;
+
+  if (side === 'front') {
+    return `<div class="recipe-card">
+      ${spine}
+      ${recipe.coverUrl ? `<img class="card-img" src="${esc(recipe.coverUrl)}" alt="">` : ''}
+      ${recipe.desc
+        ? `<p class="card-desc" style="margin-bottom:2mm;padding-bottom:1.5mm;border-bottom:.5mm solid #c8952a">${esc(recipe.desc)}</p>`
+        : '<div style="border-bottom:.5mm solid #c8952a;margin-bottom:2mm;padding-bottom:0"></div>'
+      }
+      <div class="card-section">Ingredients</div>
+      <div class="card-ing-box">${_cardSectionedList(recipe.ingredients, 'ul')}</div>
+    </div>`;
+  }
+
+  return `<div class="recipe-card back">
+    ${spine}
+    <div style="border-bottom:.5mm solid #c8952a;margin-bottom:2mm"></div>
+    <div class="card-section">Instructions</div>
+    ${_cardSectionedList(recipe.steps, 'ol')}
+    ${recipe.tip ? `<div class="card-tip"><strong>Tip:</strong> ${esc(recipe.tip)}</div>` : ''}
+  </div>`;
+}
+
+async function printRecipeCard(recipe) {
+  if (!recipe) { showToast('No recipe to print'); return; }
+  const frontCard = _buildRecipeCardFace(recipe, 'front');
+  const backCard  = _buildRecipeCardFace(recipe, 'back');
+
+  const doc_ = `<!doctype html><html><head><meta charset="utf-8"><title>${esc(recipe.title || 'Recipe')}</title>
+<style>
+  @page{margin:0;}
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;font-family:Georgia,'Times New Roman',serif;background:#fff;}
+  .card-page{width:210mm;min-height:297mm;display:grid;grid-template-columns:95mm 95mm;
+    grid-template-rows:140mm 140mm;gap:2mm;padding:7.5mm 9mm;box-sizing:border-box;
+    page-break-after:always;}
+  .card-page:last-child{page-break-after:auto;}
+  .recipe-card{border:1px solid #c8952a;border-radius:3mm;padding:4mm 5mm 4mm 9mm;overflow:hidden;
+    box-sizing:border-box;display:flex;flex-direction:column;width:95mm;height:140mm;
+    font-size:7.5pt;line-height:1.35;position:relative;background:#fbf9f5;}
+  .recipe-card.back{background:#faf6f0;border:none;padding:4mm 5mm;}
+  .recipe-card.back .card-spine-svg{display:none;}
+  .card-spine-svg{position:absolute;top:0;left:0;width:5mm;height:100%;display:block;}
+  .card-img{width:100%;height:26mm;object-fit:cover;border-radius:1.5mm;margin-bottom:2mm;display:block;flex-shrink:0;}
+  .card-desc{font-style:italic;color:#8a7060;font-size:6.5pt;margin-top:0;}
+  .card-section{font-size:6pt;letter-spacing:.12em;text-transform:uppercase;color:#c0571a;font-weight:bold;margin:2mm 0 1mm;}
+  .card-ing-box{border-left:1mm solid #c8952a;padding-left:2mm;margin-bottom:1mm;overflow:hidden;}
+  .recipe-card ul{padding-left:3mm;margin:0;list-style:disc;}
+  .recipe-card ol{padding-left:3.5mm;margin:0;}
+  .recipe-card li{margin:.3mm 0;break-inside:avoid;}
+  .card-subhead{font-weight:bold;font-size:7pt;margin:1.5mm 0 .5mm;list-style:none;margin-left:-1mm;}
+  .card-tip{font-style:italic;color:#666;font-size:6pt;border-top:.3mm dashed #bbb;padding-top:1.5mm;margin-top:auto;}
+</style></head><body>
+  <div class="card-page">${frontCard}</div>
+  <div class="card-page">${backCard}</div>
+</body></html>`;
+
+  const frame = document.createElement('iframe');
+  frame.setAttribute('aria-hidden', 'true');
+  frame.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden;';
+  document.body.appendChild(frame);
+  const fdoc = frame.contentDocument || frame.contentWindow.document;
+  fdoc.open(); fdoc.write(doc_); fdoc.close();
+
+  // Same image-readiness wait as printRecipe() — the <img> points straight
+  // at recipe.coverUrl (the same full-resolution source the app itself
+  // uses, not a thumbnail), so once it's loaded it prints crisp; object-fit
+  // just crops it to the card's fixed image band rather than downscaling
+  // the source itself.
+  const imgs = [...fdoc.images];
+  await Promise.race([
+    Promise.all(imgs.map(im => im.complete ? null : new Promise(r => { im.onload = im.onerror = r; }))),
+    new Promise(r => setTimeout(r, 4000)),
+  ]);
+  const win = frame.contentWindow;
+  const cleanup = () => setTimeout(() => frame.remove(), 500);
+  win.addEventListener('afterprint', cleanup);
+  win.focus();
+  win.print();
+  setTimeout(() => { if (frame.isConnected) frame.remove(); }, 120000); // safety net if afterprint never fires
+}
+
+// Print entry point for recipes — asks Full Page (printRecipe) vs Recipe
+// Card (printRecipeCard) using the same picker scrim as everywhere else.
+function promptRecipePrint(recipe) {
+  if (!recipe) { showToast('No recipe to print'); return; }
+  const scrim = document.createElement('div');
+  scrim.className = 'mob-picker-scrim';
+  scrim.innerHTML = `
+    <div class="mob-picker-card">
+      <div class="mob-picker-title">
+        <span>🖨 Print Recipe</span>
+        <button class="mob-picker-close" id="printChoiceCloseBtn">✕</button>
+      </div>
+      <div class="mob-picker-item" data-choice="full"><span>📄 Full Page</span></div>
+      <div class="mob-picker-item" data-choice="card"><span>🗂 Recipe Card</span></div>
+    </div>`;
+  document.body.appendChild(scrim);
+  scrim.addEventListener('click', e => { if (e.target === scrim) scrim.remove(); });
+  scrim.querySelector('#printChoiceCloseBtn').addEventListener('click', () => scrim.remove());
+  scrim.querySelectorAll('[data-choice]').forEach(item => {
+    item.addEventListener('click', () => {
+      const choice = item.dataset.choice;
+      scrim.remove();
+      if (choice === 'full') printRecipe(recipe);
+      else printRecipeCard(recipe);
+    });
+  });
+}
+
 // ── overlay shell (built once, reused across recipes) ────────────────────
 function _cmEnsureOverlay() {
   if (document.getElementById('cookModeOverlay')) return;
@@ -19694,7 +19852,7 @@ function _cmEnsureOverlay() {
         <div id="cmCategory" style="font-size:.72rem;color:var(--teal-dark);font-weight:700;letter-spacing:.03em;"></div>
         <div id="cmTitle" style="font-family:'Playfair Display',serif;font-size:1.15rem;color:var(--navy);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"></div>
       </div>
-      <button onclick="printRecipe(_cmCurrentRecipe)" title="Print recipe" aria-label="Print recipe" style="border:none;background:none;font-size:1.25rem;cursor:pointer;">🖨</button>
+      <button onclick="promptRecipePrint(_cmCurrentRecipe)" title="Print recipe" aria-label="Print recipe" style="border:none;background:none;font-size:1.25rem;cursor:pointer;">🖨</button>
       <button onclick="document.getElementById('cmTimerTray').style.display=document.getElementById('cmTimerTray').style.display==='none'?'block':'none';" style="border:none;background:none;font-size:1.25rem;cursor:pointer;">⏱</button>
     </div>
     <div id="cmTimerTray" style="display:none;flex-shrink:0;max-height:35vh;overflow-y:auto;background:var(--panel);border-bottom:1px solid var(--border);">
