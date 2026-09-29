@@ -5036,6 +5036,14 @@ function renderDetailActionRows(peekContainer, moreContainer, book, isMine){
       </button>`
     : '';
 
+  // ── Share — its own dedicated button (native share sheet), not tucked
+  // in the dropdown, same reasoning as Print/Recommend. Plain EPUB books
+  // get the rich-preview /book/<id> link (cover shows up when pasted into
+  // WhatsApp etc.); audio/recipes fall back to the in-app link for now.
+  const shareToggle = `<button type="button" class="detail-row-btn mob-pill-btn mob-pill-sm" data-action="sharebook">
+      <span style="font-size:.78rem;line-height:1">📤</span><span>Share</span>
+    </button>`;
+
   const shareLabel = '🔗 Share';
 
   // Recipes only ever have one edit destination (the recipe editor, no
@@ -5059,6 +5067,7 @@ function renderDetailActionRows(peekContainer, moreContainer, book, isMine){
     ${editControlHtml}
     ${recToggle}
     ${printToggle}
+    ${shareToggle}
   </div>`;
 
   // ── History (admin) / Delete (owner) — small, always-visible, kept out of
@@ -5265,6 +5274,7 @@ function buildDrawerIconBar(book, isMine){
         ${book.isRecipe
           ? `<button class="drawer-icon-btn" data-action="printrecipe"><span class="di-icon">🖨</span><span class="di-label">Print</span></button>`
           : `<button class="drawer-icon-btn" data-action="download"><span class="di-icon">⬇</span><span class="di-label">Download</span></button>`}
+        <button class="drawer-icon-btn" data-action="sharebook"><span class="di-icon">📤</span><span class="di-label">Share</span></button>
         <button class="drawer-icon-btn" data-action="link"><span class="di-icon">📎</span><span class="di-label">Copy Link</span></button>
         <button class="drawer-icon-btn" data-action="reportbug"><span class="di-icon">🐞</span><span class="di-label">Report Bug</span></button>
         ${isAdmin ? `<button class="drawer-icon-btn" data-action="history"><span class="di-icon">📋</span><span class="di-label">History</span></button>` : ''}
@@ -5333,6 +5343,7 @@ function handleAction(e){
   runDetailAction(a);
 }
 function runDetailAction(a){
+  if(a==='sharebook'){ const b=[...library,...communityLib].find(x=>x.id===currentId); if(b) shareBook(b); return; }
   if(a==='read'){
     const book=[...library,...communityLib].find(b=>b.id===currentId);
     if(book?.isAudio){ playAudioTrack(book._audioTrack); closeMobBookSheet(); closeDrawer(); return; }
@@ -5535,8 +5546,45 @@ document.getElementById('btnCopyPrivateLink').addEventListener('click', async ()
 });
 
 // ── DIRECT LINK ───────────────────────────────────────────────────────────────
-function showDirectLink(){if(!currentId)return;document.getElementById('directLinkBox').textContent=getDirectLink(currentId);document.getElementById('linkModal').classList.add('open');}
+// getDirectLink() is the in-app hash link — used for notification "Open
+// Book" links and anywhere else navigation should stay inside the signed-in
+// app. getBookShareLink() is the externally-shareable version: a real path
+// (not a hash fragment, which never reaches the server) so the bookShare
+// Cloud Function can serve a rich preview when it's pasted into WhatsApp,
+// iMessage, etc. Only plain EPUB books get the rich-preview link for now —
+// audio/recipes still use the in-app link until bookShare covers those
+// collections too.
 function getDirectLink(id){return `${location.origin}${location.pathname}#book=${id}`;}
+function getBookShareLink(id){return `${location.origin}/book/${id}`;}
+function showDirectLink(){
+  if(!currentId)return;
+  const b=[...library,...communityLib].find(x=>x.id===currentId);
+  const link=(b && !b.isAudio && !b.isRecipe) ? getBookShareLink(currentId) : getDirectLink(currentId);
+  document.getElementById('directLinkBox').textContent=link;
+  document.getElementById('linkModal').classList.add('open');
+}
+// Native share sheet for a single book, falling back to clipboard copy.
+async function shareBook(book){
+  if(!book){ showToast('Nothing to share'); return; }
+  const isEpub = !book.isAudio && !book.isRecipe;
+  const url = isEpub ? getBookShareLink(book.id) : getDirectLink(book.id);
+  const shareData = {
+    title: book.title || 'A book on eLibrary',
+    text: book.author ? `By ${book.author} — on eLibrary` : 'Shared from eLibrary',
+    url,
+  };
+  if(navigator.share){
+    try{ await navigator.share(shareData); }
+    catch(e){ /* user backed out of the share sheet — nothing to report */ }
+    return;
+  }
+  try{
+    await navigator.clipboard.writeText(url);
+    showToast('Link copied to clipboard ✓');
+  }catch(e){
+    showToast('Could not copy link');
+  }
+}
 document.getElementById('btnCloseLinkModal').addEventListener('click',()=>document.getElementById('linkModal').classList.remove('open'));
 async function copyTextToClipboard(text){
   try{
