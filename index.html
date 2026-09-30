@@ -19951,7 +19951,8 @@ function _cardSheetEnsureStyles() {
   const st = document.createElement('style');
   st.id = 'cardSheetStyles';
   st.textContent = `
-    .cs-card{width:100%;max-width:420px;max-height:94vh;overflow-y:auto;background:var(--warm-white);
+    .card-sheet-scrim{z-index:10000;}
+    .cs-card{width:100%;max-width:420px;max-height:94vh;max-height:94dvh;overflow-y:auto;-webkit-overflow-scrolling:touch;background:var(--warm-white);
       border-radius:16px;box-shadow:0 14px 44px rgba(20,30,45,.35);padding:1rem;}
     .cs-sub{font-size:.78rem;color:var(--muted);margin:-.2rem 0 .7rem;}
     .cs-sheet{display:grid;grid-template-columns:1fr 1fr;gap:6px;padding:8px;background:#fff;
@@ -20072,13 +20073,22 @@ function openCardSheetManager(current) {
 async function printCardSheet(recipes) {
   const slots = [0, 1, 2, 3].map(i => (recipes && recipes[i]) || null);
   if (!slots.some(Boolean)) { showToast('No recipes to print'); return; }
+  // iOS/Android can't print from a hidden iframe and drop the tap's "user
+  // gesture" after an await, so on touch devices open a real tab right now
+  // (still inside the tap) and print from there.
+  const touch = /iPad|iPhone|iPod|Android/i.test(navigator.userAgent) ||
+                (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  let pw = null;
+  if (touch) { try { pw = window.open('', '_blank'); } catch (e) { pw = null; } }
   const empty = '<div class="slot-empty"></div>';
   const fronts = slots.map(r => r ? _buildRecipeCardFace(r, 'front') : empty);
   const backOrder = CARD_SHEET_MIRROR_BACK ? [1, 0, 3, 2] : [0, 1, 2, 3];
   const backs = backOrder.map(i => slots[i] ? _buildRecipeCardFace(slots[i], 'back') : empty);
 
   const doc_ = `<!doctype html><html><head><meta charset="utf-8"><title>Recipe cards</title>
+${pw ? '<meta name="viewport" content="width=800">' : ''}
 <style>
+  @media print{.print-bar{display:none !important;}}
   @page{margin:0;}
   html,body{margin:0;padding:0;font-family:Georgia,'Times New Roman',serif;background:#fff;}
   .card-page{width:210mm;min-height:297mm;display:grid;grid-template-columns:95mm 95mm;
@@ -20088,9 +20098,21 @@ async function printCardSheet(recipes) {
   .slot-empty{width:95mm;height:140mm;}
   ${_CARD_SHEET_CSS}
 </style></head><body>
+  ${pw ? '<div class="print-bar" style="position:sticky;top:0;z-index:5;padding:10px;background:#1a1208;text-align:center;"><button onclick="window.print()" style="font-size:18px;padding:10px 26px;border-radius:8px;border:0;background:#c8952a;color:#1a1208;font-weight:bold;">🖨 Print</button></div>' : ''}
   <div class="card-page">${fronts.join('')}</div>
   <div class="card-page">${backs.join('')}</div>
 </body></html>`;
+
+  if (pw) {
+    pw.document.open(); pw.document.write(doc_); pw.document.close();
+    await Promise.race([
+      Promise.all([...pw.document.images].map(im => im.complete ? null : new Promise(r => { im.onload = im.onerror = r; }))),
+      new Promise(r => setTimeout(r, 4000)),
+    ]);
+    try { pw.focus(); pw.print(); } catch (e) { /* the 🖨 Print button in that tab still works */ }
+    return;
+  }
+  if (touch) showToast('Allow pop-ups to print from this device');
 
   const frame = document.createElement('iframe');
   frame.setAttribute('aria-hidden', 'true');
