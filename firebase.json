@@ -4,6 +4,7 @@
     "public": ".",
     "ignore": [
       "firebase.json",
+      "functions/**",
       "**/.*",
       "**/node_modules/**"
     ],
@@ -39,6 +40,14 @@
     "rewrites": [
       {
         "source": "/book/:bookId",
+        "function": "bookShare"
+      },
+      {
+        "source": "/recipe/:recipeId",
+        "function": "bookShare"
+      },
+      {
+        "source": "/audio/:audioId",
         "function": "bookShare"
       },
       {
