@@ -19894,6 +19894,151 @@ async function printRecipeCard(recipe) {
   setTimeout(() => { if (frame.isConnected) frame.remove(); }, 120000); // safety net if afterprint never fires
 }
 
+// ── 4-up card sheet (print queue) ─────────────────────────────────────────
+// Recipes are queued into up to 4 slots (kept in localStorage so the queue
+// survives navigation/reload), then printed together on one A4 sheet using
+// the same card design as above. Empty slots are simply left blank, so a
+// sheet with 1–3 recipes prints fine. Fronts are page 1, backs page 2.
+const CARD_SHEET_KEY = 'elib_cardSheet';
+const CARD_SHEET_MAX = 4;
+// true  = backs mirrored left/right within each row ([1,0,3,2]) — same as
+//         eRecipe's printCards(), so backs line up behind their fronts
+// false = backs in the same column order as the fronts
+const CARD_SHEET_MIRROR_BACK = true;
+
+function _cardSheetLoad() {
+  try {
+    const a = JSON.parse(localStorage.getItem(CARD_SHEET_KEY) || '[]');
+    return Array.isArray(a) ? a.slice(0, CARD_SHEET_MAX) : [];
+  } catch (e) { return []; }
+}
+function _cardSheetSave(list) {
+  try { localStorage.setItem(CARD_SHEET_KEY, JSON.stringify(list)); return true; }
+  catch (e) { showToast('Could not save the card sheet'); return false; }
+}
+
+function cardSheetAdd(recipe) {
+  if (!recipe) return;
+  const list = _cardSheetLoad();
+  const key = recipe.id || recipe.title;
+  if (list.some(r => (r.id || r.title) === key)) { showToast('Already on the card sheet'); return; }
+  if (list.length >= CARD_SHEET_MAX) {
+    showToast('Sheet is full — print it or remove one first');
+    openCardSheetManager();
+    return;
+  }
+  // Snapshot only the fields the card needs.
+  list.push({
+    id: recipe.id, title: recipe.title, author: recipe.author,
+    createdByName: recipe.createdByName, chapterName: recipe.chapterName,
+    category: recipe.category, coverUrl: recipe.coverUrl, desc: recipe.desc,
+    ingredients: recipe.ingredients, steps: recipe.steps, tip: recipe.tip,
+  });
+  if (_cardSheetSave(list)) showToast(`Added to card sheet (${list.length}/${CARD_SHEET_MAX})`);
+}
+
+function openCardSheetManager() {
+  document.querySelector('.card-sheet-scrim')?.remove();
+  const list = _cardSheetLoad();
+  const scrim = document.createElement('div');
+  scrim.className = 'mob-picker-scrim card-sheet-scrim';
+  let rows = '';
+  for (let i = 0; i < CARD_SHEET_MAX; i++) {
+    const r = list[i];
+    rows += r
+      ? `<div class="mob-picker-item" style="cursor:default"><span>${i + 1}. ${esc(r.title || 'Untitled Recipe')}</span>
+           <button type="button" data-remove="${i}" aria-label="Remove"
+             style="margin-left:auto;border:none;background:none;color:var(--muted);font-size:1rem;cursor:pointer">✕</button></div>`
+      : `<div class="mob-picker-item" style="cursor:default;opacity:.45"><span>${i + 1}. — empty —</span></div>`;
+  }
+  const btn = 'flex:1;padding:.55rem .6rem;border-radius:8px;border:1px solid var(--border);background:var(--panel);color:var(--navy2);font-size:.82rem;cursor:pointer;';
+  scrim.innerHTML = `
+    <div class="mob-picker-card">
+      <div class="mob-picker-title">
+        <span>🗂 Card Sheet (${list.length}/${CARD_SHEET_MAX})</span>
+        <button class="mob-picker-close" data-close>✕</button>
+      </div>
+      ${rows}
+      <div style="display:flex;gap:.5rem;margin-top:.8rem">
+        <button type="button" data-clear style="${btn}">Clear</button>
+        <button type="button" data-print style="${btn}background:var(--navy2);color:#fff;border-color:var(--navy2);">🖨 Print sheet</button>
+      </div>
+    </div>`;
+  document.body.appendChild(scrim);
+  scrim.addEventListener('click', e => { if (e.target === scrim) scrim.remove(); });
+  scrim.querySelector('[data-close]').addEventListener('click', () => scrim.remove());
+  scrim.querySelectorAll('[data-remove]').forEach(b => b.addEventListener('click', () => {
+    const l = _cardSheetLoad(); l.splice(+b.dataset.remove, 1);
+    _cardSheetSave(l); openCardSheetManager();
+  }));
+  scrim.querySelector('[data-clear]').addEventListener('click', () => {
+    _cardSheetSave([]); openCardSheetManager();
+  });
+  scrim.querySelector('[data-print]').addEventListener('click', () => {
+    if (!list.length) { showToast('Nothing on the sheet yet'); return; }
+    scrim.remove(); printCardSheet(list);
+  });
+}
+
+async function printCardSheet(recipes) {
+  recipes = (recipes || []).filter(Boolean).slice(0, CARD_SHEET_MAX);
+  if (!recipes.length) { showToast('No recipes to print'); return; }
+  const empty = '<div class="slot-empty"></div>';
+  const slots = [0, 1, 2, 3];
+  const fronts = slots.map(i => recipes[i] ? _buildRecipeCardFace(recipes[i], 'front') : empty);
+  const backOrder = CARD_SHEET_MIRROR_BACK ? [1, 0, 3, 2] : [0, 1, 2, 3];
+  const backs = backOrder.map(i => recipes[i] ? _buildRecipeCardFace(recipes[i], 'back') : empty);
+
+  const doc_ = `<!doctype html><html><head><meta charset="utf-8"><title>Recipe cards</title>
+<style>
+  @page{margin:0;}
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;font-family:Georgia,'Times New Roman',serif;background:#fff;}
+  .card-page{width:210mm;min-height:297mm;display:grid;grid-template-columns:95mm 95mm;
+    grid-template-rows:140mm 140mm;gap:2mm;padding:7.5mm 9mm;box-sizing:border-box;
+    page-break-after:always;}
+  .card-page:last-child{page-break-after:auto;}
+  .slot-empty{width:95mm;height:140mm;}
+  .recipe-card{border:1px solid #c8952a;border-radius:3mm;padding:4mm 5mm 4mm 9mm;overflow:hidden;
+    box-sizing:border-box;display:flex;flex-direction:column;width:95mm;height:140mm;
+    font-size:7.5pt;line-height:1.35;position:relative;background:#fbf9f5;}
+  .recipe-card.back{background:#faf6f0;border:none;padding:4mm 5mm;}
+  .recipe-card.back .card-spine-svg{display:none;}
+  .card-spine-svg{position:absolute;top:0;left:0;width:5mm;height:100%;display:block;}
+  .card-img{width:100%;height:26mm;object-fit:cover;border-radius:1.5mm;margin-bottom:2mm;display:block;flex-shrink:0;}
+  .card-desc{font-style:italic;color:#8a7060;font-size:6.5pt;margin-top:0;}
+  .card-section{font-size:6pt;letter-spacing:.12em;text-transform:uppercase;color:#c0571a;font-weight:bold;margin:2mm 0 1mm;}
+  .card-ing-box{border-left:1mm solid #c8952a;padding-left:2mm;margin-bottom:1mm;overflow:hidden;}
+  .recipe-card ul{padding-left:3mm;margin:0;list-style:disc;}
+  .recipe-card ol{padding-left:3.5mm;margin:0;}
+  .recipe-card li{margin:.3mm 0;break-inside:avoid;}
+  .card-subhead{font-weight:bold;font-size:7pt;margin:1.5mm 0 .5mm;list-style:none;margin-left:-1mm;}
+  .card-tip{font-style:italic;color:#666;font-size:6pt;border-top:.3mm dashed #bbb;padding-top:1.5mm;margin-top:auto;}
+</style></head><body>
+  <div class="card-page">${fronts.join('')}</div>
+  <div class="card-page">${backs.join('')}</div>
+</body></html>`;
+
+  const frame = document.createElement('iframe');
+  frame.setAttribute('aria-hidden', 'true');
+  frame.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden;';
+  document.body.appendChild(frame);
+  const fdoc = frame.contentDocument || frame.contentWindow.document;
+  fdoc.open(); fdoc.write(doc_); fdoc.close();
+
+  const imgs = [...fdoc.images];
+  await Promise.race([
+    Promise.all(imgs.map(im => im.complete ? null : new Promise(r => { im.onload = im.onerror = r; }))),
+    new Promise(r => setTimeout(r, 4000)),
+  ]);
+  const win = frame.contentWindow;
+  const cleanup = () => setTimeout(() => frame.remove(), 500);
+  win.addEventListener('afterprint', cleanup);
+  win.focus();
+  win.print();
+  setTimeout(() => { if (frame.isConnected) frame.remove(); }, 120000);
+}
+
 // Print entry point for recipes — asks Full Page (printRecipe) vs Recipe
 // Card (printRecipeCard) using the same picker scrim as everywhere else.
 function promptRecipePrint(recipe) {
@@ -19907,7 +20052,9 @@ function promptRecipePrint(recipe) {
         <button class="mob-picker-close" id="printChoiceCloseBtn">✕</button>
       </div>
       <div class="mob-picker-item" data-choice="full"><span>📄 Full Page</span></div>
-      <div class="mob-picker-item" data-choice="card"><span>🗂 Recipe Card</span></div>
+      <div class="mob-picker-item" data-choice="card"><span>🗂 Recipe Card (this one only)</span></div>
+      <div class="mob-picker-item" data-choice="add"><span>➕ Add to 4-up Card Sheet</span></div>
+      <div class="mob-picker-item" data-choice="sheet"><span>🗂 View / Print Card Sheet (${_cardSheetLoad().length}/${CARD_SHEET_MAX})</span></div>
     </div>`;
   document.body.appendChild(scrim);
   scrim.addEventListener('click', e => { if (e.target === scrim) scrim.remove(); });
@@ -19917,7 +20064,9 @@ function promptRecipePrint(recipe) {
       const choice = item.dataset.choice;
       scrim.remove();
       if (choice === 'full') printRecipe(recipe);
-      else printRecipeCard(recipe);
+      else if (choice === 'card') printCardSheet([recipe]);
+      else if (choice === 'add') cardSheetAdd(recipe);
+      else if (choice === 'sheet') openCardSheetManager();
     });
   });
 }
