@@ -20526,12 +20526,16 @@ function _reEnsureEditor() {
     </div>
     <div style="flex:1;overflow-y:auto;padding:1.2rem 1.2rem 3rem;max-width:640px;margin:0 auto;width:100%;box-sizing:border-box;">
       <div id="reImportBox" style="border:1px dashed var(--border);border-radius:10px;padding:.85rem;margin-bottom:1.3rem;background:var(--panel);">
-        <label class="re-lbl" style="margin-top:0;">✨ Import from a link <span class="re-hint">(optional)</span></label>
+        <label class="re-lbl" style="margin-top:0;">✨ Import from a link or photo <span class="re-hint">(optional)</span></label>
         <div style="display:flex;gap:.5rem;align-items:center;">
           <input id="reImportUrl" class="re-input" type="url" inputmode="url" autocomplete="off" placeholder="https://…" style="flex:1;margin:0;"/>
           <button id="reImportBtn" type="button" style="flex-shrink:0;border:none;background:var(--teal);color:var(--warm-white);font-weight:700;font-size:.8rem;padding:.55rem 1rem;border-radius:20px;cursor:pointer;">Fetch</button>
         </div>
-        <div id="reImportStatus" style="font-size:.75rem;color:var(--muted);margin-top:.45rem;min-height:1em;">Paste a recipe page and the fields below will be filled in for you to check.</div>
+        <div style="display:flex;gap:.5rem;align-items:center;margin-top:.55rem;">
+          <button id="reImportPhotoBtn" type="button" style="flex:1;border:1px solid var(--teal);background:transparent;color:var(--teal);font-weight:700;font-size:.8rem;padding:.55rem 1rem;border-radius:20px;cursor:pointer;">📷 Import from a photo</button>
+          <input id="reImportPhotoFile" type="file" accept="image/*" multiple style="display:none"/>
+        </div>
+        <div id="reImportStatus" style="font-size:.75rem;color:var(--muted);margin-top:.45rem;min-height:1em;">Paste a recipe page, or photograph a recipe (up to 4 photos), and the fields below will be filled in for you to check.</div>
       </div>
 
       <label class="re-lbl">Cover Image <span class="re-hint">(optional)</span></label>
@@ -20597,6 +20601,12 @@ function _reEnsureEditor() {
   document.getElementById('reCoverBtn').addEventListener('click', () => document.getElementById('reCoverFile').click());
   document.getElementById('reCoverFile').addEventListener('change', _reHandleCoverFile);
   document.getElementById('reImportBtn').addEventListener('click', importRecipeFromLink);
+  document.getElementById('reImportPhotoBtn').addEventListener('click', () => document.getElementById('reImportPhotoFile').click());
+  document.getElementById('reImportPhotoFile').addEventListener('change', e => {
+    const files = [...e.target.files];
+    e.target.value = '';            // lets the same photo be picked again
+    if (files.length) importRecipeFromPhotos(files);
+  });
   document.getElementById('reImportUrl').addEventListener('keydown', e => {
     if (e.key === 'Enter') { e.preventDefault(); importRecipeFromLink(); }
   });
@@ -20671,6 +20681,29 @@ function _hostnameToAuthor(url) {
   } catch { return ''; }
 }
 
+// Shared by the link and photo importers: copies whatever the import produced
+// into the editor fields. Only overwrites fields the import actually filled in,
+// so a half-typed recipe isn't wiped by an import that came back thin.
+function _applyImportedRecipe(r, fallbackAuthor) {
+  const setIfEmptyOrNew = (id, val) => { if (val) document.getElementById(id).value = val; };
+  setIfEmptyOrNew('reTitle', r.title);
+  // The importer may name the author outright; if it doesn't, fall back to
+  // the publication/site name (links) so the credit is never blank.
+  setIfEmptyOrNew('reAuthor', r.author || fallbackAuthor);
+  setIfEmptyOrNew('reCategory', r.chapterName);
+  setIfEmptyOrNew('reDesc', r.desc);
+  setIfEmptyOrNew('reIngredients', (r.ingredients || []).join('\n'));
+  setIfEmptyOrNew('reSteps', (r.steps || []).join('\n'));
+  setIfEmptyOrNew('reTip', r.tip);
+
+  // A link import also returns the source site's own image URL. It's only a
+  // preview here — uploading a local file still replaces it as before.
+  if (r.coverUrl) {
+    document.getElementById('recipeEditorOverlay').dataset.pendingCoverUrl = r.coverUrl;
+    _reRenderCoverPreview();
+  }
+}
+
 async function importRecipeFromLink() {
   const urlEl = document.getElementById('reImportUrl');
   const btn = document.getElementById('reImportBtn');
@@ -20689,26 +20722,7 @@ async function importRecipeFromLink() {
   try {
     const { data: r } = await _importRecipeCallable({ url });
 
-    // Only overwrite fields the import actually produced, so a half-typed
-    // recipe isn't wiped by an import that came back thin.
-    const setIfEmptyOrNew = (id, val) => { if (val) document.getElementById(id).value = val; };
-    setIfEmptyOrNew('reTitle', r.title);
-    // The importer may name the author outright; if it doesn't, fall back to
-    // the publication/site name, and failing that the source domain tidied up
-    // (www.bbcgoodfood.com → Bbcgoodfood.com), so the credit is never blank.
-    setIfEmptyOrNew('reAuthor', r.author || r.siteName || _hostnameToAuthor(url));
-    setIfEmptyOrNew('reCategory', r.chapterName);
-    setIfEmptyOrNew('reDesc', r.desc);
-    setIfEmptyOrNew('reIngredients', (r.ingredients || []).join('\n'));
-    setIfEmptyOrNew('reSteps', (r.steps || []).join('\n'));
-    setIfEmptyOrNew('reTip', r.tip);
-
-    // The cover comes back as the source site's own image URL. It's only a
-    // preview here — uploading a local file still replaces it as before.
-    if (r.coverUrl) {
-      document.getElementById('recipeEditorOverlay').dataset.pendingCoverUrl = r.coverUrl;
-      _reRenderCoverPreview();
-    }
+    _applyImportedRecipe(r, r.siteName || _hostnameToAuthor(url));
 
     status.style.color = 'var(--teal-dark)';
     status.textContent = `Imported ${(r.ingredients || []).length} ingredients and ${(r.steps || []).length} steps — please check them before saving.`;
@@ -20721,6 +20735,75 @@ async function importRecipeFromLink() {
   } finally {
     btn.disabled = false; btn.textContent = prevLabel;
     urlEl.disabled = false;
+  }
+}
+
+// ── AI import from photos ────────────────────────────────────────────────────
+// Calls the importRecipeFromImage Cloud Function. Photos are shrunk in the
+// browser first (the model works at ~1568px anyway) so a phone camera shot
+// doesn't become a 10 MB upload. Up to 4 photos = a multi-page recipe or both
+// sides of a recipe card; they're read together as one recipe.
+const _importRecipeImageCallable = httpsCallable(fns, 'importRecipeFromImage', { timeout: 120000 });
+const RECIPE_PHOTO_MAX = 4;
+
+function _loadImageFile(file) {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const im = new Image();
+    im.onload = () => { URL.revokeObjectURL(url); resolve(im); };
+    im.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Could not read "' + (file.name || 'that photo') + '" — try a JPEG or PNG.')); };
+    im.src = url;
+  });
+}
+
+async function _imageFileToPayload(file, maxEdge = 1568, quality = 0.85) {
+  const im = await _loadImageFile(file);
+  const w0 = im.naturalWidth || im.width, h0 = im.naturalHeight || im.height;
+  const k = Math.min(1, maxEdge / Math.max(w0, h0));
+  const c = document.createElement('canvas');
+  c.width = Math.max(1, Math.round(w0 * k)); c.height = Math.max(1, Math.round(h0 * k));
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, c.width, c.height);   // PNG transparency → white
+  ctx.drawImage(im, 0, 0, c.width, c.height);
+  return { mediaType: 'image/jpeg', data: c.toDataURL('image/jpeg', quality).split(',')[1] };
+}
+
+async function importRecipeFromPhotos(files) {
+  const btn = document.getElementById('reImportPhotoBtn');
+  const urlBtn = document.getElementById('reImportBtn');
+  const status = document.getElementById('reImportStatus');
+  files = (files || []).filter(f => /^image\//i.test(f.type) || /\.(jpe?g|png|webp|heic|heif)$/i.test(f.name || ''));
+  if (!files.length) { status.style.color = 'var(--danger)'; status.textContent = 'Please choose an image.'; return; }
+  if (files.length > RECIPE_PHOTO_MAX) {
+    showToast('Using the first ' + RECIPE_PHOTO_MAX + ' photos');
+    files = files.slice(0, RECIPE_PHOTO_MAX);
+  }
+
+  const prevLabel = btn.textContent;
+  btn.disabled = true; urlBtn.disabled = true; btn.textContent = 'Reading…';
+  status.style.color = 'var(--muted)';
+  status.textContent = 'Preparing ' + (files.length === 1 ? 'the photo' : files.length + ' photos') + '…';
+
+  try {
+    const images = [];
+    for (const f of files) images.push(await _imageFileToPayload(f));
+    status.textContent = 'Reading the recipe from the photo — this can take up to a minute…';
+
+    const { data: r } = await _importRecipeImageCallable({
+      images,
+      categories: (typeof getCategoryList === 'function' ? getCategoryList() : []).slice(0, 60),
+    });
+
+    _applyImportedRecipe(r, '');
+    status.style.color = 'var(--teal-dark)';
+    status.textContent = `Read ${(r.ingredients || []).length} ingredients and ${(r.steps || []).length} steps from the photo — please check them carefully before saving.`;
+    showToast('Recipe read — review and save');
+  } catch (e) {
+    console.warn('Photo import failed:', e);
+    status.style.color = 'var(--danger)';
+    status.textContent = (e && e.message) ? e.message : 'Could not read that photo — try a clearer, well-lit shot.';
+  } finally {
+    btn.disabled = false; urlBtn.disabled = false; btn.textContent = prevLabel;
   }
 }
 
@@ -20749,7 +20832,7 @@ function showRecipeEditor(recipe) {
   if (impUrl) impUrl.value = '';
   if (impStatus) {
     impStatus.style.color = 'var(--muted)';
-    impStatus.textContent = 'Paste a recipe page and the fields below will be filled in for you to check.';
+    impStatus.textContent = 'Paste a recipe page, or photograph a recipe (up to 4 photos), and the fields below will be filled in for you to check.';
   }
 
   overlay.dataset.pendingCoverUrl = recipe?.coverUrl || '';
