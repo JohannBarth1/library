@@ -172,7 +172,7 @@ Rules:
 - Never invent ingredients, quantities, or steps that aren't supported by the page.
 - If the page is not a recipe, set "notFound": true and leave the other fields empty.`;
 
-async function callClaude(apiKey, userContent) {
+async function callClaude(apiKey, userContent, system = SYSTEM_PROMPT) {
   let res;
   try {
     res = await fetch('https://api.anthropic.com/v1/messages', {
@@ -185,7 +185,7 @@ async function callClaude(apiKey, userContent) {
       body: JSON.stringify({
         model: MODEL,
         max_tokens: 4000,
-        system: SYSTEM_PROMPT,
+        system,
         messages: [{ role: 'user', content: userContent }],
       }),
     });
@@ -278,6 +278,117 @@ exports.importRecipeFromUrl = onCall(
     };
   }
 );
+
+/**
+ * importRecipeFromImage — callable. Same idea as importRecipeFromUrl, but the
+ * recipe comes from 1–4 photos (cookbook page, handwritten card, screenshot).
+ * Several photos are read as ONE recipe (pages, or front and back of a card).
+ * Returns the same shape as the URL importer, plus `author` when one is
+ * printed on the page. Nothing is written to Firestore.
+ */
+const IMAGE_SYSTEM_PROMPT = `You transcribe recipes from photographs into a strict JSON record for a personal recipe app.
+
+Respond with a single JSON object and NOTHING else — no prose, no markdown fences.
+
+Schema:
+{
+  "title": string,
+  "author": string,
+  "desc": string,
+  "ingredients": string[],
+  "steps": string[],
+  "tip": string,
+  "chapterName": string,
+  "language": string,
+  "servings": string,
+  "notFound": boolean
+}
+
+Rules:
+- Copy what is written. Do not invent, improve or "correct" anything, and never translate: keep the recipe in its original language.
+- If several photos are given they are parts of ONE recipe (pages, or both sides of a card). Merge them in reading order.
+- "ingredients": one per line, quantity first, exactly as written; convert or round nothing. A group heading becomes its own entry ending in a colon, e.g. "For the topping:".
+- "steps": one instruction per entry, in order, with no leading numbering. A stage heading becomes its own entry ending in a colon, e.g. "To assemble:".
+- If a word or number is illegible, give your best reading followed by "(?)" instead of guessing silently.
+- "author": the author, cookbook or source if it is printed or written on the page; otherwise an empty string.
+- "desc": one short sentence describing the dish, using only what the page supports; empty string if unsure.
+- "tip": a tip, note or serving suggestion if the page has one, condensed; otherwise an empty string.
+- "chapterName": a single broad category, title case. Prefer one from the list given in the request; otherwise one of: Breakfast, Starters, Soups, Salads, Mains, Sides, Baking, Cakes, Desserts, Sauces, Drinks, Preserves, Snacks.
+- "language": ISO code of the recipe's language, e.g. "en".
+- "servings": as stated, e.g. "Serves 4". Empty string if absent.
+- If the photo(s) contain no readable recipe, set "notFound": true and leave the other fields empty.`;
+
+const IMAGE_MAX_COUNT = 4;
+const IMAGE_MAX_BASE64_CHARS = 7_000_000;   // ~5 MB each, under Anthropic's per-image limit
+const IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+
+exports.importRecipeFromImage = onCall(
+  { secrets: [ANTHROPIC_API_KEY], region: 'us-central1', cors: true, timeoutSeconds: 120, memory: '512MiB' },
+  async (request) => {
+    if (!request.auth) throw new HttpsError('unauthenticated', 'Please sign in first.');
+
+    const { images, categories } = request.data || {};
+    if (!Array.isArray(images) || !images.length) {
+      throw new HttpsError('invalid-argument', 'No photo was received.');
+    }
+    if (images.length > IMAGE_MAX_COUNT) {
+      throw new HttpsError('invalid-argument', `Please send at most ${IMAGE_MAX_COUNT} photos.`);
+    }
+    for (const im of images) {
+      if (!im || typeof im.data !== 'string' || !IMAGE_TYPES.includes(im.mediaType)) {
+        throw new HttpsError('invalid-argument', 'Unsupported image format.');
+      }
+      if (im.data.length > IMAGE_MAX_BASE64_CHARS) {
+        throw new HttpsError('invalid-argument', 'A photo is too large — try a smaller one.');
+      }
+    }
+    const cats = (Array.isArray(categories) ? categories : [])
+      .filter(c => typeof c === 'string' && c.trim())
+      .map(c => c.trim())
+      .slice(0, 60);
+
+    const userContent = images.map(im => ({
+      type: 'image',
+      source: { type: 'base64', media_type: im.mediaType, data: im.data },
+    }));
+    userContent.push({
+      type: 'text',
+      text: `Transcribe the recipe from ${images.length === 1 ? 'this photo' : 'these photos'}.` +
+        (cats.length ? ` Existing categories (use one if it fits): ${cats.join(', ')}.` : ''),
+    });
+
+    const out = await callClaude(ANTHROPIC_API_KEY.value(), userContent, IMAGE_SYSTEM_PROMPT);
+
+    if (out.notFound) {
+      throw new HttpsError('not-found',
+        'Couldn\'t find a recipe in that photo — try a closer, well-lit shot with the whole page in frame.');
+    }
+
+    const ingredients = strArray(out.ingredients);
+    const steps = strArray(out.steps);
+    if (!ingredients.length || !steps.length) {
+      throw new HttpsError('not-found',
+        'Couldn\'t read both the ingredients and the method — try a clearer photo, or include the whole page.');
+    }
+
+    const desc = [
+      (out.desc || '').toString().trim(),
+      (out.servings || '').toString().trim(),
+    ].filter(Boolean).join('\n\n');
+
+    return {
+      title: (out.title || '').toString().trim().slice(0, 200) || 'Imported Recipe',
+      author: (out.author || '').toString().trim().slice(0, 120),
+      desc,
+      ingredients,
+      steps,
+      tip: (out.tip || '').toString().trim(),
+      chapterName: (out.chapterName || '').toString().trim() || 'Uncategorised',
+      language: (out.language || '').toString().trim().slice(0, 10),
+    };
+  }
+);
+
 /**
  * bookShare — /book/:bookId, reached via a Hosting rewrite.
  *
@@ -322,8 +433,7 @@ function renderBookPreview({ hostname, bookId, title, description, image, redire
 <meta property="og:site_name" content="eLibrary">
 <meta property="og:title" content="${t}">
 <meta property="og:description" content="${d}">
-${image ? `<meta property="og:image" content="${escHtml(image)}">
-<meta property="og:image:alt" content="${t}">` : ''}
+${image ? `<meta property="og:image" content="${escHtml(image)}">` : ''}
 <meta property="og:url" content="https://${escHtml(hostname)}/book/${escHtml(bookId)}">
 <meta name="twitter:card" content="${image ? 'summary_large_image' : 'summary'}">
 <meta name="twitter:title" content="${t}">
@@ -336,36 +446,17 @@ ${image ? `<meta name="twitter:image" content="${escHtml(image)}">` : ''}
 </body></html>`;
 }
 
-// One handler behind three Hosting rewrites (`/book/**`, `/recipe/**`,
-// `/audio/**`), all pointing at this same function — books, recipes, and
-// audio each live in their own Firestore collection (books / recipes /
-// audioFiles respectively), and recipes use `desc` where the other two use
-// `description`. `kind` also becomes the hash the client-side app opens
-// (`#book=`, `#recipe=`, `#audio=`), matching how each type is opened
-// in-app elsewhere in the client.
-const SHARE_KINDS = {
-  book:   { collection: 'books',      noun: 'book',      descField: 'description' },
-  recipe: { collection: 'recipes',    noun: 'recipe',     descField: 'desc' },
-  audio:  { collection: 'audioFiles', noun: 'audiobook',  descField: 'description' },
-};
-
 exports.bookShare = onRequest({ region: 'us-central1', cors: false }, async (req, res) => {
-  const match = req.path.match(/^\/?(book|recipe|audio)\/([^/?]+)/);
-  const kind = match ? match[1] : 'book';
-  const itemId = match ? match[2] : '';
-  const { collection, noun, descField } = SHARE_KINDS[kind];
-
-  // Behind a Hosting rewrite the original host arrives in X-Forwarded-Host;
-  // prefer it so og:url and the redirect always use the public domain.
-  const hostname = String(req.headers['x-forwarded-host'] || req.hostname || '').split(',')[0].trim();
+  const bookId = (req.path.match(/^\/?book\/([^/?]+)/) || [])[1] || '';
+  const hostname = req.hostname;
   const appRoot = `https://${hostname}/`;
-  const redirectUrl = itemId ? `${appRoot}#${kind}=${encodeURIComponent(itemId)}` : appRoot;
+  const redirectUrl = bookId ? `${appRoot}#book=${encodeURIComponent(bookId)}` : appRoot;
 
-  let item = null;
-  if (itemId) {
+  let book = null;
+  if (bookId) {
     try {
-      const snap = await db.collection(collection).doc(itemId).get();
-      if (snap.exists) item = snap.data();
+      const snap = await db.collection('books').doc(bookId).get();
+      if (snap.exists) book = snap.data();
     } catch (e) {
       console.error('bookShare lookup failed', e);
     }
@@ -373,33 +464,33 @@ exports.bookShare = onRequest({ region: 'us-central1', cors: false }, async (req
 
   res.set('Cache-Control', 'public, max-age=300, s-maxage=600');
 
-  if (!item) {
+  if (!book) {
     // Deleted / bad id — nothing to preview, just send them into the app.
     res.status(200).send(renderBookPreview({
-      hostname, bookId: itemId,
-      title: 'eLibrary', description: `Open this ${noun} in eLibrary.`,
+      hostname, bookId,
+      title: 'eLibrary', description: 'Open this book in eLibrary.',
       image: '', redirectUrl,
     }));
     return;
   }
 
-  const isShareable = item.visibility === 'public' || item.visibility === 'restricted';
+  const isShareable = book.visibility === 'public' || book.visibility === 'restricted';
   if (!isShareable) {
     res.status(200).send(renderBookPreview({
-      hostname, bookId: itemId,
-      title: `A private ${noun} on eLibrary`,
+      hostname, bookId,
+      title: 'A private book on eLibrary',
       description: 'Sign in to eLibrary to view this item.',
       image: '', redirectUrl,
     }));
     return;
   }
 
-  const title = item.title || `A ${noun} on eLibrary`;
-  const author = item.author ? String(item.author) : '';
-  const description = plainText(item[descField], 200) || (author ? `By ${author}` : 'Shared from eLibrary');
+  const title = book.title || 'A book on eLibrary';
+  const author = book.author ? String(book.author) : '';
+  const description = plainText(book.description, 200) || (author ? `By ${author}` : 'Shared from eLibrary');
 
   res.status(200).send(renderBookPreview({
-    hostname, bookId: itemId, title, description,
-    image: item.coverUrl || '', redirectUrl,
+    hostname, bookId, title, description,
+    image: book.coverUrl || '', redirectUrl,
   }));
 });
