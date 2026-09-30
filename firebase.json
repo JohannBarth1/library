@@ -42,6 +42,14 @@
         "function": "bookShare"
       },
       {
+        "source": "/recipe/:recipeId",
+        "function": "bookShare"
+      },
+      {
+        "source": "/audio/:audioId",
+        "function": "bookShare"
+      },
+      {
         "source": "**",
         "destination": "/index.html"
       }
