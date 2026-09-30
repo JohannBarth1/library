@@ -5008,6 +5008,10 @@ function renderDetailActionRows(peekContainer, moreContainer, book, isMine){
   // below), same as Recommend, since it opens its own Full Page/Recipe
   // Card choice rather than firing an action directly.
   const shareOpts = [];
+  // Native share sheet (WhatsApp etc.) — lives in this dropdown now rather
+  // than as a separate button. Books, recipes and audio all get the rich
+  // preview link (see getBookShareLink).
+  shareOpts.push({ icon:'📤', label:'Share via…', action:'sharebook' });
   if(isMine){
     shareOpts.push({ icon:'🔗', label:'Share Privately', action:'shareprivate' });
   }
@@ -5036,14 +5040,6 @@ function renderDetailActionRows(peekContainer, moreContainer, book, isMine){
       </button>`
     : '';
 
-  // ── Share — its own dedicated button (native share sheet), not tucked
-  // in the dropdown, same reasoning as Print/Recommend. Plain EPUB books
-  // get the rich-preview /book/<id> link (cover shows up when pasted into
-  // WhatsApp etc.); audio/recipes fall back to the in-app link for now.
-  const shareToggle = `<button type="button" class="detail-row-btn mob-pill-btn mob-pill-sm" data-action="sharebook">
-      <span style="font-size:.78rem;line-height:1">📤</span><span>Share</span>
-    </button>`;
-
   const shareLabel = '🔗 Share';
 
   // Recipes only ever have one edit destination (the recipe editor, no
@@ -5064,10 +5060,9 @@ function renderDetailActionRows(peekContainer, moreContainer, book, isMine){
 
   html += `<div style="display:flex;flex-wrap:wrap;gap:.4rem;padding:.6rem 0 .3rem;border-top:1px solid var(--border);margin-top:.4rem;">
     ${pillSelect('detailShareSelect', shareLabel, shareOpts)}
+    ${printToggle}
     ${editControlHtml}
     ${recToggle}
-    ${printToggle}
-    ${shareToggle}
   </div>`;
 
   // ── History (admin) / Delete (owner) — small, always-visible, kept out of
@@ -5551,23 +5546,29 @@ document.getElementById('btnCopyPrivateLink').addEventListener('click', async ()
 // app. getBookShareLink() is the externally-shareable version: a real path
 // (not a hash fragment, which never reaches the server) so the bookShare
 // Cloud Function can serve a rich preview when it's pasted into WhatsApp,
-// iMessage, etc. Only plain EPUB books get the rich-preview link for now —
-// audio/recipes still use the in-app link until bookShare covers those
-// collections too.
+// iMessage, etc. Books, recipes and audio all use it (/book/, /recipe/,
+// /audio/ — one rewrite each in firebase.json, all served by bookShare).
 function getDirectLink(id){return `${location.origin}${location.pathname}#book=${id}`;}
-function getBookShareLink(id){return `${location.origin}/book/${id}`;}
+// The path-based link only works where the bookShare rewrite exists (Firebase
+// Hosting). If someone is still on the old GitHub Pages copy, build the link
+// against the new site instead so it never points at a 404.
+function _shareOrigin(){
+  return OLD_SITE_HOSTNAMES.includes(location.hostname) ? new URL(NEW_SITE_URL).origin : location.origin;
+}
+function getBookShareLink(id){
+  const item = [...library, ...communityLib].find(b => b.id === id);
+  const kind = item?.isRecipe ? 'recipe' : item?.isAudio ? 'audio' : 'book';
+  return `${_shareOrigin()}/${kind}/${id}`;
+}
 function showDirectLink(){
   if(!currentId)return;
-  const b=[...library,...communityLib].find(x=>x.id===currentId);
-  const link=(b && !b.isAudio && !b.isRecipe) ? getBookShareLink(currentId) : getDirectLink(currentId);
-  document.getElementById('directLinkBox').textContent=link;
+  document.getElementById('directLinkBox').textContent=getBookShareLink(currentId);
   document.getElementById('linkModal').classList.add('open');
 }
 // Native share sheet for a single book, falling back to clipboard copy.
 async function shareBook(book){
   if(!book){ showToast('Nothing to share'); return; }
-  const isEpub = !book.isAudio && !book.isRecipe;
-  const url = isEpub ? getBookShareLink(book.id) : getDirectLink(book.id);
+  const url = getBookShareLink(book.id);
   const shareData = {
     title: book.title || 'A book on eLibrary',
     text: book.author ? `By ${book.author} — on eLibrary` : 'Shared from eLibrary',
@@ -5615,7 +5616,7 @@ document.getElementById('btnCopyDirectLink').addEventListener('click', async ()=
 });
 
 function checkUrlHash(){
-  const m=window.location.hash.match(/[#&]book=([a-zA-Z0-9]+)/);
+  const m=window.location.hash.match(/[#&](?:book|recipe|audio)=([a-zA-Z0-9]+)/);
   if(m){
     // Strip the #book= hash right away so the address bar (and anything the
     // user bookmarks from this point on) points at the main app URL, not
