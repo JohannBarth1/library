@@ -19901,9 +19901,20 @@ async function printRecipeCard(recipe) {
 // localStorage (per device). Fronts = page 1, backs = page 2.
 const CARD_SHEET_KEY = 'elib_cardSheet';
 const CARD_SHEET_MAX = 4;
-// true = backs mirrored left/right within each row ([1,0,3,2]) — same as
-// eRecipe's printCards(), so backs line up behind their fronts.
-const CARD_SHEET_MIRROR_BACK = true;
+// Back-side alignment, adjustable in the sheet dialog and remembered:
+//   flip 'long'  = columns swap on the back ([1,0,3,2]) — normal portrait duplex
+//   flip 'short' = rows swap on the back ([2,3,0,1])
+//   dx           = shift the whole back page sideways in mm (fixes printer offset)
+const CARD_SHEET_CAL_KEY = 'elib_cardSheetCal';
+function _cardSheetCal() {
+  let c = {};
+  try { c = JSON.parse(localStorage.getItem(CARD_SHEET_CAL_KEY) || '{}') || {}; } catch (e) {}
+  const dx = Math.max(-10, Math.min(10, parseFloat(c.dx) || 0));
+  return { flip: c.flip === 'short' ? 'short' : 'long', dx };
+}
+function _cardSheetCalSave(c) {
+  try { localStorage.setItem(CARD_SHEET_CAL_KEY, JSON.stringify(c)); } catch (e) {}
+}
 
 // Card styling shared by the print document and the on-screen slot previews
 // (each preview lives in its own iframe, so these rules can't leak into the app).
@@ -19974,6 +19985,13 @@ function _cardSheetEnsureStyles() {
       color:var(--navy2);font-size:.88rem;cursor:pointer;}
     .cs-btn.primary{flex:1;background:var(--navy2);border-color:var(--navy2);color:#fff;font-weight:600;}
     .cs-btn:disabled{opacity:.45;cursor:default;}
+    .cs-cal{margin-top:.7rem;font-size:.78rem;color:var(--muted);}
+    .cs-cal summary{cursor:pointer;}
+    .cs-cal label{display:flex;align-items:center;justify-content:space-between;gap:.6rem;margin-top:.5rem;}
+    .cs-cal select,.cs-cal input{font-size:.85rem;padding:.3rem .4rem;border:1px solid var(--border);
+      border-radius:6px;background:var(--panel);color:var(--navy2);}
+    .cs-cal input{width:5rem;}
+    .cs-cal p{margin:.4rem 0 0;font-size:.72rem;line-height:1.35;}
     .cs-link{display:block;margin:.7rem auto 0;background:none;border:none;color:var(--muted);
       font-size:.76rem;text-decoration:underline;cursor:pointer;}
   `;
@@ -20001,6 +20019,7 @@ function openCardSheetManager(current) {
   const render = () => {
     ro?.disconnect();
     const list = _cardSheetLoad();
+    const cal = _cardSheetCal();
     const filled = list.filter(Boolean).length;
     const curKey = current ? (current.id || current.title) : null;
     const onSheet = curKey != null && list.some(r => r && (r.id || r.title) === curKey);
@@ -20030,6 +20049,13 @@ function openCardSheetManager(current) {
           <button type="button" class="cs-btn" data-clear${filled ? '' : ' disabled'}>Clear all</button>
           <button type="button" class="cs-btn primary" data-print${filled ? '' : ' disabled'}>🖨 Print sheet${filled ? ` (${filled})` : ''}</button>
         </div>
+        <details class="cs-cal"><summary>Back alignment</summary>
+          <label>Flip on <select data-cal-flip>
+            <option value="long"${cal.flip === 'long' ? ' selected' : ''}>Long edge (columns swap)</option>
+            <option value="short"${cal.flip === 'short' ? ' selected' : ''}>Short edge (rows swap)</option></select></label>
+          <label>Shift backs (mm) <input type="number" step="0.5" min="-10" max="10" value="${cal.dx}" data-cal-dx></label>
+          <p>If backs sit too far right/left of their fronts, print once and adjust: a positive shift moves the back page right.</p>
+        </details>
         ${current ? '<button type="button" class="cs-link" data-full>Print this recipe as a full page instead</button>' : ''}
       </div>`;
 
@@ -20059,6 +20085,12 @@ function openCardSheetManager(current) {
     scrim.querySelector('[data-clear]')?.addEventListener('click', () => {
       if (_cardSheetSave([null, null, null, null])) render();
     });
+    const saveCal = () => _cardSheetCalSave({
+      flip: scrim.querySelector('[data-cal-flip]').value,
+      dx: parseFloat(scrim.querySelector('[data-cal-dx]').value) || 0,
+    });
+    scrim.querySelector('[data-cal-flip]').addEventListener('change', saveCal);
+    scrim.querySelector('[data-cal-dx]').addEventListener('input', saveCal);
     scrim.querySelector('[data-print]')?.addEventListener('click', () => {
       scrim.remove(); printCardSheet(_cardSheetLoad());
     });
@@ -20082,25 +20114,27 @@ async function printCardSheet(recipes) {
   if (touch) { try { pw = window.open('', '_blank'); } catch (e) { pw = null; } }
   const empty = '<div class="slot-empty"></div>';
   const fronts = slots.map(r => r ? _buildRecipeCardFace(r, 'front') : empty);
-  const backOrder = CARD_SHEET_MIRROR_BACK ? [1, 0, 3, 2] : [0, 1, 2, 3];
+  const cal = _cardSheetCal();
+  const backOrder = cal.flip === 'short' ? [2, 3, 0, 1] : [1, 0, 3, 2];
   const backs = backOrder.map(i => slots[i] ? _buildRecipeCardFace(slots[i], 'back') : empty);
 
   const doc_ = `<!doctype html><html><head><meta charset="utf-8"><title>Recipe cards</title>
-${pw ? '<meta name="viewport" content="width=800">' : ''}
+${pw ? '<meta name="viewport" content="width=794">' : ''}
 <style>
-  @media print{.print-bar{display:none !important;}}
-  @page{margin:0;}
+  @media print{.print-bar{display:none !important;} *{-webkit-print-color-adjust:exact !important;print-color-adjust:exact !important;}}
+  @page{size:A4;margin:0;}
   html,body{margin:0;padding:0;font-family:Georgia,'Times New Roman',serif;background:#fff;}
   .card-page{width:210mm;min-height:297mm;display:grid;grid-template-columns:95mm 95mm;
     grid-template-rows:140mm 140mm;gap:2mm;padding:7.5mm 9mm;box-sizing:border-box;
     page-break-after:always;}
   .card-page:last-child{page-break-after:auto;}
+  .card-page.back-page{padding:7.5mm ${9 - cal.dx}mm 7.5mm ${9 + cal.dx}mm;background:#faf6f0;}
   .slot-empty{width:95mm;height:140mm;}
   ${_CARD_SHEET_CSS}
 </style></head><body>
   ${pw ? '<div class="print-bar" style="position:sticky;top:0;z-index:5;padding:10px;background:#1a1208;text-align:center;"><button onclick="window.print()" style="font-size:18px;padding:10px 26px;border-radius:8px;border:0;background:#c8952a;color:#1a1208;font-weight:bold;">🖨 Print</button></div>' : ''}
   <div class="card-page">${fronts.join('')}</div>
-  <div class="card-page">${backs.join('')}</div>
+  <div class="card-page back-page">${backs.join('')}</div>
 </body></html>`;
 
   if (pw) {
