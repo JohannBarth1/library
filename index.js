@@ -322,7 +322,8 @@ function renderBookPreview({ hostname, bookId, title, description, image, redire
 <meta property="og:site_name" content="eLibrary">
 <meta property="og:title" content="${t}">
 <meta property="og:description" content="${d}">
-${image ? `<meta property="og:image" content="${escHtml(image)}">` : ''}
+${image ? `<meta property="og:image" content="${escHtml(image)}">
+<meta property="og:image:alt" content="${t}">` : ''}
 <meta property="og:url" content="https://${escHtml(hostname)}/book/${escHtml(bookId)}">
 <meta name="twitter:card" content="${image ? 'summary_large_image' : 'summary'}">
 <meta name="twitter:title" content="${t}">
@@ -335,17 +336,36 @@ ${image ? `<meta name="twitter:image" content="${escHtml(image)}">` : ''}
 </body></html>`;
 }
 
-exports.bookShare = onRequest({ region: 'us-central1', cors: false }, async (req, res) => {
-  const bookId = (req.path.match(/^\/?book\/([^/?]+)/) || [])[1] || '';
-  const hostname = req.hostname;
-  const appRoot = `https://${hostname}/`;
-  const redirectUrl = bookId ? `${appRoot}#book=${encodeURIComponent(bookId)}` : appRoot;
+// One handler behind three Hosting rewrites (`/book/**`, `/recipe/**`,
+// `/audio/**`), all pointing at this same function — books, recipes, and
+// audio each live in their own Firestore collection (books / recipes /
+// audioFiles respectively), and recipes use `desc` where the other two use
+// `description`. `kind` also becomes the hash the client-side app opens
+// (`#book=`, `#recipe=`, `#audio=`), matching how each type is opened
+// in-app elsewhere in the client.
+const SHARE_KINDS = {
+  book:   { collection: 'books',      noun: 'book',      descField: 'description' },
+  recipe: { collection: 'recipes',    noun: 'recipe',     descField: 'desc' },
+  audio:  { collection: 'audioFiles', noun: 'audiobook',  descField: 'description' },
+};
 
-  let book = null;
-  if (bookId) {
+exports.bookShare = onRequest({ region: 'us-central1', cors: false }, async (req, res) => {
+  const match = req.path.match(/^\/?(book|recipe|audio)\/([^/?]+)/);
+  const kind = match ? match[1] : 'book';
+  const itemId = match ? match[2] : '';
+  const { collection, noun, descField } = SHARE_KINDS[kind];
+
+  // Behind a Hosting rewrite the original host arrives in X-Forwarded-Host;
+  // prefer it so og:url and the redirect always use the public domain.
+  const hostname = String(req.headers['x-forwarded-host'] || req.hostname || '').split(',')[0].trim();
+  const appRoot = `https://${hostname}/`;
+  const redirectUrl = itemId ? `${appRoot}#${kind}=${encodeURIComponent(itemId)}` : appRoot;
+
+  let item = null;
+  if (itemId) {
     try {
-      const snap = await db.collection('books').doc(bookId).get();
-      if (snap.exists) book = snap.data();
+      const snap = await db.collection(collection).doc(itemId).get();
+      if (snap.exists) item = snap.data();
     } catch (e) {
       console.error('bookShare lookup failed', e);
     }
@@ -353,33 +373,33 @@ exports.bookShare = onRequest({ region: 'us-central1', cors: false }, async (req
 
   res.set('Cache-Control', 'public, max-age=300, s-maxage=600');
 
-  if (!book) {
+  if (!item) {
     // Deleted / bad id — nothing to preview, just send them into the app.
     res.status(200).send(renderBookPreview({
-      hostname, bookId,
-      title: 'eLibrary', description: 'Open this book in eLibrary.',
+      hostname, bookId: itemId,
+      title: 'eLibrary', description: `Open this ${noun} in eLibrary.`,
       image: '', redirectUrl,
     }));
     return;
   }
 
-  const isShareable = book.visibility === 'public' || book.visibility === 'restricted';
+  const isShareable = item.visibility === 'public' || item.visibility === 'restricted';
   if (!isShareable) {
     res.status(200).send(renderBookPreview({
-      hostname, bookId,
-      title: 'A private book on eLibrary',
+      hostname, bookId: itemId,
+      title: `A private ${noun} on eLibrary`,
       description: 'Sign in to eLibrary to view this item.',
       image: '', redirectUrl,
     }));
     return;
   }
 
-  const title = book.title || 'A book on eLibrary';
-  const author = book.author ? String(book.author) : '';
-  const description = plainText(book.description, 200) || (author ? `By ${author}` : 'Shared from eLibrary');
+  const title = item.title || `A ${noun} on eLibrary`;
+  const author = item.author ? String(item.author) : '';
+  const description = plainText(item[descField], 200) || (author ? `By ${author}` : 'Shared from eLibrary');
 
   res.status(200).send(renderBookPreview({
-    hostname, bookId, title, description,
-    image: book.coverUrl || '', redirectUrl,
+    hostname, bookId: itemId, title, description,
+    image: item.coverUrl || '', redirectUrl,
   }));
 });
