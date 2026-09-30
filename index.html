@@ -19894,111 +19894,21 @@ async function printRecipeCard(recipe) {
   setTimeout(() => { if (frame.isConnected) frame.remove(); }, 120000); // safety net if afterprint never fires
 }
 
-// ── 4-up card sheet (print queue) ─────────────────────────────────────────
-// Recipes are queued into up to 4 slots (kept in localStorage so the queue
-// survives navigation/reload), then printed together on one A4 sheet using
-// the same card design as above. Empty slots are simply left blank, so a
-// sheet with 1–3 recipes prints fine. Fronts are page 1, backs page 2.
+// ── 4-up card sheet ───────────────────────────────────────────────────────
+// Print opens a visual A4 sheet with four card slots. Add the current recipe
+// to any empty slot, remove any filled slot, then print the sheet. Empty slots
+// print blank, so 1–4 recipes are fine. Slots are positional and kept in
+// localStorage (per device). Fronts = page 1, backs = page 2.
 const CARD_SHEET_KEY = 'elib_cardSheet';
 const CARD_SHEET_MAX = 4;
-// true  = backs mirrored left/right within each row ([1,0,3,2]) — same as
-//         eRecipe's printCards(), so backs line up behind their fronts
-// false = backs in the same column order as the fronts
+// true = backs mirrored left/right within each row ([1,0,3,2]) — same as
+// eRecipe's printCards(), so backs line up behind their fronts.
 const CARD_SHEET_MIRROR_BACK = true;
 
-function _cardSheetLoad() {
-  try {
-    const a = JSON.parse(localStorage.getItem(CARD_SHEET_KEY) || '[]');
-    return Array.isArray(a) ? a.slice(0, CARD_SHEET_MAX) : [];
-  } catch (e) { return []; }
-}
-function _cardSheetSave(list) {
-  try { localStorage.setItem(CARD_SHEET_KEY, JSON.stringify(list)); return true; }
-  catch (e) { showToast('Could not save the card sheet'); return false; }
-}
-
-function cardSheetAdd(recipe) {
-  if (!recipe) return;
-  const list = _cardSheetLoad();
-  const key = recipe.id || recipe.title;
-  if (list.some(r => (r.id || r.title) === key)) { showToast('Already on the card sheet'); return; }
-  if (list.length >= CARD_SHEET_MAX) {
-    showToast('Sheet is full — print it or remove one first');
-    openCardSheetManager();
-    return;
-  }
-  // Snapshot only the fields the card needs.
-  list.push({
-    id: recipe.id, title: recipe.title, author: recipe.author,
-    createdByName: recipe.createdByName, chapterName: recipe.chapterName,
-    category: recipe.category, coverUrl: recipe.coverUrl, desc: recipe.desc,
-    ingredients: recipe.ingredients, steps: recipe.steps, tip: recipe.tip,
-  });
-  if (_cardSheetSave(list)) showToast(`Added to card sheet (${list.length}/${CARD_SHEET_MAX})`);
-}
-
-function openCardSheetManager() {
-  document.querySelector('.card-sheet-scrim')?.remove();
-  const list = _cardSheetLoad();
-  const scrim = document.createElement('div');
-  scrim.className = 'mob-picker-scrim card-sheet-scrim';
-  let rows = '';
-  for (let i = 0; i < CARD_SHEET_MAX; i++) {
-    const r = list[i];
-    rows += r
-      ? `<div class="mob-picker-item" style="cursor:default"><span>${i + 1}. ${esc(r.title || 'Untitled Recipe')}</span>
-           <button type="button" data-remove="${i}" aria-label="Remove"
-             style="margin-left:auto;border:none;background:none;color:var(--muted);font-size:1rem;cursor:pointer">✕</button></div>`
-      : `<div class="mob-picker-item" style="cursor:default;opacity:.45"><span>${i + 1}. — empty —</span></div>`;
-  }
-  const btn = 'flex:1;padding:.55rem .6rem;border-radius:8px;border:1px solid var(--border);background:var(--panel);color:var(--navy2);font-size:.82rem;cursor:pointer;';
-  scrim.innerHTML = `
-    <div class="mob-picker-card">
-      <div class="mob-picker-title">
-        <span>🗂 Card Sheet (${list.length}/${CARD_SHEET_MAX})</span>
-        <button class="mob-picker-close" data-close>✕</button>
-      </div>
-      ${rows}
-      <div style="display:flex;gap:.5rem;margin-top:.8rem">
-        <button type="button" data-clear style="${btn}">Clear</button>
-        <button type="button" data-print style="${btn}background:var(--navy2);color:#fff;border-color:var(--navy2);">🖨 Print sheet</button>
-      </div>
-    </div>`;
-  document.body.appendChild(scrim);
-  scrim.addEventListener('click', e => { if (e.target === scrim) scrim.remove(); });
-  scrim.querySelector('[data-close]').addEventListener('click', () => scrim.remove());
-  scrim.querySelectorAll('[data-remove]').forEach(b => b.addEventListener('click', () => {
-    const l = _cardSheetLoad(); l.splice(+b.dataset.remove, 1);
-    _cardSheetSave(l); openCardSheetManager();
-  }));
-  scrim.querySelector('[data-clear]').addEventListener('click', () => {
-    _cardSheetSave([]); openCardSheetManager();
-  });
-  scrim.querySelector('[data-print]').addEventListener('click', () => {
-    if (!list.length) { showToast('Nothing on the sheet yet'); return; }
-    scrim.remove(); printCardSheet(list);
-  });
-}
-
-async function printCardSheet(recipes) {
-  recipes = (recipes || []).filter(Boolean).slice(0, CARD_SHEET_MAX);
-  if (!recipes.length) { showToast('No recipes to print'); return; }
-  const empty = '<div class="slot-empty"></div>';
-  const slots = [0, 1, 2, 3];
-  const fronts = slots.map(i => recipes[i] ? _buildRecipeCardFace(recipes[i], 'front') : empty);
-  const backOrder = CARD_SHEET_MIRROR_BACK ? [1, 0, 3, 2] : [0, 1, 2, 3];
-  const backs = backOrder.map(i => recipes[i] ? _buildRecipeCardFace(recipes[i], 'back') : empty);
-
-  const doc_ = `<!doctype html><html><head><meta charset="utf-8"><title>Recipe cards</title>
-<style>
-  @page{margin:0;}
+// Card styling shared by the print document and the on-screen slot previews
+// (each preview lives in its own iframe, so these rules can't leak into the app).
+const _CARD_SHEET_CSS = `
   *{box-sizing:border-box;}
-  html,body{margin:0;padding:0;font-family:Georgia,'Times New Roman',serif;background:#fff;}
-  .card-page{width:210mm;min-height:297mm;display:grid;grid-template-columns:95mm 95mm;
-    grid-template-rows:140mm 140mm;gap:2mm;padding:7.5mm 9mm;box-sizing:border-box;
-    page-break-after:always;}
-  .card-page:last-child{page-break-after:auto;}
-  .slot-empty{width:95mm;height:140mm;}
   .recipe-card{border:1px solid #c8952a;border-radius:3mm;padding:4mm 5mm 4mm 9mm;overflow:hidden;
     box-sizing:border-box;display:flex;flex-direction:column;width:95mm;height:140mm;
     font-size:7.5pt;line-height:1.35;position:relative;background:#fbf9f5;}
@@ -20014,6 +19924,169 @@ async function printCardSheet(recipes) {
   .recipe-card li{margin:.3mm 0;break-inside:avoid;}
   .card-subhead{font-weight:bold;font-size:7pt;margin:1.5mm 0 .5mm;list-style:none;margin-left:-1mm;}
   .card-tip{font-style:italic;color:#666;font-size:6pt;border-top:.3mm dashed #bbb;padding-top:1.5mm;margin-top:auto;}
+`;
+
+function _cardSheetLoad() {
+  let a = [];
+  try { a = JSON.parse(localStorage.getItem(CARD_SHEET_KEY) || '[]'); } catch (e) {}
+  if (!Array.isArray(a)) a = [];
+  const out = [];
+  for (let i = 0; i < CARD_SHEET_MAX; i++) out.push(a[i] && typeof a[i] === 'object' ? a[i] : null);
+  return out;
+}
+function _cardSheetSave(list) {
+  try { localStorage.setItem(CARD_SHEET_KEY, JSON.stringify(list)); return true; }
+  catch (e) { showToast('Could not save the card sheet'); return false; }
+}
+function _cardSheetSnapshot(r) {
+  return {
+    id: r.id, title: r.title, author: r.author, createdByName: r.createdByName,
+    chapterName: r.chapterName, category: r.category, coverUrl: r.coverUrl,
+    desc: r.desc, ingredients: r.ingredients, steps: r.steps, tip: r.tip,
+  };
+}
+
+function _cardSheetEnsureStyles() {
+  if (document.getElementById('cardSheetStyles')) return;
+  const st = document.createElement('style');
+  st.id = 'cardSheetStyles';
+  st.textContent = `
+    .cs-card{width:100%;max-width:420px;max-height:94vh;overflow-y:auto;background:var(--warm-white);
+      border-radius:16px;box-shadow:0 14px 44px rgba(20,30,45,.35);padding:1rem;}
+    .cs-sub{font-size:.78rem;color:var(--muted);margin:-.2rem 0 .7rem;}
+    .cs-sheet{display:grid;grid-template-columns:1fr 1fr;gap:6px;padding:8px;background:#fff;
+      border:1px solid var(--border);box-shadow:0 2px 10px rgba(0,0,0,.14);border-radius:2px;}
+    .cs-slot{position:relative;aspect-ratio:95/140;min-width:0;border-radius:6px;overflow:hidden;}
+    .cs-slot.filled{box-shadow:0 1px 4px rgba(0,0,0,.25);}
+    .cs-frame{position:absolute;top:0;left:0;width:359px;height:529px;border:0;transform-origin:0 0;
+      pointer-events:none;background:transparent;}
+    .cs-x{position:absolute;top:5px;right:5px;width:26px;height:26px;border-radius:50%;border:none;
+      background:rgba(26,18,8,.78);color:#fff;font-size:.8rem;line-height:1;cursor:pointer;z-index:2;}
+    .cs-slot.empty{border:2px dashed #d3c6ad;background:#fbf9f5;display:flex;flex-direction:column;
+      align-items:center;justify-content:center;gap:.15rem;color:var(--muted);}
+    .cs-slot.empty.addable{border-color:#c8952a;color:var(--navy2);cursor:pointer;}
+    .cs-slot.empty.addable:hover{background:#f6efdf;}
+    .cs-plus{font-size:2rem;line-height:1;}
+    .cs-lbl{font-size:.76rem;}
+    .cs-actions{display:flex;gap:.5rem;margin-top:.85rem;}
+    .cs-btn{padding:.65rem .7rem;border-radius:10px;border:1px solid var(--border);background:var(--panel);
+      color:var(--navy2);font-size:.88rem;cursor:pointer;}
+    .cs-btn.primary{flex:1;background:var(--navy2);border-color:var(--navy2);color:#fff;font-weight:600;}
+    .cs-btn:disabled{opacity:.45;cursor:default;}
+    .cs-link{display:block;margin:.7rem auto 0;background:none;border:none;color:var(--muted);
+      font-size:.76rem;text-decoration:underline;cursor:pointer;}
+  `;
+  document.head.appendChild(st);
+}
+
+function _cardSheetPreviewDoc(recipe) {
+  return `<!doctype html><html><head><meta charset="utf-8"><style>
+    html,body{margin:0;padding:0;overflow:hidden;background:transparent;font-family:Georgia,'Times New Roman',serif;}
+    ${_CARD_SHEET_CSS}
+  </style></head><body>${_buildRecipeCardFace(recipe, 'front')}</body></html>`;
+}
+
+// Opens the sheet. `current` (optional) is the recipe the person pressed
+// Print on; it can be dropped into any empty slot.
+function openCardSheetManager(current) {
+  _cardSheetEnsureStyles();
+  document.querySelector('.card-sheet-scrim')?.remove();
+  const scrim = document.createElement('div');
+  scrim.className = 'mob-picker-scrim card-sheet-scrim';
+  document.body.appendChild(scrim);
+  scrim.addEventListener('click', e => { if (e.target === scrim) scrim.remove(); });
+  let ro = null;
+
+  const render = () => {
+    ro?.disconnect();
+    const list = _cardSheetLoad();
+    const filled = list.filter(Boolean).length;
+    const curKey = current ? (current.id || current.title) : null;
+    const onSheet = curKey != null && list.some(r => r && (r.id || r.title) === curKey);
+    const canAdd = !!current && !onSheet && filled < CARD_SHEET_MAX;
+
+    let sub = '';
+    if (current && onSheet) sub = `✓ “${esc(current.title || 'This recipe')}” is on the sheet`;
+    else if (canAdd) sub = `Tap an empty slot to add “${esc(current.title || 'this recipe')}”`;
+    else if (current) sub = 'Sheet is full — remove a card to add this recipe';
+
+    const slots = list.map((r, i) => r
+      ? `<div class="cs-slot filled"><iframe class="cs-frame" data-i="${i}" tabindex="-1" scrolling="no" title="Card ${i + 1}"></iframe>
+           <button type="button" class="cs-x" data-remove="${i}" aria-label="Remove card ${i + 1}">✕</button></div>`
+      : `<div class="cs-slot empty${canAdd ? ' addable' : ''}"${canAdd ? ` data-add="${i}"` : ''}>
+           <span class="cs-plus">${canAdd ? '＋' : ''}</span><span class="cs-lbl">${canAdd ? 'Add here' : 'Empty'}</span></div>`
+    ).join('');
+
+    scrim.innerHTML = `
+      <div class="cs-card">
+        <div class="mob-picker-title">
+          <span>🗂 Card Sheet (${filled}/${CARD_SHEET_MAX})</span>
+          <button class="mob-picker-close" data-close aria-label="Close">✕</button>
+        </div>
+        ${sub ? `<div class="cs-sub">${sub}</div>` : ''}
+        <div class="cs-sheet">${slots}</div>
+        <div class="cs-actions">
+          <button type="button" class="cs-btn" data-clear${filled ? '' : ' disabled'}>Clear all</button>
+          <button type="button" class="cs-btn primary" data-print${filled ? '' : ' disabled'}>🖨 Print sheet${filled ? ` (${filled})` : ''}</button>
+        </div>
+        ${current ? '<button type="button" class="cs-link" data-full>Print this recipe as a full page instead</button>' : ''}
+      </div>`;
+
+    // Fill each preview iframe with the real card face, scaled to its slot.
+    scrim.querySelectorAll('.cs-frame').forEach(fr => {
+      fr.srcdoc = _cardSheetPreviewDoc(list[+fr.dataset.i]);
+    });
+    const fit = () => scrim.querySelectorAll('.cs-slot.filled').forEach(slot => {
+      const fr = slot.querySelector('.cs-frame');
+      if (fr) fr.style.transform = `scale(${slot.clientWidth / 359.06})`;
+    });
+    fit();
+    const sheet = scrim.querySelector('.cs-sheet');
+    if (window.ResizeObserver && sheet) { ro = new ResizeObserver(fit); ro.observe(sheet); }
+
+    scrim.querySelector('[data-close]').addEventListener('click', () => scrim.remove());
+    scrim.querySelectorAll('[data-add]').forEach(el => el.addEventListener('click', () => {
+      const l = _cardSheetLoad();
+      l[+el.dataset.add] = _cardSheetSnapshot(current);
+      if (_cardSheetSave(l)) render();
+    }));
+    scrim.querySelectorAll('[data-remove]').forEach(b => b.addEventListener('click', () => {
+      const l = _cardSheetLoad();
+      l[+b.dataset.remove] = null;
+      if (_cardSheetSave(l)) render();
+    }));
+    scrim.querySelector('[data-clear]')?.addEventListener('click', () => {
+      if (_cardSheetSave([null, null, null, null])) render();
+    });
+    scrim.querySelector('[data-print]')?.addEventListener('click', () => {
+      scrim.remove(); printCardSheet(_cardSheetLoad());
+    });
+    scrim.querySelector('[data-full]')?.addEventListener('click', () => {
+      scrim.remove(); printRecipe(current);
+    });
+  };
+  render();
+}
+
+// recipes: array of up to 4 (index = slot; null/undefined = leave blank)
+async function printCardSheet(recipes) {
+  const slots = [0, 1, 2, 3].map(i => (recipes && recipes[i]) || null);
+  if (!slots.some(Boolean)) { showToast('No recipes to print'); return; }
+  const empty = '<div class="slot-empty"></div>';
+  const fronts = slots.map(r => r ? _buildRecipeCardFace(r, 'front') : empty);
+  const backOrder = CARD_SHEET_MIRROR_BACK ? [1, 0, 3, 2] : [0, 1, 2, 3];
+  const backs = backOrder.map(i => slots[i] ? _buildRecipeCardFace(slots[i], 'back') : empty);
+
+  const doc_ = `<!doctype html><html><head><meta charset="utf-8"><title>Recipe cards</title>
+<style>
+  @page{margin:0;}
+  html,body{margin:0;padding:0;font-family:Georgia,'Times New Roman',serif;background:#fff;}
+  .card-page{width:210mm;min-height:297mm;display:grid;grid-template-columns:95mm 95mm;
+    grid-template-rows:140mm 140mm;gap:2mm;padding:7.5mm 9mm;box-sizing:border-box;
+    page-break-after:always;}
+  .card-page:last-child{page-break-after:auto;}
+  .slot-empty{width:95mm;height:140mm;}
+  ${_CARD_SHEET_CSS}
 </style></head><body>
   <div class="card-page">${fronts.join('')}</div>
   <div class="card-page">${backs.join('')}</div>
@@ -20039,36 +20112,10 @@ async function printCardSheet(recipes) {
   setTimeout(() => { if (frame.isConnected) frame.remove(); }, 120000);
 }
 
-// Print entry point for recipes — asks Full Page (printRecipe) vs Recipe
-// Card (printRecipeCard) using the same picker scrim as everywhere else.
+// Print entry point for recipes — opens the visual card sheet.
 function promptRecipePrint(recipe) {
   if (!recipe) { showToast('No recipe to print'); return; }
-  const scrim = document.createElement('div');
-  scrim.className = 'mob-picker-scrim';
-  scrim.innerHTML = `
-    <div class="mob-picker-card">
-      <div class="mob-picker-title">
-        <span>🖨 Print Recipe</span>
-        <button class="mob-picker-close" id="printChoiceCloseBtn">✕</button>
-      </div>
-      <div class="mob-picker-item" data-choice="full"><span>📄 Full Page</span></div>
-      <div class="mob-picker-item" data-choice="card"><span>🗂 Recipe Card (this one only)</span></div>
-      <div class="mob-picker-item" data-choice="add"><span>➕ Add to 4-up Card Sheet</span></div>
-      <div class="mob-picker-item" data-choice="sheet"><span>🗂 View / Print Card Sheet (${_cardSheetLoad().length}/${CARD_SHEET_MAX})</span></div>
-    </div>`;
-  document.body.appendChild(scrim);
-  scrim.addEventListener('click', e => { if (e.target === scrim) scrim.remove(); });
-  scrim.querySelector('#printChoiceCloseBtn').addEventListener('click', () => scrim.remove());
-  scrim.querySelectorAll('[data-choice]').forEach(item => {
-    item.addEventListener('click', () => {
-      const choice = item.dataset.choice;
-      scrim.remove();
-      if (choice === 'full') printRecipe(recipe);
-      else if (choice === 'card') printCardSheet([recipe]);
-      else if (choice === 'add') cardSheetAdd(recipe);
-      else if (choice === 'sheet') openCardSheetManager();
-    });
-  });
+  openCardSheetManager(recipe);
 }
 
 // ── overlay shell (built once, reused across recipes) ────────────────────
