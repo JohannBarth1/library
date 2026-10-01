@@ -20561,21 +20561,19 @@ function _reEnsureEditor() {
     <div style="flex:1;overflow-y:auto;padding:1.2rem 1.2rem 3rem;max-width:640px;margin:0 auto;width:100%;box-sizing:border-box;">
       <div id="reImportBox" style="border:1px dashed var(--border);border-radius:10px;padding:.85rem;margin-bottom:1.3rem;background:var(--panel);">
         <div style="font-weight:700;color:var(--teal-dark);font-size:.92rem;">✨ Let AI do the typing <span class="re-hint">(all optional)</span></div>
-        <div class="re-hint" style="margin-top:.2rem;line-height:1.4;">Choose how to start. A web search only fills in what is still empty — it never replaces your link or photo import, your own typing, or a cover you have added.</div>
+        <div class="re-hint" style="margin-top:.2rem;line-height:1.4;">Fill in <b>one</b> of 1, 2 or 3, then press Submit at the bottom of this box. If you fill in more than one, it uses the link first, then the photos, then the name. A web search only fills in what is still empty and never replaces a cover you added.</div>
 
         <div class="re-sub">1 · I have a link</div>
-        <div style="display:flex;gap:.5rem;align-items:center;">
-          <input id="reImportUrl" class="re-input" type="url" inputmode="url" autocomplete="off" placeholder="https://…" style="flex:1;margin:0;"/>
-          <button id="reImportBtn" type="button" style="flex-shrink:0;border:none;background:var(--teal);color:var(--warm-white);font-weight:700;font-size:.8rem;padding:.55rem 1rem;border-radius:20px;cursor:pointer;">Fetch</button>
-        </div>
+        <input id="reImportUrl" class="re-input" type="url" inputmode="url" autocomplete="off" placeholder="https://…" style="margin:0;"/>
 
-        <div class="re-sub">2 · I have a photo of the recipe <span class="re-hint">(up to 4 — a book page, recipe card…)</span></div>
-        <button id="reImportPhotoBtn" type="button" style="width:100%;border:1px solid var(--teal);background:transparent;color:var(--teal);font-weight:700;font-size:.8rem;padding:.55rem 1rem;border-radius:20px;cursor:pointer;">📷 Read the recipe from a photo</button>
+        <div class="re-sub">2 · I have photos of the recipe <span class="re-hint">(up to 4 — book pages, a recipe card…)</span></div>
+        <div id="rePhotoList" style="display:flex;flex-wrap:wrap;gap:.5rem;"></div>
+        <button id="reImportPhotoBtn" type="button" style="margin-top:.5rem;width:100%;border:1px solid var(--teal);background:transparent;color:var(--teal);font-weight:700;font-size:.8rem;padding:.55rem 1rem;border-radius:20px;cursor:pointer;">📷 Add photos (up to 4)</button>
         <input id="reImportPhotoFile" type="file" accept="image/*" multiple style="display:none"/>
 
         <div id="reAutoFindRow">
           <div class="re-sub">3 · I only know the name</div>
-          <label class="re-tog"><input id="reAutoFind" type="checkbox" checked/><span><b>🔎 Find the recipe online</b><br><span class="re-hint">Type the title below, then press Save. Only used while ingredients and steps are empty.</span></span></label>
+          <input id="reFindName" class="re-input" type="text" autocomplete="off" placeholder="Cowboy Coffee Cake" style="margin:0;"/>
         </div>
 
         <div class="re-sub">Photo of the finished dish</div>
@@ -20590,10 +20588,11 @@ function _reEnsureEditor() {
           </div>
           <input id="reCoverFile" type="file" accept="image/*" style="display:none;"/>
         </div>
-        <label class="re-tog"><input id="reAutoPhoto" type="checkbox" checked/><span><b>🔎 Find a photo of the dish online</b><br><span class="re-hint">Works with any option above: it finds a picture only and leaves your recipe text alone. Skipped if you have added a cover.</span></span></label>
+        <label class="re-tog"><input id="reAutoPhoto" type="checkbox" checked/><span><b>🔎 Also find a photo of the dish online</b><br><span class="re-hint">Works with 1, 2 or 3. Skipped if you add your own cover.</span></span></label>
 
-        <div id="reImportStatus" style="font-size:.75rem;color:var(--muted);margin-top:.7rem;min-height:1em;">Paste a recipe page, or photograph a recipe (up to 4 photos), and the fields below will be filled in for you to check.</div>
-        <div id="rePlan" style="margin-top:.6rem;padding:.5rem .65rem;border-radius:8px;background:var(--teal-light);color:var(--teal-dark);font-size:.78rem;line-height:1.4;"></div>
+        <div id="rePlan" style="margin-top:.8rem;padding:.5rem .65rem;border-radius:8px;background:var(--teal-light);color:var(--teal-dark);font-size:.78rem;line-height:1.4;"></div>
+        <button id="reSubmitBtn" type="button" style="margin-top:.6rem;width:100%;border:none;background:var(--teal);color:var(--warm-white);font-weight:700;font-size:.9rem;padding:.7rem 1rem;border-radius:22px;cursor:pointer;">✨ Submit</button>
+        <div id="reImportStatus" style="font-size:.75rem;color:var(--muted);margin-top:.55rem;min-height:1em;">Fill in 1, 2 or 3, then press Submit.</div>
       </div>
 
       <label class="re-lbl">Title</label>
@@ -20646,19 +20645,21 @@ function _reEnsureEditor() {
   document.getElementById('reVisPublic').addEventListener('click', () => _reSetVis('public'));
   document.getElementById('reSaveBtn').addEventListener('click', saveRecipeFromEditor);
   ['reTitle','reIngredients','reSteps'].forEach(id => document.getElementById(id).addEventListener('input', _reUpdatePlan));
-  ['reAutoFind','reAutoPhoto'].forEach(id => document.getElementById(id).addEventListener('change', _reUpdatePlan));
+  document.getElementById('reAutoPhoto').addEventListener('change', _reUpdatePlan);
   document.getElementById('reDeleteBtn').addEventListener('click', deleteRecipeFromEditor);
   document.getElementById('reCoverBtn').addEventListener('click', () => document.getElementById('reCoverFile').click());
   document.getElementById('reCoverFile').addEventListener('change', _reHandleCoverFile);
-  document.getElementById('reImportBtn').addEventListener('click', importRecipeFromLink);
+  document.getElementById('reSubmitBtn').addEventListener('click', runAiSubmit);
   document.getElementById('reImportPhotoBtn').addEventListener('click', () => document.getElementById('reImportPhotoFile').click());
   document.getElementById('reImportPhotoFile').addEventListener('change', e => {
     const files = [...e.target.files];
     e.target.value = '';            // lets the same photo be picked again
-    if (files.length) importRecipeFromPhotos(files);
+    if (files.length) _reAddPhotos(files);
   });
-  document.getElementById('reImportUrl').addEventListener('keydown', e => {
-    if (e.key === 'Enter') { e.preventDefault(); importRecipeFromLink(); }
+  ['reImportUrl', 'reFindName'].forEach(id => {
+    const el = document.getElementById(id);
+    el.addEventListener('input', _reUpdatePlan);
+    el.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); runAiSubmit(); } });
   });
   document.getElementById('reCoverRemoveBtn').addEventListener('click', () => {
     document.getElementById('recipeEditorOverlay').dataset.pendingCoverUrl = '';
@@ -20757,36 +20758,27 @@ function _applyImportedRecipe(r, fallbackAuthor) {
 }
 
 async function importRecipeFromLink() {
-  const urlEl = document.getElementById('reImportUrl');
-  const btn = document.getElementById('reImportBtn');
   const status = document.getElementById('reImportStatus');
-  const url = urlEl.value.trim();
-
-  if (!url) { status.textContent = 'Paste a link first.'; return; }
-  if (!/^https?:\/\//i.test(url)) { status.textContent = 'The link needs to start with http:// or https://.'; return; }
-
-  const prevLabel = btn.textContent;
-  btn.disabled = true; btn.textContent = 'Reading…';
-  urlEl.disabled = true;
+  const url = document.getElementById('reImportUrl').value.trim();
+  if (!/^https?:\/\//i.test(url)) {
+    status.style.color = 'var(--danger)';
+    status.textContent = 'The link needs to start with http:// or https://.';
+    return false;
+  }
   status.style.color = 'var(--muted)';
   status.textContent = 'Fetching the page and reading the recipe — this can take up to a minute…';
-
   try {
     const { data: r } = await _importRecipeCallable({ url });
-
     _applyImportedRecipe(r, r.siteName || _hostnameToAuthor(url));
-
     status.style.color = 'var(--teal-dark)';
     status.textContent = `Imported ${(r.ingredients || []).length} ingredients and ${(r.steps || []).length} steps — please check them before saving.`;
-    showToast('Recipe imported — review and save');
+    return true;
   } catch (e) {
     console.warn('Recipe import failed:', e);
     status.style.color = 'var(--danger)';
     // Callable errors carry the message set by HttpsError on the server.
     status.textContent = (e && e.message) ? e.message : 'Import failed — try another link.';
-  } finally {
-    btn.disabled = false; btn.textContent = prevLabel;
-    urlEl.disabled = false;
+    return false;
   }
 }
 
@@ -20821,42 +20813,66 @@ async function _imageFileToPayload(file, maxEdge = 1568, quality = 0.85) {
   return { mediaType: 'image/jpeg', data: c.toDataURL('image/jpeg', quality).split(',')[1] };
 }
 
-async function importRecipeFromPhotos(files) {
-  const btn = document.getElementById('reImportPhotoBtn');
-  const urlBtn = document.getElementById('reImportBtn');
-  const status = document.getElementById('reImportStatus');
-  files = (files || []).filter(f => /^image\//i.test(f.type) || /\.(jpe?g|png|webp|heic|heif)$/i.test(f.name || ''));
-  if (!files.length) { status.style.color = 'var(--danger)'; status.textContent = 'Please choose an image.'; return; }
-  if (files.length > RECIPE_PHOTO_MAX) {
-    showToast('Using the first ' + RECIPE_PHOTO_MAX + ' photos');
-    files = files.slice(0, RECIPE_PHOTO_MAX);
-  }
+// Photos are chosen first and shown as thumbnails; they are only read when Submit is pressed.
+let _rePhotoQueue = [];
 
-  const prevLabel = btn.textContent;
-  btn.disabled = true; urlBtn.disabled = true; btn.textContent = 'Reading…';
+function _reRenderPhotoQueue() {
+  const box = document.getElementById('rePhotoList');
+  if (!box) return;
+  box.innerHTML = '';
+  _rePhotoQueue.forEach((f, i) => {
+    const w = document.createElement('div');
+    w.style.cssText = 'position:relative;width:64px;height:64px;border-radius:8px;overflow:hidden;border:1px solid var(--border);background:var(--warm-white);';
+    const im = document.createElement('img');
+    const u = URL.createObjectURL(f);
+    im.onload = () => URL.revokeObjectURL(u);
+    im.src = u;
+    im.style.cssText = 'width:100%;height:100%;object-fit:cover;';
+    const x = document.createElement('button');
+    x.type = 'button'; x.textContent = '✕'; x.setAttribute('aria-label', 'Remove photo');
+    x.style.cssText = 'position:absolute;top:2px;right:2px;width:20px;height:20px;border:none;border-radius:50%;background:rgba(15,26,46,.75);color:#fff;font-size:.7rem;line-height:20px;padding:0;cursor:pointer;';
+    x.addEventListener('click', () => { _rePhotoQueue.splice(i, 1); _reRenderPhotoQueue(); });
+    w.append(im, x);
+    box.appendChild(w);
+  });
+  const btn = document.getElementById('reImportPhotoBtn');
+  const n = _rePhotoQueue.length;
+  btn.textContent = n ? `📷 Add more (${n}/${RECIPE_PHOTO_MAX})` : `📷 Add photos (up to ${RECIPE_PHOTO_MAX})`;
+  btn.disabled = n >= RECIPE_PHOTO_MAX;
+  _reUpdatePlan();
+}
+
+function _reAddPhotos(files) {
+  files = files.filter(f => /^image\//i.test(f.type) || /\.(jpe?g|png|webp|heic|heif)$/i.test(f.name || ''));
+  const room = RECIPE_PHOTO_MAX - _rePhotoQueue.length;
+  if (files.length > room) showToast('Up to ' + RECIPE_PHOTO_MAX + ' photos');
+  _rePhotoQueue.push(...files.slice(0, room));
+  _reRenderPhotoQueue();
+}
+
+async function importRecipeFromPhotos() {
+  const status = document.getElementById('reImportStatus');
+  const files = _rePhotoQueue.slice(0, RECIPE_PHOTO_MAX);
   status.style.color = 'var(--muted)';
   status.textContent = 'Preparing ' + (files.length === 1 ? 'the photo' : files.length + ' photos') + '…';
-
   try {
     const images = [];
     for (const f of files) images.push(await _imageFileToPayload(f));
     status.textContent = 'Reading the recipe from the photo — this can take up to a minute…';
-
     const { data: r } = await _importRecipeImageCallable({
       images,
       categories: (typeof getCategoryList === 'function' ? getCategoryList() : []).slice(0, 60),
     });
-
     _applyImportedRecipe(r, '');
     status.style.color = 'var(--teal-dark)';
     status.textContent = `Read ${(r.ingredients || []).length} ingredients and ${(r.steps || []).length} steps from the photo — please check them carefully before saving.`;
-    showToast('Recipe read — review and save');
+    _rePhotoQueue = []; _reRenderPhotoQueue();
+    return true;
   } catch (e) {
     console.warn('Photo import failed:', e);
     status.style.color = 'var(--danger)';
     status.textContent = (e && e.message) ? e.message : 'Could not read that photo — try a clearer, well-lit shot.';
-  } finally {
-    btn.disabled = false; urlBtn.disabled = false; btn.textContent = prevLabel;
+    return false;
   }
 }
 
@@ -20883,7 +20899,8 @@ function showRecipeEditor(recipe) {
   // Recipe search: only when creating (on by default). Photo search: also available
   // when editing, but off by default so a plain edit never triggers a search.
   document.getElementById('reAutoFindRow').style.display = recipe ? 'none' : 'block';
-  document.getElementById('reAutoFind').checked = !recipe;
+  document.getElementById('reFindName').value = '';
+  _rePhotoQueue = []; _reRenderPhotoQueue();
   document.getElementById('reAutoPhoto').checked = !recipe;
 
   const impUrl = document.getElementById('reImportUrl');
@@ -20891,7 +20908,7 @@ function showRecipeEditor(recipe) {
   if (impUrl) impUrl.value = '';
   if (impStatus) {
     impStatus.style.color = 'var(--muted)';
-    impStatus.textContent = 'Paste a recipe page, or photograph a recipe (up to 4 photos), and the fields below will be filled in for you to check.';
+    impStatus.textContent = 'Fill in 1, 2 or 3, then press Submit.';
   }
 
   overlay.dataset.pendingCoverUrl = recipe?.coverUrl || '';
@@ -20920,23 +20937,23 @@ function closeRecipeEditor() {
   if (el) el.style.display = 'none';
 }
 
-// What will Save do? One place decides it, and the line under the AI box shows it live.
-//   'recipe' = web search for recipe (+ photo if wanted and no cover yet)
-//   'photo'  = web search for the dish photo only, recipe text untouched
-//   null     = plain save. Typed/imported text and an existing cover always win.
+// What will Submit do? One place decides it; the line above the button shows it live.
+// Priority: link → photos → name → (photo only). Typed text and an existing cover always win.
 function _reAutoPlan() {
   const g = id => document.getElementById(id);
   const ov = g('recipeEditorOverlay');
+  const url = g('reImportUrl').value.trim();
+  const n = _rePhotoQueue.length;
+  const name = ov.dataset.editId ? '' : g('reFindName').value.trim();
   const title = g('reTitle').value.trim();
-  const hasText = !!(g('reIngredients').value.trim() || g('reSteps').value.trim());
-  const hasCover = !!ov.dataset.pendingCoverUrl;
-  const wantRecipe = g('reAutoFind').checked && !ov.dataset.editId;
-  const wantPhoto = g('reAutoPhoto').checked && !hasCover;
-  const q = '“' + title + '”';
-  if (!title) return { mode: null, text: (wantRecipe || wantPhoto) ? 'Type a title below and AI can search the web for the recipe and/or a photo when you press Save.' : 'When you press Save: it saves as you see it — nothing is searched.' };
-  if (!hasText && wantRecipe) return { mode: 'recipe', text: 'When you press Save: AI searches the web for ' + q + (wantPhoto ? ' and a photo of the dish' : '') + ', then shows it for you to check before anything is saved.' + (hasCover ? ' Your cover photo is kept.' : '') };
-  if (wantPhoto) return { mode: 'photo', text: 'When you press Save: AI searches the web for a photo of ' + q + ' only. Your recipe text is not touched, and you check the photo before it is saved.' };
-  return { mode: null, text: 'When you press Save: it saves as you see it — nothing is searched.' };
+  const wantPhoto = g('reAutoPhoto').checked && !ov.dataset.pendingCoverUrl;
+  const more = wantPhoto ? ' Then it looks for a photo of the dish.' : '';
+  const others = [n ? 'photos' : '', name ? 'name' : ''].filter(Boolean).join(' and ');
+  if (url) return { mode: 'link', text: 'Submit will read the recipe from your link.' + (others ? ' (Your ' + others + ' will be ignored.)' : '') + more };
+  if (n) return { mode: 'photos', text: 'Submit will read the recipe from your ' + (n === 1 ? 'photo' : n + ' photos') + '.' + (name ? ' (The name will be ignored.)' : '') + more };
+  if (name) return { mode: 'name', text: 'Submit will search the web for “' + name + '”' + (wantPhoto ? ' and a photo of the dish' : '') + ', then show it for you to check.' };
+  if (wantPhoto && title) return { mode: 'photo', text: 'Submit will search the web for a photo of “' + title + '” only. Your recipe text is not touched.' };
+  return { mode: null, text: 'Add a link, photos or a name above, then press Submit — or just fill in the recipe yourself below.' };
 }
 
 function _reUpdatePlan() {
@@ -20944,23 +20961,55 @@ function _reUpdatePlan() {
   if (el && document.getElementById('reTitle')) el.textContent = _reAutoPlan().text;
 }
 
-// Web search by title: fills the editor and STAYS OPEN so the result is reviewed
+async function runAiSubmit() {
+  const g = id => document.getElementById(id);
+  const status = g('reImportStatus');
+  const plan = _reAutoPlan();
+  if (!plan.mode) {
+    status.style.color = 'var(--danger)';
+    status.textContent = 'Add a link, photos or a name first — or just fill in the recipe yourself.';
+    return;
+  }
+  const btn = g('reSubmitBtn'), save = g('reSaveBtn');
+  const prevLabel = btn.textContent;
+  btn.disabled = true; save.disabled = true; btn.textContent = 'Working…';
+  try {
+    let ok;
+    if (plan.mode === 'link') ok = await importRecipeFromLink();
+    else if (plan.mode === 'photos') ok = await importRecipeFromPhotos();
+    else if (plan.mode === 'name') ok = await _findRecipeOnline(g('reFindName').value.trim(), 'name');
+    else ok = await _findRecipeOnline(g('reTitle').value.trim(), 'photo');
+    // After a link or photo import, also look for a dish photo if asked and there is no cover yet.
+    const t = g('reTitle').value.trim();
+    if (ok && (plan.mode === 'link' || plan.mode === 'photos') && t &&
+        g('reAutoPhoto').checked && !g('recipeEditorOverlay').dataset.pendingCoverUrl) {
+      const before = status.textContent;
+      await _findRecipeOnline(t, 'photo');
+      status.textContent = before + ' ' + status.textContent;
+    }
+    if (ok) showToast('Done — review and save');
+  } finally {
+    btn.disabled = false; save.disabled = false; btn.textContent = prevLabel;
+    _reUpdatePlan();
+  }
+}
+
+// Web search by name: fills the editor and STAYS OPEN so the result is reviewed
 // before the real save. mode 'photo' uses only the picture from the result.
 async function _findRecipeOnline(title, mode) {
   const photoOnly = mode === 'photo';
   const g = id => document.getElementById(id);
-  const saveBtn = g('reSaveBtn'), status = g('reImportStatus'), overlay = g('recipeEditorOverlay');
-  const prev = saveBtn.textContent;
-  saveBtn.disabled = true; saveBtn.textContent = 'Searching…';
+  const status = g('reImportStatus'), overlay = g('recipeEditorOverlay');
   status.style.color = 'var(--muted)';
   status.textContent = photoOnly
     ? `Searching the web for a photo of “${title}” — this can take up to a minute…`
     : `Searching the web for “${title}” — this can take up to a minute…`;
   try {
     const { data: r } = await _findRecipeCallable({ name: title, imageOnly: photoOnly });
-    // Keep what the user typed; fill only what is still empty.
+    // Fill only what is still empty.
     const set = (id, v) => { if (v && !g(id).value.trim()) g(id).value = v; };
     if (!photoOnly) {
+      set('reTitle', title);
       set('reCategory', r.chapterName);
       set('reDesc', r.desc);
       set('reIngredients', (r.ingredients || []).join('\n'));
@@ -20974,24 +21023,21 @@ async function _findRecipeOnline(title, mode) {
       gotPhoto = true;
     }
     const photoMissed = g('reAutoPhoto').checked && !gotPhoto && !overlay.dataset.pendingCoverUrl;
-    if (photoMissed) g('reAutoPhoto').checked = false;   // do not search again on the next Save
+    if (photoMissed) g('reAutoPhoto').checked = false;   // do not search again on the next Submit
     const noPhoto = r.imageTooSmall ? 'no photo large enough was found — you can upload one' : 'no suitable photo was found — you can upload one';
     status.style.color = (photoOnly && !gotPhoto) ? 'var(--danger)' : 'var(--teal-dark)';
     status.textContent = photoOnly
       ? (gotPhoto ? 'Found a photo — check it, then press Save.' : 'Sorry, ' + noPhoto + '.')
       : `Found a recipe (${(r.ingredients || []).length} ingredients, ${(r.steps || []).length} steps)` +
         (gotPhoto ? ' and a photo' : (photoMissed ? ' — ' + noPhoto : '')) + ' — check everything, then press Save.';
-    showToast(photoOnly ? (gotPhoto ? 'Photo found — review and save' : 'No photo found') : 'Recipe found — review and save');
+    return true;
   } catch (e) {
     console.warn('Recipe lookup failed:', e);
-    // Untick so the next Save works as a normal manual save.
-    g('reAutoFind').checked = false; g('reAutoPhoto').checked = false;
+    g('reAutoPhoto').checked = false;
     status.style.color = 'var(--danger)';
     status.textContent = ((e && e.message) ? e.message : (photoOnly ? 'Could not find a photo.' : 'Could not find that recipe.')) +
-      (photoOnly ? ' You can upload a cover yourself.' : ' Add the ingredients and steps yourself, or use a link or photo above.');
-  } finally {
-    saveBtn.disabled = false; saveBtn.textContent = prev;
-    _reUpdatePlan();
+      (photoOnly ? ' You can upload a cover yourself.' : ' Add the ingredients and steps yourself, or use a link or photos above.');
+    return false;
   }
 }
 
@@ -21002,9 +21048,10 @@ async function saveRecipeFromEditor() {
   const ingredients = document.getElementById('reIngredients').value.split('\n').map(l => l.trim()).filter(Boolean);
   const steps = document.getElementById('reSteps').value.split('\n').map(l => l.trim()).filter(Boolean);
 
-  // Web search first if the plan says so (see _reAutoPlan); stays open for review.
-  const plan = _reAutoPlan();
-  if (plan.mode) { await _findRecipeOnline(title, plan.mode); return; }
+  if (!ingredients.length && !steps.length && ['link', 'photos', 'name'].includes(_reAutoPlan().mode)) {
+    showToast('Press Submit in the AI box first — or clear it to type the recipe yourself');
+    return;
+  }
   if (!ingredients.length) { showToast('Please add at least one ingredient'); return; }
   if (!steps.length) { showToast('Please add at least one step'); return; }
 
