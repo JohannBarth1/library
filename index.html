@@ -20560,20 +20560,20 @@ function _reEnsureEditor() {
     </div>
     <div style="flex:1;overflow-y:auto;padding:1.2rem 1.2rem 3rem;max-width:640px;margin:0 auto;width:100%;box-sizing:border-box;">
       <div id="reImportBox" style="border:1px dashed var(--border);border-radius:10px;padding:.85rem;margin-bottom:1.3rem;background:var(--panel);">
-        <div style="font-weight:700;color:var(--teal-dark);font-size:.92rem;">✨ Let AI do the typing <span class="re-hint">(all optional)</span></div>
-        <div class="re-hint" style="margin-top:.2rem;line-height:1.4;">Fill in <b>one</b> of 1, 2 or 3, then press Submit at the bottom of this box. If you fill in more than one, it uses the link first, then the photos, then the name. A web search only fills in what is still empty and never replaces a cover you added.</div>
+        <div style="font-weight:700;color:var(--teal-dark);font-size:.92rem;">✨ Create with AI <span class="re-hint">(all optional)</span></div>
+        //<div class="re-hint" style="margin-top:.2rem;line-height:1.4;">Fill in <b>one</b> of 1, 2 or 3, then press Submit at the bottom of this box. If you fill in more than one, it uses the link first, then the photos, then the name. A web search only fills in what is still empty and never replaces a cover you added.</div>
 
         <div class="re-sub">1 · I have a link</div>
         <input id="reImportUrl" class="re-input" type="url" inputmode="url" autocomplete="off" placeholder="https://…" style="margin:0;"/>
 
         <div class="re-sub">2 · I have photos of the recipe <span class="re-hint">(up to 4 — book pages, a recipe card…)</span></div>
         <div id="rePhotoList" style="display:flex;flex-wrap:wrap;gap:.5rem;"></div>
-        <button id="reImportPhotoBtn" type="button" style="margin-top:.5rem;width:100%;border:1px solid var(--teal);background:transparent;color:var(--teal);font-weight:700;font-size:.8rem;padding:.55rem 1rem;border-radius:20px;cursor:pointer;">📷 Add photos (up to 4)</button>
+        <button id="reImportPhotoBtn" type="button" style="margin-top:.5rem;width:100%;border:1px solid var(--teal);background:transparent;color:var(--teal);font-weight:700;font-size:.8rem;padding:.55rem 1rem;border-radius:20px;cursor:pointer;">📷 Add photos</button>
         <input id="reImportPhotoFile" type="file" accept="image/*" multiple style="display:none"/>
 
         <div id="reAutoFindRow">
           <div class="re-sub">3 · I only know the name</div>
-          <input id="reFindName" class="re-input" type="text" autocomplete="off" placeholder="Cowboy Coffee Cake" style="margin:0;"/>
+          <input id="reFindName" class="re-input" type="text" autocomplete="off" placeholder="Recipe Name" style="margin:0;"/>
         </div>
 
         <div class="re-sub">Photo of the finished dish</div>
@@ -20592,11 +20592,11 @@ function _reEnsureEditor() {
 
         <div id="rePlan" style="margin-top:.8rem;padding:.5rem .65rem;border-radius:8px;background:var(--teal-light);color:var(--teal-dark);font-size:.78rem;line-height:1.4;"></div>
         <button id="reSubmitBtn" type="button" style="margin-top:.6rem;width:100%;border:none;background:var(--teal);color:var(--warm-white);font-weight:700;font-size:.9rem;padding:.7rem 1rem;border-radius:22px;cursor:pointer;">✨ Submit</button>
-        <div id="reImportStatus" style="font-size:.75rem;color:var(--muted);margin-top:.55rem;min-height:1em;">Fill in 1, 2 or 3, then press Submit.</div>
+        //<div id="reImportStatus" style="font-size:.75rem;color:var(--muted);margin-top:.55rem;min-height:1em;">Fill in 1, 2 or 3, then press Submit.</div>
       </div>
 
       <label class="re-lbl">Title</label>
-      <input id="reTitle" class="re-input" type="text" placeholder="Cowboy Coffee Cake"/>
+      <input id="reTitle" class="re-input" type="text" placeholder="Recipe Name"/>
 
       <label class="re-lbl">Author <span class="re-hint">(who wrote it — filled in from the source on import)</span></label>
       <input id="reAuthor" class="re-input" type="text" placeholder="BBC Good Food, Nigella Lawson…"/>
