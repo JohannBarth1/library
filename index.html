@@ -20038,6 +20038,7 @@ function _cardSheetEnsureStyles() {
       padding:.45rem .7rem;background:var(--panel);font-size:.78rem;color:var(--navy2);border-bottom:1px solid var(--border);}
     .rc-cat label{display:flex;align-items:center;gap:.5rem;cursor:pointer;}
     .rc-n{font-size:.7rem;color:var(--muted);}
+    .rc-badge{margin-left:auto;font-size:.68rem;color:var(--muted);background:var(--panel);border-radius:10px;padding:.1rem .5rem;white-space:nowrap;}
     .rc-row{display:flex;align-items:center;gap:.6rem;padding:.5rem .7rem .5rem 1rem;font-size:.86rem;
       color:var(--navy2);border-bottom:1px solid var(--border);cursor:pointer;}
     .rc-row.dis{opacity:.45;}
@@ -20190,7 +20191,8 @@ function openRecipeChecklist(o) {
     listHtml += `<div class="rc-group"><div class="rc-cat">` +
       (unlimited ? `<label><input type="checkbox" data-cat="${esc(cat)}"><b>${esc(cat)}</b></label>` : `<b>${esc(cat)}</b>`) +
       `<span class="rc-n">${idxs.length}</span></div>` +
-      idxs.map(i => `<label class="rc-row" data-i="${i}"><input type="checkbox" data-i="${i}"><span>${esc(recipes[i].title || 'Untitled Recipe')}</span></label>`).join('') +
+      idxs.map(i => { const bd = o.badge ? o.badge(recipes[i]) : '';
+        return `<label class="rc-row" data-i="${i}"><input type="checkbox" data-i="${i}"><span>${esc(recipes[i].title || 'Untitled Recipe')}</span>${bd ? `<span class="rc-badge">${esc(bd)}</span>` : ''}</label>`; }).join('') +
       `</div>`;
   });
 
@@ -20204,6 +20206,7 @@ function openRecipeChecklist(o) {
       <input type="search" class="rc-search" placeholder="Search recipes…" autocomplete="off">
       <div class="rc-tools">
         ${unlimited ? '<button type="button" data-all>Select all</button><button type="button" data-none>None</button>' : ''}
+        ${(o.quick || []).map((q, qi) => `<button type="button" data-quick="${qi}">${esc(q.label)}</button>`).join('')}
         <span class="rc-count"></span>
       </div>
       <div class="rc-list">${listHtml}</div>
@@ -20271,6 +20274,12 @@ function openRecipeChecklist(o) {
     });
     sync();
   };
+  scrim.querySelectorAll('[data-quick]').forEach(b => b.addEventListener('click', () => {
+    const q = o.quick[+b.dataset.quick];
+    sel.clear();
+    recipes.forEach(r => { if (q.test(r)) sel.add(keyOf(r)); });
+    sync();
+  }));
   scrim.querySelector('[data-all]')?.addEventListener('click', () => setVisible(true));
   scrim.querySelector('[data-none]')?.addEventListener('click', () => setVisible(false));
   scrim.querySelector('[data-close]').addEventListener('click', () => scrim.remove());
@@ -20304,14 +20313,18 @@ function openCardSheetPicker(current) {
   });
 }
 
-// Settings → "Print Recipe Cards": all own recipes ticked by default.
+// Settings → "Print Recipe Cards": every recipe you can see (yours plus public /
+// shared / restricted ones from the community) ticked by default.
 function openPrintRecipesDialog() {
-  const recipes = _printableRecipes(false);
+  const recipes = _printableRecipes(true);
   if (!recipes.length) { showToast('No recipes to print'); return; }
+  const mine = r => !currentUser || r.ownerId === currentUser.uid;
   openRecipeChecklist({
     title: '🖨 Print recipe cards', recipes,
     selected: recipes.map(r => r.id || r.title),
     note: 'Prints 4 cards per A4 sheet (fronts, then backs). Untick recipes or whole categories to leave them out.',
+    badge: r => mine(r) ? '' : 'Community',
+    quick: [{ label: 'Only mine', test: mine }],
     confirmLabel: n => n ? `🖨 Print ${n} recipe${n === 1 ? '' : 's'}` : 'Print',
     onConfirm: chosen => printRecipeList(chosen),
   });
