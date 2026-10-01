@@ -19291,6 +19291,16 @@ async function loadCommunityRecipes() {
   return [...pub, ...shared, ...restricted];
 }
 
+// Re-pulls the public/shared/restricted recipes into communityLib. Saving or
+// deleting only reloads the user's OWN recipes, so without this an admin's
+// change to someone else's recipe wouldn't show until the next full reload.
+async function _refreshCommunityRecipes() {
+  try {
+    const fresh = await loadCommunityRecipes();
+    communityLib = dedupe([...communityLib.filter(b => !b.isRecipe), ...fresh]);
+  } catch (e) { console.warn('Community recipe refresh failed:', e); }
+}
+
 // Wraps a recipe doc in the same shape the grid renders, tagged with
 // isRecipe (parallel to isAudio) so cards pick the right icon/tile and
 // clicks open cook-mode instead of the reader/player.
@@ -19574,25 +19584,26 @@ function updateTrackNavButtons(track) {
 // Ported verbatim from eRecipe's js/render.js. Lines ending in ":" become
 // sub-headings; otherwise normal list items. Numbered for steps (tag='ol').
 function renderSectionedList(lines, tag) {
-  let html    = `<${tag}>`;
-  let open    = true;
-  let stepNum = 0;
+  // A line ending in ":" is a sub-heading: it closes the current list, is
+  // shown on its own, and the NEXT item opens a fresh list — so every item
+  // always sits inside a <ul>/<ol> and lines up identically.
+  let html = '', open = false, stepNum = 0;
+  const openList  = () => { if (!open) { html += `<${tag}>`; open = true; } };
+  const closeList = () => { if (open) { html += `</${tag}>`; open = false; } };
   for (const line of (lines || [])) {
     const t = line.trim();
     if (!t) continue;
     if (t.endsWith(':')) {
-      if (open) { html += `</${tag}>`; open = false; }
-      html += `<li style="list-style:none;font-weight:700;margin-top:.7em;margin-left:0">${esc(t.slice(0, -1))}</li>`;
-      open = true;
+      closeList();
+      html += `<div class="cm-subhead">${esc(t.slice(0, -1))}</div>`;
       if (tag === 'ol') stepNum = 0;
-    } else if (tag === 'ol') {
-      stepNum++;
-      html += `<li><span class="cm-step-num">${stepNum}</span><span>${esc(t)}</span></li>`;
     } else {
-      html += `<li>${esc(t)}</li>`;
+      openList();
+      if (tag === 'ol') { stepNum++; html += `<li><span class="cm-step-num">${stepNum}</span><span class="cm-step-text">${esc(t)}</span></li>`; }
+      else html += `<li>${esc(t)}</li>`;
     }
   }
-  if (open) html += `</${tag}>`;
+  closeList();
   return html;
 }
 
@@ -20027,6 +20038,7 @@ function _cardSheetEnsureStyles() {
       padding:.45rem .7rem;background:var(--panel);font-size:.78rem;color:var(--navy2);border-bottom:1px solid var(--border);}
     .rc-cat label{display:flex;align-items:center;gap:.5rem;cursor:pointer;}
     .rc-n{font-size:.7rem;color:var(--muted);}
+    .rc-badge{margin-left:auto;font-size:.68rem;color:var(--muted);background:var(--panel);border-radius:10px;padding:.1rem .5rem;white-space:nowrap;}
     .rc-row{display:flex;align-items:center;gap:.6rem;padding:.5rem .7rem .5rem 1rem;font-size:.86rem;
       color:var(--navy2);border-bottom:1px solid var(--border);cursor:pointer;}
     .rc-row.dis{opacity:.45;}
@@ -20179,7 +20191,8 @@ function openRecipeChecklist(o) {
     listHtml += `<div class="rc-group"><div class="rc-cat">` +
       (unlimited ? `<label><input type="checkbox" data-cat="${esc(cat)}"><b>${esc(cat)}</b></label>` : `<b>${esc(cat)}</b>`) +
       `<span class="rc-n">${idxs.length}</span></div>` +
-      idxs.map(i => `<label class="rc-row" data-i="${i}"><input type="checkbox" data-i="${i}"><span>${esc(recipes[i].title || 'Untitled Recipe')}</span></label>`).join('') +
+      idxs.map(i => { const bd = o.badge ? o.badge(recipes[i]) : '';
+        return `<label class="rc-row" data-i="${i}"><input type="checkbox" data-i="${i}"><span>${esc(recipes[i].title || 'Untitled Recipe')}</span>${bd ? `<span class="rc-badge">${esc(bd)}</span>` : ''}</label>`; }).join('') +
       `</div>`;
   });
 
@@ -20193,6 +20206,7 @@ function openRecipeChecklist(o) {
       <input type="search" class="rc-search" placeholder="Search recipes…" autocomplete="off">
       <div class="rc-tools">
         ${unlimited ? '<button type="button" data-all>Select all</button><button type="button" data-none>None</button>' : ''}
+        ${(o.quick || []).map((q, qi) => `<button type="button" data-quick="${qi}">${esc(q.label)}</button>`).join('')}
         <span class="rc-count"></span>
       </div>
       <div class="rc-list">${listHtml}</div>
@@ -20260,6 +20274,12 @@ function openRecipeChecklist(o) {
     });
     sync();
   };
+  scrim.querySelectorAll('[data-quick]').forEach(b => b.addEventListener('click', () => {
+    const q = o.quick[+b.dataset.quick];
+    sel.clear();
+    recipes.forEach(r => { if (q.test(r)) sel.add(keyOf(r)); });
+    sync();
+  }));
   scrim.querySelector('[data-all]')?.addEventListener('click', () => setVisible(true));
   scrim.querySelector('[data-none]')?.addEventListener('click', () => setVisible(false));
   scrim.querySelector('[data-close]').addEventListener('click', () => scrim.remove());
@@ -20293,14 +20313,18 @@ function openCardSheetPicker(current) {
   });
 }
 
-// Settings → "Print Recipe Cards": all own recipes ticked by default.
+// Settings → "Print Recipe Cards": every recipe you can see (yours plus public /
+// shared / restricted ones from the community) ticked by default.
 function openPrintRecipesDialog() {
-  const recipes = _printableRecipes(false);
+  const recipes = _printableRecipes(true);
   if (!recipes.length) { showToast('No recipes to print'); return; }
+  const mine = r => !currentUser || r.ownerId === currentUser.uid;
   openRecipeChecklist({
     title: '🖨 Print recipe cards', recipes,
     selected: recipes.map(r => r.id || r.title),
     note: 'Prints 4 cards per A4 sheet (fronts, then backs). Untick recipes or whole categories to leave them out.',
+    badge: r => mine(r) ? '' : 'Community',
+    quick: [{ label: 'Only mine', test: mine }],
     confirmLabel: n => n ? `🖨 Print ${n} recipe${n === 1 ? '' : 's'}` : 'Print',
     onConfirm: chosen => printRecipeList(chosen),
   });
@@ -20414,36 +20438,49 @@ function _cmEnsureOverlay() {
   el.id = 'cookModeOverlay';
   el.style.cssText = 'position:fixed;inset:0;z-index:500;background:var(--cream);display:none;flex-direction:column;';
   el.innerHTML = `
-    <div style="flex-shrink:0;display:flex;align-items:center;gap:.8rem;padding:.9rem 1rem;background:var(--warm-white);border-bottom:1px solid var(--border);">
-      <button onclick="closeRecipeCookMode()" style="border:none;background:none;font-size:1.3rem;cursor:pointer;color:var(--navy);line-height:1;">←</button>
-      <div style="flex:1;min-width:0;">
-        <div id="cmCategory" style="font-size:.72rem;color:var(--teal-dark);font-weight:700;letter-spacing:.03em;"></div>
-        <div id="cmTitle" style="font-family:'Playfair Display',serif;font-size:1.15rem;color:var(--navy);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"></div>
-      </div>
+    <div style="flex-shrink:0;display:flex;align-items:center;gap:.8rem;padding:.7rem 1rem;background:var(--warm-white);border-bottom:1px solid var(--border);">
+      <button onclick="closeRecipeCookMode()" aria-label="Back" style="border:none;background:none;font-size:1.4rem;cursor:pointer;color:var(--navy);line-height:1;">←</button>
+      <div style="flex:1;"></div>
       <button onclick="promptRecipePrint(_cmCurrentRecipe)" title="Print recipe" aria-label="Print recipe" style="border:none;background:none;font-size:1.25rem;cursor:pointer;">🖨</button>
       <button onclick="document.getElementById('cmTimerTray').style.display=document.getElementById('cmTimerTray').style.display==='none'?'block':'none';" style="border:none;background:none;font-size:1.25rem;cursor:pointer;">⏱</button>
     </div>
     <div id="cmTimerTray" style="display:none;flex-shrink:0;max-height:35vh;overflow-y:auto;background:var(--panel);border-bottom:1px solid var(--border);">
       <div id="cmTimerList"></div>
     </div>
-    <div style="flex:1;overflow-y:auto;padding:1.2rem 1.2rem 3rem;max-width:720px;margin:0 auto;width:100%;box-sizing:border-box;">
-      <img id="cmCoverImg" style="display:none;width:100%;max-height:280px;object-fit:cover;border-radius:10px;margin-bottom:1rem;"/>
-      <div id="cmByline" style="font-size:.8rem;color:var(--muted);margin-bottom:.6rem;display:none;"></div>
-      <div id="cmDesc" style="font-size:.92rem;color:var(--navy);margin-bottom:1.2rem;line-height:1.5;"></div>
-      <h3 style="font-family:'Playfair Display',serif;color:var(--rust);border-bottom:2px solid var(--gold);padding-bottom:.3rem;margin-bottom:.6rem;">Ingredients</h3>
-      <div id="cmIngredients" style="margin-bottom:1.6rem;line-height:1.7;"></div>
-      <h3 style="font-family:'Playfair Display',serif;color:var(--rust);border-bottom:2px solid var(--gold);padding-bottom:.3rem;margin-bottom:.6rem;">Steps</h3>
-      <div id="cmSteps" style="line-height:1.9;"></div>
-      <div id="cmTip" style="display:none;margin-top:1.4rem;padding:.8rem 1rem;background:var(--teal-light);border-radius:8px;font-size:.85rem;color:var(--teal-dark);"></div>
+    <div style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:1.2rem 1.2rem 3.5rem;max-width:720px;margin:0 auto;width:100%;box-sizing:border-box;">
+      <img id="cmCoverImg" alt="" style="display:none;width:100%;max-height:340px;object-fit:cover;border-radius:14px;margin-bottom:1.1rem;box-shadow:0 4px 18px rgba(0,0,0,.18);"/>
+      <div id="cmCategory" class="cm-cat"></div>
+      <h1 id="cmTitle" class="cm-title"></h1>
+      <div id="cmDesc" class="cm-desc"></div>
+      <h3 class="cm-h">Ingredients</h3>
+      <div id="cmIngredients"></div>
+      <h3 class="cm-h">Steps</h3>
+      <div id="cmSteps"></div>
+      <div id="cmTip" class="cm-tip" style="display:none;"></div>
     </div>`;
   document.body.appendChild(el);
 
   const style = document.createElement('style');
   style.textContent = `
-    .cm-step-num{display:inline-flex;align-items:center;justify-content:center;width:1.6em;height:1.6em;border-radius:50%;background:var(--gold);color:#fff;font-size:.75em;font-weight:700;margin-right:.5em;flex-shrink:0;}
-    #cmSteps ol,#cmIngredients ul{list-style:none;margin:0;padding:0;}
-    #cmSteps li{display:flex;align-items:flex-start;margin-bottom:.7em;}
-    #cmIngredients li{padding:.25em 0;border-bottom:1px dashed var(--border);}
+    #cookModeOverlay .cm-cat{font-size:.78rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--rust);margin-bottom:.35rem;}
+    #cookModeOverlay .cm-cat:empty{display:none;}
+    #cookModeOverlay .cm-title{font-family:'Playfair Display',serif;font-weight:700;font-size:2rem;line-height:1.2;color:var(--navy);margin:0 0 .7rem;}
+    #cookModeOverlay .cm-desc{font-size:1.02rem;line-height:1.6;color:var(--muted);margin-bottom:.4rem;white-space:pre-line;}
+    #cookModeOverlay .cm-desc:empty{display:none;}
+    #cookModeOverlay .cm-h{font-family:'Playfair Display',serif;font-size:1.4rem;color:var(--rust);margin:1.8rem 0 .85rem;padding-bottom:.35rem;border-bottom:2px solid var(--gold);}
+    #cmIngredients{background:var(--warm-white);border:1px solid var(--border);border-left:5px solid var(--gold);border-radius:0 12px 12px 0;padding:.5rem 1.1rem .6rem;}
+    #cmIngredients ul,#cmSteps ol{list-style:none;margin:0;padding:0;}
+    #cmIngredients li{position:relative;padding:.55em 0 .55em 1.5em;font-size:1.05rem;line-height:1.45;color:var(--navy);border-bottom:1px solid var(--border);}
+    #cmIngredients li:last-child{border-bottom:none;}
+    #cmIngredients li::before{content:'';position:absolute;left:.2em;top:1.05em;width:.5em;height:.5em;border-radius:50%;background:var(--rust);}
+    #cmIngredients ul:last-child li:last-child{border-bottom:none;}
+    #cookModeOverlay .cm-subhead{font-weight:700;font-size:.8rem;letter-spacing:.14em;text-transform:uppercase;color:var(--rust);margin:1.05rem 0 .15rem;}
+    #cmIngredients .cm-subhead:first-child,#cmSteps .cm-subhead:first-child{margin-top:.5rem;}
+    #cmSteps li{display:flex;align-items:flex-start;gap:.9rem;margin-bottom:1.15rem;font-size:1.08rem;line-height:1.65;color:var(--navy);}
+    .cm-step-num{display:inline-flex;align-items:center;justify-content:center;flex:0 0 2.1rem;width:2.1rem;height:2.1rem;border-radius:50%;background:var(--gold);color:#fff;font-size:.9rem;font-weight:700;margin-top:.1rem;}
+    .cm-step-text{flex:1;min-width:0;}
+    #cookModeOverlay .cm-tip{margin-top:1.8rem;padding:.95rem 1.1rem;background:var(--teal-light);border-left:5px solid var(--teal);border-radius:0 10px 10px 0;font-size:.98rem;line-height:1.55;color:var(--teal-dark);}
+    #cookModeOverlay .cm-tip::before{content:'Tip  ';font-weight:700;letter-spacing:.12em;text-transform:uppercase;font-size:.75rem;}
     .inline-timer-btn{border:1px solid var(--gold);background:var(--warm-white);color:var(--teal-dark);border-radius:12px;font-size:.72rem;padding:.15em .6em;margin-left:.4em;cursor:pointer;white-space:nowrap;}`;
   document.head.appendChild(style);
 }
@@ -20484,9 +20521,6 @@ function openRecipeCookMode(recipe) {
   const coverImg = document.getElementById('cmCoverImg');
   if (recipe.coverUrl) { coverImg.src = recipe.coverUrl; coverImg.style.display = 'block'; }
   else { coverImg.style.display = 'none'; }
-  const bylineEl = document.getElementById('cmByline');
-  if (recipe.createdByName) { bylineEl.textContent = `Recipe by ${recipe.createdByName}`; bylineEl.style.display = 'block'; }
-  else { bylineEl.style.display = 'none'; }
   document.getElementById('cmDesc').innerHTML = esc(recipe.desc || '');
   document.getElementById('cmIngredients').innerHTML = renderSectionedList(recipe.ingredients, 'ul');
   document.getElementById('cmSteps').innerHTML = linkifyTimers(renderSectionedList(recipe.steps, 'ol'));
@@ -20553,6 +20587,10 @@ function _reEnsureEditor() {
 
       <label class="re-lbl">Title</label>
       <input id="reTitle" class="re-input" type="text" placeholder="Cowboy Coffee Cake"/>
+      <label id="reAutoFindRow" style="display:flex;align-items:flex-start;gap:.55rem;margin-top:.55rem;font-size:.82rem;color:var(--navy);cursor:pointer;line-height:1.35;">
+        <input id="reAutoFind" type="checkbox" checked style="width:18px;height:18px;margin-top:1px;flex-shrink:0;accent-color:var(--teal);"/>
+        <span>🔎 Find this recipe online and fill it in<br><span style="color:var(--muted);font-size:.74rem;">When you press Save with only a title, AI searches the web for the recipe and a good photo, then shows it for you to check.</span></span>
+      </label>
 
       <label class="re-lbl">Author <span class="re-hint">(who wrote it — filled in from the source on import)</span></label>
       <input id="reAuthor" class="re-input" type="text" placeholder="BBC Good Food, Nigella Lawson…"/>
@@ -20744,6 +20782,7 @@ async function importRecipeFromLink() {
 // doesn't become a 10 MB upload. Up to 4 photos = a multi-page recipe or both
 // sides of a recipe card; they're read together as one recipe.
 const _importRecipeImageCallable = httpsCallable(fns, 'importRecipeFromImage', { timeout: 120000 });
+const _findRecipeCallable = httpsCallable(fns, 'findRecipeByName', { timeout: 240000 });
 const RECIPE_PHOTO_MAX = 4;
 
 function _loadImageFile(file) {
@@ -20825,7 +20864,11 @@ function showRecipeEditor(recipe) {
   document.getElementById('reIngredients').value = (recipe?.ingredients || []).join('\n');
   document.getElementById('reSteps').value = (recipe?.steps || []).join('\n');
   document.getElementById('reTip').value = recipe?.tip || '';
-  _reSetVis(recipe?.visibility || 'private');
+  _reSetVis(recipe ? (recipe.visibility || 'private') : 'public');   // new recipes default to public
+
+  // Only offered when creating: ticked by default, hidden while editing.
+  const autoRow = document.getElementById('reAutoFindRow');
+  if (autoRow) { autoRow.style.display = recipe ? 'none' : 'flex'; document.getElementById('reAutoFind').checked = true; }
 
   const impUrl = document.getElementById('reImportUrl');
   const impStatus = document.getElementById('reImportStatus');
@@ -20861,12 +20904,59 @@ function closeRecipeEditor() {
   if (el) el.style.display = 'none';
 }
 
+// "Find this recipe online": searches the web by the typed title, fills the
+// editor and STAYS OPEN so the result is reviewed before the real save.
+async function _findRecipeOnline(title) {
+  const saveBtn = document.getElementById('reSaveBtn');
+  const status = document.getElementById('reImportStatus');
+  const prev = saveBtn.textContent;
+  saveBtn.disabled = true; saveBtn.textContent = 'Searching…';
+  status.style.color = 'var(--muted)';
+  status.textContent = `Searching the web for “${title}” — this can take up to a minute…`;
+  try {
+    const { data: r } = await _findRecipeCallable({ name: title });
+    // Keep the title the user typed; fill only what the search produced.
+    const set = (id, v) => { if (v) document.getElementById(id).value = v; };
+    set('reCategory', r.chapterName);
+    set('reDesc', r.desc);
+    set('reIngredients', (r.ingredients || []).join('\n'));
+    set('reSteps', (r.steps || []).join('\n'));
+    set('reTip', r.tip);
+    const overlay = document.getElementById('recipeEditorOverlay');
+    if (r.coverUrl && !overlay.dataset.pendingCoverUrl) {
+      overlay.dataset.pendingCoverUrl = r.coverUrl;
+      _reRenderCoverPreview();
+    }
+    status.style.color = 'var(--teal-dark)';
+    status.textContent = `Found a recipe (${(r.ingredients || []).length} ingredients, ${(r.steps || []).length} steps)` +
+      (r.coverUrl ? ' and a photo' : (r.imageTooSmall ? ' — no photo large enough, you can upload one' : '')) +
+      ' — check everything, then press Save.';
+    showToast('Recipe found — review and save');
+  } catch (e) {
+    console.warn('Recipe lookup failed:', e);
+    // Untick so the next Save works as a normal manual save.
+    document.getElementById('reAutoFind').checked = false;
+    status.style.color = 'var(--danger)';
+    status.textContent = ((e && e.message) ? e.message : 'Could not find that recipe.') +
+      ' Add the ingredients and steps yourself, or paste a link above.';
+  } finally {
+    saveBtn.disabled = false; saveBtn.textContent = prev;
+  }
+}
+
 async function saveRecipeFromEditor() {
   const overlay = document.getElementById('recipeEditorOverlay');
   const title = document.getElementById('reTitle').value.trim();
   if (!title) { showToast('Please enter a title'); return; }
   const ingredients = document.getElementById('reIngredients').value.split('\n').map(l => l.trim()).filter(Boolean);
   const steps = document.getElementById('reSteps').value.split('\n').map(l => l.trim()).filter(Boolean);
+
+  // New recipe, box ticked, nothing typed yet → look it up instead of saving.
+  if (!overlay.dataset.editId && !ingredients.length && !steps.length &&
+      document.getElementById('reAutoFind')?.checked) {
+    await _findRecipeOnline(title);
+    return;
+  }
   if (!ingredients.length) { showToast('Please add at least one ingredient'); return; }
   if (!steps.length) { showToast('Please add at least one step'); return; }
 
@@ -20921,6 +21011,7 @@ async function saveRecipeFromEditor() {
     }
     await loadRecipes();
     mergeRecipesIntoLibrary();
+    if (editId && isAdmin) await _refreshCommunityRecipes();   // admin may have edited someone else's recipe
     renderAll();
     closeRecipeEditor();
     showToast(editId ? 'Recipe updated' : 'Recipe added');
@@ -20941,6 +21032,7 @@ async function deleteRecipeFromEditor() {
     await deleteDoc(doc(db, 'recipes', editId));
     await loadRecipes();
     mergeRecipesIntoLibrary();
+    communityLib = communityLib.filter(b => b.id !== editId);
     renderAll();
     closeRecipeEditor();
     closeRecipeCookMode();
