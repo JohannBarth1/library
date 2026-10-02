@@ -20561,7 +20561,7 @@ function _reEnsureEditor() {
     <div style="flex:1;overflow-y:auto;padding:1.2rem 1.2rem 3rem;max-width:640px;margin:0 auto;width:100%;box-sizing:border-box;">
       <div id="reImportBox" style="border:1px dashed var(--border);border-radius:10px;padding:.85rem;margin-bottom:1.3rem;background:var(--panel);">
         <div style="font-weight:700;color:var(--teal-dark);font-size:.92rem;">✨ Create with AI <span class="re-hint">(all optional)</span></div>
-        <div class="re-hint" style="margin-top:.2rem;line-height:1.4;">Fill in <b>one</b> of 1, 2 or 3, then press Submit at the bottom of this box. If you fill in more than one, it uses the link first, then the photos, then the name. A web search only fills in what is still empty and never replaces a cover you added.</div>
+        <!--<div class="re-hint" style="margin-top:.2rem;line-height:1.4;">Fill in <b>one</b> of 1, 2 or 3, then press Submit at the bottom of this box. If you fill in more than one, it uses the link first, then the photos, then the name. A web search only fills in what is still empty and never replaces a cover you added.</div>-->
 
         <div class="re-sub">1 · I have a link</div>
         <input id="reImportUrl" class="re-input" type="url" inputmode="url" autocomplete="off" placeholder="https://…" style="margin:0;"/>
@@ -20575,6 +20575,9 @@ function _reEnsureEditor() {
           <div class="re-sub">3 · I only know the name</div>
           <input id="reFindName" class="re-input" type="text" autocomplete="off" placeholder="Recipe Name" style="margin:0;"/>
         </div>
+
+        <div class="re-sub">Extra instructions for the AI <span class="re-hint">(optional — used with 1, 2 or 3)</span></div>
+        <textarea id="reNotes" class="re-input" rows="2" maxlength="500" placeholder="e.g. include the recipe for the dough, not pre-made dough" style="margin:0;"></textarea>
 
         <div class="re-sub">Photo of the finished dish</div>
         <div style="display:flex;align-items:center;gap:.8rem;margin-bottom:.6rem;">
@@ -20602,8 +20605,7 @@ function _reEnsureEditor() {
       <input id="reAuthor" class="re-input" type="text" placeholder="BBC Good Food, Nigella Lawson…"/>
 
       <label class="re-lbl">Category</label>
-      <input id="reCategory" class="re-input" type="text" list="reCategoryList" placeholder="Breakfast Foods, Cakes, Mains…"/>
-      <datalist id="reCategoryList"></datalist>
+      <select id="reCategory" class="re-input"></select>
 
       <label class="re-lbl">Description</label>
       <textarea id="reDesc" class="re-input" rows="2" placeholder="A rustic, hearty coffee cake with a thick brown sugar crumble."></textarea>
@@ -20637,6 +20639,7 @@ function _reEnsureEditor() {
        otherwise re-introduce the zoom on the ingredients/steps boxes. */
     .re-input{width:100%;box-sizing:border-box;border:1px solid var(--border);border-radius:8px;padding:.6rem .7rem;font-family:'Lato',sans-serif;font-size:16px;color:var(--navy);background:var(--warm-white);resize:vertical;}
     .re-mono{font-family:ui-monospace,Menlo,monospace;font-size:16px;line-height:1.5;}
+    #recipeEditorOverlay input:not([type=checkbox]),#recipeEditorOverlay select,#recipeEditorOverlay textarea{font-size:16px !important;}
     .re-vis-btn{flex:1;border:1px solid var(--border);background:var(--warm-white);border-radius:20px;padding:.5rem;font-size:.82rem;cursor:pointer;color:var(--muted);}
     .re-vis-btn.active{border-color:var(--teal);background:var(--teal-light);color:var(--teal-dark);font-weight:700;}`;
   document.head.appendChild(style);
@@ -20646,6 +20649,14 @@ function _reEnsureEditor() {
   document.getElementById('reSaveBtn').addEventListener('click', saveRecipeFromEditor);
   ['reTitle','reIngredients','reSteps'].forEach(id => document.getElementById(id).addEventListener('input', _reUpdatePlan));
   document.getElementById('reAutoPhoto').addEventListener('change', _reUpdatePlan);
+  document.getElementById('reNotes').addEventListener('input', _reUpdatePlan);
+  document.getElementById('reCategory').addEventListener('change', e => {
+    const sel = e.target;
+    if (sel.value === '__new__') {
+      const name = (prompt('Name for the new category:') || '').trim();
+      if (name) _reSetCategory(name); else sel.value = _reCatPrev;
+    } else _reCatPrev = sel.value;
+  });
   document.getElementById('reDeleteBtn').addEventListener('click', deleteRecipeFromEditor);
   document.getElementById('reCoverBtn').addEventListener('click', () => document.getElementById('reCoverFile').click());
   document.getElementById('reCoverFile').addEventListener('change', _reHandleCoverFile);
@@ -20742,7 +20753,7 @@ function _applyImportedRecipe(r, fallbackAuthor) {
   // The importer may name the author outright; if it doesn't, fall back to
   // the publication/site name (links) so the credit is never blank.
   setIfEmptyOrNew('reAuthor', r.author || fallbackAuthor);
-  setIfEmptyOrNew('reCategory', r.chapterName);
+  if (r.chapterName) _reSetCategory(r.chapterName);
   setIfEmptyOrNew('reDesc', r.desc);
   setIfEmptyOrNew('reIngredients', (r.ingredients || []).join('\n'));
   setIfEmptyOrNew('reSteps', (r.steps || []).join('\n'));
@@ -20768,7 +20779,7 @@ async function importRecipeFromLink() {
   status.style.color = 'var(--muted)';
   status.textContent = 'Fetching the page and reading the recipe — this can take up to a minute…';
   try {
-    const { data: r } = await _importRecipeCallable({ url });
+    const { data: r } = await _importRecipeCallable({ url, ..._reExtra() });
     _applyImportedRecipe(r, r.siteName || _hostnameToAuthor(url));
     status.style.color = 'var(--teal-dark)';
     status.textContent = `Imported ${(r.ingredients || []).length} ingredients and ${(r.steps || []).length} steps — please check them before saving.`;
@@ -20861,6 +20872,7 @@ async function importRecipeFromPhotos() {
     status.textContent = 'Reading the recipe from the photo — this can take up to a minute…';
     const { data: r } = await _importRecipeImageCallable({
       images,
+      ..._reExtra(),
       categories: (typeof getCategoryList === 'function' ? getCategoryList() : []).slice(0, 60),
     });
     _applyImportedRecipe(r, '');
@@ -20876,6 +20888,34 @@ async function importRecipeFromPhotos() {
   }
 }
 
+// ── Category dropdown ───────────────────────────────────────────────────────
+// The same shared, admin-managed genre list used for books/audio, plus any category
+// already used by a recipe (e.g. one that came in through the eRecipe import tool).
+let _reCatPrev = '';
+function _reBuildCategories() {
+  const sel = document.getElementById('reCategory');
+  const used = _recipes.map(r => r.chapterName || r.category).filter(Boolean);
+  const cats = [...new Set([...getCategoryList(), ...used])].sort((a, b) => a.localeCompare(b));
+  sel.innerHTML = '<option value="">Choose a category…</option>' +
+    cats.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('') +
+    '<option value="__new__">➕ New category…</option>';
+}
+// Selects a category, adding it to the list first if it is not there yet (e.g. one the AI suggested).
+function _reSetCategory(v) {
+  const sel = document.getElementById('reCategory');
+  v = (v || '').trim();
+  if (!v) { sel.value = ''; _reCatPrev = ''; return; }
+  let opt = [...sel.options].find(o => o.value.toLowerCase() === v.toLowerCase());
+  if (!opt) {
+    opt = document.createElement('option');
+    opt.value = v; opt.textContent = v;
+    sel.insertBefore(opt, sel.lastElementChild);   // keep "New category…" last
+  }
+  sel.value = opt.value; _reCatPrev = opt.value;
+}
+function _reNotes() { return (document.getElementById('reNotes').value || '').trim(); }
+function _reExtra() { const n = _reNotes(); return n ? { notes: n } : {}; }
+
 // Pass an existing eRecipe-shaped recipe object to edit it; omit to create new.
 function showRecipeEditor(recipe) {
   if (!currentUser) { showToast('Please sign in first'); return; }
@@ -20889,7 +20929,8 @@ function showRecipeEditor(recipe) {
   // Falls back to createdByName so recipes saved before the author field
   // existed show whoever added them rather than an empty box.
   document.getElementById('reAuthor').value = recipe?.author || recipe?.createdByName || '';
-  document.getElementById('reCategory').value = recipe?.chapterName || recipe?.category || '';
+  _reBuildCategories();
+  _reSetCategory(recipe?.chapterName || recipe?.category || '');
   document.getElementById('reDesc').value = recipe?.desc || '';
   document.getElementById('reIngredients').value = (recipe?.ingredients || []).join('\n');
   document.getElementById('reSteps').value = (recipe?.steps || []).join('\n');
@@ -20900,6 +20941,7 @@ function showRecipeEditor(recipe) {
   // when editing, but off by default so a plain edit never triggers a search.
   document.getElementById('reAutoFindRow').style.display = recipe ? 'none' : 'block';
   document.getElementById('reFindName').value = '';
+  document.getElementById('reNotes').value = '';
   _rePhotoQueue = []; _reRenderPhotoQueue();
   document.getElementById('reAutoPhoto').checked = !recipe;
 
@@ -20914,20 +20956,7 @@ function showRecipeEditor(recipe) {
   overlay.dataset.pendingCoverUrl = recipe?.coverUrl || '';
   _reRenderCoverPreview();
 
-  // Category suggestions: the same shared, admin-managed genre list used
-  // for books/audio (getCategoryList()) — this is what makes it a "proper"
-  // category system rather than something recipes track separately — plus
-  // any category already in use on a recipe that hasn't been added to that
-  // shared list yet (e.g. one that came in through the eRecipe import tool).
-  // No icon prefix here: a <datalist> option's value has to be the plain
-  // category name (that's what actually gets saved), and giving the option
-  // a *different* visible label than its value is exactly what makes some
-  // browsers show the name twice in the suggestion list. Icons still show
-  // everywhere it's actually useful to see them at a glance — group tiles,
-  // the Admin genre manager — just not in this free-text picker.
-  const recipeOnlyCats = _recipes.map(r => r.chapterName || r.category).filter(Boolean);
-  const cats = [...new Set([...getCategoryList(), ...recipeOnlyCats])].sort((a, b) => a.localeCompare(b));
-  document.getElementById('reCategoryList').innerHTML = cats.map(c => `<option value="${esc(c)}"></option>`).join('');
+  // Category dropdown: see _reBuildCategories (shared genre list + categories already used by recipes).
 
   overlay.style.display = 'flex';
 }
@@ -20947,11 +20976,11 @@ function _reAutoPlan() {
   const name = ov.dataset.editId ? '' : g('reFindName').value.trim();
   const title = g('reTitle').value.trim();
   const wantPhoto = g('reAutoPhoto').checked && !ov.dataset.pendingCoverUrl;
-  const more = wantPhoto ? ' Then it looks for a photo of the dish.' : '';
+  const more = (wantPhoto ? ' Then it looks for a photo of the dish.' : '') + (_reNotes() ? ' Your extra instructions are sent along.' : '');
   const others = [n ? 'photos' : '', name ? 'name' : ''].filter(Boolean).join(' and ');
   if (url) return { mode: 'link', text: 'Submit will read the recipe from your link.' + (others ? ' (Your ' + others + ' will be ignored.)' : '') + more };
   if (n) return { mode: 'photos', text: 'Submit will read the recipe from your ' + (n === 1 ? 'photo' : n + ' photos') + '.' + (name ? ' (The name will be ignored.)' : '') + more };
-  if (name) return { mode: 'name', text: 'Submit will search the web for “' + name + '”' + (wantPhoto ? ' and a photo of the dish' : '') + ', then show it for you to check.' };
+  if (name) return { mode: 'name', text: 'Submit will search the web for “' + name + '”' + (wantPhoto ? ' and a photo of the dish' : '') + ', then show it for you to check.' + (_reNotes() ? ' Your extra instructions are sent along.' : '') };
   if (wantPhoto && title) return { mode: 'photo', text: 'Submit will search the web for a photo of “' + title + '” only. Your recipe text is not touched.' };
   return { mode: null, text: 'Add a link, photos or a name above, then press Submit — or just fill in the recipe yourself below.' };
 }
@@ -21005,12 +21034,12 @@ async function _findRecipeOnline(title, mode) {
     ? `Searching the web for a photo of “${title}” — this can take up to a minute…`
     : `Searching the web for “${title}” — this can take up to a minute…`;
   try {
-    const { data: r } = await _findRecipeCallable({ name: title, imageOnly: photoOnly });
+    const { data: r } = await _findRecipeCallable({ name: title, imageOnly: photoOnly, ...(photoOnly ? {} : _reExtra()) });
     // Fill only what is still empty.
     const set = (id, v) => { if (v && !g(id).value.trim()) g(id).value = v; };
     if (!photoOnly) {
       set('reTitle', title);
-      set('reCategory', r.chapterName);
+      if (!g('reCategory').value && r.chapterName) _reSetCategory(r.chapterName);
       set('reDesc', r.desc);
       set('reIngredients', (r.ingredients || []).join('\n'));
       set('reSteps', (r.steps || []).join('\n'));
