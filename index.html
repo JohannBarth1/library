@@ -4938,6 +4938,7 @@ function renderDetailActionRows(peekContainer, moreContainer, book, isMine){
       : book.isAudio
       ? bigBtn('🎧', hasStarted ? 'Continue Listening' : 'Listen', 'read','#3d7a96','var(--gold)')
       : bigBtn('📖', hasStarted ? 'Continue Reading' : 'Read', 'read','#3d7a96','var(--gold)')}
+    ${(book.isAudio || book.isRecipe) ? '' : bigBtn('🎧', listenHasProgress(book.id) ? 'Continue Listening' : 'Listen', 'listen','var(--teal)','var(--gold)')}
     ${(book.isAudio || book.isRecipe) ? '' : bigBtn('🔲','Send to Kobo','sendtokobo','var(--teal)','var(--gold)')}
   </div>`;
 
@@ -5249,11 +5250,15 @@ function buildDrawerIconBar(book, isMine){
 
   let html = `
     <!-- Primary: Read/Listen/Open (+ Continue variants) + Send to Kobo -->
-    <div style="display:flex;gap:.5rem;padding:.65rem 1.5rem .5rem;border-bottom:1px solid var(--border);">
+    <div style="display:flex;flex-wrap:wrap;gap:.5rem;padding:.65rem 1.5rem .5rem;border-bottom:1px solid var(--border);">
       <button class="btn-action btn-read" style="flex:1;justify-content:center;padding:.6rem 1rem;font-size:.83rem;border-radius:24px;gap:.4rem;" data-action="read">
         <span style="font-size:1rem;line-height:1;">${book.isRecipe ? '🍲' : book.isAudio ? '🎧' : '📖'}</span>
         <span>${book.isRecipe ? 'Open' : book.isAudio ? (hasStarted ? 'Continue Listening' : 'Listen') : (hasStarted ? 'Continue Reading' : 'Read')}</span>
       </button>
+      ${(book.isAudio || book.isRecipe) ? '' : `<button class="btn-action btn-read" style="flex:1;justify-content:center;padding:.6rem 1rem;font-size:.83rem;border-radius:24px;gap:.4rem;" data-action="listen">
+        <span style="font-size:1rem;line-height:1;">🎧</span>
+        <span>${listenHasProgress(book.id) ? 'Continue Listening' : 'Listen'}</span>
+      </button>`}
       ${(book.isAudio || book.isRecipe) ? '' : `<button class="btn-action btn-kobo" style="flex:1;justify-content:center;padding:.6rem 1rem;font-size:.83rem;border-radius:24px;gap:.4rem;" data-action="sendtokobo">
         <span style="font-size:1rem;line-height:1;">🔲</span>
         <span>Send to Kobo</span>
@@ -5355,6 +5360,7 @@ function handleAction(e){
 }
 function runDetailAction(a){
   if(a==='sharebook'){ const b=[...library,...communityLib].find(x=>x.id===currentId); if(b) shareBook(b); return; }
+  if(a==='listen'){ listenToCurrentBook(); return; }
   if(a==='read'){
     const book=[...library,...communityLib].find(b=>b.id===currentId);
     if(book?.isAudio){ playAudioTrack(book._audioTrack); closeMobBookSheet(); closeDrawer(); return; }
@@ -13329,12 +13335,12 @@ function ttsLoadVoices() {
   ).join('');
 
   // Default: first local English voice, else first English
-  const localEng = eng.find(v => v.localService);
-  const defaultIdx = voices.indexOf(localEng || eng[0] || voices[0]);
+  const best = ttsPickBestVoice(eng.length ? eng : voices);
+  const defaultIdx = voices.indexOf(best || eng[0] || voices[0]);
   sel.value = defaultIdx >= 0 ? defaultIdx : 0;
   ttsVoice = voices[parseInt(sel.value)];
 
-  sel.onchange = () => { ttsVoice = voices[parseInt(sel.value)]; };
+  sel.onchange = () => { ttsVoice = voices[parseInt(sel.value)]; try{ localStorage.setItem('elib_tts_voice', ttsVoice.name); }catch(e){} };
 }
 
 // Voices load asynchronously — wire both the event and a fallback poll
@@ -21717,6 +21723,379 @@ async function deleteAudioTrack(id) {
 // kept separate from the EPUB uploader.
 
 document.getElementById('audioUploadLabel')?.addEventListener('click', showAudioUploadModal);
+
+// ══════════════════════════════════════════════════════════════════════════
+// LISTEN MODE — narrates an EPUB through the existing audiobook player UI.
+// Parses the EPUB in memory (no reader needed), speaks it sentence-by-sentence
+// with the Web Speech API, and maps the player's controls onto it:
+//   play/pause = play/pause · ⟲10/⟳10 = back/forward 2 sentences
+//   prev/next episode = prev/next chapter · seek bar = position in chapter
+//   speed buttons = speech rate · ✕ = stop · ⌄ = minimise to the mini-bar
+// Engine is isolated in listenSpeak() so a cloud voice (pre-generated MP3 per
+// chapter) can replace Web Speech later without touching the UI wiring.
+// ══════════════════════════════════════════════════════════════════════════
+const LISTEN = {
+  active:false, playing:false, busy:false,
+  bookId:null, book:null, zip:null, opfBase:'', spine:[], chapters:{},
+  ch:0, sents:[], idx:0, token:0, errs:0, startedAt:0, watch:null, rate:1,
+};
+const listenKey = id => `elib_listen_${id}`;
+function listenHasProgress(id){ try{ return !!localStorage.getItem(listenKey(id)); }catch(e){ return false; } }
+
+// ── voice ranking: prefer neural/"Natural" voices (e.g. Edge's Online Natural
+// voices, Chrome's Google voices, Apple Premium/Enhanced) over robotic ones.
+function ttsVoiceScore(v){
+  const n = (v.name || '').toLowerCase();
+  let s = 0;
+  if(/natural|neural/.test(n)) s += 50;
+  if(/premium|enhanced|siri/.test(n)) s += 30;
+  if(/online/.test(n)) s += 20;
+  if(/google/.test(n)) s += 15;
+  if(/compact|espeak|novelty/.test(n)) s -= 30;
+  return s;
+}
+function ttsPickBestVoice(list){
+  try{
+    const saved = localStorage.getItem('elib_tts_voice');
+    const hit = saved && list.find(v => v.name === saved);
+    if(hit) return hit;
+  }catch(e){}
+  return [...list].sort((a,b) => ttsVoiceScore(b) - ttsVoiceScore(a))[0];
+}
+
+// ── text prep ────────────────────────────────────────────────────────────
+function listenSplit(text){
+  const parts = text.match(/[^.!?…]+(?:[.!?…]+["'”’)\]]*|$)\s*/g) || [text];
+  const merged = []; let buf = '';
+  for(const p of parts){ buf += p; if(buf.trim().length >= 40){ merged.push(buf.trim()); buf = ''; } }
+  if(buf.trim()){
+    if(merged.length && buf.trim().length < 40) merged[merged.length-1] += ' ' + buf.trim();
+    else merged.push(buf.trim());
+  }
+  const out = [];
+  for(const s of merged){            // keep each utterance short — long ones get cut off by some engines
+    let rest = s;
+    while(rest.length > 200){
+      let cut = rest.lastIndexOf(', ', 200);
+      if(cut < 80) cut = rest.lastIndexOf(' ', 200);
+      if(cut < 1) cut = 200;
+      out.push(rest.slice(0, cut+1).trim()); rest = rest.slice(cut+1).trim();
+    }
+    if(rest) out.push(rest);
+  }
+  return out;
+}
+
+async function listenLoadBook(book){
+  let storagePath = book.storagePath;
+  if(!storagePath && book.epubUrl){ const m = book.epubUrl.match(/\/o\/(.+?)\?/); if(m) storagePath = decodeURIComponent(m[1]); }
+  if(!storagePath) throw new Error('EPUB not available');
+  let bytes = await getCachedEpubBytes(book.id);
+  if(!bytes){
+    try{ bytes = await getBytes(storageRef(storage, storagePath)); }
+    catch(e){ if(navigator.onLine === false) throw new Error("You're offline and this book isn't downloaded yet."); throw e; }
+  }
+  const zip = await JSZip.loadAsync(bytes);
+  const container = await zip.file('META-INF/container.xml')?.async('string');
+  const opfPath = container?.match(/full-path="([^"]+\.opf)"/i)?.[1];
+  if(!opfPath) throw new Error('No OPF found');
+  const opfXml = await zip.file(opfPath)?.async('string');
+  const base = opfPath.includes('/') ? opfPath.replace(/\/[^/]+$/, '/') : '';
+  const manifest = {}; const mRe = /<item\s+([^>]+)>/gi; let m;
+  while((m = mRe.exec(opfXml)) !== null){
+    const id = m[1].match(/\bid="([^"]+)"/)?.[1], href = m[1].match(/\bhref="([^"]+)"/)?.[1], mt = m[1].match(/\bmedia-type="([^"]+)"/)?.[1];
+    if(id && href) manifest[id] = { href, mediaType: mt };
+  }
+  const labels = {};
+  const ncxId = Object.keys(manifest).find(k => manifest[k].mediaType === 'application/x-dtbncx+xml');
+  if(ncxId){
+    const ncx = await zip.file(base + manifest[ncxId].href)?.async('string');
+    if(ncx){ const re = /<navPoint[^>]*>[\s\S]*?<navLabel[^>]*>[\s\S]*?<text>([^<]*)<\/text>[\s\S]*?<content\s+src="([^"]+)"/gi; let np;
+      while((np = re.exec(ncx)) !== null) labels[np[2].split('#')[0]] = np[1].trim(); }
+  }
+  const spine = []; const sRe = /<itemref\s+idref="([^"]+)"/gi; let sp;
+  while((sp = sRe.exec(opfXml)) !== null){
+    const it = manifest[sp[1]];
+    if(it) spine.push({ href: it.href, label: labels[it.href] || it.href.split('/').pop().replace(/\.x?html?$/i, '') });
+  }
+  if(!spine.length) throw new Error('Empty spine');
+  return { zip, base, spine };
+}
+
+async function listenGetChapter(i){
+  if(LISTEN.chapters[i]) return LISTEN.chapters[i];
+  const item = LISTEN.spine[i];
+  const f = LISTEN.zip.file(LISTEN.opfBase + item.href) || LISTEN.zip.file(LISTEN.opfBase + decodeURIComponent(item.href));
+  let sents = [];
+  if(f){
+    const html = await f.async('string');
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    doc.querySelectorAll('script,style').forEach(n => n.remove());
+    const walk = node => {
+      for(const el of node.children){
+        if(TTS_BLOCK_TAGS.includes(el.tagName.toLowerCase())){
+          const t = el.textContent.replace(/\s+/g, ' ').trim();
+          if(t.length > 3) sents.push(...listenSplit(t));
+        } else walk(el);
+      }
+    };
+    if(doc.body) walk(doc.body);
+    if(!sents.length && doc.body){
+      const t = doc.body.textContent.replace(/\s+/g, ' ').trim();
+      if(t.length > 3) sents = listenSplit(t);
+    }
+  }
+  return (LISTEN.chapters[i] = sents);
+}
+
+// ── persistence (device-local; "Continue Listening" label reads this) ─────
+function listenSave(){
+  if(!LISTEN.bookId) return;
+  try{ localStorage.setItem(listenKey(LISTEN.bookId), JSON.stringify({ ch: LISTEN.ch, idx: LISTEN.idx, ts: Date.now() })); }catch(e){}
+}
+
+// ── UI sync with the existing player markup ──────────────────────────────
+function listenRenderPlay(){
+  const t = LISTEN.playing ? '⏸️' : '▶️';
+  ['audioPlayPauseBtn','audioMiniPlayPauseBtn'].forEach(id => { const b = document.getElementById(id); if(b) b.textContent = t; });
+}
+function listenSetNavLabels(listening){
+  const l = document.querySelectorAll('#audioTrackNav .audio-track-nav-label');
+  if(l[0]) l[0].textContent = listening ? '⏮ Previous chapter' : '⏮ Previous episode';
+  if(l[1]) l[1].textContent = listening ? 'Next chapter ⏭' : 'Next episode ⏭';
+}
+function listenRender(){
+  if(!LISTEN.active) return;
+  const q = id => document.getElementById(id);
+  const label = LISTEN.spine[LISTEN.ch]?.label || `Chapter ${LISTEN.ch + 1}`;
+  const pct = LISTEN.sents.length ? Math.round(100 * LISTEN.idx / LISTEN.sents.length) : 0;
+  q('audioNowPlayingLabel').textContent = LISTEN.book.title || 'Listening';
+  const part = q('audioPartLabel'); part.style.display = ''; part.textContent = label;
+  const seek = q('audioSeek'); seek.max = Math.max(LISTEN.sents.length, 1); seek.value = Math.min(LISTEN.idx, LISTEN.sents.length);
+  q('audioCurTime').textContent = `Ch ${LISTEN.ch + 1}/${LISTEN.spine.length}`;
+  q('audioDurTime').textContent = pct + '%';
+  q('audioMiniBarTitle').textContent = LISTEN.book.title || 'Listening';
+  q('audioMiniBarSub').textContent = `${label} · ${pct}%`;
+  q('audioTrackNav').style.display = 'flex';
+  q('audioPrevTrackBtn').disabled = LISTEN.ch <= 0;
+  q('audioNextTrackBtn').disabled = LISTEN.ch >= LISTEN.spine.length - 1;
+  q('audioPrevTitle').textContent = LISTEN.spine[LISTEN.ch - 1]?.label || '—';
+  q('audioNextTitle').textContent = LISTEN.spine[LISTEN.ch + 1]?.label || '—';
+  ['audioPrevCoverImg','audioNextCoverImg'].forEach(id => q(id).style.display = 'none');
+  ['audioPrevCoverPh','audioNextCoverPh'].forEach(id => q(id).style.display = 'flex');
+  listenRenderPlay();
+}
+function listenFillVoices(){
+  const sel = document.getElementById('listenVoiceSelect'); if(!sel) return;
+  const all = window.speechSynthesis.getVoices(); if(!all.length) return;
+  const lang = (navigator.language || 'en').slice(0, 2).toLowerCase();
+  const mine = all.filter(v => v.lang.toLowerCase().startsWith(lang));
+  const use = (mine.length ? mine : all).slice().sort((a, b) => ttsVoiceScore(b) - ttsVoiceScore(a));
+  sel.innerHTML = '';
+  use.forEach((v, i) => sel.add(new Option(v.name, String(i))));
+  ttsVoice = (ttsVoice && use.includes(ttsVoice)) ? ttsVoice : ttsPickBestVoice(use);
+  sel.value = String(use.indexOf(ttsVoice));
+  sel.onchange = () => {
+    ttsVoice = use[parseInt(sel.value)];
+    try{ localStorage.setItem('elib_tts_voice', ttsVoice.name); }catch(e){}
+    if(LISTEN.playing) listenSpeak();
+  };
+}
+function listenEnsureVoiceSelect(){
+  let sel = document.getElementById('listenVoiceSelect');
+  if(!sel){
+    sel = document.createElement('select'); sel.id = 'listenVoiceSelect';
+    sel.style.cssText = 'width:min(90vw,440px);background:rgba(255,255,255,.08);color:#fff;border:1px solid rgba(255,255,255,.16);border-radius:20px;padding:.4rem .8rem;font-size:.72rem;color-scheme:dark;';
+    document.getElementById('audioSpeedWrap').after(sel);
+    window.speechSynthesis.addEventListener('voiceschanged', listenFillVoices);
+  }
+  sel.style.display = '';
+  listenFillVoices();
+}
+
+// ── engine ───────────────────────────────────────────────────────────────
+function listenSpeak(){
+  if(!LISTEN.playing) return;
+  const my = ++LISTEN.token;
+  const s = LISTEN.sents[LISTEN.idx];
+  if(s == null){ listenAdvanceChapter(1); return; }
+  window.speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(s);
+  u.rate = LISTEN.rate;
+  if(ttsVoice){ u.voice = ttsVoice; u.lang = ttsVoice.lang; }
+  u.onend = () => {
+    if(my !== LISTEN.token || !LISTEN.playing) return;
+    LISTEN.errs = 0; LISTEN.idx++; listenSave(); listenRender(); listenSpeak();
+  };
+  u.onerror = e => {
+    if(my !== LISTEN.token) return;
+    if(e.error === 'interrupted' || e.error === 'canceled') return;
+    if(++LISTEN.errs >= 4){ listenPause(); showToast("The voice isn't responding — try another voice"); return; }
+    LISTEN.idx++; listenSpeak();
+  };
+  LISTEN.startedAt = Date.now();
+  window.speechSynthesis.speak(u);
+}
+function listenStartWatch(){
+  clearInterval(LISTEN.watch);
+  LISTEN.watch = setInterval(() => {   // some mobile engines drop onend — recover instead of going silent
+    if(!LISTEN.playing || LISTEN.busy || Date.now() - LISTEN.startedAt < 2500) return;
+    if(!window.speechSynthesis.speaking && !window.speechSynthesis.pending){
+      if(++LISTEN.errs >= 4){ listenPause(); showToast("The voice isn't responding — try another voice"); return; }
+      listenSpeak();
+    }
+  }, 1000);
+}
+function listenPlay(){
+  if(LISTEN.playing) return;
+  LISTEN.playing = true; LISTEN.errs = 0;
+  _acquireWakeLock(); listenStartWatch(); listenRenderPlay(); listenSpeak();
+}
+function listenPause(){
+  LISTEN.playing = false; LISTEN.token++;
+  window.speechSynthesis.cancel(); clearInterval(LISTEN.watch);
+  listenSave(); listenRenderPlay();
+}
+function listenSkip(n){
+  if(!LISTEN.active || !LISTEN.sents.length) return;
+  LISTEN.idx = Math.max(0, Math.min(LISTEN.sents.length - 1, LISTEN.idx + n));
+  listenSave(); listenRender();
+  if(LISTEN.playing) listenSpeak();
+}
+async function listenAdvanceChapter(dir){
+  if(LISTEN.busy) return;
+  LISTEN.busy = true; LISTEN.token++; window.speechSynthesis.cancel();
+  try{
+    let n = LISTEN.ch + dir;
+    while(n >= 0 && n < LISTEN.spine.length){
+      const s = await listenGetChapter(n);
+      if(s.length){ LISTEN.ch = n; LISTEN.sents = s; LISTEN.idx = 0; listenSave(); listenRender(); LISTEN.busy = false; if(LISTEN.playing) listenSpeak(); return; }
+      n += dir;
+    }
+    LISTEN.busy = false;
+    if(dir > 0){
+      try{ localStorage.removeItem(listenKey(LISTEN.bookId)); }catch(e){}
+      showToast('End of book 📖'); listenExit(true);
+    } else { showToast('This is the first chapter'); if(LISTEN.playing) listenSpeak(); }
+  }catch(e){ LISTEN.busy = false; showToast('Could not load chapter: ' + e.message); }
+}
+function listenMinimize(){
+  document.getElementById('audioPersistentPlayer')?.classList.remove('open');
+  document.getElementById('audioMiniBar')?.classList.add('visible');
+}
+function listenExit(hidePlayer = true){
+  if(!LISTEN.active) return;
+  listenSave();
+  LISTEN.token++; LISTEN.playing = false; LISTEN.active = false; LISTEN.busy = false;
+  window.speechSynthesis.cancel(); clearInterval(LISTEN.watch);
+  listenSetNavLabels(false);
+  const q = id => document.getElementById(id);
+  const vs = q('listenVoiceSelect'); if(vs) vs.style.display = 'none';
+  if(hidePlayer){
+    q('audioPersistentPlayer')?.classList.remove('open');
+    q('audioMiniBar')?.classList.remove('visible');
+    q('audioTrackNav').style.display = 'none';
+    q('audioPartLabel').style.display = 'none';
+    q('audioSeek').value = 0; q('audioSeek').max = 0;
+    q('audioCurTime').textContent = '0:00'; q('audioDurTime').textContent = '0:00';
+    setAudioArt(null);
+  }
+  ['audioPlayPauseBtn','audioMiniPlayPauseBtn'].forEach(id => { const b = q(id); if(b) b.textContent = '▶️'; });
+  const readerOpen = q('readerOverlay')?.classList.contains('open');
+  if(!readerOpen) _releaseWakeLock();
+  LISTEN.chapters = {}; LISTEN.zip = null;
+}
+
+// ── entry point: the "Listen" button ─────────────────────────────────────
+async function listenToCurrentBook(){
+  if(!currentId) return;
+  if(!window.speechSynthesis){ showToast("This browser doesn't support text-to-speech"); return; }
+  // Prime the speech engine inside the tap itself — iOS/Safari ignore speak()
+  // calls that happen after an await unless one already ran in the gesture.
+  try{ window.speechSynthesis.speak(new SpeechSynthesisUtterance('')); }catch(e){}
+  const book = await findBookById(currentId);
+  if(!book || book.isAudio || book.isRecipe){ showToast("Couldn't open that book — try again in a moment"); return; }
+  closeMobBookSheet(); closeDrawer();
+  if(LISTEN.active && LISTEN.bookId === book.id){ expandAudioPlayer(); if(!LISTEN.playing) listenPlay(); return; }
+  showLoading('Preparing audio…', book.coverUrl);
+  try{
+    if(ttsPlaying) ttsStop();                 // reader's own read-aloud
+    if(_audioCurrentId) stopAudioPlayback();  // a real audiobook
+    listenExit(true);                         // a different book already being narrated
+    const info = await listenLoadBook(book);
+    Object.assign(LISTEN, { bookId: book.id, book, zip: info.zip, opfBase: info.base, spine: info.spine, chapters: {}, busy: false, errs: 0, rate: _audioSpeed });
+    let ch = 0, idx = 0;
+    try{
+      const saved = JSON.parse(localStorage.getItem(listenKey(book.id)) || 'null');
+      if(saved && saved.ch < info.spine.length){ ch = saved.ch; idx = saved.idx || 0; }
+      else { const rp = loadReadingProgress(book.id); if(rp && rp.chapterIdx > 0 && rp.chapterIdx < info.spine.length) ch = rp.chapterIdx; }
+    }catch(e){}
+    let sents = [];
+    while(ch < info.spine.length && !(sents = await listenGetChapter(ch)).length){ ch++; idx = 0; }
+    if(!sents.length) throw new Error('No readable text found in this book');
+    LISTEN.ch = ch; LISTEN.sents = sents; LISTEN.idx = Math.min(idx, sents.length - 1);
+    LISTEN.active = true;
+    try{ recordBookOpened(book); addBookToViewedList(book.id); }catch(e){}
+    setAudioArt(book.coverUrl || null);
+    listenEnsureVoiceSelect(); listenSetNavLabels(true);
+    document.querySelectorAll('#audioSpeedWrap .audio-speed-btn').forEach(b => b.classList.toggle('active', Number(b.dataset.speed) === LISTEN.rate));
+    expandAudioPlayer(); listenRender();
+    hideLoading();
+    listenPlay();
+  }catch(e){
+    hideLoading(); listenExit(true);
+    showToast('Could not start listening: ' + e.message); console.error(e);
+  }
+}
+
+// ── route the player's controls to the narrator while Listen mode is active ──
+(function initListenControls(){
+  const overlay = document.getElementById('audioPersistentPlayer');
+  const mini = document.getElementById('audioMiniBar');
+  if(!overlay) return;
+  const swallow = e => { e.stopImmediatePropagation(); e.preventDefault(); };
+  overlay.addEventListener('click', e => {
+    if(!LISTEN.active) return;
+    const t = e.target;
+    if(t.closest('#audioPlayPauseBtn')){ swallow(e); if(LISTEN.playing) listenPause(); else listenPlay(); }
+    else if(t.closest('#audioBackBtn')){ swallow(e); listenSkip(-2); }
+    else if(t.closest('#audioFwdBtn')){ swallow(e); listenSkip(2); }
+    else if(t.closest('#audioPrevTrackBtn')){ swallow(e); listenAdvanceChapter(-1); }
+    else if(t.closest('#audioNextTrackBtn')){ swallow(e); listenAdvanceChapter(1); }
+    else if(t.closest('.audio-speed-btn')){
+      swallow(e);
+      const b = t.closest('.audio-speed-btn'); const r = Number(b.dataset.speed);
+      _audioSpeed = r; LISTEN.rate = r;
+      overlay.querySelectorAll('.audio-speed-btn').forEach(x => x.classList.toggle('active', x === b));
+      if(LISTEN.playing) listenSpeak();
+    }
+    else if(t.closest('#audioPlayerMinimizeBtn')){ swallow(e); listenMinimize(); }
+    else if(t.closest('#audioPlayerCloseBtn')){ swallow(e); listenExit(true); }
+  }, true);
+  overlay.addEventListener('input', e => {
+    if(!LISTEN.active || e.target.id !== 'audioSeek') return;
+    e.stopImmediatePropagation();
+    document.getElementById('audioDurTime').textContent = Math.round(100 * Number(e.target.value) / Math.max(LISTEN.sents.length, 1)) + '%';
+  }, true);
+  overlay.addEventListener('change', e => {
+    if(!LISTEN.active || e.target.id !== 'audioSeek') return;
+    e.stopImmediatePropagation();
+    LISTEN.idx = Math.min(Number(e.target.value), Math.max(LISTEN.sents.length - 1, 0));
+    listenSave(); listenRender();
+    if(LISTEN.playing) listenSpeak();
+  }, true);
+  mini?.addEventListener('click', e => {
+    if(!LISTEN.active) return;
+    if(e.target.closest('#audioMiniPlayPauseBtn')){ swallow(e); if(LISTEN.playing) listenPause(); else listenPlay(); }
+    else if(e.target.closest('#audioMiniCloseBtn')){ swallow(e); listenExit(true); }
+  }, true);
+  // Starting a real audiobook ends narration so the two never talk over each other.
+  const origPlay = playAudioTrack;
+  playAudioTrack = function(track){ if(LISTEN.active) listenExit(false); return origPlay(track); };
+  document.addEventListener('visibilitychange', () => {
+    if(!document.hidden && LISTEN.active && LISTEN.playing && !window.speechSynthesis.speaking) listenSpeak();
+  });
+})();
 
 renderAll();
 </script>
