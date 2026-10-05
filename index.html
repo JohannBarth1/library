@@ -21726,24 +21726,32 @@ document.getElementById('audioUploadLabel')?.addEventListener('click', showAudio
 
 // ══════════════════════════════════════════════════════════════════════════
 // LISTEN MODE — narrates an EPUB through the existing audiobook player UI.
-// Parses the EPUB in memory (no reader needed), speaks it sentence-by-sentence
-// with the Web Speech API, and maps the player's controls onto it:
-//   play/pause = play/pause · ⟲10/⟳10 = back/forward 2 sentences
-//   prev/next episode = prev/next chapter · seek bar = position in chapter
-//   speed buttons = speech rate · ✕ = stop · ⌄ = minimise to the mini-bar
-// Engine is isolated in listenSpeak() so a cloud voice (pre-generated MP3 per
-// chapter) can replace Web Speech later without touching the UI wiring.
+//
+// Two engines, one position model (LISTEN.idx = sentence index in the chapter):
+//   • 'ai'     Google Cloud TTS via the narrateChapter Cloud Function. Text is cut into
+//              ≤30k-char units; each unit is an MP3 cached in Storage under
+//              tts/<rev>/<lang>/<tier>/<sha256(text)>.mp3. The browser checks the cache
+//              first (free) and only asks the function to generate on a miss, so a
+//              chapter is paid for once, ever, across all users. The MP3 plays in the
+//              normal <audio> element, so seek / ±10s / speed / lock-screen all work.
+//   • 'device' the browser's built-in Web Speech voices (free, no network).
+// AI falls back to device automatically (not deployed, quota used up, offline…).
 // ══════════════════════════════════════════════════════════════════════════
+const LISTEN_VOICE_REV = 'v1';      // keep equal to VOICE_REV in functions/narrate.js
+const LISTEN_UNIT_CHARS = 30000;    // keep ≤ MAX_UNIT_CHARS in functions/narrate.js
+const LISTEN_TIERS = { 'ai': ['hd', 'wn'], 'ai-wn': ['wn'] };
+const _narrateCallable = httpsCallable(fns, 'narrateChapter', { timeout: 300000 });
 const LISTEN = {
-  active:false, playing:false, busy:false,
-  bookId:null, book:null, zip:null, opfBase:'', spine:[], chapters:{},
-  ch:0, sents:[], idx:0, token:0, errs:0, startedAt:0, watch:null, rate:1,
+  active:false, playing:false, busy:false, mode:'device', engineKey:'ai', lang:null,
+  bookId:null, book:null, zip:null, opfBase:'', spine:[], chapters:{}, unitCache:{},
+  ch:0, sents:[], units:[], unit:0, idx:0, token:0, errs:0, startedAt:0, watch:null,
+  rate:1, status:'', lastTick:0,
 };
 const listenKey = id => `elib_listen_${id}`;
 function listenHasProgress(id){ try{ return !!localStorage.getItem(listenKey(id)); }catch(e){ return false; } }
 
-// ── voice ranking: prefer neural/"Natural" voices (e.g. Edge's Online Natural
-// voices, Chrome's Google voices, Apple Premium/Enhanced) over robotic ones.
+// ── device-voice ranking: prefer neural/"Natural" voices (Edge Online Natural,
+// Chrome Google, Apple Premium/Enhanced) over robotic ones.
 function ttsVoiceScore(v){
   const n = (v.name || '').toLowerCase();
   let s = 0;
@@ -21773,7 +21781,7 @@ function listenSplit(text){
     else merged.push(buf.trim());
   }
   const out = [];
-  for(const s of merged){            // keep each utterance short — long ones get cut off by some engines
+  for(const s of merged){            // keep each device utterance short — long ones get cut off by some engines
     let rest = s;
     while(rest.length > 200){
       let cut = rest.lastIndexOf(', ', 200);
@@ -21801,6 +21809,7 @@ async function listenLoadBook(book){
   if(!opfPath) throw new Error('No OPF found');
   const opfXml = await zip.file(opfPath)?.async('string');
   const base = opfPath.includes('/') ? opfPath.replace(/\/[^/]+$/, '/') : '';
+  const lang = opfXml.match(/<dc:language[^>]*>\s*([^<\s]+)/i)?.[1] || '';
   const manifest = {}; const mRe = /<item\s+([^>]+)>/gi; let m;
   while((m = mRe.exec(opfXml)) !== null){
     const id = m[1].match(/\bid="([^"]+)"/)?.[1], href = m[1].match(/\bhref="([^"]+)"/)?.[1], mt = m[1].match(/\bmedia-type="([^"]+)"/)?.[1];
@@ -21819,7 +21828,7 @@ async function listenLoadBook(book){
     if(it) spine.push({ href: it.href, label: labels[it.href] || it.href.split('/').pop().replace(/\.x?html?$/i, '') });
   }
   if(!spine.length) throw new Error('Empty spine');
-  return { zip, base, spine };
+  return { zip, base, spine, lang };
 }
 
 async function listenGetChapter(i){
@@ -21848,6 +21857,44 @@ async function listenGetChapter(i){
   return (LISTEN.chapters[i] = sents);
 }
 
+// ── units (one MP3 each) and the sentence-index ⇄ audio-position mapping ──
+function listenMakeUnits(sents){
+  const units = []; let start = 0, chars = 0;
+  for(let i = 0; i < sents.length; i++){
+    const add = sents[i].length + 1;
+    if(chars && chars + add > LISTEN_UNIT_CHARS){ units.push({ start, end: i, chars }); start = i; chars = 0; }
+    chars += add;
+  }
+  if(sents.length) units.push({ start, end: sents.length, chars });
+  for(const u of units) u.text = sents.slice(u.start, u.end).join(' ');
+  return units;
+}
+function listenSetChapter(n, sents, idx = 0){
+  LISTEN.ch = n; LISTEN.sents = sents; LISTEN.idx = idx;
+  LISTEN.units = LISTEN.unitCache[n] || (LISTEN.unitCache[n] = listenMakeUnits(sents));
+}
+function listenFracFromIdx(u, idx){
+  let before = 0;
+  for(let i = u.start; i < Math.min(idx, u.end); i++) before += LISTEN.sents[i].length + 1;
+  return u.chars ? before / u.chars : 0;
+}
+function listenIdxFromFrac(u, frac){
+  const target = frac * u.chars; let acc = 0;
+  for(let i = u.start; i < u.end; i++){ acc += LISTEN.sents[i].length + 1; if(acc >= target) return i; }
+  return u.end - 1;
+}
+// EPUB language → a language the AI voices cover (null = use the device voice)
+function listenAiLang(code){
+  const c = (code || navigator.language || '').toLowerCase();
+  if(c.startsWith('de')) return 'de-DE';
+  if(c.startsWith('en')){
+    if(c === 'en-us') return 'en-US';
+    if(c === 'en') return /^en-gb/i.test(navigator.language || '') ? 'en-GB' : 'en-US';
+    return 'en-GB';
+  }
+  return null;
+}
+
 // ── persistence (device-local; "Continue Listening" label reads this) ─────
 function listenSave(){
   if(!LISTEN.bookId) return;
@@ -21856,6 +21903,7 @@ function listenSave(){
 
 // ── UI sync with the existing player markup ──────────────────────────────
 function listenRenderPlay(){
+  if(LISTEN.mode !== 'device') return;   // in AI mode the <audio> element's own events drive the icons
   const t = LISTEN.playing ? '⏸️' : '▶️';
   ['audioPlayPauseBtn','audioMiniPlayPauseBtn'].forEach(id => { const b = document.getElementById(id); if(b) b.textContent = t; });
 }
@@ -21864,18 +21912,14 @@ function listenSetNavLabels(listening){
   if(l[0]) l[0].textContent = listening ? '⏮ Previous chapter' : '⏮ Previous episode';
   if(l[1]) l[1].textContent = listening ? 'Next chapter ⏭' : 'Next episode ⏭';
 }
+function listenStatus(msg){ LISTEN.status = msg || ''; listenRender(); }
 function listenRender(){
   if(!LISTEN.active) return;
   const q = id => document.getElementById(id);
   const label = LISTEN.spine[LISTEN.ch]?.label || `Chapter ${LISTEN.ch + 1}`;
-  const pct = LISTEN.sents.length ? Math.round(100 * LISTEN.idx / LISTEN.sents.length) : 0;
   q('audioNowPlayingLabel').textContent = LISTEN.book.title || 'Listening';
-  const part = q('audioPartLabel'); part.style.display = ''; part.textContent = label;
-  const seek = q('audioSeek'); seek.max = Math.max(LISTEN.sents.length, 1); seek.value = Math.min(LISTEN.idx, LISTEN.sents.length);
-  q('audioCurTime').textContent = `Ch ${LISTEN.ch + 1}/${LISTEN.spine.length}`;
-  q('audioDurTime').textContent = pct + '%';
+  const part = q('audioPartLabel'); part.style.display = ''; part.textContent = LISTEN.status || label;
   q('audioMiniBarTitle').textContent = LISTEN.book.title || 'Listening';
-  q('audioMiniBarSub').textContent = `${label} · ${pct}%`;
   q('audioTrackNav').style.display = 'flex';
   q('audioPrevTrackBtn').disabled = LISTEN.ch <= 0;
   q('audioNextTrackBtn').disabled = LISTEN.ch >= LISTEN.spine.length - 1;
@@ -21883,8 +21927,16 @@ function listenRender(){
   q('audioNextTitle').textContent = LISTEN.spine[LISTEN.ch + 1]?.label || '—';
   ['audioPrevCoverImg','audioNextCoverImg'].forEach(id => q(id).style.display = 'none');
   ['audioPrevCoverPh','audioNextCoverPh'].forEach(id => q(id).style.display = 'flex');
-  listenRenderPlay();
+  if(LISTEN.mode === 'device'){          // AI mode: the normal player handlers show real audio time
+    const pct = LISTEN.sents.length ? Math.round(100 * LISTEN.idx / LISTEN.sents.length) : 0;
+    const seek = q('audioSeek'); seek.max = Math.max(LISTEN.sents.length, 1); seek.value = Math.min(LISTEN.idx, LISTEN.sents.length);
+    q('audioCurTime').textContent = `Ch ${LISTEN.ch + 1}/${LISTEN.spine.length}`;
+    q('audioDurTime').textContent = pct + '%';
+    q('audioMiniBarSub').textContent = `${label} · ${pct}%`;
+    listenRenderPlay();
+  }
 }
+const LISTEN_SELECT_CSS = 'width:min(90vw,440px);background:rgba(255,255,255,.08);color:#fff;border:1px solid rgba(255,255,255,.16);border-radius:20px;padding:.4rem .8rem;font-size:.72rem;color-scheme:dark;';
 function listenFillVoices(){
   const sel = document.getElementById('listenVoiceSelect'); if(!sel) return;
   const all = window.speechSynthesis.getVoices(); if(!all.length) return;
@@ -21898,24 +21950,118 @@ function listenFillVoices(){
   sel.onchange = () => {
     ttsVoice = use[parseInt(sel.value)];
     try{ localStorage.setItem('elib_tts_voice', ttsVoice.name); }catch(e){}
-    if(LISTEN.playing) listenSpeak();
+    if(LISTEN.playing && LISTEN.mode === 'device') listenSpeak();
   };
 }
-function listenEnsureVoiceSelect(){
-  let sel = document.getElementById('listenVoiceSelect');
-  if(!sel){
-    sel = document.createElement('select'); sel.id = 'listenVoiceSelect';
-    sel.style.cssText = 'width:min(90vw,440px);background:rgba(255,255,255,.08);color:#fff;border:1px solid rgba(255,255,255,.16);border-radius:20px;padding:.4rem .8rem;font-size:.72rem;color-scheme:dark;';
-    document.getElementById('audioSpeedWrap').after(sel);
+function listenEnsureSelects(){
+  let es = document.getElementById('listenEngineSelect');
+  if(!es){
+    es = document.createElement('select'); es.id = 'listenEngineSelect'; es.style.cssText = LISTEN_SELECT_CSS;
+    [['ai', 'AI voice — best quality (cached)'], ['ai-wn', 'AI voice — standard (cached)'], ['device', 'Device voice']]
+      .forEach(([v, t]) => es.add(new Option(t, v)));
+    es.onchange = () => listenSetEngine(es.value);
+    const vs = document.createElement('select'); vs.id = 'listenVoiceSelect'; vs.style.cssText = LISTEN_SELECT_CSS;
+    document.getElementById('audioSpeedWrap').after(es);
+    es.after(vs);
     window.speechSynthesis.addEventListener('voiceschanged', listenFillVoices);
   }
-  sel.style.display = '';
+  es.style.display = ''; es.value = LISTEN.engineKey;
+  listenApplyModeUI();
   listenFillVoices();
 }
+function listenApplyModeUI(){
+  const vs = document.getElementById('listenVoiceSelect');
+  if(vs) vs.style.display = LISTEN.mode === 'device' ? '' : 'none';
+}
 
-// ── engine ───────────────────────────────────────────────────────────────
+// ── AI engine ────────────────────────────────────────────────────────────
+async function listenSha256(s){
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s));
+  return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, '0')).join('');
+}
+const listenAiPath = (lang, tier, hash) => `tts/${LISTEN_VOICE_REV}/${lang}/${tier}/${hash}.mp3`;
+
+// Returns { url, tier } or null if every tier's monthly allowance is used up.
+async function listenAiResolve(u, tiers){
+  const hash = u.hash || (u.hash = await listenSha256(u.text));
+  for(const tier of tiers){                       // 1) already generated by anyone? (free)
+    try{ return { url: await getDownloadURL(storageRef(storage, listenAiPath(LISTEN.lang, tier, hash))), tier }; }
+    catch(e){ if(e.code === 'storage/unauthorized') throw e; }
+  }
+  for(const tier of tiers){                       // 2) generate with the best tier that still has budget
+    try{
+      const r = await _narrateCallable({ text: u.text, lang: LISTEN.lang, tier });
+      return { url: await getDownloadURL(storageRef(storage, r.data.path)), tier };
+    }catch(e){
+      if(e.code === 'functions/resource-exhausted') continue;
+      throw e;
+    }
+  }
+  return null;
+}
+function listenAiGet(u){                          // one in-flight/finished lookup per unit
+  const key = LISTEN.engineKey;
+  if(u.promise && u.promiseKey === key) return u.promise;
+  u.promiseKey = key;
+  const p = listenAiResolve(u, LISTEN_TIERS[key] || LISTEN_TIERS.ai);
+  u.promise = p;
+  p.catch(() => { if(u.promise === p) u.promise = null; });
+  return p;
+}
+function listenAiFailed(e){
+  console.warn('AI narration unavailable:', e);
+  const code = (e && e.code) || '';
+  let msg = 'AI voice unavailable — using the device voice';
+  if(code === 'quota') msg = "This month's AI voice allowance is used up — using the device voice";
+  else if(code === 'storage/unauthorized') msg = 'AI voice needs the tts/ Storage rule — using the device voice';
+  else if(code === 'functions/not-found') msg = 'AI voice function not deployed yet — using the device voice';
+  showToast(msg);
+  listenStopEngine();
+  LISTEN.mode = 'device'; LISTEN.status = '';
+  const es = document.getElementById('listenEngineSelect'); if(es) es.value = 'device';
+  listenApplyModeUI(); listenRender();
+  if(LISTEN.playing) listenStartCurrent();
+}
+async function aiLoadUnit(ui, frac){
+  const my = ++LISTEN.token;
+  const u = LISTEN.units[ui]; LISTEN.unit = ui;
+  const audio = document.getElementById('audioPlayerEl');
+  audio.pause();
+  listenStatus('Preparing narration… (first listen of a chapter takes a moment)');
+  let res;
+  try{ res = await listenAiGet(u); }
+  catch(e){ if(my === LISTEN.token) listenAiFailed(e); return; }
+  if(my !== LISTEN.token) return;                 // the user moved on while we waited
+  if(!res){ const e = new Error('quota'); e.code = 'quota'; listenAiFailed(e); return; }
+  listenStatus('');
+  audio.src = res.url; audio.load(); audio.playbackRate = _audioSpeed;
+  audio.addEventListener('loadedmetadata', () => {
+    if(my === LISTEN.token && frac > 0.001 && frac < 0.999) audio.currentTime = frac * audio.duration;
+  }, { once: true });
+  audio.play().catch(() => showToast('Tap ▶ to start'));
+}
+function aiStart(){
+  const i = LISTEN.units.findIndex(u => LISTEN.idx >= u.start && LISTEN.idx < u.end);
+  const ui = i < 0 ? 0 : i;
+  LISTEN.playing = true;
+  aiLoadUnit(ui, listenFracFromIdx(LISTEN.units[ui], LISTEN.idx));
+}
+async function aiPrefetchNext(){                  // generate the next unit while this one plays
+  try{
+    let u = LISTEN.units[LISTEN.unit + 1];
+    if(!u){
+      for(let n = LISTEN.ch + 1; n < LISTEN.spine.length; n++){
+        const s = await listenGetChapter(n);
+        if(s.length){ u = (LISTEN.unitCache[n] || (LISTEN.unitCache[n] = listenMakeUnits(s)))[0]; break; }
+      }
+    }
+    if(u && LISTEN.mode === 'ai') await listenAiGet(u);
+  }catch(e){ /* best effort */ }
+}
+
+// ── device engine (Web Speech) ───────────────────────────────────────────
 function listenSpeak(){
-  if(!LISTEN.playing) return;
+  if(!LISTEN.playing || LISTEN.mode !== 'device') return;
   const my = ++LISTEN.token;
   const s = LISTEN.sents[LISTEN.idx];
   if(s == null){ listenAdvanceChapter(1); return; }
@@ -21939,45 +22085,85 @@ function listenSpeak(){
 function listenStartWatch(){
   clearInterval(LISTEN.watch);
   LISTEN.watch = setInterval(() => {   // some mobile engines drop onend — recover instead of going silent
-    if(!LISTEN.playing || LISTEN.busy || Date.now() - LISTEN.startedAt < 2500) return;
+    if(!LISTEN.playing || LISTEN.busy || LISTEN.mode !== 'device' || Date.now() - LISTEN.startedAt < 2500) return;
     if(!window.speechSynthesis.speaking && !window.speechSynthesis.pending){
       if(++LISTEN.errs >= 4){ listenPause(); showToast("The voice isn't responding — try another voice"); return; }
       listenSpeak();
     }
   }, 1000);
 }
-function listenPlay(){
-  if(LISTEN.playing) return;
+
+// ── engine-neutral transport ─────────────────────────────────────────────
+function listenStartCurrent(){                    // (re)start playback at LISTEN.idx with the active engine
+  if(!LISTEN.active) return;
   LISTEN.playing = true; LISTEN.errs = 0;
-  _acquireWakeLock(); listenStartWatch(); listenRenderPlay(); listenSpeak();
+  _acquireWakeLock();
+  if(LISTEN.mode === 'ai'){ aiStart(); return; }
+  listenStartWatch(); listenRenderPlay(); listenSpeak();
+}
+function listenStopEngine(){                      // silence whichever engine is running; leaves position alone
+  LISTEN.token++;
+  window.speechSynthesis.cancel(); clearInterval(LISTEN.watch);
+  if(LISTEN.mode === 'ai'){
+    const a = document.getElementById('audioPlayerEl');
+    if(a){ a.pause(); a.removeAttribute('src'); a.load(); }
+  }
+}
+function listenPlay(){
+  if(LISTEN.mode === 'ai'){
+    const a = document.getElementById('audioPlayerEl');
+    if(a.getAttribute('src')) a.play().catch(() => {}); else listenStartCurrent();
+    return;
+  }
+  if(LISTEN.playing) return;
+  listenStartCurrent();
 }
 function listenPause(){
+  if(LISTEN.mode === 'ai'){ document.getElementById('audioPlayerEl').pause(); listenSave(); return; }
   LISTEN.playing = false; LISTEN.token++;
   window.speechSynthesis.cancel(); clearInterval(LISTEN.watch);
   listenSave(); listenRenderPlay();
 }
-function listenSkip(n){
-  if(!LISTEN.active || !LISTEN.sents.length) return;
+function listenSkip(n){                           // device mode only (AI mode uses the real ±10s buttons)
+  if(!LISTEN.active || LISTEN.mode !== 'device' || !LISTEN.sents.length) return;
   LISTEN.idx = Math.max(0, Math.min(LISTEN.sents.length - 1, LISTEN.idx + n));
   listenSave(); listenRender();
   if(LISTEN.playing) listenSpeak();
 }
 async function listenAdvanceChapter(dir){
   if(LISTEN.busy) return;
-  LISTEN.busy = true; LISTEN.token++; window.speechSynthesis.cancel();
+  LISTEN.busy = true;
+  const wasPlaying = LISTEN.playing;
+  listenStopEngine();
   try{
     let n = LISTEN.ch + dir;
     while(n >= 0 && n < LISTEN.spine.length){
       const s = await listenGetChapter(n);
-      if(s.length){ LISTEN.ch = n; LISTEN.sents = s; LISTEN.idx = 0; listenSave(); listenRender(); LISTEN.busy = false; if(LISTEN.playing) listenSpeak(); return; }
+      if(s.length){
+        listenSetChapter(n, s, 0); listenSave(); LISTEN.busy = false; listenRender();
+        if(wasPlaying) listenStartCurrent();
+        return;
+      }
       n += dir;
     }
     LISTEN.busy = false;
     if(dir > 0){
       try{ localStorage.removeItem(listenKey(LISTEN.bookId)); }catch(e){}
       showToast('End of book 📖'); listenExit(true);
-    } else { showToast('This is the first chapter'); if(LISTEN.playing) listenSpeak(); }
+    } else { showToast('This is the first chapter'); if(wasPlaying) listenStartCurrent(); }
   }catch(e){ LISTEN.busy = false; showToast('Could not load chapter: ' + e.message); }
+}
+function listenSetEngine(key){
+  LISTEN.engineKey = key;
+  try{ localStorage.setItem('elib_listen_engine', key); }catch(e){}
+  if(!LISTEN.active) return;
+  listenStopEngine();
+  if(key !== 'device' && !LISTEN.lang) showToast("AI narration isn't available for this book's language — using the device voice");
+  LISTEN.mode = (key !== 'device' && LISTEN.lang && currentUser) ? 'ai' : 'device';
+  Object.values(LISTEN.unitCache).forEach(us => us.forEach(u => { u.promise = null; u._pre = false; }));
+  LISTEN.status = '';
+  listenApplyModeUI(); listenRender();
+  listenStartCurrent();
 }
 function listenMinimize(){
   document.getElementById('audioPersistentPlayer')?.classList.remove('open');
@@ -21986,11 +22172,11 @@ function listenMinimize(){
 function listenExit(hidePlayer = true){
   if(!LISTEN.active) return;
   listenSave();
-  LISTEN.token++; LISTEN.playing = false; LISTEN.active = false; LISTEN.busy = false;
-  window.speechSynthesis.cancel(); clearInterval(LISTEN.watch);
+  listenStopEngine();
+  LISTEN.playing = false; LISTEN.active = false; LISTEN.busy = false; LISTEN.status = '';
   listenSetNavLabels(false);
   const q = id => document.getElementById(id);
-  const vs = q('listenVoiceSelect'); if(vs) vs.style.display = 'none';
+  ['listenEngineSelect', 'listenVoiceSelect'].forEach(id => { const s = q(id); if(s) s.style.display = 'none'; });
   if(hidePlayer){
     q('audioPersistentPlayer')?.classList.remove('open');
     q('audioMiniBar')?.classList.remove('visible');
@@ -22001,29 +22187,32 @@ function listenExit(hidePlayer = true){
     setAudioArt(null);
   }
   ['audioPlayPauseBtn','audioMiniPlayPauseBtn'].forEach(id => { const b = q(id); if(b) b.textContent = '▶️'; });
-  const readerOpen = q('readerOverlay')?.classList.contains('open');
-  if(!readerOpen) _releaseWakeLock();
-  LISTEN.chapters = {}; LISTEN.zip = null;
+  if(!q('readerOverlay')?.classList.contains('open')) _releaseWakeLock();
+  LISTEN.chapters = {}; LISTEN.unitCache = {}; LISTEN.units = []; LISTEN.zip = null;
 }
 
 // ── entry point: the "Listen" button ─────────────────────────────────────
 async function listenToCurrentBook(){
   if(!currentId) return;
   if(!window.speechSynthesis){ showToast("This browser doesn't support text-to-speech"); return; }
-  // Prime the speech engine inside the tap itself — iOS/Safari ignore speak()
+  // Prime the device engine inside the tap itself — iOS/Safari ignore speak()
   // calls that happen after an await unless one already ran in the gesture.
   try{ window.speechSynthesis.speak(new SpeechSynthesisUtterance('')); }catch(e){}
   const book = await findBookById(currentId);
   if(!book || book.isAudio || book.isRecipe){ showToast("Couldn't open that book — try again in a moment"); return; }
   closeMobBookSheet(); closeDrawer();
-  if(LISTEN.active && LISTEN.bookId === book.id){ expandAudioPlayer(); if(!LISTEN.playing) listenPlay(); return; }
+  if(LISTEN.active && LISTEN.bookId === book.id){ expandAudioPlayer(); listenPlay(); return; }
   showLoading('Preparing audio…', book.coverUrl);
   try{
     if(ttsPlaying) ttsStop();                 // reader's own read-aloud
     if(_audioCurrentId) stopAudioPlayback();  // a real audiobook
     listenExit(true);                         // a different book already being narrated
     const info = await listenLoadBook(book);
-    Object.assign(LISTEN, { bookId: book.id, book, zip: info.zip, opfBase: info.base, spine: info.spine, chapters: {}, busy: false, errs: 0, rate: _audioSpeed });
+    Object.assign(LISTEN, { bookId: book.id, book, zip: info.zip, opfBase: info.base, spine: info.spine,
+      chapters: {}, unitCache: {}, busy: false, errs: 0, status: '', rate: _audioSpeed });
+    LISTEN.lang = listenAiLang(info.lang);
+    try{ LISTEN.engineKey = localStorage.getItem('elib_listen_engine') || 'ai'; }catch(e){ LISTEN.engineKey = 'ai'; }
+    LISTEN.mode = (LISTEN.engineKey !== 'device' && LISTEN.lang && currentUser) ? 'ai' : 'device';
     let ch = 0, idx = 0;
     try{
       const saved = JSON.parse(localStorage.getItem(listenKey(book.id)) || 'null');
@@ -22033,15 +22222,15 @@ async function listenToCurrentBook(){
     let sents = [];
     while(ch < info.spine.length && !(sents = await listenGetChapter(ch)).length){ ch++; idx = 0; }
     if(!sents.length) throw new Error('No readable text found in this book');
-    LISTEN.ch = ch; LISTEN.sents = sents; LISTEN.idx = Math.min(idx, sents.length - 1);
-    LISTEN.active = true;
+    listenSetChapter(ch, sents, Math.min(idx, sents.length - 1));
+    LISTEN.bookId = book.id; LISTEN.active = true;
     try{ recordBookOpened(book); addBookToViewedList(book.id); }catch(e){}
     setAudioArt(book.coverUrl || null);
-    listenEnsureVoiceSelect(); listenSetNavLabels(true);
+    listenEnsureSelects(); listenSetNavLabels(true);
     document.querySelectorAll('#audioSpeedWrap .audio-speed-btn').forEach(b => b.classList.toggle('active', Number(b.dataset.speed) === LISTEN.rate));
     expandAudioPlayer(); listenRender();
     hideLoading();
-    listenPlay();
+    listenStartCurrent();
   }catch(e){
     hideLoading(); listenExit(true);
     showToast('Could not start listening: ' + e.message); console.error(e);
@@ -22052,33 +22241,34 @@ async function listenToCurrentBook(){
 (function initListenControls(){
   const overlay = document.getElementById('audioPersistentPlayer');
   const mini = document.getElementById('audioMiniBar');
-  if(!overlay) return;
+  const audio = document.getElementById('audioPlayerEl');
+  if(!overlay || !audio) return;
   const swallow = e => { e.stopImmediatePropagation(); e.preventDefault(); };
   overlay.addEventListener('click', e => {
     if(!LISTEN.active) return;
-    const t = e.target;
-    if(t.closest('#audioPlayPauseBtn')){ swallow(e); if(LISTEN.playing) listenPause(); else listenPlay(); }
-    else if(t.closest('#audioBackBtn')){ swallow(e); listenSkip(-2); }
-    else if(t.closest('#audioFwdBtn')){ swallow(e); listenSkip(2); }
-    else if(t.closest('#audioPrevTrackBtn')){ swallow(e); listenAdvanceChapter(-1); }
+    const t = e.target, dev = LISTEN.mode === 'device';
+    if(t.closest('#audioPrevTrackBtn')){ swallow(e); listenAdvanceChapter(-1); }
     else if(t.closest('#audioNextTrackBtn')){ swallow(e); listenAdvanceChapter(1); }
-    else if(t.closest('.audio-speed-btn')){
+    else if(t.closest('#audioPlayerMinimizeBtn')){ swallow(e); listenMinimize(); }
+    else if(t.closest('#audioPlayerCloseBtn')){ swallow(e); listenExit(true); }
+    else if(dev && t.closest('#audioPlayPauseBtn')){ swallow(e); if(LISTEN.playing) listenPause(); else listenPlay(); }
+    else if(dev && t.closest('#audioBackBtn')){ swallow(e); listenSkip(-2); }
+    else if(dev && t.closest('#audioFwdBtn')){ swallow(e); listenSkip(2); }
+    else if(dev && t.closest('.audio-speed-btn')){
       swallow(e);
       const b = t.closest('.audio-speed-btn'); const r = Number(b.dataset.speed);
       _audioSpeed = r; LISTEN.rate = r;
       overlay.querySelectorAll('.audio-speed-btn').forEach(x => x.classList.toggle('active', x === b));
       if(LISTEN.playing) listenSpeak();
     }
-    else if(t.closest('#audioPlayerMinimizeBtn')){ swallow(e); listenMinimize(); }
-    else if(t.closest('#audioPlayerCloseBtn')){ swallow(e); listenExit(true); }
   }, true);
   overlay.addEventListener('input', e => {
-    if(!LISTEN.active || e.target.id !== 'audioSeek') return;
+    if(!LISTEN.active || LISTEN.mode !== 'device' || e.target.id !== 'audioSeek') return;
     e.stopImmediatePropagation();
     document.getElementById('audioDurTime').textContent = Math.round(100 * Number(e.target.value) / Math.max(LISTEN.sents.length, 1)) + '%';
   }, true);
   overlay.addEventListener('change', e => {
-    if(!LISTEN.active || e.target.id !== 'audioSeek') return;
+    if(!LISTEN.active || LISTEN.mode !== 'device' || e.target.id !== 'audioSeek') return;
     e.stopImmediatePropagation();
     LISTEN.idx = Math.min(Number(e.target.value), Math.max(LISTEN.sents.length - 1, 0));
     listenSave(); listenRender();
@@ -22086,14 +22276,37 @@ async function listenToCurrentBook(){
   }, true);
   mini?.addEventListener('click', e => {
     if(!LISTEN.active) return;
-    if(e.target.closest('#audioMiniPlayPauseBtn')){ swallow(e); if(LISTEN.playing) listenPause(); else listenPlay(); }
-    else if(e.target.closest('#audioMiniCloseBtn')){ swallow(e); listenExit(true); }
+    if(e.target.closest('#audioMiniCloseBtn')){ swallow(e); listenExit(true); }
+    else if(LISTEN.mode === 'device' && e.target.closest('#audioMiniPlayPauseBtn')){ swallow(e); if(LISTEN.playing) listenPause(); else listenPlay(); }
   }, true);
+
+  // AI mode: the real <audio> element drives everything; these keep LISTEN in step with it.
+  audio.addEventListener('play',  () => { if(LISTEN.active && LISTEN.mode === 'ai') LISTEN.playing = true; });
+  audio.addEventListener('pause', () => { if(LISTEN.active && LISTEN.mode === 'ai') LISTEN.playing = false; });
+  audio.addEventListener('timeupdate', () => {
+    if(!LISTEN.active || LISTEN.mode !== 'ai') return;
+    const d = audio.duration, t = audio.currentTime;
+    if(!isFinite(d) || d <= 0) return;
+    const now = Date.now(); if(now - LISTEN.lastTick < 1000) return;
+    LISTEN.lastTick = now;
+    const u = LISTEN.units[LISTEN.unit]; if(!u) return;
+    LISTEN.idx = listenIdxFromFrac(u, t / d);
+    listenSave();
+    if(!u._pre && t / d > 0.4){ u._pre = true; aiPrefetchNext(); }
+  });
+  audio.addEventListener('ended', () => {
+    if(!LISTEN.active || LISTEN.mode !== 'ai') return;
+    LISTEN.playing = true;
+    const next = LISTEN.unit + 1;
+    if(next < LISTEN.units.length){ LISTEN.idx = LISTEN.units[next].start; listenSave(); listenRender(); aiLoadUnit(next, 0); }
+    else listenAdvanceChapter(1);
+  });
+
   // Starting a real audiobook ends narration so the two never talk over each other.
   const origPlay = playAudioTrack;
   playAudioTrack = function(track){ if(LISTEN.active) listenExit(false); return origPlay(track); };
   document.addEventListener('visibilitychange', () => {
-    if(!document.hidden && LISTEN.active && LISTEN.playing && !window.speechSynthesis.speaking) listenSpeak();
+    if(!document.hidden && LISTEN.active && LISTEN.playing && LISTEN.mode === 'device' && !window.speechSynthesis.speaking) listenSpeak();
   });
 })();
 
