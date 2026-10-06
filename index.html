@@ -21745,7 +21745,7 @@ const LISTEN = {
   active:false, playing:false, busy:false, mode:'device', engineKey:'ai', lang:null,
   bookId:null, book:null, zip:null, opfBase:'', spine:[], chapters:{}, unitCache:{},
   ch:0, sents:[], units:[], unit:0, idx:0, token:0, errs:0, startedAt:0, watch:null,
-  rate:1, status:'', lastTick:0,
+  rate:1, status:'', lastTick:0, toc:[],
 };
 const listenKey = id => `elib_listen_${id}`;
 function listenHasProgress(id){ try{ return !!localStorage.getItem(listenKey(id)); }catch(e){ return false; } }
@@ -21794,6 +21794,57 @@ function listenSplit(text){
   return out;
 }
 
+// ── chapter labels: numbers are only shown when the book's own TOC has them ──
+const LISTEN_NUM_WORDS = { one:1, two:2, three:3, four:4, five:5, six:6, seven:7, eight:8, nine:9, ten:10,
+  eleven:11, twelve:12, thirteen:13, fourteen:14, fifteen:15, sixteen:16, seventeen:17, eighteen:18, nineteen:19, twenty:20 };
+function listenRoman(s){
+  if(!/^(?=[ivxlcdm])m{0,3}(cm|cd|d?c{0,3})(xc|xl|l?x{0,3})(ix|iv|v?i{0,3})$/i.test(s)) return null;
+  const v = { i:1, v:5, x:10, l:50, c:100, d:500, m:1000 }; let n = 0, prev = 0;
+  for(const ch of s.toLowerCase().split('').reverse()){ const x = v[ch]; n += x < prev ? -x : x; prev = Math.max(prev, x); }
+  return n;
+}
+// "Chapter 3: The Storm" → {no:3, title:'The Storm'} · "Chapter One" → {no:1, title:''} · "Prologue" → {no:null, title:'Prologue'}
+function listenParseLabel(label){
+  const s = (label || '').trim();
+  let tok = null, rest = '', m;
+  if((m = s.match(/^(?:(?:chapter|kapitel)\s*|(?:chap|ch|kap)\.\s*)(\d{1,4}|[a-z]{1,12})\b\s*[.:)\-–—]*\s*(.*)$/i))){ tok = m[1]; rest = m[2]; }
+  else if((m = s.match(/^(\d{1,3})\s*[.:)\-–—]\s*(\S.*)$/))){ tok = m[1]; rest = m[2]; }
+  if(tok == null) return { no: null, title: s };
+  const n = /^\d+$/.test(tok) ? parseInt(tok, 10) : (listenRoman(tok) ?? LISTEN_NUM_WORDS[tok.toLowerCase()] ?? null);
+  return n == null ? { no: null, title: s } : { no: n, title: rest.trim() };
+}
+function listenMakeEntry(si, label){
+  const p = listenParseLabel(label);
+  return { si, label, no: p.no, title: p.no != null ? p.title : label };
+}
+function listenEntryText(e){
+  if(!e) return '—';
+  return e.no != null ? (e.title ? `Ch ${e.no} · ${e.title}` : `Chapter ${e.no}`) : e.title;
+}
+function listenResolve(dir, href){            // resolve a TOC/manifest href against a folder inside the zip
+  let h = href.split('#')[0];
+  try{ h = decodeURIComponent(h); }catch(e){}
+  const out = [];
+  for(const part of (dir + h).split('/')){ if(part === '..') out.pop(); else if(part !== '.' && part !== '') out.push(part); }
+  return out.join('/');
+}
+function listenFallbackLabel(href, i){        // spine files with no TOC entry (cover, title page, split parts…)
+  let name = href.split('/').pop().replace(/\.x?html?$/i, '');
+  try{ name = decodeURIComponent(name); }catch(e){}
+  if(/index_split/i.test(name) || /^(?:part|split|section|chapter|chap|ch|text|content|page|xhtml)?[_-]?\d+$/i.test(name)) return `Section ${i + 1}`;
+  return name.replace(/[_-]+/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+}
+// Position of the current spine file in the TOC (-1 = before the first entry, e.g. a cover page)
+function listenTocPos(){
+  let p = -1;
+  for(let i = 0; i < LISTEN.toc.length; i++){ if(LISTEN.toc[i].si <= LISTEN.ch) p = i; else break; }
+  return p;
+}
+function listenCurrentLabel(){
+  const p = listenTocPos();
+  return p >= 0 ? listenEntryText(LISTEN.toc[p]) : (LISTEN.spine[LISTEN.ch]?.label || `Section ${LISTEN.ch + 1}`);
+}
+
 async function listenLoadBook(book){
   let storagePath = book.storagePath;
   if(!storagePath && book.epubUrl){ const m = book.epubUrl.match(/\/o\/(.+?)\?/); if(m) storagePath = decodeURIComponent(m[1]); }
@@ -21808,27 +21859,54 @@ async function listenLoadBook(book){
   const opfPath = container?.match(/full-path="([^"]+\.opf)"/i)?.[1];
   if(!opfPath) throw new Error('No OPF found');
   const opfXml = await zip.file(opfPath)?.async('string');
-  const base = opfPath.includes('/') ? opfPath.replace(/\/[^/]+$/, '/') : '';
+  const dirOf = p => p.includes('/') ? p.replace(/\/[^/]+$/, '/') : '';
+  const base = dirOf(opfPath);
   const lang = opfXml.match(/<dc:language[^>]*>\s*([^<\s]+)/i)?.[1] || '';
   const manifest = {}; const mRe = /<item\s+([^>]+)>/gi; let m;
   while((m = mRe.exec(opfXml)) !== null){
-    const id = m[1].match(/\bid="([^"]+)"/)?.[1], href = m[1].match(/\bhref="([^"]+)"/)?.[1], mt = m[1].match(/\bmedia-type="([^"]+)"/)?.[1];
-    if(id && href) manifest[id] = { href, mediaType: mt };
+    const id = m[1].match(/\bid="([^"]+)"/)?.[1], href = m[1].match(/\bhref="([^"]+)"/)?.[1];
+    const mt = m[1].match(/\bmedia-type="([^"]+)"/)?.[1], props = m[1].match(/\bproperties="([^"]+)"/)?.[1] || '';
+    if(id && href) manifest[id] = { href, mediaType: mt, props };
   }
-  const labels = {};
-  const ncxId = Object.keys(manifest).find(k => manifest[k].mediaType === 'application/x-dtbncx+xml');
+  const labels = {};                               // resolved path → TOC label (first one wins)
+  const addLabel = (dir, src, text) => {
+    const t = (text || '').replace(/\s+/g, ' ').trim();
+    if(!t || !src) return;
+    const path = listenResolve(dir, src);
+    if(!(path in labels)) labels[path] = t;
+  };
+  const navId = Object.keys(manifest).find(k => /\bnav\b/.test(manifest[k].props));          // EPUB 3
+  if(navId){
+    const navPath = listenResolve(base, manifest[navId].href);
+    const html = await zip.file(navPath)?.async('string');
+    if(html){
+      const d = new DOMParser().parseFromString(html, 'text/html');
+      const navEl = [...d.querySelectorAll('nav')].find(n => /\btoc\b/.test(n.getAttribute('epub:type') || '')) || d.querySelector('nav');
+      navEl?.querySelectorAll('a[href]').forEach(a => addLabel(dirOf(navPath), a.getAttribute('href'), a.textContent));
+    }
+  }
+  const ncxId = Object.keys(manifest).find(k => manifest[k].mediaType === 'application/x-dtbncx+xml');   // EPUB 2
   if(ncxId){
-    const ncx = await zip.file(base + manifest[ncxId].href)?.async('string');
-    if(ncx){ const re = /<navPoint[^>]*>[\s\S]*?<navLabel[^>]*>[\s\S]*?<text>([^<]*)<\/text>[\s\S]*?<content\s+src="([^"]+)"/gi; let np;
-      while((np = re.exec(ncx)) !== null) labels[np[2].split('#')[0]] = np[1].trim(); }
+    const ncxPath = listenResolve(base, manifest[ncxId].href);
+    const xml = await zip.file(ncxPath)?.async('string');
+    if(xml){
+      const d = new DOMParser().parseFromString(xml, 'text/xml');
+      d.querySelectorAll('navPoint').forEach(np =>
+        addLabel(dirOf(ncxPath), np.querySelector('content')?.getAttribute('src'), np.querySelector('navLabel > text')?.textContent));
+    }
   }
   const spine = []; const sRe = /<itemref\s+idref="([^"]+)"/gi; let sp;
   while((sp = sRe.exec(opfXml)) !== null){
     const it = manifest[sp[1]];
-    if(it) spine.push({ href: it.href, label: labels[it.href] || it.href.split('/').pop().replace(/\.x?html?$/i, '') });
+    if(!it) continue;
+    const path = listenResolve(base, it.href);
+    spine.push({ href: it.href, label: labels[path] || listenFallbackLabel(it.href, spine.length), inToc: path in labels });
   }
   if(!spine.length) throw new Error('Empty spine');
-  return { zip, base, spine, lang };
+  // The chapter list shows the book's own TOC entries; spine files without one (split parts) just play on.
+  let toc = spine.map((x, i) => x.inToc ? listenMakeEntry(i, x.label) : null).filter(Boolean);
+  if(!toc.length) toc = spine.map((x, i) => listenMakeEntry(i, x.label));
+  return { zip, base, spine, lang, toc };
 }
 
 async function listenGetChapter(i){
@@ -21916,24 +21994,32 @@ function listenStatus(msg){ LISTEN.status = msg || ''; listenRender(); }
 function listenRender(){
   if(!LISTEN.active) return;
   const q = id => document.getElementById(id);
-  const label = LISTEN.spine[LISTEN.ch]?.label || `Chapter ${LISTEN.ch + 1}`;
+  const audio = q('audioPlayerEl');
+  const p = listenTocPos(), label = listenCurrentLabel();
   q('audioNowPlayingLabel').textContent = LISTEN.book.title || 'Listening';
   const part = q('audioPartLabel'); part.style.display = ''; part.textContent = LISTEN.status || label;
   q('audioMiniBarTitle').textContent = LISTEN.book.title || 'Listening';
   q('audioTrackNav').style.display = 'flex';
-  q('audioPrevTrackBtn').disabled = LISTEN.ch <= 0;
-  q('audioNextTrackBtn').disabled = LISTEN.ch >= LISTEN.spine.length - 1;
-  q('audioPrevTitle').textContent = LISTEN.spine[LISTEN.ch - 1]?.label || '—';
-  q('audioNextTitle').textContent = LISTEN.spine[LISTEN.ch + 1]?.label || '—';
+  q('audioPrevTrackBtn').disabled = p <= 0;
+  q('audioNextTrackBtn').disabled = p >= LISTEN.toc.length - 1;
+  q('audioPrevTitle').textContent = listenEntryText(LISTEN.toc[p - 1]);
+  q('audioNextTitle').textContent = listenEntryText(LISTEN.toc[p + 1]);
   ['audioPrevCoverImg','audioNextCoverImg'].forEach(id => q(id).style.display = 'none');
   ['audioPrevCoverPh','audioNextCoverPh'].forEach(id => q(id).style.display = 'flex');
+  const cb = q('listenChaptersBtn');
+  if(cb){ cb.style.display = 'flex'; cb.textContent = `☰  All chapters (${LISTEN.toc.length})`; }
+  if(q('listenChapterPanel')?.classList.contains('open')) listenRenderChapterList(false);
   if(LISTEN.mode === 'device'){          // AI mode: the normal player handlers show real audio time
     const pct = LISTEN.sents.length ? Math.round(100 * LISTEN.idx / LISTEN.sents.length) : 0;
     const seek = q('audioSeek'); seek.max = Math.max(LISTEN.sents.length, 1); seek.value = Math.min(LISTEN.idx, LISTEN.sents.length);
-    q('audioCurTime').textContent = `Ch ${LISTEN.ch + 1}/${LISTEN.spine.length}`;
+    q('audioCurTime').textContent = (p >= 0 && LISTEN.toc[p].no != null) ? `Ch ${LISTEN.toc[p].no}` : `${p + 1}/${LISTEN.toc.length}`;
     q('audioDurTime').textContent = pct + '%';
     q('audioMiniBarSub').textContent = `${label} · ${pct}%`;
     listenRenderPlay();
+  } else {
+    const preparing = !!LISTEN.status;
+    if(preparing || !audio.getAttribute('src')) q('audioMiniBarSub').textContent = LISTEN.status || label;
+    ['audioPlayPauseBtn','audioMiniPlayPauseBtn'].forEach(id => { const b = q(id); if(b && (preparing || audio.paused)) b.textContent = preparing ? '⏳' : '▶️'; });
   }
 }
 const LISTEN_SELECT_CSS = 'width:min(90vw,440px);background:rgba(255,255,255,.08);color:#fff;border:1px solid rgba(255,255,255,.16);border-radius:20px;padding:.4rem .8rem;font-size:.72rem;color-scheme:dark;';
@@ -21974,6 +22060,76 @@ function listenApplyModeUI(){
   if(vs) vs.style.display = LISTEN.mode === 'device' ? '' : 'none';
 }
 
+// ── chapter list ("All chapters") + compact layout so everything fits on a phone ──
+(function(){
+  const st = document.createElement('style');
+  st.textContent = `
+#audioPersistentPlayer.listen-mode{justify-content:flex-start;overflow-y:auto;gap:.9rem;
+  padding-top:calc(env(safe-area-inset-top,0px) + 3.8rem);padding-bottom:calc(env(safe-area-inset-bottom,0px) + 1.5rem);}
+#audioPersistentPlayer.listen-mode > *{flex-shrink:0;}
+#audioPersistentPlayer.listen-mode .audio-player-close{position:fixed;z-index:4;}
+#audioPersistentPlayer.listen-mode .audio-player-art{width:min(34vw,140px);height:min(34vw,140px);font-size:3rem;}
+#audioPersistentPlayer.listen-mode .audio-now-playing-label{font-size:1.1rem;}
+#audioPersistentPlayer.listen-mode .audio-player-part-label{margin-top:-.3rem;max-width:90vw;}
+.listen-chapters-btn{display:none;align-items:center;justify-content:center;gap:.4rem;width:min(90vw,440px);padding:.6rem 1rem;
+  border-radius:12px;border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.08);color:#fff;font-size:.8rem;font-weight:700;cursor:pointer;}
+.listen-chapters-btn:hover{background:rgba(255,255,255,.14);}
+#listenChapterPanel{display:none;position:fixed;inset:0;z-index:6;flex-direction:column;align-items:center;gap:.6rem;background:var(--navy);
+  padding:calc(env(safe-area-inset-top,0px) + 1rem) 1rem calc(env(safe-area-inset-bottom,0px) + 1rem);}
+#listenChapterPanel.open{display:flex;}
+.listen-ch-head{width:min(100%,520px);display:flex;align-items:center;justify-content:space-between;color:var(--gold);font-family:'Playfair Display',serif;font-size:1.2rem;}
+.listen-ch-head button{background:rgba(255,255,255,.1);border:none;color:#fff;width:2.4rem;height:2.4rem;border-radius:50%;font-size:1.1rem;cursor:pointer;}
+#listenChapterFilter{width:min(100%,520px);box-sizing:border-box;padding:.55rem .9rem;border-radius:10px;border:1px solid rgba(255,255,255,.16);
+  background:rgba(255,255,255,.08);color:#fff;font-size:.85rem;color-scheme:dark;}
+#listenChapterList{width:min(100%,520px);flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:.3rem;-webkit-overflow-scrolling:touch;}
+.listen-ch-row{display:flex;align-items:center;gap:.7rem;text-align:left;padding:.65rem .8rem;border-radius:10px;border:1px solid transparent;
+  background:rgba(255,255,255,.05);color:#fff;font-size:.85rem;cursor:pointer;flex-shrink:0;}
+.listen-ch-row:hover{background:rgba(255,255,255,.12);}
+.listen-ch-row.current{border-color:var(--gold);background:rgba(200,149,42,.16);}
+.listen-ch-no{min-width:2.1rem;text-align:center;color:var(--gold2,#e8b84b);font-weight:700;font-variant-numeric:tabular-nums;}
+.listen-ch-title{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;}
+.listen-ch-now{font-size:.62rem;text-transform:uppercase;letter-spacing:.05em;color:var(--gold2,#e8b84b);font-weight:700;flex-shrink:0;}`;
+  document.head.appendChild(st);
+})();
+function listenEnsureChapterUI(){
+  if(document.getElementById('listenChapterPanel')) return;
+  const btn = document.createElement('button');
+  btn.id = 'listenChaptersBtn'; btn.className = 'listen-chapters-btn'; btn.type = 'button';
+  btn.onclick = listenOpenChapters;
+  document.getElementById('audioTrackNav').after(btn);
+  const panel = document.createElement('div'); panel.id = 'listenChapterPanel';
+  panel.innerHTML = '<div class="listen-ch-head"><span>Chapters</span><button type="button" id="listenChapterClose" aria-label="Close chapter list">✕</button></div>'
+    + '<input id="listenChapterFilter" type="search" placeholder="Filter chapters…" autocomplete="off"/><div id="listenChapterList"></div>';
+  document.getElementById('audioPersistentPlayer').appendChild(panel);
+  panel.querySelector('#listenChapterClose').onclick = listenCloseChapters;
+  panel.querySelector('#listenChapterFilter').oninput = () => listenRenderChapterList(false);
+}
+function listenRenderChapterList(scrollToCurrent){
+  const list = document.getElementById('listenChapterList'); if(!list) return;
+  const f = (document.getElementById('listenChapterFilter').value || '').trim().toLowerCase();
+  const cur = listenTocPos();
+  list.innerHTML = '';
+  LISTEN.toc.forEach((e, i) => {
+    if(f && !(listenEntryText(e).toLowerCase().includes(f) || String(e.no) === f)) return;
+    const row = document.createElement('button'); row.type = 'button';
+    row.className = 'listen-ch-row' + (i === cur ? ' current' : '');
+    const no = document.createElement('span'); no.className = 'listen-ch-no'; no.textContent = e.no != null ? String(e.no) : '';
+    const title = document.createElement('span'); title.className = 'listen-ch-title'; title.textContent = e.no != null ? (e.title || `Chapter ${e.no}`) : e.title;
+    row.append(no, title);
+    if(i === cur){ const now = document.createElement('span'); now.className = 'listen-ch-now'; now.textContent = 'Now playing'; row.append(now); }
+    row.onclick = () => { listenCloseChapters(); listenGoto(e.si, 1, true); };
+    list.appendChild(row);
+  });
+  if(scrollToCurrent) list.querySelector('.current')?.scrollIntoView({ block: 'center' });
+}
+function listenOpenChapters(){
+  listenEnsureChapterUI();
+  document.getElementById('listenChapterFilter').value = '';
+  document.getElementById('listenChapterPanel').classList.add('open');
+  listenRenderChapterList(true);
+}
+function listenCloseChapters(){ document.getElementById('listenChapterPanel')?.classList.remove('open'); }
+
 // ── AI engine ────────────────────────────────────────────────────────────
 async function listenSha256(s){
   const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s));
@@ -21981,14 +22137,24 @@ async function listenSha256(s){
 }
 const listenAiPath = (lang, tier, hash) => `tts/${LISTEN_VOICE_REV}/${lang}/${tier}/${hash}.mp3`;
 
+// Languages whose cached narration is interchangeable for a book (en-GB ⇄ en-US read the same text)
+function listenAiLangs(lang){
+  if(!lang) return [];
+  return lang.startsWith('en') ? [lang, lang === 'en-GB' ? 'en-US' : 'en-GB'] : [lang];
+}
 // Returns { url, tier } or null if every tier's monthly allowance is used up.
 async function listenAiResolve(u, tiers){
   const hash = u.hash || (u.hash = await listenSha256(u.text));
-  for(const tier of tiers){                       // 1) already generated by anyone? (free)
-    try{ return { url: await getDownloadURL(storageRef(storage, listenAiPath(LISTEN.lang, tier, hash))), tier }; }
-    catch(e){ if(e.code === 'storage/unauthorized') throw e; }
+  // 1) Is there already a narration of this text on file, by anyone, in any tier? Use it (free).
+  const cacheTiers = [...tiers, ...['hd', 'wn'].filter(t => !tiers.includes(t))];
+  for(const lang of listenAiLangs(LISTEN.lang)){
+    for(const tier of cacheTiers){
+      try{ return { url: await getDownloadURL(storageRef(storage, listenAiPath(lang, tier, hash))), tier }; }
+      catch(e){ if(e.code === 'storage/unauthorized') throw e; }
+    }
   }
-  for(const tier of tiers){                       // 2) generate with the best tier that still has budget
+  // 2) Otherwise generate it with the best tier that still has budget.
+  for(const tier of tiers){
     try{
       const r = await _narrateCallable({ text: u.text, lang: LISTEN.lang, tier });
       return { url: await getDownloadURL(storageRef(storage, r.data.path)), tier };
@@ -22130,13 +22296,12 @@ function listenSkip(n){                           // device mode only (AI mode u
   listenSave(); listenRender();
   if(LISTEN.playing) listenSpeak();
 }
-async function listenAdvanceChapter(dir){
+async function listenGoto(n, dir = 1, force = false){
   if(LISTEN.busy) return;
   LISTEN.busy = true;
-  const wasPlaying = LISTEN.playing;
+  const wasPlaying = force || LISTEN.playing;
   listenStopEngine();
   try{
-    let n = LISTEN.ch + dir;
     while(n >= 0 && n < LISTEN.spine.length){
       const s = await listenGetChapter(n);
       if(s.length){
@@ -22144,7 +22309,7 @@ async function listenAdvanceChapter(dir){
         if(wasPlaying) listenStartCurrent();
         return;
       }
-      n += dir;
+      n += dir;                                   // image-only / empty file: keep going
     }
     LISTEN.busy = false;
     if(dir > 0){
@@ -22152,6 +22317,12 @@ async function listenAdvanceChapter(dir){
       showToast('End of book 📖'); listenExit(true);
     } else { showToast('This is the first chapter'); if(wasPlaying) listenStartCurrent(); }
   }catch(e){ LISTEN.busy = false; showToast('Could not load chapter: ' + e.message); }
+}
+function listenAdvanceChapter(dir){ return listenGoto(LISTEN.ch + dir, dir); }   // auto-advance: next file in reading order
+function listenNavChapter(dir){                                                   // ⏮ ⏭ buttons: previous/next TOC chapter
+  const t = LISTEN.toc[listenTocPos() + dir];
+  if(!t){ showToast(dir < 0 ? 'This is the first chapter' : 'This is the last chapter'); return; }
+  return listenGoto(t.si, dir);
 }
 function listenSetEngine(key){
   LISTEN.engineKey = key;
@@ -22166,6 +22337,7 @@ function listenSetEngine(key){
   listenStartCurrent();
 }
 function listenMinimize(){
+  listenCloseChapters();
   document.getElementById('audioPersistentPlayer')?.classList.remove('open');
   document.getElementById('audioMiniBar')?.classList.add('visible');
 }
@@ -22176,7 +22348,9 @@ function listenExit(hidePlayer = true){
   LISTEN.playing = false; LISTEN.active = false; LISTEN.busy = false; LISTEN.status = '';
   listenSetNavLabels(false);
   const q = id => document.getElementById(id);
-  ['listenEngineSelect', 'listenVoiceSelect'].forEach(id => { const s = q(id); if(s) s.style.display = 'none'; });
+  ['listenEngineSelect', 'listenVoiceSelect', 'listenChaptersBtn'].forEach(id => { const s = q(id); if(s) s.style.display = 'none'; });
+  listenCloseChapters();
+  q('audioPersistentPlayer')?.classList.remove('listen-mode');
   if(hidePlayer){
     q('audioPersistentPlayer')?.classList.remove('open');
     q('audioMiniBar')?.classList.remove('visible');
@@ -22208,7 +22382,7 @@ async function listenToCurrentBook(){
     if(_audioCurrentId) stopAudioPlayback();  // a real audiobook
     listenExit(true);                         // a different book already being narrated
     const info = await listenLoadBook(book);
-    Object.assign(LISTEN, { bookId: book.id, book, zip: info.zip, opfBase: info.base, spine: info.spine,
+    Object.assign(LISTEN, { bookId: book.id, book, zip: info.zip, opfBase: info.base, spine: info.spine, toc: info.toc,
       chapters: {}, unitCache: {}, busy: false, errs: 0, status: '', rate: _audioSpeed });
     LISTEN.lang = listenAiLang(info.lang);
     try{ LISTEN.engineKey = localStorage.getItem('elib_listen_engine') || 'ai'; }catch(e){ LISTEN.engineKey = 'ai'; }
@@ -22224,6 +22398,8 @@ async function listenToCurrentBook(){
     if(!sents.length) throw new Error('No readable text found in this book');
     listenSetChapter(ch, sents, Math.min(idx, sents.length - 1));
     LISTEN.bookId = book.id; LISTEN.active = true;
+    document.getElementById('audioPersistentPlayer').classList.add('listen-mode');
+    listenEnsureChapterUI();
     try{ recordBookOpened(book); addBookToViewedList(book.id); }catch(e){}
     setAudioArt(book.coverUrl || null);
     listenEnsureSelects(); listenSetNavLabels(true);
@@ -22247,8 +22423,8 @@ async function listenToCurrentBook(){
   overlay.addEventListener('click', e => {
     if(!LISTEN.active) return;
     const t = e.target, dev = LISTEN.mode === 'device';
-    if(t.closest('#audioPrevTrackBtn')){ swallow(e); listenAdvanceChapter(-1); }
-    else if(t.closest('#audioNextTrackBtn')){ swallow(e); listenAdvanceChapter(1); }
+    if(t.closest('#audioPrevTrackBtn')){ swallow(e); listenNavChapter(-1); }
+    else if(t.closest('#audioNextTrackBtn')){ swallow(e); listenNavChapter(1); }
     else if(t.closest('#audioPlayerMinimizeBtn')){ swallow(e); listenMinimize(); }
     else if(t.closest('#audioPlayerCloseBtn')){ swallow(e); listenExit(true); }
     else if(dev && t.closest('#audioPlayPauseBtn')){ swallow(e); if(LISTEN.playing) listenPause(); else listenPlay(); }
