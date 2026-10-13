@@ -21814,10 +21814,11 @@ function adminEmailNewItems(sinceMs){
     if(ms <= sinceMs) continue;
     (b.isRecipe ? g.recipes : b.isAudio ? g.audio : g.books).push({ b, ms });
   }
-  const line = ({ b }) => `- ${b.title || 'Untitled'}${b.author && !b.isRecipe ? ' — ' + b.author : ''}`;
-  const sec = (title, arr) => arr.length ? `## ${title}\n\n` + arr.sort((x, y) => y.ms - x.ms).map(line).join('\n') + '\n\n' : '';
+  // "[book:ID] Title — Author": the server turns each such line into a card (cover, details, link); the text after the ] is only for you to read
+  const line = kind => ({ b }) => `[${kind}:${b.id}] ${b.title || 'Untitled'}${b.author && !b.isRecipe ? ' — ' + b.author : ''}`;
+  const sec = (title, kind, arr) => arr.length ? `## ${title}\n\n` + arr.sort((x, y) => y.ms - x.ms).map(line(kind)).join('\n') + '\n\n' : '';
   return {
-    text: (sec('New books', g.books) + sec('New audiobooks', g.audio) + sec('New recipes', g.recipes)).trim(),
+    text: (sec('New books', 'book', g.books) + sec('New audiobooks', 'audio', g.audio) + sec('New recipes', 'recipe', g.recipes)).trim(),
     count: g.books.length + g.audio.length + g.recipes.length,
   };
 }
@@ -21836,7 +21837,7 @@ async function adminLoadEmail(){
       ${aud.lastSentAt ? 'Last update sent ' + new Date(aud.lastSentAt).toLocaleDateString() + '.' : 'No update sent yet.'}</div>
     <input id="adminEmailSubject" type="text" placeholder="Subject" maxlength="150" style="${inp}margin-bottom:.5rem"/>
     <textarea id="adminEmailText" rows="10" placeholder="Write your message…" style="${inp}resize:vertical;margin-bottom:.4rem"></textarea>
-    <div style="font-size:.7rem;color:var(--muted);line-height:1.5;margin-bottom:.6rem">Blank line = new paragraph · <code>## Heading</code> · lines starting with <code>- </code> become a bulleted list · web addresses become links.</div>
+    <div style="font-size:.7rem;color:var(--muted);line-height:1.5;margin-bottom:.6rem">Blank line = new paragraph · <code>## Heading</code> · lines starting with <code>- </code> become a bulleted list · web addresses become links · a line like <code>[book:ID] Title</code> becomes a card with the cover and a link (<i>Add new items</i> fills these in).</div>
     <div style="display:flex;align-items:center;gap:.4rem;flex-wrap:wrap;margin-bottom:.8rem">
       <button class="btn-cancel" id="adminEmailAddNew" style="font-size:.72rem;padding:.4rem .7rem">＋ Add new items since</button>
       <input id="adminEmailSince" type="date" value="${new Date(sinceMs).toISOString().slice(0, 10)}" style="font-size:.75rem;padding:.3rem .4rem;border:1px solid var(--border);border-radius:6px"/>
@@ -21864,9 +21865,11 @@ async function adminLoadEmail(){
     status(testOnly ? 'Sending a test to you…' : 'Sending… this takes about a minute, please keep this open.');
     try{
       const r = (await _sendUpdateCallable({ subject, body, testOnly })).data;
-      status(testOnly
-        ? `Test sent (${r.sent}/${r.total}). Check your inbox and spam folder.`
-        : `Sent to ${r.sent} of ${r.total}${r.failed ? ` — ${r.failed} failed (see the function logs)` : ''}.`);
+      const why = r.error ? ` Error: ${r.error}` : '';
+      const skip = r.skipped ? ` ${r.skipped} item${r.skipped === 1 ? '' : 's'} left out (not public, or not found).` : '';
+      status((testOnly
+        ? (r.sent ? `Test sent (${r.sent}/${r.total}). Check your inbox and spam folder.` : `Test NOT sent.${why}`)
+        : `Sent to ${r.sent} of ${r.total}${r.failed ? ` — ${r.failed} failed.${why}` : ''}.`) + skip);
       if(!testOnly && r.sent) showToast('Update sent ✉️');
     }catch(e){ status('Failed: ' + (e.message || e)); console.error(e); }
     finally{ btns.forEach(b => b.disabled = false); }
