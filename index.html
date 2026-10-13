@@ -2460,6 +2460,18 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
         </button>
       </div>
 
+      <div class="settings-card">
+        <div class="settings-card-label">✉️ Email</div>
+        <label class="settings-row" style="cursor:pointer">
+          <span class="settings-row-icon" style="background:var(--teal);color:var(--gold)">✉️</span>
+          <span class="settings-row-text">
+            <span class="settings-row-title">Email me about updates</span>
+            <span class="settings-row-desc">New features and new books · occasional · unsubscribe any time</span>
+          </span>
+          <input type="checkbox" id="mobEmailUpdatesToggle" style="width:20px;height:20px;accent-color:var(--teal);flex-shrink:0"/>
+        </label>
+      </div>
+
       <div class="settings-card" id="mobAdminSettingsCard" style="display:none">
         <div class="settings-card-label">🔑 Admin</div>
         <button class="settings-row" id="btnMobOpenAdmin">
@@ -15847,6 +15859,7 @@ async function checkAdminStatus() {
     isAdmin = accessLevel === 'admin';
     hasRestrictedAccess = accessLevel === 'elevated' || accessLevel === 'admin';
     document.getElementById('mobAdminSettingsCard').style.display = isAdmin ? '' : 'none';
+    _emailPrefInit(data);
   } catch(e) {
     console.warn('Admin check failed:', e);
   }
@@ -18008,6 +18021,16 @@ function buildAdminSections() {
       <div class="admin-section-body" id="adminBookmarkBody">
         <div style="color:var(--muted);font-size:.85rem">Open to load…</div>
       </div>
+    </div>
+
+    <div class="admin-section">
+      <div class="admin-section-header" data-admin-section="email">
+        <span class="admin-section-title">✉️ Email updates</span>
+        <span class="admin-section-chevron">▾</span>
+      </div>
+      <div class="admin-section-body" id="adminEmailBody">
+        <div style="color:var(--muted);font-size:.85rem">Open to load…</div>
+      </div>
     </div>`;
 
   // Collapsible toggle
@@ -18025,6 +18048,7 @@ function buildAdminSections() {
         if(section === 'recipecats')  adminLoadRecipeCategories();
         if(section === 'bookmarks')   adminLoadBookmarks();
         if(section === 'tags')        adminLoadTags();
+        if(section === 'email')       adminLoadEmail();
       }
     });
   });
@@ -21721,6 +21745,135 @@ async function deleteAudioTrack(id) {
 // ── wire audio-panel "+ Upload" button ──────────────────────────────────────
 // Routes into the dedicated Audio Upload modal (audio files + YouTube link),
 // kept separate from the EPUB uploader.
+
+// ══════════════════════════════════════════════════════════════════════════
+// EMAIL UPDATES — opt-in switch (Settings), one-time prompt, and the admin
+// "Send update" screen. Sending happens server-side (functions/mailer.js).
+// ══════════════════════════════════════════════════════════════════════════
+const _emailAudienceCallable = httpsCallable(fns, 'emailAudience');
+const _sendUpdateCallable = httpsCallable(fns, 'sendUpdate', { timeout: 300000 });
+let _emailPromptShown = false;
+
+async function setEmailUpdates(on){
+  if(!currentUser) return;
+  await setDoc(doc(db,'users',currentUser.uid), { emailUpdates: on, emailUpdatesAt: serverTimestamp(), emailPromptSeen: true }, { merge: true });
+}
+function _emailPrefInit(data){            // called from checkAdminStatus with the user's profile doc
+  const t = document.getElementById('mobEmailUpdatesToggle');
+  if(t){
+    t.checked = data.emailUpdates === true;
+    if(!t._bound){
+      t._bound = true;
+      t.addEventListener('change', async () => {
+        const want = t.checked;
+        try{ await setEmailUpdates(want); showToast(want ? "You'll get the occasional update email ✉️" : 'Update emails are off'); }
+        catch(e){ t.checked = !want; showToast("Couldn't save that — try again"); console.error(e); }
+      });
+    }
+  }
+  if(data.emailUpdates === undefined && data.emailPromptSeen !== true && !_emailPromptShown){
+    _emailPromptShown = true;
+    setTimeout(showEmailPrompt, 5000);
+  }
+}
+function showEmailPrompt(){               // asked once; an answer (either way) is remembered
+  if(!currentUser || document.querySelector('.modal-overlay.open')){ _emailPromptShown = false; return; }
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay open';
+  overlay.innerHTML = `
+    <div class="modal" style="max-width:400px">
+      <h3>✉️ Stay in the loop?</h3>
+      <p style="font-size:.88rem;line-height:1.6;color:var(--muted);margin:.4rem 0 0">Get an occasional email about new features and new books in the library. No spam, and you can unsubscribe in one click, or in Settings, at any time.</p>
+      <div class="modal-actions">
+        <button class="btn-cancel" id="emailPromptNo">No thanks</button>
+        <button class="btn-save" id="emailPromptYes">Yes, email me</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+  const answer = async on => {
+    overlay.remove();
+    try{
+      await setEmailUpdates(on);
+      const t = document.getElementById('mobEmailUpdatesToggle'); if(t) t.checked = on;
+      if(on) showToast("Great — you'll get occasional updates ✉️");
+    }catch(e){ console.warn(e); }
+  };
+  overlay.querySelector('#emailPromptYes').onclick = () => answer(true);
+  overlay.querySelector('#emailPromptNo').onclick = () => answer(false);
+}
+
+// Public items added since a date, grouped, as ready-to-edit message text.
+function adminEmailNewItems(sinceMs){
+  const seen = new Set(), g = { books: [], audio: [], recipes: [] };
+  for(const b of [...library, ...communityLib]){
+    if(!b || !b.id || seen.has(b.id)) continue;
+    seen.add(b.id);
+    if(b.visibility !== 'public') continue;          // private / restricted titles never go in an email
+    const c = b.createdAt;
+    const ms = c && c.toMillis ? c.toMillis() : (c && c.seconds ? c.seconds * 1000 : 0);
+    if(ms <= sinceMs) continue;
+    (b.isRecipe ? g.recipes : b.isAudio ? g.audio : g.books).push({ b, ms });
+  }
+  const line = ({ b }) => `- ${b.title || 'Untitled'}${b.author && !b.isRecipe ? ' — ' + b.author : ''}`;
+  const sec = (title, arr) => arr.length ? `## ${title}\n\n` + arr.sort((x, y) => y.ms - x.ms).map(line).join('\n') + '\n\n' : '';
+  return {
+    text: (sec('New books', g.books) + sec('New audiobooks', g.audio) + sec('New recipes', g.recipes)).trim(),
+    count: g.books.length + g.audio.length + g.recipes.length,
+  };
+}
+
+async function adminLoadEmail(){
+  const el = document.getElementById('adminEmailBody'); if(!el) return;
+  el.innerHTML = '<div style="color:var(--muted);font-size:.85rem">Loading…</div>';
+  let aud;
+  try{ aud = (await _emailAudienceCallable()).data; }
+  catch(e){ el.innerHTML = `<div style="color:var(--danger);font-size:.82rem">Email functions aren't available yet (${esc(e.message)}). Deploy sendUpdate, emailAudience and unsubscribe first.</div>`; return; }
+  const sinceMs = aud.lastSentAt || (Date.now() - 14 * 864e5);
+  const inp = 'width:100%;box-sizing:border-box;font-size:.85rem;padding:.5rem .6rem;border:1px solid var(--border);border-radius:8px;background:var(--cream);color:inherit;font-family:inherit;';
+  el.innerHTML = `
+    <div style="font-size:.8rem;color:var(--muted);margin-bottom:.7rem;line-height:1.5">
+      <b>${aud.optedIn}</b> ${aud.optedIn === 1 ? 'person has' : 'people have'} opted in.
+      ${aud.lastSentAt ? 'Last update sent ' + new Date(aud.lastSentAt).toLocaleDateString() + '.' : 'No update sent yet.'}</div>
+    <input id="adminEmailSubject" type="text" placeholder="Subject" maxlength="150" style="${inp}margin-bottom:.5rem"/>
+    <textarea id="adminEmailText" rows="10" placeholder="Write your message…" style="${inp}resize:vertical;margin-bottom:.4rem"></textarea>
+    <div style="font-size:.7rem;color:var(--muted);line-height:1.5;margin-bottom:.6rem">Blank line = new paragraph · <code>## Heading</code> · lines starting with <code>- </code> become a bulleted list · web addresses become links.</div>
+    <div style="display:flex;align-items:center;gap:.4rem;flex-wrap:wrap;margin-bottom:.8rem">
+      <button class="btn-cancel" id="adminEmailAddNew" style="font-size:.72rem;padding:.4rem .7rem">＋ Add new items since</button>
+      <input id="adminEmailSince" type="date" value="${new Date(sinceMs).toISOString().slice(0, 10)}" style="font-size:.75rem;padding:.3rem .4rem;border:1px solid var(--border);border-radius:6px"/>
+    </div>
+    <div style="display:flex;gap:.5rem;flex-wrap:wrap">
+      <button class="btn-cancel" id="adminEmailTest" style="font-size:.78rem">Send test to me</button>
+      <button class="btn-save" id="adminEmailSend" style="font-size:.78rem">Send to ${aud.optedIn}</button>
+    </div>
+    <div id="adminEmailStatus" style="font-size:.78rem;color:var(--muted);margin-top:.6rem"></div>`;
+  const q = id => el.querySelector('#' + id);
+  const status = msg => { q('adminEmailStatus').textContent = msg; };
+  q('adminEmailAddNew').onclick = () => {
+    const since = new Date(q('adminEmailSince').value + 'T00:00:00').getTime() || sinceMs;
+    const { text, count } = adminEmailNewItems(since);
+    if(!count){ showToast('Nothing new and public since that date'); return; }
+    const ta = q('adminEmailText');
+    ta.value = (ta.value.trim() ? ta.value.trim() + '\n\n' : '') + text + '\n\nOpen eLibrary: ' + location.origin + location.pathname;
+    status(`Added ${count} item${count === 1 ? '' : 's'} — edit as you like before sending.`);
+  };
+  const run = async testOnly => {
+    const subject = q('adminEmailSubject').value.trim(), body = q('adminEmailText').value.trim();
+    if(!subject || !body){ showToast('Add a subject and a message first'); return; }
+    if(!testOnly && !confirm(`Send this to ${aud.optedIn} ${aud.optedIn === 1 ? 'person' : 'people'}?`)) return;
+    const btns = el.querySelectorAll('button'); btns.forEach(b => b.disabled = true);
+    status(testOnly ? 'Sending a test to you…' : 'Sending… this takes about a minute, please keep this open.');
+    try{
+      const r = (await _sendUpdateCallable({ subject, body, testOnly })).data;
+      status(testOnly
+        ? `Test sent (${r.sent}/${r.total}). Check your inbox and spam folder.`
+        : `Sent to ${r.sent} of ${r.total}${r.failed ? ` — ${r.failed} failed (see the function logs)` : ''}.`);
+      if(!testOnly && r.sent) showToast('Update sent ✉️');
+    }catch(e){ status('Failed: ' + (e.message || e)); console.error(e); }
+    finally{ btns.forEach(b => b.disabled = false); }
+  };
+  q('adminEmailTest').onclick = () => run(true);
+  q('adminEmailSend').onclick = () => run(false);
+}
 
 document.getElementById('audioUploadLabel')?.addEventListener('click', showAudioUploadModal);
 
