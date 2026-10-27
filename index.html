@@ -1270,6 +1270,23 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .settings-row-title{font-family:'Lato',sans-serif;font-size:.87rem;font-weight:700;color:var(--navy2);}
 .settings-row-desc{font-size:.72rem;color:var(--muted);}
 .settings-row-chevron{font-size:1rem;color:var(--border);flex-shrink:0;}
+
+/* ── RECOMMENDED — seasonal themes ── */
+.rec-shell{position:relative;overflow:hidden;}
+.rec-body{position:relative;z-index:1;}
+.rec-bar{position:absolute;top:0;left:0;right:0;height:4px;pointer-events:none;}
+.rec-bar.twinkle{animation:recTwinkle 1.8s ease-in-out infinite;}
+.rec-p{position:absolute;top:-12%;line-height:1;opacity:0;pointer-events:none;user-select:none;animation:recFall linear infinite,recSway ease-in-out infinite alternate;}
+@keyframes recFall{0%{top:-12%;opacity:0}8%{opacity:.85}92%{opacity:.85}100%{top:104%;opacity:0}}
+@keyframes recSway{from{transform:translateX(-7px) rotate(-14deg)}to{transform:translateX(9px) rotate(16deg)}}
+@keyframes recTwinkle{0%,100%{opacity:1}50%{opacity:.4}}
+@media (prefers-reduced-motion:reduce){.rec-p{display:none}.rec-bar.twinkle{animation:none}}
+.rec-theme-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:.45rem;padding:.2rem .5rem .3rem;}
+.rec-theme-chip{display:flex;flex-direction:column;align-items:center;gap:.2rem;padding:.55rem .2rem;border:1.5px solid var(--border);border-radius:10px;background:var(--cream);font-family:'Lato',sans-serif;font-size:.72rem;font-weight:700;color:var(--navy2);cursor:pointer;-webkit-tap-highlight-color:transparent;}
+.rec-theme-chip .e{font-size:1.35rem;line-height:1;}
+.rec-theme-chip.on{border-color:var(--teal);background:var(--teal-light);}
+.rec-blurb-input{flex:1;min-width:0;padding:.5rem .7rem;font-size:1rem;font-family:'Lato',sans-serif;border:1px solid var(--border);border-radius:8px;background:var(--cream);color:var(--navy);outline:none;}
+.rec-blurb-reset{padding:.5rem .8rem;font-size:.78rem;font-weight:700;font-family:'Lato',sans-serif;border:1px solid var(--teal);color:var(--teal);background:var(--cream);border-radius:8px;cursor:pointer;}
 .settings-footer{text-align:center;font-size:.68rem;color:var(--muted);font-style:italic;padding:1rem 0 .5rem;font-family:'Playfair Display',serif;opacity:.6;}
 
 /* ── CHAPTER MANAGER ── */
@@ -1838,6 +1855,31 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
   border:1px solid rgba(184,76,26,.3);cursor:pointer;-webkit-tap-highlight-color:transparent;flex-shrink:0;}
 .reader-overlay.theme-night .reader-ledger-pill{background:rgba(255,138,92,.15);color:#ff8a5c;border-color:rgba(255,138,92,.35);}
 
+/* ── Reading game ── */
+.reader-game-chip{font-size:.7rem;font-weight:700;padding:.2rem .55rem;border-radius:12px;white-space:nowrap;display:none;align-items:center;gap:.3rem;background:rgba(30,120,130,.12);color:var(--teal);border:1px solid rgba(30,120,130,.35);cursor:pointer;-webkit-tap-highlight-color:transparent;flex-shrink:0;}
+.reader-game-chip.ready{background:var(--teal);color:#fff;border-color:var(--teal);animation:gamePulse 1.8s ease-in-out infinite;}
+.reader-overlay.theme-night .reader-game-chip{background:rgba(94,200,210,.15);color:#7fd6de;border-color:rgba(94,200,210,.35);}
+.reader-overlay.theme-night .reader-game-chip.ready{background:#2a9aa6;color:#fff;border-color:#2a9aa6;}
+@keyframes gamePulse{0%,100%{box-shadow:0 0 0 0 rgba(30,120,130,.45)}50%{box-shadow:0 0 0 6px rgba(30,120,130,0)}}
+@media (prefers-reduced-motion:reduce){.reader-game-chip.ready{animation:none}}
+.game-overlay{position:fixed;inset:0;z-index:520;display:flex;flex-direction:column;background:#14233b;color:#e8eef5;font-family:'Lato',sans-serif;-webkit-user-select:none;user-select:none;overscroll-behavior:contain;touch-action:none;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);}
+.game-top{display:flex;align-items:center;gap:.5rem;padding:.5rem .7rem;border-bottom:1px solid rgba(255,255,255,.1);}
+.game-title{flex:1;font-size:1.2rem;line-height:1;}
+.game-stat{text-align:center;min-width:2.9rem;}
+.game-stat b{display:block;font-size:1rem;color:#e6b94d;font-variant-numeric:tabular-nums;}
+.game-stat span{font-size:.55rem;letter-spacing:.08em;text-transform:uppercase;opacity:.7;}
+.game-x{width:2.1rem;height:2.1rem;border-radius:50%;border:1px solid rgba(255,255,255,.25);background:rgba(255,255,255,.08);color:#fff;font-size:.95rem;cursor:pointer;touch-action:manipulation;}
+.game-stage{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;padding:.5rem;position:relative;}
+.game-controls{display:grid;grid-template-columns:repeat(5,1fr);gap:.4rem;padding:.5rem .7rem .8rem;}
+.game-btn{padding:.85rem 0;font-size:1.25rem;border-radius:12px;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.08);color:#fff;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent;}
+.game-btn:active{background:rgba(255,255,255,.22);}
+.game-panel{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.7rem;background:rgba(10,18,32,.9);text-align:center;padding:1.5rem;z-index:2;}
+.game-panel h2{font-family:'Playfair Display',serif;font-size:1.6rem;margin:0;}
+.game-panel p{margin:0;opacity:.85;font-size:.9rem;line-height:1.4;}
+.game-big{font-family:'Playfair Display',serif;font-size:2.2rem;color:#e6b94d;line-height:1;}
+.game-go{padding:.8rem 1.8rem;border-radius:999px;border:none;background:#e6b94d;color:#1a1205;font-weight:700;font-size:1rem;cursor:pointer;touch-action:manipulation;}
+.game-ghost{padding:.6rem 1.3rem;border-radius:999px;border:1px solid rgba(255,255,255,.3);background:none;color:#fff;font-size:.85rem;cursor:pointer;touch-action:manipulation;}
+
 /* Home tab teaser */
 .home-ledger-teaser{display:flex;align-items:center;gap:.8rem;padding:.85rem 1rem;border-radius:14px;
   background:var(--warm-white);border:1px solid var(--border);margin-bottom:1rem;cursor:pointer;position:relative;
@@ -1990,6 +2032,40 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .ledger-goal-chip.active{background:var(--teal);border-color:var(--teal);color:#fff;}
 .ledger-goal-custom-input{width:100%;padding:.55rem .7rem;font-size:.85rem;font-family:'Lato',sans-serif;
   border:1px solid var(--border);border-radius:10px;background:var(--cream);color:var(--navy);outline:none;margin-top:.6rem;}
+/* ── Songbook view ───────────────────────────────────────────────────────── */
+.sb-overlay{display:none;position:fixed;inset:0;z-index:155;flex-direction:column;background:var(--sb-bg);color:var(--sb-fg);
+  --sb-bg:#fffefb;--sb-fg:#1a1a1a;--sb-bar:#f4f4f4;--sb-muted:#7a8a9a;--sb-accent:#2a7c8a;--sb-line:rgba(15,26,46,.12);}
+.sb-overlay.open{display:flex;}
+.sb-overlay.theme-sepia{--sb-bg:#e9dcc4;--sb-fg:#3b2a1a;--sb-bar:#e0d0b8;--sb-muted:#8a7355;--sb-accent:#9a6a1a;--sb-line:rgba(59,42,26,.18);}
+.sb-overlay.theme-night{--sb-bg:#12122a;--sb-fg:#e8e4dc;--sb-bar:#1a1a38;--sb-muted:#8a90a8;--sb-accent:var(--gold);--sb-line:rgba(255,255,255,.12);}
+.sb-bar,.sb-nav{display:flex;align-items:center;gap:.4rem;background:var(--sb-bar);padding:.5rem .7rem;flex-shrink:0;}
+.sb-bar{padding-top:calc(.5rem + env(safe-area-inset-top,0px));border-bottom:1px solid var(--sb-line);}
+.sb-nav{padding-bottom:calc(.5rem + var(--sab));border-top:1px solid var(--sb-line);justify-content:space-between;}
+.sb-title{flex:1;min-width:0;font-family:'Playfair Display',serif;font-size:1rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.sb-btn{border:none;background:transparent;color:var(--sb-fg);font-size:1.05rem;min-width:40px;height:40px;border-radius:8px;cursor:pointer;-webkit-tap-highlight-color:transparent;}
+.sb-btn:active,.sb-btn.on{background:var(--sb-line);}
+.sb-btn.fav-on{color:var(--sb-accent);}
+.sb-nav .sb-btn{font-size:1.6rem;min-width:64px;}
+.sb-pos{font-size:.8rem;color:var(--sb-muted);}
+.sb-body{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:1.2rem 1.4rem 2rem;touch-action:pan-y;}
+.sb-song{max-width:640px;margin:0 auto;font-family:'Playfair Display',Georgia,serif;font-size:22px;line-height:1.55;}
+.sb-song h1{font-size:1.25em;line-height:1.25;margin-bottom:.7em;}
+.sb-num{color:var(--sb-accent);margin-right:.15em;}
+.sb-verse{margin:0 0 1.1em;}
+.sb-note{font-size:.72em;font-style:italic;color:var(--sb-muted);margin:0 0 .6em;}
+.sb-empty{font-size:.8em;color:var(--sb-muted);margin-top:1.2em;}
+.sb-index{display:none;position:absolute;inset:0;background:var(--sb-bg);flex-direction:column;z-index:2;}
+.sb-index.open{display:flex;}
+.sb-index-top{display:flex;gap:.4rem;align-items:center;background:var(--sb-bar);padding:.5rem .7rem;padding-top:calc(.5rem + env(safe-area-inset-top,0px));border-bottom:1px solid var(--sb-line);}
+.sb-search{flex:1;min-width:0;padding:.55rem .7rem;font-size:1rem;font-family:'Lato',sans-serif;border:1px solid var(--sb-line);border-radius:10px;background:var(--sb-bg);color:var(--sb-fg);outline:none;}
+.sb-list{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;}
+.sb-item{display:flex;gap:.8rem;align-items:baseline;padding:.7rem 1rem;border-bottom:1px solid var(--sb-line);cursor:pointer;}
+.sb-item.current{background:var(--sb-line);}
+.sb-item .n{min-width:2.6rem;color:var(--sb-accent);font-weight:700;}
+.sb-item .t{flex:1;}
+.sb-item .a{font-size:.7rem;color:var(--sb-muted);}
+.sb-item .s{color:var(--sb-accent);}
+.sb-none{padding:2rem 1rem;text-align:center;color:var(--sb-muted);}
 </style>
 </head>
 <body>
@@ -2121,6 +2197,10 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
             <span id="deskPillCatLabel">Genre</span>
             <span class="mfp-caret">▾</span>
           </button>
+          <button class="mfp mfp-cat lib-pill-hidden" id="deskPillRecipeCat" aria-label="Filter by recipe category">
+            <span id="deskPillRecipeCatLabel">Categories</span>
+            <span class="mfp-caret">▾</span>
+          </button>
           <button class="mfp mfp-tags" id="deskPillTags" aria-label="Filter by tags">
             <span id="deskPillTagsLabel">Tags</span>
             <span class="mfp-caret">▾</span>
@@ -2199,6 +2279,10 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
       <div class="mob-filter-bar" id="mobFilterBar">
         <button class="mfp mfp-cat" id="mfpCat" aria-label="Filter by genre">
           <span id="mfpCatLabel">Genre</span>
+          <span class="mfp-caret">▾</span>
+        </button>
+        <button class="mfp mfp-cat lib-pill-hidden" id="mfpRecipeCat" aria-label="Filter by recipe category">
+          <span id="mfpRecipeCatLabel">Categories</span>
           <span class="mfp-caret">▾</span>
         </button>
         <button class="mfp mfp-tags" id="mfpTags" aria-label="Filter by tags">
@@ -3059,6 +3143,33 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
   <button class="audio-mini-bar-btn" id="audioMiniCloseBtn" title="Stop">✕</button>
 </div>
 
+<!-- Songbook reading view (opened instead of the paginated reader for EPUBs flagged elib:type=songbook) -->
+<div class="sb-overlay theme-day" id="sbOverlay">
+  <div class="sb-bar">
+    <button class="sb-btn" id="sbClose" title="Close">✕</button>
+    <div class="sb-title" id="sbTitle"></div>
+    <button class="sb-btn" id="sbFavBtn" title="Favourite this song">☆</button>
+    <button class="sb-btn" id="sbSizeDown" title="Smaller text">A−</button>
+    <button class="sb-btn" id="sbSizeUp" title="Larger text">A+</button>
+    <button class="sb-btn" id="sbThemeBtn" title="Theme">◐</button>
+    <button class="sb-btn" id="sbIndexBtn" title="Song index">☰</button>
+  </div>
+  <div class="sb-body" id="sbBody"><article class="sb-song" id="sbSong"></article></div>
+  <div class="sb-nav">
+    <button class="sb-btn" id="sbPrev" title="Previous song">‹</button>
+    <span class="sb-pos" id="sbPos"></span>
+    <button class="sb-btn" id="sbNext" title="Next song">›</button>
+  </div>
+  <div class="sb-index" id="sbIndex">
+    <div class="sb-index-top">
+      <input class="sb-search" id="sbSearch" type="search" placeholder="Song number or title…" autocomplete="off">
+      <button class="sb-btn" id="sbFavFilter" title="Show favourites only">★</button>
+      <button class="sb-btn" id="sbIndexClose" title="Back to song">✕</button>
+    </div>
+    <div class="sb-list" id="sbList"></div>
+  </div>
+</div>
+
 <!-- EPUB Reader — PATCH 5: toolbar moved to bottom -->
 <div class="reader-overlay theme-day" id="readerOverlay">
 <div class="reader-settings-bar" id="readerSettingsBar">
@@ -3122,6 +3233,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
     </div>
     <div class="reader-title" id="readerTitle">Reading…</div>
     <span class="reader-ledger-pill" id="readerLedgerPill" title="Today's reading progress">🔥0 · +0</span>
+    <span class="reader-game-chip" id="readerGameChip" title="Reading game"></span>
     <span class="reader-page-info" id="readerPageInfo">1/1</span>
   </div>
   <!-- Button bar — hides on center-tap -->
@@ -3188,7 +3300,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
 import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, onAuthStateChanged, signOut }
   from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
-import { getFirestore, collection, addDoc, getDocs, getDoc, doc,
+import { getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager, getDocsFromCache, collection, addDoc, getDocs, getDoc, doc,
          query, where, orderBy, updateDoc, deleteDoc, serverTimestamp, setDoc, Timestamp, limit, onSnapshot, deleteField, increment, arrayUnion, arrayRemove }
   from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 import { getStorage, ref as storageRef, uploadBytes, getDownloadURL, getBytes, deleteObject }
@@ -3201,6 +3313,21 @@ import { getFunctions, httpsCallable }
 // Blob URL generated on load — needed so packaging tools like Bubblewrap can
 // fetch it directly when building the Play Store TWA, and so Chrome doesn't
 // see a "new" manifest identity on every single page load.
+// ── DEEP LINK CAPTURE ────────────────────────────────────────────────────────
+// Remember which item a link points at the instant the page loads — before a sign-in redirect, a
+// service-worker reload or anything else can drop the #hash — so checkUrlHash() can still open it
+// afterwards. Understands #book=ID / #audio=ID / #recipe=ID (from the bookShare redirect) and
+// path-style /book|audio|recipe/ID (if the page is ever served directly at that address).
+(function captureDeepLink(){
+  try{
+    const h = location.hash.match(/[#&](book|recipe|audio)=([a-zA-Z0-9]+)/);
+    const p = location.pathname.match(/\/(book|recipe|audio)\/([a-zA-Z0-9]+)\/?$/);
+    const m = h || p;
+    if(m) sessionStorage.setItem('elib_pending_open', JSON.stringify({ id: m[2], ts: Date.now() }));
+    if(!h && p) history.replaceState(null, '', location.pathname.replace(/\/(book|recipe|audio)\/[a-zA-Z0-9]+\/?$/, '/') + location.search);
+  }catch(e){}
+})();
+
 if('serviceWorker' in navigator){
   navigator.serviceWorker.register(new URL('./sw.js', location.href).href).catch(e => console.warn('SW registration failed:', e));
   // Once a new service worker takes over (after skipWaiting()/clients.claim()
@@ -3220,7 +3347,24 @@ window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredIns
 
 // ── FIREBASE ─────────────────────────────────────────────────────────────────
 const app=initializeApp({apiKey:'AIzaSyA1hCS7-C_W0VS7_JVcPIPdJ4aluDuL_-Q',authDomain:'elibrary-c0074.firebaseapp.com',projectId:'elibrary-c0074',storageBucket:'elibrary-c0074.firebasestorage.app',messagingSenderId:'310807052995',appId:'1:310807052995:web:a06dbe84f3924731749876'});
-const auth=getAuth(app),db=getFirestore(app),storage=getStorage(app),gprovider=new GoogleAuthProvider();
+// Firestore with a persistent local copy (IndexedDB, shared by every open tab): whatever has been read
+// before — books, lists, settings — is available instantly on the next start, and offline, instead of
+// being downloaded from scratch each time. Falls back to the old memory-only cache if the browser refuses.
+function _initDb(app){
+  try{
+    // experimentalAutoDetectLongPolling: some networks and antivirus/web-shield tools BUFFER Firestore's streaming
+    // connection, so answers arrive late — or only once something else is requested. This makes Firestore detect
+    // that at start-up and switch to plain long-polling, which such tools leave alone.
+    return initializeFirestore(app, {
+      localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }),
+      experimentalAutoDetectLongPolling: true,
+    });
+  }catch(e){
+    console.warn('Firestore persistent cache unavailable, using memory cache:', e);
+    return getFirestore(app);
+  }
+}
+const auth=getAuth(app),db=_initDb(app),storage=getStorage(app),gprovider=new GoogleAuthProvider();
 // Region must match the `region` set on the function in functions/index.js.
 const fns=getFunctions(app,'us-central1');
 
@@ -3276,6 +3420,13 @@ let ledgerState = {
   loaded: false,
 };
 let ledgerToday = { dateStr: null, pagesRead: 0, pointsEarned: 0, goalMet: false };
+
+// ── READING GAME state (admin-only for now — see readingGameEnabled()) ──────
+const GAME_PAGES_PER_TOKEN = 10;   // credited pages that earn one play
+const GAME_MAX_TOKENS      = 3;    // unspent plays you can bank
+const GAME_RUN_SECS        = 300;  // one play lasts at most this long
+let gameState = { tokens: 0, progress: 0, highScore: 0, loaded: false };
+let _gameCloser = null;            // set while the game overlay is open
 let _ledgerFlushedPages = 0;   // pages already written to Firestore today (for delta increments)
 let _ledgerFlushedPoints = 0;  // points already written to Firestore today
 let _ledgerFlushTimer = null;
@@ -3330,6 +3481,7 @@ let _ledgerTier2BackfillDone = false; // guards the one-off retroactive check, s
 let myCheckedOutIds=new Set();
 let koboDevices = [];
 let _userLists = [];
+let _userListsFromCache = false;   // true while the lists on screen came from the local copy (or a failed read) — see loadUserLists()
 let _categories = [];
 let _recipeCategories = [];  // config/recipeCategories — persisted so an Admin-added category with no recipes yet doesn't disappear
 let _globalTags = [];
@@ -3463,9 +3615,12 @@ onAuthStateChanged(auth, async user => {
     // ── WAVE 2: library — loads in background, renders when ready ───────
     // Slight delay so wave 1 fetches get priority on the connection
     setTimeout(() => {
-      loadLibrary().then(() => {
-        checkUrlHash();
-        renderSkeleton('deskBookGrid', 0);
+      // Paint the saved copy straight away (a local read, no network), THEN refresh from the server.
+      hydrateLibraryFromCache().finally(() => {
+        loadLibrary().then(() => {
+          checkUrlHash();
+          renderSkeleton('deskBookGrid', 0);
+        });
       });
     }, 100);
 
@@ -3488,24 +3643,25 @@ onAuthStateChanged(auth, async user => {
 
   } else {
     document.getElementById('authScreen').classList.remove('hidden');
+    _resetLibraryState();          // never let the next person to sign in on this tab see (or merge with) this one's library
+    _adminStatusKnown = false;
+    if(_gameCloser) _gameCloser(true);
+    gameState = { tokens: 0, progress: 0, highScore: 0, loaded: false };
+    updateGameChip();
     if(appNotifUnsub) { appNotifUnsub(); appNotifUnsub = null; }
     if(appNotifRepliesUnsub) { appNotifRepliesUnsub(); appNotifRepliesUnsub = null; }
+    if(_recCfgUnsub) { _recCfgUnsub(); _recCfgUnsub = null; }
+    _recCfg = { theme:'classic', blurbs:{} };
     appNotifications = [];
     updateNotifBadge();
   }
 });
 
-// ── Resume/reconnect resilience ──────────────────────────────────────────
-// Root cause of "app sits backgrounded a while, then shows no books when
-// reopened": mobile browsers/PWAs commonly throttle or drop network access
-// for a backgrounded tab, and can even discard the in-memory JS state
-// entirely under memory pressure. Either way, nothing previously re-ran the
-// initial load on return — a query that failed (or a fresh reload whose
-// very first load attempt raced a not-yet-reconnected network) just left
-// `library`/`_userLists` empty with no retry, so the Home/Library views
-// rendered their normal "nothing here" empty state forever, indistinguishable
-// from an actually-empty account. Re-check and retry whenever we get a
-// signal that connectivity or visibility just came back.
+// ── Resume/reconnect ─────────────────────────────────────────────────────
+// Mobile browsers throttle or drop the network for a backgrounded app. The library is now kept as a saved
+// copy, and a failed or partial load retries itself with backoff (see loadLibrary), so coming back only
+// needs a quiet refresh when the last full load failed or has gone stale — the saved copy stays on screen
+// meanwhile, so nothing blanks out.
 let _lastHiddenAt = null;
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'hidden') {
@@ -3515,13 +3671,13 @@ document.addEventListener('visibilitychange', () => {
   if (document.visibilityState !== 'visible' || !currentUser) return;
   const awayMs = _lastHiddenAt ? Date.now() - _lastHiddenAt : 0;
   if (awayMs < 15000) return; // brief switch-away — state is almost certainly still fine
-  if (!library.length) loadLibrary();
-  if (!_userLists.length) loadUserLists().then(() => { renderMobHome(); renderDeskSidebar(); });
+  if (!_libLastGoodAt || Date.now() - _libLastGoodAt > 5 * 60 * 1000) { _libRetryN = 0; loadLibrary(); }
+  if (!_userLists.length || _userListsFromCache) loadUserLists().then(() => { renderMobHome(); renderDeskSidebar(); });
 });
 window.addEventListener('online', () => {
   if (!currentUser) return;
-  if (!library.length) loadLibrary();
-  if (!_userLists.length) loadUserLists().then(() => { renderMobHome(); renderDeskSidebar(); });
+  _libRetryN = 0; loadLibrary();      // connectivity just came back: always try (one load at a time, see loadLibrary)
+  if (!_userLists.length || _userListsFromCache) loadUserLists().then(() => { renderMobHome(); renderDeskSidebar(); });
 });
 // signInWithPopup can fail purely because of how the browser's
 // Cross-Origin-Opener-Policy header interacts with Firebase's popup-close
@@ -3621,96 +3777,199 @@ let _libraryReady = false;
 let _libraryReadyResolve;
 let _libraryReadyPromise = new Promise(res => { _libraryReadyResolve = res; });
 
-async function loadLibrary() {
-  if (!currentUser) return;
-  // PATCH: no showLoading() here — this used to throw a blocking full-screen
-  // spinner over whatever was already on screen every time loadLibrary()
-  // ran, which was barely noticeable on first app open (nothing to look at
-  // yet) but was jarring on a resume/refresh, where it blanked out an
-  // already-usable library the user was mid-interaction with. Now this
-  // matches the same non-blocking, fetch-then-swap pattern used for the
-  // rest of the "Wave" loads on first open: whatever's already rendered
-  // (skeleton or the previous library) just stays interactive until the
-  // fresh data lands and renderAll() swaps it in.
-  try {
-    const myQ = query(
-      collection(db, 'books'),
-      where('ownerId', '==', currentUser.uid),
-      orderBy('createdAt', 'desc')
-    );
-    const pubQ = query(
-      collection(db, 'books'),
-      where('visibility', '==', 'public'),
-      orderBy('createdAt', 'desc')
-    );
-    const sharedQ = query(
-      collection(db, 'books'),
-      where('allowedUsers', 'array-contains', currentUser.uid)
-    );
-    // Restricted-visibility books are a cohort-wide tier, not a per-book
-    // reader list: anyone admin-granted restrictedAccess (or an admin
-    // themselves) can see every book marked 'restricted', the same way
-    // 'public' is visible to everyone. Only issue this query for readers
-    // the rules will actually let through — for anyone else it would be
-    // guaranteed permission-denied (Firestore has to satisfy the security
-    // rule for the whole query, not just filter out what it can't see).
-    const restrictedPromise = (isAdmin || hasRestrictedAccess)
-      ? getDocs(query(collection(db, 'books'), where('visibility', '==', 'restricted')))
-      : Promise.resolve({ docs: [] });
+// ── LIBRARY LOADING ──────────────────────────────────────────────────────────
+// How this works, and why:
+//  1. Firestore keeps a persistent local copy of everything it has read (see _initDb). On start the
+//     library is painted from that copy immediately (hydrateLibraryFromCache), then refreshed from the
+//     server — so a reload never begins with an empty screen, and the app opens offline.
+//  2. An answer that came from the local copy (snap.metadata.fromCache) is useful, but it is NOT proof
+//     that something is gone. When the server can't be reached for ~10 seconds Firestore resolves
+//     getDocs() with whatever it has cached — an EMPTY list on a cold start — with no error at all, and
+//     that used to be taken as "this person has no books". Such an answer may ADD to what is on screen
+//     but never REMOVE from it; only a server-confirmed answer is allowed to replace the lists.
+//  3. A load that isn't fully server-confirmed retries itself with backoff, and the person is told
+//     (see _setLibBanner) instead of being left with a silently empty library.
+//  4. One load at a time; asking again mid-load queues exactly one follow-up run.
+let _libUid = null;                // whose data the library arrays currently hold
+let _libLoadPromise = null, _libLoadAgain = false;
+let _libRetryTimer = null, _libRetryN = 0, _libLastGoodAt = 0, _libFailStreak = 0;
+let _libSigMine = null, _libSigAll = null, _libReport = [];     // what was last drawn / how the last load went
+const _warnedSources = new Set();
+const _LIB_RETRY_DELAYS = [3000, 8000, 20000, 45000, 90000];
+const _readDocs = (q, opts) => (opts && opts.cacheOnly) ? getDocsFromCache(q) : getDocs(q);
+const _fromCache = snap => !!(snap && snap.metadata && snap.metadata.fromCache);
 
-    // Load and render my books (+ audiobooks + recipes) immediately
-    const [mySnap] = await Promise.all([getDocs(myQ), loadAudioTracks(), loadRecipes()]);
-    library = mySnap.docs.map(d => ({ id: d.id, ...d.data() }));
+// Errors that retrying can never fix: the rules refuse the query for good, or it needs an index that doesn't
+// exist. These must NOT be treated like a dropped connection — no banner, no retries; carry on without that
+// source (exactly what the app did before the saved-copy logic existed).
+const _PERMANENT_READ_ERRORS = new Set(['permission-denied', 'failed-precondition', 'invalid-argument', 'not-found', 'unimplemented']);
+const _isPermanentReadError = e => !!(e && _PERMANENT_READ_ERRORS.has(e.code));
+// A settled read counts as "confirmed" if the server answered it, or if the server refused it for good.
+const _srcOk = r => r.status === 'fulfilled' ? !_fromCache(r.value) : _isPermanentReadError(r.reason);
+
+// Turns rejected reads into readable report lines; a permanent refusal is logged only once per source.
+function _readIssues(entries) {
+  const out = [];
+  for (const [label, r] of entries) {
+    if (r.status !== 'rejected') continue;
+    const code = (r.reason && r.reason.code) || 'error';
+    if (_isPermanentReadError(r.reason)) {
+      out.push(`${label}: refused by the server (${code}) — left out`);
+      if (!_warnedSources.has(label)) {
+        _warnedSources.add(label);
+        console.warn(`[library] ${label} can't be read (${code}) and is left out — check the Firestore rules/indexes for it.`, r.reason);
+      }
+    } else {
+      out.push(`${label}: failed (${code})`);
+      console.warn(`[library] ${label} failed:`, r.reason);
+    }
+  }
+  return out;
+}
+
+function _resetLibraryState() {
+  library = []; communityLib = []; _audioTracks = []; _recipes = [];
+  clearTimeout(_libRetryTimer); _libRetryN = 0; _libLastGoodAt = 0; _libFailStreak = 0; _libUid = null;
+  _libSigMine = null; _libSigAll = null; _libReport = []; _warnedSources.clear();
+  _setLibBanner(false);
+}
+
+function _setLibBanner(show, hasContent) {
+  const old = document.getElementById('libStatusBar');
+  if (!show) { old?.remove(); return; }
+  const msg = hasContent ? "Showing your saved library — couldn't reach the server." : "Couldn't load your library — check your connection.";
+  if (old) { old.firstElementChild.textContent = msg; return; }
+  const el = document.createElement('div');
+  el.id = 'libStatusBar';
+  el.style.cssText = 'position:fixed;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom,0px) + 76px);z-index:450;max-width:92vw;'
+    + 'display:flex;align-items:center;gap:.7rem;padding:.5rem .6rem .5rem .9rem;border-radius:22px;background:var(--navy,#1a2a3a);color:#fff;'
+    + 'font-size:.78rem;box-shadow:0 4px 18px rgba(0,0,0,.3);';
+  el.innerHTML = '<span></span><a href="#" id="libStatusDetails" style="color:#fff;opacity:.75;text-decoration:underline;flex-shrink:0">Details</a>'
+    + '<button type="button" style="border:none;border-radius:14px;padding:.3rem .8rem;background:var(--gold,#c8952a);color:var(--navy,#1a2a3a);font-weight:700;font-size:.75rem;cursor:pointer;flex-shrink:0">Retry</button>';
+  el.firstElementChild.textContent = msg;
+  el.querySelector('#libStatusDetails').onclick = e => { e.preventDefault(); alert('Last library load:\n\n' + (_libReport.length ? _libReport.join('\n') : 'no details yet')); };
+  el.querySelector('button').onclick = () => { _libRetryN = 0; loadLibrary(); };
+  document.body.appendChild(el);
+}
+
+// Paint whatever the local copy holds, with no network involved. Never retries, never shows the banner.
+async function hydrateLibraryFromCache() {
+  try { await _loadLibraryOnce({ cacheOnly: true }); }
+  catch (e) { console.warn('Painting from the saved copy failed (continuing with a normal load):', e); }
+}
+
+// One load at a time. A call that arrives mid-load queues exactly one follow-up run and resolves with it.
+function loadLibrary() {
+  if (_libLoadPromise) { _libLoadAgain = true; return _libLoadPromise; }
+  _libLoadPromise = (async () => {
+    let res = { ok: false };
+    try {
+      do { _libLoadAgain = false; res = await _loadLibraryOnce(); } while (_libLoadAgain);
+    } catch (e) { console.error('loadLibrary:', e); res = { ok: false }; }
+    finally { _libLoadPromise = null; }
+    clearTimeout(_libRetryTimer);
+    if (!currentUser) return res;
+    if (res.ok) { _libLastGoodAt = Date.now(); _libRetryN = 0; _libFailStreak = 0; _setLibBanner(false); }
+    else {
+      _libFailStreak++;
+      if (_libRetryN < _LIB_RETRY_DELAYS.length) _libRetryTimer = setTimeout(() => { if (currentUser) loadLibrary(); }, _LIB_RETRY_DELAYS[_libRetryN++]);
+      // One unconfirmed run is normal while the connection is still waking up — the retry a few seconds later
+      // usually settles it — so only speak up if it keeps happening, or the device itself says it's offline.
+      if (_libFailStreak >= 2 || navigator.onLine === false) _setLibBanner(true, library.length + communityLib.length > 0);
+    }
+    return res;
+  })();
+  return _libLoadPromise;
+}
+
+// Returns { ok } — ok is true when every source was either confirmed by the server or refused by it for good.
+async function _loadLibraryOnce(opts) {
+  if (!currentUser) return { ok: false };
+  const cacheOnly = !!(opts && opts.cacheOnly);
+  if (_libUid !== currentUser.uid) { _resetLibraryState(); _libUid = currentUser.uid; }
+  // The restricted-books queries depend on the person's access level. If that read failed earlier (say, a bad
+  // connection at sign-in) redo it now, so restricted items don't silently drop out of the library.
+  if (!cacheOnly && !_adminStatusKnown) await checkAdminStatus();
+  const uid = currentUser.uid;
+  let ok = true;
+  const report = [];                 // one line per source — shown by the banner's "Details" link
+  // Notes how one source went. Returns true only for a TRANSIENT problem (worth retrying and worth telling the
+  // person about); a source the server refuses for good is logged once and simply left out.
+  const note = (label, r) => {
+    if (r.status === 'fulfilled') {
+      const unconfirmed = !!r.value && (r.value.reliable === false || _fromCache(r.value));
+      report.push(`${label}: ${unconfirmed ? 'saved copy only (server not confirmed)' : 'ok'}`);
+      (r.value && r.value.issues || []).forEach(i => report.push('   ↳ ' + i));     // parts a community loader had to drop
+      return unconfirmed;
+    }
+    report.push(..._readIssues([[label, r]]));
+    return !_isPermanentReadError(r.reason);
+  };
+  // Cheap "did anything change?" check, so a refresh that finds the same data doesn't redraw the whole screen.
+  const sig = arr => { try { return JSON.stringify(arr); } catch (e) { return String(Math.random()); } };
+  try {
+    const myQ = query(collection(db, 'books'), where('ownerId', '==', uid), orderBy('createdAt', 'desc'));
+    const pubQ = query(collection(db, 'books'), where('visibility', '==', 'public'), orderBy('createdAt', 'desc'));
+    const sharedQ = query(collection(db, 'books'), where('allowedUsers', 'array-contains', uid));
+
+    // ── mine: books + audiobooks + recipes ──
+    // allSettled: one source failing (a flaky audiobook query, say) must not throw away the others.
+    const [myR, audioR, recipeR] = await Promise.allSettled([_readDocs(myQ, opts), loadAudioTracks(opts), loadRecipes(opts)]);
+    if (!currentUser || currentUser.uid !== uid) return { ok: false };      // signed out / switched account while waiting
+    const prevMine = library.filter(b => !b.isAudio && !b.isRecipe);
+    let mine = prevMine;
+    if (myR.status === 'fulfilled') {
+      const fresh = myR.value.docs.map(d => ({ id: d.id, ...d.data() }));
+      mine = _fromCache(myR.value) ? dedupe([...fresh, ...prevMine]) : fresh;   // saved copy: add, never remove
+    }
+    if (note('My books', myR)) ok = false;
+    if (note('My audiobooks', audioR)) ok = false;
+    if (note('My recipes', recipeR)) ok = false;
+    library = mine;
     mergeAudioIntoLibrary();
     mergeRecipesIntoLibrary();
-    renderAll();
+    const sigMine = sig(library);
+    if (sigMine !== _libSigMine) { _libSigMine = sigMine; renderAll(); }
 
-    // Load public and shared in background without blocking UI.
-    // Each of these queries can fail independently of the others (most
-    // commonly: the restricted-visibility query getting permission-denied
-    // for a user whose access-level grant hasn't been mirrored in the
-    // security rules yet). Promise.allSettled — rather than Promise.all —
-    // means one denied query no longer takes the whole public/shared library
-    // down with it; whatever did succeed still renders, and only the piece
-    // that failed is silently dropped (with a console warning to spot it).
-    Promise.allSettled([getDocs(pubQ), getDocs(sharedQ), restrictedPromise, loadCommunityAudioTracks(), loadCommunityRecipes()])
-      .then(([pubR, sharedR, restrictedR, audioR, recipeR]) => {
-        const failed = [];
-        const pubBooks = pubR.status === 'fulfilled'
-          ? pubR.value.docs.map(d => ({ id: d.id, ...d.data() }))
-          : (failed.push('public books'), []);
-        const sharedBooks = sharedR.status === 'fulfilled'
-          ? sharedR.value.docs.map(d => ({ id: d.id, ...d.data() })).filter(b => b.ownerId !== currentUser.uid)
-          : (failed.push('shared books'), []);
-        const restrictedBooks = restrictedR.status === 'fulfilled'
-          ? restrictedR.value.docs.map(d => ({ id: d.id, ...d.data() })).filter(b => b.ownerId !== currentUser.uid)
-          : (failed.push('restricted books'), []);
-        const communityAudio = audioR.status === 'fulfilled' ? audioR.value : (failed.push('community audiobooks'), []);
-        const communityRecipes = recipeR.status === 'fulfilled' ? recipeR.value : (failed.push('community recipes'), []);
-
-        if (failed.length) {
-          console.warn('Background load: partial failure —', failed.join(', '),
-            [pubR, sharedR, restrictedR, audioR, recipeR].map(r => r.reason).filter(Boolean));
-          showToast(`Some content couldn't be loaded (${failed.join(', ')})`);
-        }
-
-        communityLib = dedupe([...pubBooks, ...sharedBooks, ...restrictedBooks, ...communityAudio, ...communityRecipes]);
-        renderAll();
-        renderMobHome();
-        renderDeskHome();
-      })
-      .finally(() => {
-        // PATCH: mark the library "ready" once both waves have settled
-        // (success or failure), so findBookById() stops waiting on it.
-        _libraryReady = true;
-        _libraryReadyResolve();
-      });
-
+    // ── everyone else's: public / shared / restricted (books, audiobooks, recipes) ──
+    // Restricted-visibility books are a cohort-wide tier: anyone admin-granted restrictedAccess (or an admin) can
+    // see every book marked 'restricted'. Only issue that query for readers the rules will let through — for anyone
+    // else it is guaranteed permission-denied (Firestore must satisfy the rule for the whole query).
+    const restrictedPromise = (isAdmin || hasRestrictedAccess)
+      ? _readDocs(query(collection(db, 'books'), where('visibility', '==', 'restricted')), opts)
+      : Promise.resolve({ docs: [] });
+    const [pubR, sharedR, restrictedR, audioCR, recipeCR] = await Promise.allSettled([
+      _readDocs(pubQ, opts), _readDocs(sharedQ, opts), restrictedPromise, loadCommunityAudioTracks(opts), loadCommunityRecipes(opts)]);
+    if (!currentUser || currentUser.uid !== uid) return { ok: false };
+    const books = (r, dropOwn) => {
+      if (r.status !== 'fulfilled') return [];
+      const arr = r.value.docs.map(d => ({ id: d.id, ...d.data() }));
+      return dropOwn ? arr.filter(b => b.ownerId !== uid) : arr;
+    };
+    const lists = r => (r.status === 'fulfilled' ? r.value : []);
+    const transient = [
+      note('Public books', pubR), note('Shared books', sharedR), note('Restricted books', restrictedR),
+      note('Community audiobooks', audioCR), note('Community recipes', recipeCR),
+    ];
+    const reliable = !transient.some(Boolean);
+    const fresh = dedupe([...books(pubR), ...books(sharedR, true), ...books(restrictedR, true), ...lists(audioCR), ...lists(recipeCR)]);
+    // Fully confirmed (or refused for good) → replace. A dropped or cache-only source → merge, so it can never empty the list.
+    communityLib = reliable ? fresh : dedupe([...fresh, ...communityLib]);
+    ok = ok && reliable;
+    const sigAll = sig(library) + '\u0000' + sig(communityLib);
+    if (sigAll !== _libSigAll) { _libSigAll = sigAll; renderAll(); renderMobHome(); renderDeskHome(); }
+    return { ok };
   } catch (e) {
-    showToast('Error loading library');
-    console.error(e);
-    _libraryReady = true;
-    _libraryReadyResolve();
+    console.error('Library load failed:', e);
+    return { ok: false };
+  } finally {
+    // Marks the library "ready" once both waves have settled (success or failure), so findBookById() stops
+    // waiting on it. The cache-only paint doesn't count — a real load still follows it.
+    if (!cacheOnly) {
+      _libReport = report;
+      console.info('[library] load report — ' + report.join(' · '));
+      _libraryReady = true; _libraryReadyResolve();
+    }
   }
 }
 
@@ -4141,7 +4400,7 @@ setUpP(rowId,70,'Saving…');
       title:meta.title,
       author:meta.author,
       description:stripHtml(meta.description||''),
-      category: _categories.includes(meta.category) ? meta.category : (_categories.includes(localStorage.getItem('elib_default_cat')||'') ? localStorage.getItem('elib_default_cat') : 'Uncategorised'),
+      category: getBookGenres().includes(meta.category) ? meta.category : (getBookGenres().includes(localStorage.getItem('elib_default_cat')||'') ? localStorage.getItem('elib_default_cat') : 'Uncategorised'),
       language:meta.language,publisher:meta.publisher,
       series:meta.series||null,seriesIndex:meta.seriesIndex??null,
       coverUrl:coverUrl||null,
@@ -4386,7 +4645,7 @@ function filteredBooks(){
     // A list can contain books from any source — search everything
     books=dedupe([...library,...communityLib]).filter(b=>ids.has(b.id));
   }
-  if(deskLibCat!=='All')books=books.filter(b=>(b.category||'Uncategorised')===deskLibCat);
+  if(deskLibCat!=='All'&&!deskLibFormat.has('recipe'))books=books.filter(b=>(b.category||'Uncategorised')===deskLibCat);
   if(deskLibFormat.has('recipe')){
     books=books.filter(b=>b.isRecipe);
   } else {
@@ -4600,10 +4859,11 @@ document.getElementById('deskSearchClear').addEventListener('click',()=>{
 function updateDeskFilterPillLabels() {
   renderLibModeToggle('deskModeToggle', deskLibFormat);
 
-  // Genre, Tags and Sort don't apply in Recipes mode — recipes are browsed
-  // via their own category folders instead (see openRecipeCategory).
+  // Genre, Tags and Sort don't apply in Recipes mode — recipes have their own
+  // "Categories" dropdown instead (see openRecipeCatPicker).
   const isRecipeMode = deskLibFormat.has('recipe');
   document.getElementById('deskPillCat')?.classList.toggle('lib-pill-hidden', isRecipeMode);
+  updateRecipeCatPill('deskPillRecipeCat', 'deskPillRecipeCatLabel', isRecipeMode);
   document.getElementById('deskPillTags')?.classList.toggle('lib-pill-hidden', isRecipeMode);
   document.getElementById('deskPillSort')?.classList.toggle('lib-pill-hidden', isRecipeMode);
   document.getElementById('deskSortDivider')?.classList.toggle('lib-pill-hidden', isRecipeMode);
@@ -4642,6 +4902,10 @@ document.getElementById('deskPillCat').addEventListener('click', (e) => {
     onSelect: it => { deskLibCat = it.id; },
     onAfterSelect: renderAll,
   });
+});
+
+document.getElementById('deskPillRecipeCat').addEventListener('click', (e) => {
+  openRecipeCatPicker(e.currentTarget, activeBooks());
 });
 
 document.getElementById('deskPillTags').addEventListener('click', (e) => {
@@ -5078,7 +5342,7 @@ function renderDetailActionRows(peekContainer, moreContainer, book, isMine){
   // Books/audio keep the dropdown since Edit Details vs Edit Contents is a
   // real choice there.
   const editControlHtml = book.isRecipe
-    ? (canManage ? `<button type="button" data-action="editrecipe" class="mfp detail-pill-select"><span>✎ Edit</span></button>` : '')
+    ? `<button type="button" data-action="editrecipe" class="mfp detail-pill-select"><span>✎ Edit</span></button>`   // anyone can edit a recipe; only the owner/admin can delete it or change who sees it
     : pillSelect('detailEditSelect', 'Edit', editOpts);
 
   if(canManage){
@@ -5300,7 +5564,7 @@ function buildDrawerIconBar(book, isMine){
           <span class="di-label">${book.recommended?'Unrec':'Rec'}</span>
         </button>
         ${book.isRecipe
-          ? `<button class="drawer-icon-btn" data-action="printrecipe"><span class="di-icon">🖨</span><span class="di-label">Print</span></button>`
+          ? `<button class="drawer-icon-btn" data-action="editrecipe"><span class="di-icon">✎</span><span class="di-label">Edit</span></button><button class="drawer-icon-btn" data-action="printrecipe"><span class="di-icon">🖨</span><span class="di-label">Print</span></button>`
           : `<button class="drawer-icon-btn" data-action="download"><span class="di-icon">⬇</span><span class="di-label">Download</span></button>`}
         <button class="drawer-icon-btn" data-action="sharebook"><span class="di-icon">📤</span><span class="di-label">Share</span></button>
         <button class="drawer-icon-btn" data-action="link"><span class="di-icon">📎</span><span class="di-label">Copy Link</span></button>
@@ -5329,9 +5593,11 @@ function buildDrawerIconBar(book, isMine){
       manageBtns += `<button class="drawer-icon-btn" data-action="shareprivate">
           <span class="di-icon">🔗</span><span class="di-label">Share Link</span></button>`;
     }
-    manageBtns += `<button class="drawer-icon-btn" data-action="editmeta">
+    if(!book.isRecipe){      // recipes have their own Edit button above, open to everyone, and no chapters to manage
+      manageBtns += `<button class="drawer-icon-btn" data-action="editmeta">
           <span class="di-icon">✎</span><span class="di-label">Edit</span></button>`;
-    if(!book.isAudio){
+    }
+    if(!book.isAudio && !book.isRecipe){
       manageBtns += `<button class="drawer-icon-btn" data-action="chapters">
           <span class="di-icon">📑</span><span class="di-label">Edit Contents</span></button>`;
     }
@@ -5650,21 +5916,32 @@ document.getElementById('btnCopyDirectLink').addEventListener('click', async ()=
 });
 
 function checkUrlHash(){
+  // The target is captured at page load (captureDeepLink), so it still opens after a sign-in redirect
+  // or a service-worker reload has wiped the #hash. The live #hash is honoured too.
+  let id = null;
   const m=window.location.hash.match(/[#&](?:book|recipe|audio)=([a-zA-Z0-9]+)/);
-  if(m){
-    // Strip the #book= hash right away so the address bar (and anything the
-    // user bookmarks from this point on) points at the main app URL, not
-    // back to this specific book. The book still opens below as normal.
-    history.replaceState(null,'',window.location.pathname+window.location.search);
-    setTimeout(()=>{
-      if(window.innerWidth > 768){
-        showBookById(m[1]);
-      } else {
-        mobPrevPanel = 'mobPanelHome';
-        mob_showBook(m[1]);
-      }
-    },400);
+  if(m) id = m[1];
+  if(!id){
+    try{
+      const s = JSON.parse(sessionStorage.getItem('elib_pending_open') || 'null');
+      if(s && s.id && Date.now() - s.ts < 30*60*1000) id = s.id;
+    }catch(e){}
   }
+  if(!id) return;
+  // Strip the #hash right away so the address bar (and anything the user bookmarks from
+  // this point on) points at the main app URL, not back to this specific item.
+  if(m) history.replaceState(null,'',window.location.pathname+window.location.search);
+  setTimeout(()=>{
+    // Only forget the target once we're actually about to open it — a reload before this
+    // point (e.g. a service-worker update) still finds it and tries again.
+    try{ sessionStorage.removeItem('elib_pending_open'); }catch(e){}
+    if(window.innerWidth > 768){
+      showBookById(id);
+    } else {
+      mobPrevPanel = 'mobPanelHome';
+      mob_showBook(id);
+    }
+  },400);
 }
 
 // ── EDIT METADATA ─────────────────────────────────────────────────────────────
@@ -5688,7 +5965,7 @@ function showEditMeta(){
     coverRow.style.display='none';
   }
   const catSelect = document.getElementById('metaCategory');
-  catSelect.innerHTML = _categories.map(c =>
+  catSelect.innerHTML = getBookGenres().map(c =>
     `<option value="${esc(c)}" ${(book.category||'Uncategorised')===c?'selected':''}>${catIcon(c)} ${esc(c)}</option>`
   ).join('');
   // Autocomplete: existing series names across the visible library, so linking
@@ -6025,10 +6302,11 @@ function getAllMobTags() {
 function updateMobFilterPillLabels() {
   renderLibModeToggle('mobModeToggle', mobLibFormat);
 
-  // Genre, Tags and Sort don't apply in Recipes mode — recipes are browsed
-  // via their own category folders instead (see openRecipeCategory).
+  // Genre, Tags and Sort don't apply in Recipes mode — recipes have their own
+  // "Categories" dropdown instead (see openRecipeCatPicker).
   const isRecipeMode = mobLibFormat.has('recipe');
   document.getElementById('mfpCat')?.classList.toggle('lib-pill-hidden', isRecipeMode);
+  updateRecipeCatPill('mfpRecipeCat', 'mfpRecipeCatLabel', isRecipeMode);
   document.getElementById('mfpTags')?.classList.toggle('lib-pill-hidden', isRecipeMode);
   document.getElementById('mfpSort')?.classList.toggle('lib-pill-hidden', isRecipeMode);
   document.getElementById('mfpSortDivider')?.classList.toggle('lib-pill-hidden', isRecipeMode);
@@ -6122,6 +6400,10 @@ document.getElementById('mfpCat').addEventListener('click', (e) => {
     isSelected: it => mobLibCat === it.id,
     onSelect: it => { mobLibCat = it.id; },
   });
+});
+
+document.getElementById('mfpRecipeCat').addEventListener('click', (e) => {
+  openRecipeCatPicker(e.currentTarget, getMobLibSourceBooks());
 });
 
 document.getElementById('mfpTags').addEventListener('click', (e) => {
@@ -6236,7 +6518,7 @@ function getMobLibSourceBooks() { return getLibSourceBooks(mobLibFilter); }
 function getMobLibBooks() {
   let src = getMobLibSourceBooks();
   // Category filter
-  if (mobLibCat !== 'All') src = src.filter(b => (b.category || 'Uncategorised') === mobLibCat);
+  if (mobLibCat !== 'All' && !mobLibFormat.has('recipe')) src = src.filter(b => (b.category || 'Uncategorised') === mobLibCat);
   // Format filter — eBooks and Audio filter independently and can both be
   // active (see toggleLibFormat); Recipes stays an exclusive mode.
   if (mobLibFormat.has('recipe')) {
@@ -6622,7 +6904,7 @@ function showMobBulkCategoryPicker(){
         <button class="mob-picker-close" id="mobBulkCatCloseBtn">✕</button>
       </div>
       <div id="mobBulkCatItems" class="mob-picker-grid">
-        ${_categories.map(c => `<div class="mob-picker-item" data-cat="${esc(c)}">
+        ${getBookGenres().map(c => `<div class="mob-picker-item" data-cat="${esc(c)}">
             <span>${catIcon(c)} ${esc(c)}</span>
           </div>`).join('')}
       </div>
@@ -6807,6 +7089,185 @@ function showMobBulkSeriesPicker(){
 function matchesQ(b,q){return(b.title||'').toLowerCase().includes(q)||(b.author||'').toLowerCase().includes(q)||(b.category||'').toLowerCase().includes(q);}
 
 
+// ── RECOMMENDED SECTION — seasonal themes ─────────────────────────────────────
+// App-wide choice: one Firestore doc (config/recommendedTheme = {theme, blurbs}),
+// set by an admin, read by everyone, live via onSnapshot. 'classic' is the
+// original look. Themes are pure data; recShell() turns one into the card, and
+// the same function draws the live preview in Admin → Recommended Theme.
+let _recCfg = { theme:'classic', blurbs:{} };
+let _recCfgUnsub = null;
+const REC_THEMES = {
+  classic:  { label:'Classic',  icon:'⭐', blurb:'Recommended',
+    rgb:'200,149,42', a:[.25,.2,.3], accent:'var(--gold)',
+    bg:'linear-gradient(135deg,rgba(200,149,42,.07),rgba(200,149,42,.015))',
+    lead:'', trail:'⭐', trailOp:.5, bar:'', fall:[] },
+  harvest:  { label:'Harvest',  icon:'🍂', blurb:'Harvest Picks',
+    rgb:'184,87,26', a:[.45,.3,.45], accent:'#a8501a',
+    bg:'linear-gradient(135deg,rgba(217,119,6,.17),rgba(146,64,14,.07) 55%,rgba(250,204,21,.08))',
+    lead:'🍂', trail:'🍁', trailOp:.5,
+    bar:'repeating-linear-gradient(90deg,#c2410c 0 22px,#d97706 22px 44px,#a16207 44px 66px,#92400e 66px 88px)',
+    fall:['🍂','🍁','🍃'] },
+  christmas:{ label:'Christmas', icon:'🎄', blurb:'Christmas Picks',
+    rgb:'22,101,52', a:[.5,.3,.45], accent:'#a3162f', glow:'234,179,8',
+    bg:'linear-gradient(135deg,rgba(22,101,52,.14),rgba(185,28,28,.07) 60%,rgba(250,204,21,.07))',
+    lead:'🎄', trail:'🎁', trailOp:.5,
+    bar:'repeating-linear-gradient(90deg,#dc2626 0 14px,#16a34a 14px 28px,#facc15 28px 42px,#2563eb 42px 56px)', twinkle:true,
+    fall:['❄️','✨'] },
+  winter:   { label:'Winter',   icon:'❄️', blurb:'Cosy Winter Reads',
+    rgb:'59,130,196', a:[.4,.28,.4], accent:'#2b5f8e',
+    bg:'linear-gradient(135deg,rgba(147,197,253,.3),rgba(224,242,254,.35) 55%,rgba(255,255,255,.45))',
+    lead:'❄️', trail:'☕', trailOp:.5,
+    bar:'linear-gradient(90deg,#bfdbfe,#fff,#93c5fd,#fff,#bfdbfe)',
+    fall:['❄️','❅','❆'] },
+  spring:   { label:'Spring',   icon:'🌷', blurb:'Spring Reads',
+    rgb:'236,72,153', a:[.35,.25,.4], accent:'#b8326f',
+    bg:'linear-gradient(135deg,rgba(251,207,232,.42),rgba(187,247,208,.24) 60%,rgba(254,249,195,.32))',
+    lead:'🌷', trail:'🌸', trailOp:.5,
+    bar:'repeating-linear-gradient(90deg,#f9a8d4 0 20px,#86efac 20px 40px,#fde68a 40px 60px)',
+    fall:['🌸','🌼','🍃'] },
+  summer:   { label:'Summer',   icon:'☀️', blurb:'Summer Reads',
+    rgb:'245,158,11', a:[.45,.3,.45], accent:'#c2610a',
+    bg:'linear-gradient(135deg,rgba(253,224,71,.3),rgba(251,146,60,.1) 50%,rgba(56,189,248,.18))',
+    lead:'🌴', trail:'🍉', trailOp:.5,
+    bar:'linear-gradient(90deg,#fde047,#fb923c,#38bdf8,#0ea5e9)',
+    fall:[] }
+};
+// Falling-particle layout: [left %, size rem, fall secs, sway secs, delay secs].
+// Fixed (not random) so the HTML is byte-identical between renders and the
+// Home reconciler reuses the node instead of restarting the animation.
+const REC_FALL = [[5,.8,9,3,0],[16,.65,12,4,3],[28,.9,10,3.5,6],[40,.7,14,4.5,1.5],[52,.85,11,3,8],[64,.6,13,4,4.5],[76,.75,9.5,3.2,10],[88,.9,12.5,3.8,2],[95,.7,15,4.2,7]];
+
+const recCfgRef = () => doc(db, 'config', 'recommendedTheme');
+function recCfgFrom(d){
+  d = d || {};
+  const blurbs = (d.blurbs && typeof d.blurbs === 'object' && !Array.isArray(d.blurbs)) ? d.blurbs : {};
+  return { theme: REC_THEMES[d.theme] ? d.theme : 'classic', blurbs };
+}
+function recThemeKey(){ return REC_THEMES[_recCfg.theme] ? _recCfg.theme : 'classic'; }
+function recBlurbs(){ return _recCfg.blurbs || {}; }
+
+// Called from loadConfig(): one read so Home paints with the right theme, then
+// a live listener so open sessions follow an admin's change without a reload.
+async function loadRecCfg(){
+  try{
+    const snap = await getDoc(recCfgRef());
+    _recCfg = recCfgFrom(snap.exists() ? snap.data() : null);
+  }catch(e){ console.warn('loadRecCfg:', e); }
+  if(_recCfgUnsub) return;
+  try{
+    _recCfgUnsub = onSnapshot(recCfgRef(), snap => {
+      const next = recCfgFrom(snap.exists() ? snap.data() : null);
+      if(JSON.stringify(next) === JSON.stringify(_recCfg)) return;
+      _recCfg = next;
+      renderMobHome();
+    }, () => {});
+  }catch(e){ console.warn('recCfg listener:', e); }
+}
+async function saveRecCfg(){
+  try{
+    await setDoc(recCfgRef(), { theme: _recCfg.theme, blurbs: _recCfg.blurbs });
+    return true;
+  }catch(e){
+    console.error('saveRecCfg:', e);
+    showToast('Couldn\u2019t save theme: ' + (e.code || e.message));
+    await loadRecCfg();               // resync with what the server really has
+    renderRecThemeSettings(); renderMobHome();
+    return false;
+  }
+}
+function recBlurb(key){
+  const v = String(recBlurbs()[key] || '').trim();
+  return v || REC_THEMES[key].blurb;
+}
+function setRecBlurb(key, val){
+  const v = String(val || '').trim().slice(0, 40);
+  const b = { ...recBlurbs() };
+  if(v && v !== REC_THEMES[key].blurb) b[key] = v; else delete b[key];
+  _recCfg = { ..._recCfg, blurbs: b };
+}
+
+// The themed card. `inner` is the tile grid. opts.blurb overrides the stored
+// heading (live preview); opts.mb overrides the bottom margin.
+function recShell(key, inner, opts = {}){
+  const t = REC_THEMES[key] || REC_THEMES.classic;
+  const blurb = String(opts.blurb !== undefined ? opts.blurb : recBlurb(key)).trim() || t.blurb;
+  const [a1, a2, a3] = t.a;
+  const bar = t.bar ? `<div class="rec-bar${t.twinkle ? ' twinkle' : ''}" style="background:${t.bar};"></div>` : '';
+  const flakes = t.fall.length
+    ? REC_FALL.map((p, i) => `<span class="rec-p" style="left:${p[0]}%;font-size:${p[1]}rem;color:${t.accent};animation-duration:${p[2]}s,${p[3]}s;animation-delay:-${p[4]}s,-${p[4]}s;">${t.fall[i % t.fall.length]}</span>`).join('')
+    : '';
+  return `<div class="rec-shell" style="
+      margin-bottom:${opts.mb || '1.4rem'};
+      padding:.8rem .9rem .75rem;
+      background:${t.bg};
+      border:1px solid rgba(${t.rgb},${a1});
+      border-radius:10px;">
+      ${bar}${flakes}
+      <div class="rec-body">
+        <div style="
+          display:flex;align-items:center;gap:.6rem;
+          margin-bottom:.8rem;padding-bottom:.6rem;
+          border-bottom:1px solid rgba(${t.rgb},${a2});">
+          <div style="
+            font-family:'Playfair Display',serif;
+            font-size:.95rem;font-style:italic;
+            color:${t.accent};letter-spacing:.03em;">
+            ${t.lead ? t.lead + ' ' : ''}${esc(blurb)}
+          </div>
+          <div style="flex:1;height:1px;
+            background:linear-gradient(to right,rgba(${t.rgb},${a3}),transparent);">
+          </div>
+          <span style="font-size:.8rem;opacity:${t.trailOp};">${t.trail}</span>
+        </div>
+        ${inner}
+      </div>
+    </div>`;
+}
+
+// Settings → Recommended Section: live preview, theme chips, heading editor.
+function renderRecThemeSettings(){
+  const host = document.getElementById('mobRecThemeSettings');
+  if(!host) return;
+  const key = recThemeKey(), t = REC_THEMES[key];
+  host.innerHTML = `
+    <div id="recThemePreview" style="padding:.1rem .5rem .3rem;"></div>
+    <div class="rec-theme-grid">
+      ${Object.entries(REC_THEMES).map(([k, th]) => `<button type="button" class="rec-theme-chip${k === key ? ' on' : ''}" data-rectheme="${k}"><span class="e">${th.icon}</span><span>${th.label}</span></button>`).join('')}
+    </div>
+    <div style="padding:.5rem .6rem .5rem;">
+      <div style="font-size:.72rem;font-weight:700;color:var(--navy2);margin-bottom:.3rem;">Heading text</div>
+      <div style="display:flex;gap:.4rem;">
+        <input type="text" id="recBlurbInput" class="rec-blurb-input" maxlength="40" autocomplete="off"/>
+        <button type="button" id="recBlurbReset" class="rec-blurb-reset">Reset</button>
+      </div>
+      <div class="settings-card-note" style="padding:.35rem 0 0;">Applies to all users. Each theme remembers its own heading.</div>
+    </div>`;
+  const input = host.querySelector('#recBlurbInput');
+  input.value = String(recBlurbs()[key] || '');
+  input.placeholder = t.blurb;
+  const tiles = `<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:.65rem;">${
+    [0,1,2,3].map(() => `<div style="aspect-ratio:2/3;border-radius:4px;background:linear-gradient(160deg,#2a3d5a,var(--navy2));box-shadow:0 0 8px rgba(${t.glow || t.rgb},.35);"></div>`).join('')
+  }</div>`;
+  const drawPreview = () => { host.querySelector('#recThemePreview').innerHTML = recShell(key, tiles, { blurb: input.value, mb: '.2rem' }); };
+  drawPreview();
+  host.querySelectorAll('[data-rectheme]').forEach(btn => btn.addEventListener('click', async () => {
+    const k = btn.dataset.rectheme;
+    if(k === _recCfg.theme) return;
+    _recCfg = { ..._recCfg, theme: k };
+    renderRecThemeSettings();
+    renderMobHome();
+    if(await saveRecCfg()) showToast('Theme saved for everyone ✓');
+  }));
+  input.addEventListener('input', () => { setRecBlurb(key, input.value); drawPreview(); });
+  input.addEventListener('change', async () => {
+    renderMobHome();
+    if(await saveRecCfg()) showToast('Heading saved for everyone ✓');
+  });
+  host.querySelector('#recBlurbReset').addEventListener('click', async () => {
+    input.value = ''; setRecBlurb(key, ''); drawPreview(); renderMobHome();
+    if(await saveRecCfg()) showToast('Heading reset ✓');
+  });
+}
 // ── HOME PANEL (mobile) ───────────────────────────────────────────────────────
   
 async function renderMobHome(){
@@ -7031,7 +7492,8 @@ function recommendedSection(books) {
       // ebook tiles). Ebooks stay 2:3 with no label — the cover carries the title.
       const square = !!(b.isAudio || b.isRecipe);
       const ar = square ? '1/1' : '2/3';
-      const glow = 'box-shadow:0 0 8px rgba(200,149,42,.35);border-radius:4px;';
+      const _rt = REC_THEMES[recThemeKey()];
+      const glow = `box-shadow:0 0 8px rgba(${_rt.glow || _rt.rgb},.35);border-radius:4px;`;
 
       const coverContent = src
         ? `<img src="${src}" loading="lazy" style="
@@ -7060,35 +7522,13 @@ function recommendedSection(books) {
       </div>`;
     }).join('');
 
-    return `<div style="
-      margin-bottom:1.4rem;
-      padding:.8rem .9rem .75rem;
-      background:linear-gradient(135deg,rgba(200,149,42,.07),rgba(200,149,42,.015));
-      border:1px solid rgba(200,149,42,.25);
-      border-radius:10px;">
-      <div style="
-        display:flex;align-items:center;gap:.6rem;
-        margin-bottom:.8rem;padding-bottom:.6rem;
-        border-bottom:1px solid rgba(200,149,42,.2);">
-        <div style="
-          font-family:'Playfair Display',serif;
-          font-size:.95rem;font-style:italic;
-          color:var(--gold);letter-spacing:.03em;">
-          Recommended
-        </div>
-        <div style="flex:1;height:1px;
-          background:linear-gradient(to right,rgba(200,149,42,.3),transparent);">
-        </div>
-        <span style="font-size:.8rem;opacity:.5;">⭐</span>
-      </div>
-      <div style="
+    return recShell(recThemeKey(), `<div style="
         display:grid;
         grid-template-columns:repeat(auto-fill,minmax(80px,1fr));
         align-items:start;
         gap:.65rem;">
         ${tileHtml}
-      </div>
-    </div>`;
+      </div>`);
   }
 
   // ── Gather data ───────────────────────────────────────────────────────
@@ -7925,6 +8365,179 @@ document.addEventListener('visibilitychange', () => {
   }
 });
 
+// ── Songbook view ─────────────────────────────────────────────────────────
+// Opened by readCurrentBook() for EPUBs whose OPF carries
+// <meta name="elib:type" content="songbook"/>. One spine item = one song;
+// the NCX label ("12 People Look East") drives the index. Favourites and the
+// last-viewed song are kept per book in localStorage.
+let sbState=null, _sbBound=false;
+function _sbUnesc(s){const t=document.createElement('textarea');t.innerHTML=s;return t.value;}
+async function _sbIsSongbook(zip){
+  try{
+    const c=await zip.file('META-INF/container.xml')?.async('string');
+    const opfPath=c?.match(/full-path="([^"]+\.opf)"/i)?.[1];
+    if(!opfPath)return null;
+    const opf=await zip.file(opfPath)?.async('string');
+    if(!opf)return null;
+    const isSb=/name="elib:type"[^>]*content="songbook"/i.test(opf)||/content="songbook"[^>]*name="elib:type"/i.test(opf);
+    return isSb?{opfPath,opf}:null;
+  }catch(e){return null;}
+}
+function _sbLoadFavs(bookId){try{return new Set(JSON.parse(localStorage.getItem('elib_sb_fav_'+bookId)||'[]'));}catch(e){return new Set();}}
+function _sbSaveFavs(){if(!sbState)return;try{localStorage.setItem('elib_sb_fav_'+sbState.bookId,JSON.stringify([...sbState.favs]));}catch(e){}}
+async function openSongbookView(book,zip,info){
+  const base=info.opfPath.includes('/')?info.opfPath.replace(/\/[^/]+$/,'/'):'';
+  const manifest={};
+  const mRe=/<item\s+([^>]+)>/gi;let m;
+  while((m=mRe.exec(info.opf))!==null){const a=m[1];const id=a.match(/\bid="([^"]+)"/)?.[1];const href=a.match(/\bhref="([^"]+)"/)?.[1];const mt=a.match(/\bmedia-type="([^"]+)"/)?.[1];if(id&&href)manifest[id]={href,mt};}
+  const labels={};
+  const ncxId=Object.keys(manifest).find(k=>manifest[k].mt==='application/x-dtbncx+xml');
+  if(ncxId){
+    const ncx=await zip.file(base+manifest[ncxId].href)?.async('string');
+    if(ncx){const re=/<navPoint[^>]*>[\s\S]*?<text>([^<]*)<\/text>[\s\S]*?<content\s+src="([^"]+)"/gi;let n;while((n=re.exec(ncx))!==null)labels[n[2].split('#')[0]]=n[1].trim();}
+  }
+  const songs=[];const sRe=/<itemref\s+idref="([^"]+)"/gi;let s;
+  while((s=sRe.exec(info.opf))!==null){
+    const it=manifest[s[1]];if(!it)continue;
+    const label=_sbUnesc(labels[it.href]||it.href.split('/').pop().replace(/\.x?html?$/i,''));
+    const mm=label.match(/^(\d+)([a-z]?)\s+(.+)$/i);
+    const title=mm?mm[3]:label;
+    songs.push({href:it.href,label,num:mm?+mm[1]:null,letter:mm?mm[2]:'',title,alt:/^alternate/i.test(title)});
+  }
+  if(!songs.length)throw new Error('No songs found in this songbook');
+  sbState={bookId:book.id,title:book.title||'Songbook',zip,base,songs,idx:0,favs:_sbLoadFavs(book.id),onlyFav:false};
+  const last=parseInt(localStorage.getItem('elib_sb_last_'+book.id)||'0');
+  const ov=document.getElementById('sbOverlay');
+  _sbBind();
+  sbApplyTheme(localStorage.getItem('elib_sb_theme')||readerTheme||'day');
+  sbApplyFont(0);
+  document.getElementById('sbTitle').textContent=sbState.title;
+  document.getElementById('sbIndex').classList.remove('open');
+  document.getElementById('sbSearch').value='';
+  document.getElementById('sbFavFilter').classList.remove('on');
+  ov.classList.add('open');
+  await sbShowSong(last>=0&&last<songs.length?last:0);
+}
+async function sbShowSong(idx){
+  const st=sbState;if(!st)return;
+  idx=Math.max(0,Math.min(st.songs.length-1,idx));st.idx=idx;
+  const sg=st.songs[idx];
+  const xml=await st.zip.file(st.base+sg.href)?.async('string');
+  if(sbState!==st||st.idx!==idx)return; // a faster tap superseded this one
+  const doc=new DOMParser().parseFromString(xml||'','text/html');
+  const art=document.getElementById('sbSong');
+  art.textContent='';
+  const h=document.createElement('h1');
+  const n=document.createElement('span');n.className='sb-num';n.textContent=sg.num!=null?sg.num+sg.letter:'';
+  h.append(n,document.createTextNode(' '+sg.title));
+  art.appendChild(h);
+  let hasVerse=false;
+  doc.querySelectorAll('section.song p.note, section.song p.verse').forEach(p=>{
+    const isVerse=p.classList.contains('verse');
+    const el=document.createElement('p');el.className=isVerse?'sb-verse':'sb-note';
+    if(isVerse)hasVerse=true;
+    p.childNodes.forEach(c=>{el.appendChild(c.nodeName==='BR'?document.createElement('br'):document.createTextNode(c.textContent));});
+    art.appendChild(el);
+  });
+  if(!hasVerse){const e=document.createElement('p');e.className='sb-empty';e.textContent='No lyrics text is stored for this song in this book.';art.appendChild(e);}
+  document.getElementById('sbBody').scrollTop=0;
+  document.getElementById('sbPos').textContent=(idx+1)+' / '+st.songs.length;
+  document.getElementById('sbPrev').style.visibility=idx>0?'visible':'hidden';
+  document.getElementById('sbNext').style.visibility=idx<st.songs.length-1?'visible':'hidden';
+  _sbRefreshFav();
+  try{localStorage.setItem('elib_sb_last_'+st.bookId,String(idx));}catch(e){}
+}
+function _sbRefreshFav(){
+  if(!sbState)return;
+  const on=sbState.favs.has(sbState.songs[sbState.idx].href);
+  const b=document.getElementById('sbFavBtn');b.textContent=on?'★':'☆';b.classList.toggle('fav-on',on);
+}
+function sbToggleFav(){
+  if(!sbState)return;
+  const href=sbState.songs[sbState.idx].href;
+  sbState.favs.has(href)?sbState.favs.delete(href):sbState.favs.add(href);
+  _sbSaveFavs();_sbRefreshFav();
+}
+function sbApplyTheme(t){
+  if(!['day','sepia','night'].includes(t))t='day';
+  const ov=document.getElementById('sbOverlay');
+  ov.classList.remove('theme-day','theme-sepia','theme-night');ov.classList.add('theme-'+t);
+  ov.dataset.theme=t;localStorage.setItem('elib_sb_theme',t);
+}
+function sbApplyFont(delta){
+  let f=parseInt(localStorage.getItem('elib_sb_font')||'22');
+  f=Math.max(14,Math.min(48,f+delta));
+  localStorage.setItem('elib_sb_font',String(f));
+  document.getElementById('sbSong').style.fontSize=f+'px';
+}
+function sbRenderIndex(){
+  if(!sbState)return;
+  const q=document.getElementById('sbSearch').value.trim().toLowerCase();
+  const list=document.getElementById('sbList');list.textContent='';
+  let shown=0;
+  sbState.songs.forEach((sg,i)=>{
+    const numStr=sg.num!=null?String(sg.num)+sg.letter:'';
+    if(sbState.onlyFav&&!sbState.favs.has(sg.href))return;
+    if(q){
+      const hit=/^\d+$/.test(q)?numStr.startsWith(q):(numStr+' '+sg.title).toLowerCase().includes(q);
+      if(!hit)return;
+    }
+    const row=document.createElement('div');row.className='sb-item'+(i===sbState.idx?' current':'');row.dataset.idx=i;
+    const n=document.createElement('span');n.className='n';n.textContent=numStr;
+    const t=document.createElement('span');t.className='t';t.textContent=sg.title;
+    row.append(n,t);
+    if(sg.alt){const a=document.createElement('span');a.className='a';a.textContent='alt. melody';row.appendChild(a);}
+    if(sbState.favs.has(sg.href)){const f=document.createElement('span');f.className='s';f.textContent='★';row.appendChild(f);}
+    list.appendChild(row);shown++;
+  });
+  if(!shown){const e=document.createElement('div');e.className='sb-none';e.textContent=sbState.onlyFav?'No favourites yet — tap ☆ on a song.':'No songs match.';list.appendChild(e);}
+}
+function sbOpenIndex(){
+  sbRenderIndex();
+  document.getElementById('sbIndex').classList.add('open');
+  document.getElementById('sbList').querySelector('.sb-item.current')?.scrollIntoView({block:'center'});
+}
+function sbCloseIndex(){document.getElementById('sbIndex').classList.remove('open');}
+function sbClose(){
+  document.getElementById('sbOverlay').classList.remove('open');
+  document.getElementById('sbIndex').classList.remove('open');
+  sbState=null;
+}
+function _sbBind(){
+  if(_sbBound)return;_sbBound=true;
+  const $=id=>document.getElementById(id);
+  $('sbClose').addEventListener('click',sbClose);
+  $('sbPrev').addEventListener('click',()=>sbState&&sbShowSong(sbState.idx-1));
+  $('sbNext').addEventListener('click',()=>sbState&&sbShowSong(sbState.idx+1));
+  $('sbFavBtn').addEventListener('click',sbToggleFav);
+  $('sbSizeDown').addEventListener('click',()=>sbApplyFont(-2));
+  $('sbSizeUp').addEventListener('click',()=>sbApplyFont(2));
+  $('sbThemeBtn').addEventListener('click',()=>{const o=['day','sepia','night'];sbApplyTheme(o[(o.indexOf($('sbOverlay').dataset.theme)+1)%3]);});
+  $('sbIndexBtn').addEventListener('click',sbOpenIndex);
+  $('sbIndexClose').addEventListener('click',sbCloseIndex);
+  $('sbSearch').addEventListener('input',sbRenderIndex);
+  $('sbFavFilter').addEventListener('click',e=>{if(!sbState)return;sbState.onlyFav=!sbState.onlyFav;e.currentTarget.classList.toggle('on',sbState.onlyFav);sbRenderIndex();});
+  $('sbList').addEventListener('click',e=>{
+    const row=e.target.closest('.sb-item[data-idx]');if(!row||!sbState)return;
+    sbCloseIndex();sbShowSong(parseInt(row.dataset.idx));
+  });
+  let tx=0,ty=0;
+  const body=$('sbBody');
+  body.addEventListener('touchstart',e=>{tx=e.touches[0].clientX;ty=e.touches[0].clientY;},{passive:true});
+  body.addEventListener('touchend',e=>{
+    if(!sbState)return;
+    const dx=e.changedTouches[0].clientX-tx,dy=e.changedTouches[0].clientY-ty;
+    if(Math.abs(dx)>70&&Math.abs(dx)>Math.abs(dy)*1.5)sbShowSong(sbState.idx+(dx<0?1:-1));
+  },{passive:true});
+  document.addEventListener('keydown',e=>{
+    if(!sbState)return;
+    if(e.target&&e.target.id==='sbSearch'&&e.key!=='Escape')return;
+    if(e.key==='Escape'){$('sbIndex').classList.contains('open')?sbCloseIndex():sbClose();}
+    else if(e.key==='ArrowRight')sbShowSong(sbState.idx+1);
+    else if(e.key==='ArrowLeft')sbShowSong(sbState.idx-1);
+  });
+}
+
 async function readCurrentBook(){
   if(!currentId)return;
   closeMobBookSheet(); // the reader is about to open full-screen — the bottom sheet shouldn't linger behind it
@@ -7964,6 +8577,9 @@ async function readCurrentBook(){
       _bookOpenPriority = false;
     }
     readerZip=await JSZip.loadAsync(bytes);readerSpine=[];readerChapter=0;
+    // Songbooks (OPF flag elib:type=songbook) get their own view instead of the paginated reader
+    const _sbInfo=await _sbIsSongbook(readerZip);
+    if(_sbInfo){const _sbZip=readerZip;readerZip=null;hideLoading();await openSongbookView(book,_sbZip,_sbInfo);return;}
     _ledgerFlushSession(); // persist the previous sitting's page count (if any) before starting a new one
     readerBookId = book.id;
     _ledgerSessionPages = 0; // new reading sitting — Marathon achievement counts from here
@@ -8162,6 +8778,10 @@ async function loadLedgerState() {
     ledgerState.lastGoalMetDate       = data.lastGoalMetDate || null;
     ledgerState.lastFreezeGrantStreak = data.lastFreezeGrantStreak || 0;
     ledgerState.achievements          = data.ledgerAchievements || {};
+    gameState.tokens    = Math.min(GAME_MAX_TOKENS, Math.max(0, data.gameTokens | 0));
+    gameState.progress  = Math.min(GAME_PAGES_PER_TOKEN - 1, Math.max(0, data.gameProgress | 0));
+    gameState.highScore = Math.max(0, data.gameHighScore | 0);
+    gameState.loaded    = true;
 
     const todayStr = ledgerDateStr();
     let dayData = {};
@@ -8182,6 +8802,7 @@ async function loadLedgerState() {
 
     ledgerState.loaded = true;
     updateReaderLedgerPill();
+    updateGameChip();
     renderHomeLedgerTeaser();
   } catch(e) {
     console.warn('loadLedgerState:', e);
@@ -8272,6 +8893,7 @@ function _ledgerAwardPages(delta) {
     _ledgerPlayGoalMetAnimation();
   }
 
+  _gameAwardPages(delta);
   updateReaderLedgerPill();
   _ledgerScheduleFlush();
 }
@@ -8562,6 +9184,433 @@ function _ledgerFlushSession() {
   }).catch(e => console.warn('ledger session flush:', e));
 }
 
+// ── READING GAME ─────────────────────────────────────────────────────────
+// Every GAME_PAGES_PER_TOKEN credited pages earns one play of a short Tetris
+// run. Hooked from _ledgerAwardPages(), so it inherits the Ledger's
+// anti-farming rules (per-book high-water mark, capped forward jumps) and
+// audiobook minutes count as pages too. State lives on users/{uid}
+// (gameTokens, gameProgress, gameHighScore). Admin-only for now: widen
+// readingGameEnabled() when it's ready for everyone.
+function readingGameEnabled() { return isAdmin; }
+
+function _gameAwardPages(delta) {
+  if (!readingGameEnabled() || !gameState.loaded || !delta || delta <= 0) return;
+  if (gameState.tokens >= GAME_MAX_TOKENS) return;        // bank full: reading doesn't bank extra credit
+  let p = gameState.progress + delta, earned = 0;
+  while (p >= GAME_PAGES_PER_TOKEN && gameState.tokens + earned < GAME_MAX_TOKENS) { p -= GAME_PAGES_PER_TOKEN; earned++; }
+  if (gameState.tokens + earned >= GAME_MAX_TOKENS) p = 0;
+  gameState.progress = p;
+  gameState.tokens += earned;
+  if (earned) {
+    showToast(gameState.tokens >= GAME_MAX_TOKENS
+      ? '🎮 You earned a play — bank is full, tap 🎮 whenever you like'
+      : '🎮 You earned a play — tap 🎮 whenever you\u2019re ready');
+    _gamePersistNow();
+  } else {
+    _gameSchedulePersist();
+  }
+  updateGameChip();
+}
+
+let _gamePersistTimer = null;
+function _gameSchedulePersist() {
+  if (_gamePersistTimer) return;
+  _gamePersistTimer = setTimeout(() => { _gamePersistTimer = null; _gamePersistNow(); }, 3000);
+}
+function _gamePersistNow() {
+  if (!currentUser || !gameState.loaded) return;
+  if (_gamePersistTimer) { clearTimeout(_gamePersistTimer); _gamePersistTimer = null; }
+  _ledgerPersistUserFields({ gameTokens: gameState.tokens, gameProgress: gameState.progress, gameHighScore: gameState.highScore });
+}
+window.addEventListener('beforeunload', _gamePersistNow);
+
+function updateGameChip() {
+  const chip = document.getElementById('readerGameChip');
+  if (!chip) return;
+  if (!readingGameEnabled() || !gameState.loaded) { chip.style.display = 'none'; return; }
+  const ready = gameState.tokens > 0;
+  chip.style.display = 'flex';
+  chip.classList.toggle('ready', ready);
+  chip.textContent = ready
+    ? `🎮 Play${gameState.tokens > 1 ? ' ×' + gameState.tokens : ''}`
+    : `🎮 ${gameState.progress}/${GAME_PAGES_PER_TOKEN}`;
+}
+document.getElementById('readerGameChip')?.addEventListener('click', (e) => {
+  e.stopPropagation();
+  if (gameState.tokens > 0) { openReadingGame(); return; }
+  const left = GAME_PAGES_PER_TOKEN - gameState.progress;
+  showToast(`📖 Read ${left} more page${left === 1 ? '' : 's'} to earn a play`);
+});
+
+function _gameLedgerCardHtml() {
+  if (!readingGameEnabled() || !gameState.loaded) return '';
+  const pct = Math.round((gameState.progress / GAME_PAGES_PER_TOKEN) * 100);
+  const t = gameState.tokens, left = GAME_PAGES_PER_TOKEN - gameState.progress;
+  const headline = t > 0 ? `🎮 ${t} play${t === 1 ? '' : 's'} ready` : `${left} page${left === 1 ? '' : 's'} to your next play`;
+  const sub = `Every ${GAME_PAGES_PER_TOKEN} pages earns a play${t >= GAME_MAX_TOKENS ? ' · bank full' : ''}${gameState.highScore ? ' · best ' + gameState.highScore.toLocaleString() : ''}`;
+  return `<div class="ledger-card">
+      <div class="ledger-card-label">Reading Game <span style="font-size:.6rem;opacity:.6;margin-left:.4rem;">admin preview</span></div>
+      <div class="ledger-row">
+        ${_ledgerGoalRingSvg(pct, 64)}
+        <div>
+          <div class="ledger-goal-num">${headline}</div>
+          <div class="ledger-goal-sub">${sub}</div>
+        </div>
+      </div>
+      <button class="ledger-goal-edit" id="btnGamePlay"${t > 0 ? '' : ' disabled style="opacity:.5"'}>▶ Play Tetris</button>
+    </div>`;
+}
+
+// ── Tetris engine (pure — no DOM, so it can be tested on its own) ─────────
+const TETRIS_COLS = 10, TETRIS_ROWS = 20;
+const TETRIS_SHAPES = {
+  I: [[0,0,0,0],[1,1,1,1],[0,0,0,0],[0,0,0,0]],
+  O: [[1,1],[1,1]],
+  T: [[0,1,0],[1,1,1],[0,0,0]],
+  S: [[0,1,1],[1,1,0],[0,0,0]],
+  Z: [[1,1,0],[0,1,1],[0,0,0]],
+  J: [[1,0,0],[1,1,1],[0,0,0]],
+  L: [[0,0,1],[1,1,1],[0,0,0]],
+};
+const TETRIS_COLORS = { I:'#38bdf8', O:'#facc15', T:'#c084fc', S:'#4ade80', Z:'#f87171', J:'#60a5fa', L:'#fb923c' };
+const TETRIS_KICKS = [[0,0],[-1,0],[1,0],[-2,0],[2,0],[0,-1],[-1,-1],[1,-1],[0,-2]];
+
+function tetrisCreate(rng) {
+  rng = rng || Math.random;
+  const rotCW = m => m[0].map((_, i) => m.map(row => row[i]).reverse());
+  let bag = [];
+  const draw = () => {
+    if (!bag.length) {
+      bag = Object.keys(TETRIS_SHAPES);
+      for (let i = bag.length - 1; i > 0; i--) { const j = Math.floor(rng() * (i + 1)); [bag[i], bag[j]] = [bag[j], bag[i]]; }
+    }
+    return bag.pop();
+  };
+  const mk = type => {
+    const m = TETRIS_SHAPES[type].map(r => r.slice());
+    return { type, m, x: Math.floor((TETRIS_COLS - m[0].length) / 2), y: 0 };
+  };
+  const g = {
+    board: Array.from({ length: TETRIS_ROWS }, () => Array(TETRIS_COLS).fill(null)),
+    score: 0, lines: 0, level: 1, over: false, soft: false, cleared: 0,
+    cur: null, next: null, _acc: 0, _lock: 0, _resets: 0,
+  };
+  const hit = (m, x, y) => {
+    for (let r = 0; r < m.length; r++) for (let c = 0; c < m[r].length; c++) {
+      if (!m[r][c]) continue;
+      const nx = x + c, ny = y + r;
+      if (nx < 0 || nx >= TETRIS_COLS || ny >= TETRIS_ROWS) return true;
+      if (ny >= 0 && g.board[ny][nx]) return true;
+    }
+    return false;
+  };
+  const grounded = () => hit(g.cur.m, g.cur.x, g.cur.y + 1);
+  // A move/turn on the ground restarts the lock timer (max 15 times per piece).
+  const touched = () => { if (grounded() && g._resets < 15) { g._lock = 0; g._resets++; } };
+  const spawn = () => {
+    g.cur = g.next || mk(draw());
+    g.next = mk(draw());
+    g._acc = 0; g._lock = 0; g._resets = 0;
+    if (hit(g.cur.m, g.cur.x, g.cur.y)) g.over = true;
+  };
+  const lockPiece = () => {
+    const { m, x, y, type } = g.cur;
+    for (let r = 0; r < m.length; r++) for (let c = 0; c < m[r].length; c++) {
+      if (!m[r][c]) continue;
+      if (y + r < 0) { g.over = true; return; }
+      g.board[y + r][x + c] = type;
+    }
+    let n = 0;
+    for (let r = TETRIS_ROWS - 1; r >= 0; r--) {
+      if (g.board[r].every(Boolean)) { g.board.splice(r, 1); g.board.unshift(Array(TETRIS_COLS).fill(null)); n++; r++; }
+    }
+    g.cleared = n;
+    if (n) {
+      g.score += [0, 100, 300, 500, 800][n] * g.level;
+      g.lines += n;
+      g.level = 1 + Math.floor(g.lines / 10);
+    }
+    spawn();
+  };
+  g.move = dx => {
+    if (g.over || hit(g.cur.m, g.cur.x + dx, g.cur.y)) return false;
+    g.cur.x += dx; touched(); return true;
+  };
+  g.rotate = () => {
+    if (g.over) return false;
+    const rm = rotCW(g.cur.m);
+    for (const [kx, ky] of TETRIS_KICKS) {
+      if (!hit(rm, g.cur.x + kx, g.cur.y + ky)) { g.cur.m = rm; g.cur.x += kx; g.cur.y += ky; touched(); return true; }
+    }
+    return false;
+  };
+  g.hardDrop = () => {
+    if (g.over) return 0;
+    let d = 0;
+    while (!hit(g.cur.m, g.cur.x, g.cur.y + 1)) { g.cur.y++; d++; }
+    g.score += 2 * d;
+    lockPiece();
+    return d;
+  };
+  g.ghostY = () => { let y = g.cur.y; while (!hit(g.cur.m, g.cur.x, y + 1)) y++; return y; };
+  g.interval = () => { const base = Math.max(90, 800 - (g.level - 1) * 70); return g.soft ? Math.min(base, 45) : base; };
+  g.step = dt => {
+    if (g.over) return;
+    if (grounded()) {
+      g._lock += dt;
+      if (g._lock >= (g.soft ? 150 : 500)) lockPiece();
+      return;
+    }
+    g._lock = 0;
+    g._acc += dt;
+    const iv = g.interval();
+    while (g._acc >= iv) {
+      g._acc -= iv;
+      if (hit(g.cur.m, g.cur.x, g.cur.y + 1)) break;
+      g.cur.y++;
+      if (g.soft) g.score++;
+    }
+  };
+  spawn();
+  return g;
+}
+
+// ── Game overlay (UI around the engine) ───────────────────────────────────
+function openReadingGame() {
+  if (!readingGameEnabled() || document.getElementById('gameOverlay')) return;
+  const el = document.createElement('div');
+  el.id = 'gameOverlay';
+  el.className = 'game-overlay';
+  el.innerHTML = `
+    <div class="game-top">
+      <div class="game-title">🎮</div>
+      <div class="game-stat"><b id="gScore">0</b><span>Score</span></div>
+      <div class="game-stat"><b id="gLines">0</b><span>Lines</span></div>
+      <div class="game-stat"><b id="gTime">0:00</b><span>Time</span></div>
+      <canvas id="gNext" width="48" height="48" style="width:48px;height:48px;"></canvas>
+      <button class="game-x" id="gClose" aria-label="Close">✕</button>
+    </div>
+    <div class="game-stage" id="gStage">
+      <canvas id="gBoard" style="touch-action:none;border-radius:6px;"></canvas>
+      <div class="game-panel" id="gPanel"></div>
+    </div>
+    <div class="game-controls">
+      <button class="game-btn" data-k="left" aria-label="Left">◀</button>
+      <button class="game-btn" data-k="rotate" aria-label="Rotate">⟳</button>
+      <button class="game-btn" data-k="right" aria-label="Right">▶</button>
+      <button class="game-btn" data-k="soft" aria-label="Soft drop">▼</button>
+      <button class="game-btn" data-k="drop" aria-label="Hard drop">⏬</button>
+    </div>`;
+  document.body.appendChild(el);
+
+  const stage = el.querySelector('#gStage'), cv = el.querySelector('#gBoard'), ctx = cv.getContext('2d');
+  const nextCv = el.querySelector('#gNext'), nctx = nextCv.getContext('2d');
+  const panel = el.querySelector('#gPanel');
+  const hudEls = { score: el.querySelector('#gScore'), lines: el.querySelector('#gLines'), time: el.querySelector('#gTime') };
+  const hudLast = {};
+  let cell = 20, state = 'ready', g = null, remain = GAME_RUN_SECS * 1000, raf = 0, last = 0, gs = null;
+  const rep = { t: null, i: null };
+
+  function fit() {
+    const w = stage.clientWidth - 16, h = stage.clientHeight - 16;
+    cell = Math.max(12, Math.floor(Math.min(w / TETRIS_COLS, h / TETRIS_ROWS)));
+    const dpr = window.devicePixelRatio || 1;
+    cv.width = TETRIS_COLS * cell * dpr; cv.height = TETRIS_ROWS * cell * dpr;
+    cv.style.width = TETRIS_COLS * cell + 'px'; cv.style.height = TETRIS_ROWS * cell + 'px';
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    nctx.setTransform(1, 0, 0, 1, 0, 0);
+  }
+
+  function drawCell(c, x, y, size, color, alpha) {
+    const bevel = Math.max(2, size * 0.14);
+    c.globalAlpha = alpha;
+    c.fillStyle = color;                    c.fillRect(x + 1, y + 1, size - 2, size - 2);
+    c.fillStyle = 'rgba(255,255,255,.28)';  c.fillRect(x + 1, y + 1, size - 2, bevel);
+    c.fillStyle = 'rgba(0,0,0,.22)';        c.fillRect(x + 1, y + size - 1 - bevel, size - 2, bevel);
+    c.globalAlpha = 1;
+  }
+  function draw() {
+    ctx.fillStyle = '#0f1a2e';
+    ctx.fillRect(0, 0, TETRIS_COLS * cell, TETRIS_ROWS * cell);
+    ctx.strokeStyle = 'rgba(255,255,255,.05)'; ctx.lineWidth = 1;
+    for (let c = 1; c < TETRIS_COLS; c++) { ctx.beginPath(); ctx.moveTo(c * cell + .5, 0); ctx.lineTo(c * cell + .5, TETRIS_ROWS * cell); ctx.stroke(); }
+    for (let r = 1; r < TETRIS_ROWS; r++) { ctx.beginPath(); ctx.moveTo(0, r * cell + .5); ctx.lineTo(TETRIS_COLS * cell, r * cell + .5); ctx.stroke(); }
+    nctx.clearRect(0, 0, 48, 48);
+    if (!g) return;
+    for (let r = 0; r < TETRIS_ROWS; r++) for (let c = 0; c < TETRIS_COLS; c++) {
+      const t = g.board[r][c]; if (t) drawCell(ctx, c * cell, r * cell, cell, TETRIS_COLORS[t], 1);
+    }
+    if (!g.over) {
+      const p = g.cur, gy = g.ghostY();
+      for (let r = 0; r < p.m.length; r++) for (let c = 0; c < p.m[r].length; c++) {
+        if (!p.m[r][c]) continue;
+        if (gy !== p.y && gy + r >= 0) drawCell(ctx, (p.x + c) * cell, (gy + r) * cell, cell, TETRIS_COLORS[p.type], .22);
+        if (p.y + r >= 0) drawCell(ctx, (p.x + c) * cell, (p.y + r) * cell, cell, TETRIS_COLORS[p.type], 1);
+      }
+      const n = g.next, ns = 11;
+      const rows = n.m.filter(row => row.some(Boolean));
+      const cols = n.m[0].map((_, ci) => n.m.some(row => row[ci]));
+      const firstC = cols.indexOf(true), lastC = cols.lastIndexOf(true);
+      const firstR = n.m.findIndex(row => row.some(Boolean));
+      const ox = (48 - (lastC - firstC + 1) * ns) / 2, oy = (48 - rows.length * ns) / 2;
+      for (let r = 0; r < n.m.length; r++) for (let c = 0; c < n.m[r].length; c++) {
+        if (n.m[r][c]) drawCell(nctx, ox + (c - firstC) * ns, oy + (r - firstR) * ns, ns, TETRIS_COLORS[n.type], 1);
+      }
+    }
+  }
+  function hud() {
+    const v = { score: g ? g.score : 0, lines: g ? g.lines : 0, time: Math.ceil(remain / 1000) };
+    if (v.score !== hudLast.score) { hudEls.score.textContent = v.score.toLocaleString(); hudLast.score = v.score; }
+    if (v.lines !== hudLast.lines) { hudEls.lines.textContent = v.lines; hudLast.lines = v.lines; }
+    if (v.time !== hudLast.time) { hudEls.time.textContent = Math.floor(v.time / 60) + ':' + String(v.time % 60).padStart(2, '0'); hudLast.time = v.time; }
+  }
+
+  function showPanel(html) { panel.style.display = html ? 'flex' : 'none'; panel.innerHTML = html || ''; }
+  function readyHtml() {
+    const t = gameState.tokens;
+    return `<h2>Tetris</h2>
+      <p>You have <b>${t}</b> play${t === 1 ? '' : 's'}.${gameState.highScore ? ` Best score: <b>${gameState.highScore.toLocaleString()}</b>.` : ''}</p>
+      <p>A play lasts up to ${Math.round(GAME_RUN_SECS / 60)} minutes, or until the stack reaches the top.</p>
+      <button class="game-go" data-act="start">Start</button>
+      <button class="game-ghost" data-act="back">Back to reading</button>`;
+  }
+  function overHtml(reason, isBest) {
+    const t = gameState.tokens, left = GAME_PAGES_PER_TOKEN - gameState.progress;
+    return `<h2>${reason}</h2>
+      <div class="game-big">${g.score.toLocaleString()}</div>
+      <p>${g.lines} line${g.lines === 1 ? '' : 's'}${isBest ? ' · 🏆 new best!' : ` · best ${gameState.highScore.toLocaleString()}`}</p>
+      ${t > 0
+        ? `<button class="game-go" data-act="start">Play again (${t} left)</button>`
+        : `<p>📖 Read ${left} more page${left === 1 ? '' : 's'} for another play.</p>`}
+      <button class="game-ghost" data-act="back">Back to reading</button>`;
+  }
+
+  function releaseInputs() { clearTimeout(rep.t); clearInterval(rep.i); rep.t = rep.i = null; if (g) g.soft = false; gs = null; }
+  function startRun() {
+    if (gameState.tokens < 1) return;
+    gameState.tokens--;
+    _gamePersistNow();                       // persisted up front so quitting mid-game can't refund the play
+    updateGameChip();
+    g = tetrisCreate(); remain = GAME_RUN_SECS * 1000; state = 'playing'; hudLast.score = hudLast.lines = hudLast.time = undefined;
+    showPanel(null);
+  }
+  function endRun(reason) {
+    if (state === 'over') return;
+    state = 'over'; releaseInputs();
+    const isBest = g.score > gameState.highScore;
+    if (isBest) gameState.highScore = g.score;
+    _gamePersistNow();
+    showPanel(overHtml(reason, isBest));
+  }
+  function pause() {
+    if (state !== 'playing') return;
+    state = 'paused'; releaseInputs();
+    showPanel(`<h2>Paused</h2>
+      <button class="game-go" data-act="resume">Resume</button>
+      <button class="game-ghost" data-act="end">End game</button>`);
+  }
+  function resume() { if (state === 'paused') { state = 'playing'; showPanel(null); } }
+  function close(force) {
+    if (!force) {
+      if (state === 'playing') pause();
+      if (state === 'paused') { if (!confirm('End this game? Your score still counts.')) return; endRun('Game ended'); }
+    }
+    cancelAnimationFrame(raf);
+    releaseInputs();
+    window.removeEventListener('resize', fit);
+    window.removeEventListener('keydown', onKeyDown, true);
+    window.removeEventListener('keyup', onKeyUp, true);
+    document.removeEventListener('visibilitychange', onVis);
+    el.remove();
+    _gameCloser = null;
+    updateGameChip();
+    renderLedgerTab();                       // no-op unless the Ledger tab exists; refreshes its game card
+  }
+  _gameCloser = close;
+
+  function press(k) {
+    if (state !== 'playing') return;
+    if (k === 'left') g.move(-1); else if (k === 'right') g.move(1);
+    else if (k === 'rotate') g.rotate(); else if (k === 'drop') g.hardDrop(); else if (k === 'soft') g.soft = true;
+  }
+  function release(k) { if (k === 'soft' && g) g.soft = false; }
+
+  el.querySelectorAll('.game-btn').forEach(b => {
+    const k = b.dataset.k;
+    b.addEventListener('pointerdown', e => {
+      e.preventDefault(); press(k);
+      if (k === 'left' || k === 'right') { clearTimeout(rep.t); clearInterval(rep.i); rep.t = setTimeout(() => { rep.i = setInterval(() => press(k), 70); }, 170); }
+    });
+    ['pointerup', 'pointerleave', 'pointercancel'].forEach(ev => b.addEventListener(ev, () => { clearTimeout(rep.t); clearInterval(rep.i); release(k); }));
+  });
+  // Board gestures: tap = rotate, drag sideways = move, quick swipe down = hard drop.
+  cv.addEventListener('pointerdown', e => {
+    if (state !== 'playing') return;
+    try { cv.setPointerCapture(e.pointerId); } catch (_) {}
+    gs = { x: e.clientX, y: e.clientY, lx: e.clientX, t: performance.now(), moved: false };
+  });
+  cv.addEventListener('pointermove', e => {
+    if (!gs || state !== 'playing') return;
+    const step = cell * 0.85;
+    while (e.clientX - gs.lx >= step) { g.move(1);  gs.lx += step; gs.moved = true; }
+    while (gs.lx - e.clientX >= step) { g.move(-1); gs.lx -= step; gs.moved = true; }
+  });
+  cv.addEventListener('pointerup', e => {
+    if (!gs) return;
+    const dx = e.clientX - gs.x, dy = e.clientY - gs.y, dt = performance.now() - gs.t;
+    if (state === 'playing') {
+      if (dy > cell * 3 && dy > Math.abs(dx) * 1.5 && dt < 350) g.hardDrop();
+      else if (!gs.moved && Math.hypot(dx, dy) < 10 && dt < 300) g.rotate();
+    }
+    gs = null;
+  });
+  cv.addEventListener('pointercancel', () => { gs = null; });
+  // Keep touches inside the game from reaching reader swipe handlers underneath.
+  ['touchstart', 'touchmove', 'touchend'].forEach(ev => el.addEventListener(ev, e => e.stopPropagation(), { passive: true }));
+
+  panel.addEventListener('click', e => {
+    const a = e.target.closest('[data-act]')?.dataset.act;
+    if (a === 'start') startRun();
+    else if (a === 'resume') resume();
+    else if (a === 'end') endRun('Game ended');
+    else if (a === 'back') close(true);
+  });
+  el.querySelector('#gClose').addEventListener('click', () => close(false));
+
+  // Capture phase + stopImmediatePropagation: arrow keys, Escape and Android volume
+  // keys would otherwise turn pages / close the reader behind the game.
+  function onKeyDown(e) {
+    e.stopImmediatePropagation();
+    if (e.key === 'Escape') { e.preventDefault(); if (state === 'playing') pause(); else if (state === 'paused') resume(); else close(false); return; }
+    if (e.key === 'p' || e.key === 'P') { e.preventDefault(); if (state === 'playing') pause(); else if (state === 'paused') resume(); return; }
+    const k = { ArrowLeft: 'left', ArrowRight: 'right', ArrowUp: 'rotate', x: 'rotate', X: 'rotate', ArrowDown: 'soft', ' ': 'drop' }[e.key];
+    if (!k) return;
+    e.preventDefault();
+    if (k === 'left' || k === 'right' || k === 'soft' || !e.repeat) press(k);
+  }
+  function onKeyUp(e) { e.stopImmediatePropagation(); if (e.key === 'ArrowDown') release('soft'); }
+  function onVis() { if (document.hidden && state === 'playing') pause(); }
+  window.addEventListener('keydown', onKeyDown, true);
+  window.addEventListener('keyup', onKeyUp, true);
+  window.addEventListener('resize', fit);
+  document.addEventListener('visibilitychange', onVis);
+
+  function frame(t) {
+    raf = requestAnimationFrame(frame);
+    const dt = Math.min(50, t - (last || t)); last = t;
+    if (state === 'playing' && g) {
+      g.step(dt);
+      remain -= dt;
+      if (g.over) endRun('Stacked to the top');
+      else if (remain <= 0) { remain = 0; endRun('Time\u2019s up!'); }
+    }
+    draw(); hud();
+  }
+  fit();
+  showPanel(readyHtml());
+  raf = requestAnimationFrame(frame);
+}
+
 // ── Rendering ────────────────────────────────────────────────────────────
 function updateReaderLedgerPill() {
   const pill = document.getElementById('readerLedgerPill');
@@ -8777,6 +9826,8 @@ async function renderLedgerTab() {
       <button class="ledger-goal-edit" id="btnLedgerEditGoal">Change daily goal</button>
     </div>
 
+    ${_gameLedgerCardHtml()}
+
     <div class="ledger-card" style="padding-bottom:.5rem;">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.75rem;">
         <div class="ledger-card-label" style="margin-bottom:0;">Reading Goals</div>
@@ -8908,6 +9959,7 @@ async function renderLedgerTab() {
     </div>` : ''}`;
 
   document.getElementById('btnLedgerEditGoal')?.addEventListener('click', showLedgerGoalPicker);
+  document.getElementById('btnGamePlay')?.addEventListener('click', () => { if (gameState.tokens > 0) openReadingGame(); });
   document.getElementById('btnLedgerAddGoal')?.addEventListener('click', () => openGoalModal());
   el.querySelectorAll('.ledger-goal-tile[data-goal-id]').forEach(row => {
     row.addEventListener('click', () => openGoalModal(row.dataset.goalId));
@@ -9474,49 +10526,47 @@ function pickCategoryImage(cat, onDone) {
   input.click();
 }
 
+// Recipes are shown as ordinary flat tiles. _openRecipeCategory is now simply
+// the value of the "Categories" dropdown (null = All), shared by desktop and
+// mobile — no more folder tiles to drill into.
 function collapseRecipesByCategoryForGrid(books) {
-  const recipes = books.filter(b => b.isRecipe);
-  if (!recipes.length) return books;
-  const others = books.filter(b => !b.isRecipe);
-  const byCat = new Map();
-  recipes.forEach(r => {
-    const cat = r.category || 'Uncategorised';
-    if (!byCat.has(cat)) byCat.set(cat, []);
-    byCat.get(cat).push(r);
-  });
-  // Drilled into a category: show only its recipes, flat — no folder tiles,
-  // no inline header row. The persistent breadcrumb bar (renderRecipeFolderBar)
-  // is what tells the person where they are; going "back" is closeRecipeCategory().
-  if (_openRecipeCategory && byCat.has(_openRecipeCategory)) {
-    return [...others, ...byCat.get(_openRecipeCategory)];
-  }
-  const out = [...others];
-  [...byCat.keys()].sort((a, b) => a.localeCompare(b)).forEach(cat => {
-    const group = byCat.get(cat);
-    const key = 'recipecat:' + cat.toLowerCase();
-    const icon = recipeCatIcon(cat);
-    out.push({
-      id: group[0].id,
-      isGroup: true,
-      groupIds: group.map(r => r.id),
-      groupKey: key,
-      title: cat,
-      category: cat,
-      author: '',
-      coverUrl: _categoryImages[cat] || null,
-      isRecipe: true,
-      partCount: group.length,
-      icon,
-    });
-  });
-  return out;
+  if (!_openRecipeCategory) return books;
+  return books.filter(b => !b.isRecipe || (b.category || 'Uncategorised') === _openRecipeCategory);
 }
 
-// Drill into / back out of a recipe category folder. Shared by desktop and
-// mobile — renderAll() refreshes both.
+// Keeps the "Categories" pill's visibility, label and active state in sync.
+function updateRecipeCatPill(pillId, labelId, isRecipeMode) {
+  const pill = document.getElementById(pillId);
+  if (!pill) return;
+  pill.classList.toggle('lib-pill-hidden', !isRecipeMode);
+  const label = document.getElementById(labelId);
+  if (label) label.textContent = _openRecipeCategory || 'Categories';
+  pill.classList.toggle('mfp-active', !!_openRecipeCategory);
+}
+
+// Anchored dropdown listing the categories that actually have recipes.
+function openRecipeCatPicker(anchor, sourceBooks) {
+  const recs = sourceBooks.filter(b => b.isRecipe);
+  const cats = {};
+  recs.forEach(b => { const c = b.category || 'Uncategorised'; cats[c] = (cats[c] || 0) + 1; });
+  const items = [
+    { id: 'All', label: 'All', count: recs.length },
+    ...Object.entries(cats).sort(([x], [y]) => x.localeCompare(y))
+      .map(([c, cnt]) => ({ id: c, label: c, icon: recipeCatIcon(c), count: cnt })),
+  ];
+  openMobFilterPicker({
+    anchor,
+    title: '🍲 Categories',
+    items,
+    grid: true,
+    isSelected: it => (_openRecipeCategory || 'All') === it.id,
+    onSelect: it => { _openRecipeCategory = it.id === 'All' ? null : it.id; },
+    onAfterSelect: renderAll,
+  });
+}
+
 function openRecipeCategory(cat) {
-  if (!cat) return;
-  _openRecipeCategory = cat;
+  _openRecipeCategory = cat || null;
   renderAll();
 }
 function closeRecipeCategory() {
@@ -9524,37 +10574,11 @@ function closeRecipeCategory() {
   renderAll();
 }
 
-// Builds (or updates) the persistent breadcrumb bar shown above the grid
-// while a recipe category is open — back arrow, category icon, name and
-// recipe count. Inserted as a sibling right before `grid` rather than as a
-// grid item, so it isn't part of reconcileGrid's diffing and always spans
-// full width regardless of the grid's column count. `count` is however many
-// recipe cards the caller is about to render for this category.
-// `isRecipeMode` is whether THIS surface (desktop or mobile) is currently
-// showing recipes. The two surfaces keep independent format state, so the bar
-// has to be hidden per-surface — otherwise switching to eBooks/Audio on one
-// leaves a stale "back to <category>" bar sitting above a grid of books.
-function renderRecipeFolderBar(grid, barId, count, isRecipeMode) {
-  let bar = document.getElementById(barId);
-  if (!_openRecipeCategory || !isRecipeMode) {
-    if (bar) bar.style.display = 'none';
-    return;
-  }
-  if (!bar) {
-    bar = document.createElement('div');
-    bar.id = barId;
-    bar.className = 'recipe-folder-bar';
-    grid.insertAdjacentElement('beforebegin', bar);
-    bar.addEventListener('click', e => {
-      if (e.target.closest('.rfb-back')) closeRecipeCategory();
-    });
-  }
-  bar.style.display = '';
-  const cat = _openRecipeCategory;
-  const icon = recipeCatIcon(cat);
-  bar.innerHTML = `<button class="rfb-back" aria-label="Back to recipe categories">←</button>
-    <div class="rfb-icon">${icon}</div>
-    <div><div class="rfb-title">${esc(cat)}</div><div class="rfb-count">${count} recipe${count===1?'':'s'}</div></div>`;
+// The old folder breadcrumb bar is retired (the dropdown replaces it); this
+// just hides any bar left over so existing call sites keep working.
+function renderRecipeFolderBar(grid, barId) {
+  const bar = document.getElementById(barId);
+  if (bar) bar.style.display = 'none';
 }
 
 function collapseAudioSeriesForGrid(books) {
@@ -9755,7 +10779,7 @@ function showSeriesEpisodesModal(seriesTitle) {
     genreSelect.style.cssText = 'flex:1;padding:.55rem .8rem;border:1px solid var(--border);'
       + 'border-radius:8px;font-family:"Lato",sans-serif;font-size:.88rem;'
       + 'background:var(--cream);color:var(--navy);outline:none;min-width:0;-webkit-appearance:none;appearance:none;';
-    genreSelect.innerHTML = _categories.map(c =>
+    genreSelect.innerHTML = getBookGenres().map(c =>
       `<option value="${esc(c)}" ${(myEpisodes[0]?.category||'Uncategorised')===c?'selected':''}>${catIcon(c)} ${esc(c)}</option>`
     ).join('');
     const genreSave = document.createElement('button');
@@ -14444,8 +15468,9 @@ document.getElementById('btnSideImportERecipe')?.addEventListener('click', showI
 // it's also called on sign-in and after uploads, where a "refreshed" toast
 // would just be noise on top of feedback those flows already give.
 async function refreshLibraryWithToast(){
-  await loadLibrary();
-  showToast('Library refreshed ✓');
+  _libRetryN = 0;
+  const r = await loadLibrary();
+  showToast(r && r.ok ? 'Library refreshed ✓' : "Couldn't reach the server — showing your saved library");
 }
 [document.getElementById('btnSideRefresh'),document.getElementById('btnMobRefresh')].forEach(b=>b?.addEventListener('click',refreshLibraryWithToast));
 document.getElementById('btnToggleSettings').addEventListener('click',e=>{
@@ -14469,7 +15494,7 @@ document.getElementById('deskManageTagsBtn')?.addEventListener('click', () => {
 document.addEventListener('click',e=>{const s=document.getElementById('deskSettings');if(s.style.display!=='none'&&!s.contains(e.target)&&e.target.id!=='btnToggleSettings')s.style.display='none';});
 document.getElementById('defaultCatInput').value=localStorage.getItem('elib_default_cat')||'';
 document.getElementById('defaultCatInput').addEventListener('keydown',e=>{if(e.key==='Enter'){localStorage.setItem('elib_default_cat',e.target.value);showToast('Default genre saved');}});
-document.getElementById('btnClearCache').addEventListener('click',()=>{if(!confirm('Clear local cache?'))return;library=[];communityLib=[];currentId=null;deskLibCat='All';renderAll();closeDrawer();showToast('Cache cleared');});
+document.getElementById('btnClearCache').addEventListener('click',()=>{if(!confirm('Clear local cache?'))return;_resetLibraryState();currentId=null;deskLibCat='All';renderAll();closeDrawer();showToast('Cache cleared — reloading…');loadLibrary();});
 document.getElementById('deskInstallBtn').addEventListener('click',triggerInstall);
 document.getElementById('mobInstallBtn').addEventListener('click',triggerInstall);
 function triggerInstall(){if(deferredInstall){deferredInstall.prompt();deferredInstall.userChoice.then(()=>deferredInstall=null);}}
@@ -15843,6 +16868,7 @@ window.showBookById = showBookById;
 
 let accessLevel = 'standard'; // 'standard' | 'elevated' | 'admin' — see checkAdminStatus()
 let isAdmin = false;
+let _adminStatusKnown = false;    // true once checkAdminStatus() has read the profile successfully (restricted queries depend on it)
 let hasRestrictedAccess = false; // true for 'elevated' and 'admin' — can see/set Restricted books
 let adminCheckoutsShowAll = false;
 
@@ -15859,7 +16885,9 @@ async function checkAdminStatus() {
     isAdmin = accessLevel === 'admin';
     hasRestrictedAccess = accessLevel === 'elevated' || accessLevel === 'admin';
     document.getElementById('mobAdminSettingsCard').style.display = isAdmin ? '' : 'none';
+    updateGameChip();
     _emailPrefInit(data);
+    _adminStatusKnown = true;
   } catch(e) {
     console.warn('Admin check failed:', e);
   }
@@ -15951,15 +16979,22 @@ document.getElementById('adminCheckoutsFilter')?.addEventListener('click', funct
 // be opened first "pays" for that automatically, instead of it looking like
 // the Users section specifically is broken depending on click order.
 async function _adminFetchAllUsers() {
+  // Each attempt has a deadline: a read that never answers (seen when the connection stalls until something else
+  // is requested) must not leave the Users list on "Loading…" forever. The retry asks a slightly different
+  // question — the same users, capped at 1,000 — so it goes out as a fresh request instead of joining the
+  // stalled one (which is what expanding the Kobo Devices section used to do by accident).
+  const withDeadline = (p, ms) => Promise.race([
+    p,
+    new Promise((_, rej) => setTimeout(() => rej(Object.assign(new Error('The users list is taking too long to load.'), { code: 'timeout' })), ms)),
+  ]);
   try {
-    return await getDocs(collection(db, 'users'));
+    return await withDeadline(getDocs(collection(db, 'users')), 8000);
   } catch(e) {
     console.warn('users fetch failed, retrying once:', e);
     await new Promise(r => setTimeout(r, 400));
-    return await getDocs(collection(db, 'users'));
+    return await withDeadline(getDocs(query(collection(db, 'users'), limit(1000))), 12000);
   }
 }
-
 async function adminLoadKoboDevices() {
   const el = document.getElementById('adminKoboList');
   el.innerHTML = '<div style="color:var(--muted);font-size:.85rem">Loading…</div>';
@@ -16062,6 +17097,10 @@ function _adminUserCardHtml(u, checkoutsByUser, koboSendsByUser) {
               border-radius:8px;background:#f3e6e6;color:#a83232;">🔒 Elevated</span>`;
           return '';
         })()}
+        ${u.emailUpdates === true
+          ? `<span title="Signed up to email updates" style="font-size:.6rem;font-weight:700;padding:1px 6px;
+              border-radius:8px;background:#e6f2f4;color:var(--teal);">✉️ Newsletter</span>`
+          : ''}
         ${koboSends.length
           ? `<span style="font-size:.6rem;color:#5a48b0;font-weight:700;">
               🔲 ${koboSends.length} to Kobo</span>`
@@ -16098,9 +17137,10 @@ function _adminFilterUsers(filterText) {
 
   const total = adminAllUsersCache.length;
   if(countEl) {
-    countEl.textContent = q
+    const subs = adminAllUsersCache.filter(u => u.emailUpdates === true).length;
+    countEl.textContent = (q
       ? `${users.length} of ${total} user${total === 1 ? '' : 's'}`
-      : `${total} user${total === 1 ? '' : 's'}`;
+      : `${total} user${total === 1 ? '' : 's'}`) + (subs ? ` · ✉️ ${subs} on newsletter` : '');
   }
 
   if(!total) {
@@ -16114,56 +17154,92 @@ function _adminFilterUsers(filterText) {
   el.innerHTML = users.map(u => _adminUserCardHtml(u, checkoutsByUser, koboSendsByUser)).join('');
 }
 
+let _adminUsersLoadSeq = 0;
+// The Users list needs only the `users` collection, so it is drawn the moment that arrives. The checkout
+// history and Kobo sends merely decorate each card (they show when a card is expanded), so they load
+// afterwards and can never hold the list up — before, one slow or stalled read among the three left the
+// whole list on "Loading…".
 async function adminLoadUsers() {
   const el = document.getElementById('adminUsersList');
   if(!el) return;
-  el.innerHTML = '<div style="color:var(--muted);font-size:.85rem">Loading…</div>';
+  const mySeq = ++_adminUsersLoadSeq;
+  const current = () => mySeq === _adminUsersLoadSeq;          // a newer call supersedes this one
+  const searchValue = () => { const s = document.getElementById('adminUsersSearch'); return s ? s.value : ''; };
+  const asUsers = snap => snap.docs
+    .map(d => ({ id: d.id, ...d.data() }))
+    .sort((a, b) => (b.lastSeen?.toMillis?.() || 0) - (a.lastSeen?.toMillis?.() || 0));
+
+  // 1. Whatever we already have (an earlier visit, or the saved copy) is shown immediately.
+  if(adminAllUsersCache.length) {
+    _adminFilterUsers(searchValue());
+  } else {
+    el.innerHTML = '<div style="color:var(--muted);font-size:.85rem">Loading…</div>';
+    try {
+      const saved = await getDocsFromCache(collection(db, 'users'));
+      if(current() && saved.docs.length && !adminAllUsersCache.length) {
+        adminAllUsersCache = asUsers(saved);
+        _adminFilterUsers(searchValue());
+      }
+    } catch(e) { /* nothing saved yet — fine */ }
+  }
+
+  // 2. If the server hasn't answered after a few seconds, say so (with a way to retry) rather than an endless "Loading…".
+  let arrived = false;
+  const slowTimer = setTimeout(() => {
+    if(!current() || arrived || adminAllUsersCache.length) return;
+    el.innerHTML = `<div style="color:var(--muted);font-size:.85rem;line-height:1.5">Still loading — this is taking longer than usual.
+      <button type="button" id="adminUsersRetry" style="margin-left:.4rem;border:none;border-radius:12px;padding:.25rem .8rem;background:var(--teal);color:var(--warm-white);font-size:.75rem;cursor:pointer">Try again</button></div>`;
+    el.querySelector('#adminUsersRetry')?.addEventListener('click', adminLoadUsers);
+  }, 6000);
+
   try {
-    const [userSnap, checkoutSnap, koboQueueSnap] = await Promise.all([
-      _adminFetchAllUsers(),
-      getDocs(query(collection(db, 'checkouts'), orderBy('checkedOutAt', 'desc'))),
-      getDocs(collection(db, 'kobo_queue')),
-    ]);
-
-    const checkoutsByUser = {};
-    checkoutSnap.docs.forEach(d => {
-      const data = d.data();
-      if(!checkoutsByUser[data.userId]) checkoutsByUser[data.userId] = [];
-      checkoutsByUser[data.userId].push({ id: d.id, ...data });
-    });
-
-    const koboSendsByUser = {};
-    koboQueueSnap.docs.forEach(d => {
-      const data = d.data();
-      if(!koboSendsByUser[data.ownerId]) koboSendsByUser[data.ownerId] = [];
-      koboSendsByUser[data.ownerId].push({ id: d.id, ...data });
-    });
-    // Newest send first for every user's list.
-    Object.values(koboSendsByUser).forEach(list => {
-      list.sort((a, b) => (b.createdAt?.toMillis?.() || 0) - (a.createdAt?.toMillis?.() || 0));
-    });
-
-    const users = userSnap.docs
-      .map(d => ({ id: d.id, ...d.data() }))
-      .sort((a, b) => {
-        const ta = a.lastSeen?.toMillis?.() || 0;
-        const tb = b.lastSeen?.toMillis?.() || 0;
-        return tb - ta;
-      });
+    const userSnap = await _adminFetchAllUsers();
+    arrived = true; clearTimeout(slowTimer);
+    if(!current()) return;
     // Shared with the Restricted Books section below, so adminToggleUserCard()
     // can look a user's current restrictedAccess up regardless of which
     // admin section happened to load the cache first.
-    adminAllUsersCache = users;
+    adminAllUsersCache = asUsers(userSnap);
+    _adminFilterUsers(searchValue());
+
+    // 3. The extras, afterwards. allSettled: one failing must not lose the other, or the list.
+    const [checkoutR, koboR] = await Promise.allSettled([
+      getDocs(query(collection(db, 'checkouts'), orderBy('checkedOutAt', 'desc'))),
+      getDocs(collection(db, 'kobo_queue')),
+    ]);
+    if(!current()) return;
+    const checkoutsByUser = {};
+    if(checkoutR.status === 'fulfilled') {
+      checkoutR.value.docs.forEach(d => {
+        const data = d.data();
+        if(!checkoutsByUser[data.userId]) checkoutsByUser[data.userId] = [];
+        checkoutsByUser[data.userId].push({ id: d.id, ...data });
+      });
+    } else console.warn('Checkout history failed to load:', checkoutR.reason);
+    const koboSendsByUser = {};
+    if(koboR.status === 'fulfilled') {
+      koboR.value.docs.forEach(d => {
+        const data = d.data();
+        if(!koboSendsByUser[data.ownerId]) koboSendsByUser[data.ownerId] = [];
+        koboSendsByUser[data.ownerId].push({ id: d.id, ...data });
+      });
+      // Newest send first for every user's list.
+      Object.values(koboSendsByUser).forEach(list => {
+        list.sort((a, b) => (b.createdAt?.toMillis?.() || 0) - (a.createdAt?.toMillis?.() || 0));
+      });
+    } else console.warn('Kobo sends failed to load:', koboR.reason);
     el._checkoutsByUser = checkoutsByUser;
     el._koboSendsByUser = koboSendsByUser;
-
-    const searchBox = document.getElementById('adminUsersSearch');
-    _adminFilterUsers(searchBox ? searchBox.value : '');
-
+    _adminFilterUsers(searchValue());
   } catch(e) {
-    el.innerHTML = `<div style="color:var(--danger);font-size:.82rem">
-      Failed: ${e.message}</div>`;
+    arrived = true; clearTimeout(slowTimer);
     console.error(e);
+    if(!current()) return;
+    if(adminAllUsersCache.length) return;     // keep showing the saved list rather than replacing it with an error
+    el.innerHTML = `<div style="color:var(--danger);font-size:.82rem">
+      Failed: ${e.message}
+      <button type="button" id="adminUsersRetry" style="margin-left:.4rem;border:none;border-radius:12px;padding:.25rem .8rem;background:var(--teal);color:var(--warm-white);font-size:.75rem;cursor:pointer">Try again</button></div>`;
+    el.querySelector('#adminUsersRetry')?.addEventListener('click', adminLoadUsers);
   }
 }
 
@@ -16597,6 +17673,7 @@ async function loadConfig() {
     if(!tagIconSnap.exists()) {
       await setDoc(doc(db, 'config', 'tagIcons'), { map: _tagIcons });
     }
+    await loadRecCfg();
   } catch(e) {
     console.warn('loadConfig:', e);
     _categories = [...SYSTEM_CATEGORIES];
@@ -16609,6 +17686,28 @@ async function loadConfig() {
 }
 
 function getCategoryList() { return _categories; }
+// Names that only exist as recipe categories. They are kept out of every book
+// genre picker — unless they are one of the built-in genres or a book/audiobook
+// actually uses them as its genre.
+function _recipeOnlyGenreSet() {
+  const names = new Set([
+    ..._recipeCategories,
+    ...(_recipes || []).map(r => r.chapterName || r.category),
+    ...communityLib.filter(b => b.isRecipe).map(b => b.category),
+  ].filter(Boolean));
+  SYSTEM_CATEGORIES.forEach(c => names.delete(c));
+  [...library, ...communityLib].forEach(b => { if (!b.isRecipe && b.category) names.delete(b.category); });
+  return names;
+}
+function getBookGenres() {
+  const ro = _recipeOnlyGenreSet();
+  return _categories.filter(c => !ro.has(c));
+}
+// Recipe categories: their own registry plus anything a recipe already uses.
+function getRecipeCategoryList() {
+  const used = [..._recipes.map(r => r.chapterName || r.category), ...communityLib.filter(b => b.isRecipe).map(b => b.category)].filter(Boolean);
+  return [...new Set([..._recipeCategories, ...used])].filter(c => c !== 'Uncategorised').sort((a, b) => a.localeCompare(b));
+}
 function getTagList() { return _globalTags; }
 // Per-item emoji, with sensible fallbacks for anything not yet set
 // (e.g. a brand-new category/tag an admin just added).
@@ -16641,7 +17740,7 @@ function showQuickCategoryModal() {
         <button class="mob-picker-close" id="quickCatCloseBtn">✕</button>
       </div>
       <div id="quickCatItems" class="mob-picker-grid">
-        ${_categories.map(c => {
+        ${getBookGenres().map(c => {
           const selected = (book.category || 'Uncategorised') === c;
           return `<div class="mob-picker-item ${selected?'selected':''}" data-cat="${esc(c)}">
             <span>${catIcon(c)} ${esc(c)}</span>
@@ -16695,7 +17794,17 @@ async function loadUserLists() {
     const snap = await getDocs(
       collection(db, 'user_lists', currentUser.uid, 'lists')
     );
+    if (snap.metadata && snap.metadata.fromCache) {
+      // Answered from the saved copy because the server couldn't be reached. Fine to display — but NEVER seed the
+      // system lists from it: an empty cached answer means "unknown", and writing defaults now would overwrite the
+      // person's real lists the moment the connection returns.
+      if (snap.docs.length) _userLists = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      else if (!_userLists.length) _userLists = SYSTEM_LISTS.map(sl => ({ ...sl, bookIds: [] }));
+      _userListsFromCache = true;          // so the next resume / reconnect fetches the real thing
+      return;
+    }
     _userLists = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    _userListsFromCache = false;
 
     // Ensure system lists exist
     for(const sl of SYSTEM_LISTS) {
@@ -16709,7 +17818,8 @@ async function loadUserLists() {
     }
   } catch(e) {
     console.warn('loadUserLists:', e);
-    _userLists = SYSTEM_LISTS.map(sl => ({ ...sl, bookIds: [] }));
+    if (!_userLists.length) _userLists = SYSTEM_LISTS.map(sl => ({ ...sl, bookIds: [] }));   // keep what we have if we have it
+    _userListsFromCache = true;
   }
 }
 
@@ -17413,10 +18523,10 @@ async function adminLoadCategories() {
   if(!el) return;
   el.innerHTML = '<div style="color:var(--muted);font-size:.85rem">Loading…</div>';
 
-  const cats = getCategoryList();
+  const ro = _recipeOnlyGenreSet();
   el.innerHTML = `
     <div id="adminCatList">
-      ${cats.map((c, i) => `
+      ${_categories.map((c, i) => ro.has(c) ? '' : `
         <div class="cat-admin-row" data-catidx="${i}">
           <input class="cat-admin-icon" data-cat-icon="${i}" value="${esc(catIcon(c))}"
             maxlength="4" title="Emoji for this genre"
@@ -17681,10 +18791,6 @@ async function adminLoadRecipeCategories() {
         if(!newName || newName === orig) { adminLoadRecipeCategories(); return; }
         showLoading('Updating category…');
         try {
-          const catIdx = _categories.indexOf(orig);
-          if(catIdx !== -1) _categories[catIdx] = newName; else _categories.push(newName);
-          _categories.sort((a, b) => a.localeCompare(b));
-          await setDoc(doc(db, 'config', 'categories'), { list: _categories });
           const rcIdx = _recipeCategories.indexOf(orig);
           if(rcIdx !== -1) _recipeCategories[rcIdx] = newName; else _recipeCategories.push(newName);
           _recipeCategories.sort((a, b) => a.localeCompare(b));
@@ -17723,11 +18829,6 @@ async function adminLoadRecipeCategories() {
       if(!confirm(`Delete category "${name}"?\n\nRecipes in this category will be moved to Uncategorised.`)) return;
       showLoading('Deleting category…');
       try {
-        const catIdx = _categories.indexOf(name);
-        if(catIdx !== -1) {
-          _categories.splice(catIdx, 1);
-          await setDoc(doc(db, 'config', 'categories'), { list: _categories });
-        }
         const rcIdx = _recipeCategories.indexOf(name);
         if(rcIdx !== -1) {
           _recipeCategories.splice(rcIdx, 1);
@@ -17763,11 +18864,6 @@ async function adminLoadRecipeCategories() {
     const name = addInput.value.trim();
     if(!name) return;
     if(_recipeCategories.includes(name)) { showToast('Category already exists'); return; }
-    if(!_categories.includes(name)) {
-      _categories.push(name);
-      _categories.sort((a, b) => a.localeCompare(b));
-      await setDoc(doc(db, 'config', 'categories'), { list: _categories });
-    }
     _recipeCategories.push(name);
     _recipeCategories.sort((a, b) => a.localeCompare(b));
     addInput.value = '';
@@ -18031,6 +19127,26 @@ function buildAdminSections() {
       <div class="admin-section-body" id="adminEmailBody">
         <div style="color:var(--muted);font-size:.85rem">Open to load…</div>
       </div>
+    </div>
+
+    <div class="admin-section">
+      <div class="admin-section-header" data-admin-section="signups">
+        <span class="admin-section-title">📬 Newsletter signups</span>
+        <span class="admin-section-chevron">▾</span>
+      </div>
+      <div class="admin-section-body" id="adminSignupsBody">
+        <div style="color:var(--muted);font-size:.85rem">Open to load…</div>
+      </div>
+    </div>
+
+    <div class="admin-section">
+      <div class="admin-section-header" data-admin-section="rectheme">
+        <span class="admin-section-title">🎨 Recommended Theme</span>
+        <span class="admin-section-chevron">▾</span>
+      </div>
+      <div class="admin-section-body" id="adminRecThemeBody">
+        <div id="mobRecThemeSettings"></div>
+      </div>
     </div>`;
 
   // Collapsible toggle
@@ -18049,6 +19165,8 @@ function buildAdminSections() {
         if(section === 'bookmarks')   adminLoadBookmarks();
         if(section === 'tags')        adminLoadTags();
         if(section === 'email')       adminLoadEmail();
+        if(section === 'signups')     adminLoadSignups();
+        if(section === 'rectheme')    renderRecThemeSettings();
       }
     });
   });
@@ -18174,7 +19292,7 @@ function showBookmarkEditor(templateId) {
           font-family:'Lato',sans-serif;font-size:.85rem;border:1px solid var(--border);
           border-radius:3px;background:var(--cream);color:var(--navy)">
           <option value="">— Add a genre —</option>
-          ${_categories.map(c => `<option value="${esc(c)}">${catIcon(c)} ${esc(c)}</option>`).join('')}
+          ${getBookGenres().map(c => `<option value="${esc(c)}">${catIcon(c)} ${esc(c)}</option>`).join('')}
         </select>
       </div>
 
@@ -19183,23 +20301,31 @@ function fmtAudioDate(ts) {
 
 // ── load tracks from Firestore ────────────────────────────────────────────────
 
-async function loadAudioTracks() {
-  if (!currentUser) return;
+async function loadAudioTracks(opts) {
+  if (!currentUser) return { reliable: true };
   const q = query(
     collection(db, 'audioFiles'),
     where('userId', '==', currentUser.uid),
     orderBy('uploadedAt', 'desc')
   );
-  const snap = await getDocs(q);
-  _audioTracks = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  const snap = await _readDocs(q, opts);
+  const items = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  if (_fromCache(snap)) {
+    // Answered from the saved copy (server unreachable, or a cache-first paint): fine to show, but it can
+    // only add to the list — an empty cached answer means "unknown", not "none".
+    _audioTracks = dedupe([...items, ..._audioTracks]);
+    return { reliable: false };
+  }
+  _audioTracks = items;
+  return { reliable: true };
 }
 
 // Mirrors loadLibrary()'s public/shared/restricted queries for `books`, but
 // against `audioFiles` (field is `userId` there, not `ownerId`). Feeds
 // communityLib the same way books do, so publishing/sharing an audiobook
 // actually surfaces it to other users instead of only updating your own copy.
-async function loadCommunityAudioTracks() {
-  if (!currentUser) return [];
+async function loadCommunityAudioTracks(opts) {
+  if (!currentUser) return Object.assign([], { reliable: true });
   const pubQ = query(
     collection(db, 'audioFiles'),
     where('visibility', '==', 'public')
@@ -19209,21 +20335,21 @@ async function loadCommunityAudioTracks() {
     where('allowedUsers', 'array-contains', currentUser.uid)
   );
   const restrictedPromise = (isAdmin || hasRestrictedAccess)
-    ? getDocs(query(collection(db, 'audioFiles'), where('visibility', '==', 'restricted')))
+    ? _readDocs(query(collection(db, 'audioFiles'), where('visibility', '==', 'restricted')), opts)
     : Promise.resolve({ docs: [] });
 
-  // allSettled, not all — a denied restricted query (e.g. rules not yet
-  // updated for a freshly-granted access level) shouldn't also swallow the
-  // public/shared audiobooks that would otherwise have loaded fine.
-  const [pubR, sharedR, restrictedR] = await Promise.allSettled([getDocs(pubQ), getDocs(sharedQ), restrictedPromise]);
+  // allSettled, not all — a denied restricted query (e.g. rules not yet updated for a freshly-granted access
+  // level) shouldn't also swallow the public/shared audiobooks that would otherwise have loaded fine.
+  const [pubR, sharedR, restrictedR] = await Promise.allSettled([_readDocs(pubQ, opts), _readDocs(sharedQ, opts), restrictedPromise]);
   const toBookLike = d => audioTrackToBookLike({ id: d.id, ...d.data() });
-  if (pubR.status === 'rejected') console.warn('Public audiobooks failed to load:', pubR.reason);
-  if (sharedR.status === 'rejected') console.warn('Shared audiobooks failed to load:', sharedR.reason);
-  if (restrictedR.status === 'rejected') console.warn('Restricted audiobooks failed to load:', restrictedR.reason);
+  const issues = _readIssues([['Public audiobooks', pubR], ['Shared audiobooks', sharedR], ['Restricted audiobooks', restrictedR]]);
   const pub = pubR.status === 'fulfilled' ? pubR.value.docs.map(toBookLike) : [];
   const shared = sharedR.status === 'fulfilled' ? sharedR.value.docs.map(toBookLike).filter(b => b.ownerId !== currentUser.uid) : [];
   const restricted = restrictedR.status === 'fulfilled' ? restrictedR.value.docs.map(toBookLike).filter(b => b.ownerId !== currentUser.uid) : [];
-  return [...pub, ...shared, ...restricted];
+  // `reliable` = every query was answered by the server. A failed or cache-only answer must never be allowed to
+  // REMOVE items (see _loadLibraryOnce).
+  const reliable = [pubR, sharedR, restrictedR].every(_srcOk);     // server answered, or refused for good
+  return Object.assign([...pub, ...shared, ...restricted], { reliable, issues });
 }
 
 // ── surface audio tracks in the main library grid ──────────────────────────────
@@ -19265,39 +20391,36 @@ function mergeAudioIntoLibrary() {
 
 let _recipes = [];
 
-async function loadRecipes() {
-  if (!currentUser) return;
-  // Swallows its own errors (most likely: the `recipes` collection has no
-  // Firestore security rules yet, so this comes back permission-denied).
-  // This function is awaited inside loadLibrary()'s Promise.all alongside
-  // the books/audio queries — if it threw instead, that single rejection
-  // would cascade and take down the ENTIRE initial load, books and audio
-  // included, since Promise.all rejects as soon as any one promise does.
-  // Recipes failing to load should only mean an empty recipes shelf, never
-  // a blank library.
+async function loadRecipes(opts) {
+  if (!currentUser) return { reliable: true };
+  // Swallows its own errors (most likely: the `recipes` collection has no Firestore security rules yet, so
+  // this comes back permission-denied). This is awaited alongside the books/audio queries — if it threw
+  // instead, that one rejection would take the whole initial load with it. Recipes failing to load should
+  // only mean an empty recipes shelf, never a blank library.
   try {
-    // No orderBy here on purpose — combining it with the ownerId equality
-    // filter would need a composite index (ownerId + createdAt) that
-    // Firestore has to build per-collection. Sorting the small result set
-    // client-side avoids that setup step entirely.
+    // No orderBy here on purpose — combining it with the ownerId equality filter would need a composite
+    // index (ownerId + createdAt). Sorting the small result set client-side avoids that setup step.
     const q = query(
       collection(db, 'recipes'),
       where('ownerId', '==', currentUser.uid)
     );
-    const snap = await getDocs(q);
-    _recipes = snap.docs
-      .map(d => ({ id: d.id, ...d.data() }))
+    const snap = await _readDocs(q, opts);
+    const items = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    const cached = _fromCache(snap);
+    _recipes = (cached ? dedupe([...items, ..._recipes]) : items)      // saved copy: add, never remove
       .sort((a, b) => (b.createdAt?.toMillis?.() || 0) - (a.createdAt?.toMillis?.() || 0));
+    return { reliable: !cached };
   } catch (e) {
     console.warn('Recipes failed to load (check Firestore security rules for the `recipes` collection):', e);
-    _recipes = [];
+    if (_isPermanentReadError(e)) { _recipes = []; return { reliable: true }; }   // the rules/indexes say no: genuinely nothing to show
+    return { reliable: false };                                                              // anything else: keep what we already have
   }
 }
 
 // Mirrors loadCommunityAudioTracks() — public/shared/restricted queries
 // against `recipes` instead of `audioFiles`.
-async function loadCommunityRecipes() {
-  if (!currentUser) return [];
+async function loadCommunityRecipes(opts) {
+  if (!currentUser) return Object.assign([], { reliable: true });
   const pubQ = query(
     collection(db, 'recipes'),
     where('visibility', '==', 'public')
@@ -19307,18 +20430,17 @@ async function loadCommunityRecipes() {
     where('allowedUsers', 'array-contains', currentUser.uid)
   );
   const restrictedPromise = (isAdmin || hasRestrictedAccess)
-    ? getDocs(query(collection(db, 'recipes'), where('visibility', '==', 'restricted')))
+    ? _readDocs(query(collection(db, 'recipes'), where('visibility', '==', 'restricted')), opts)
     : Promise.resolve({ docs: [] });
 
-  const [pubR, sharedR, restrictedR] = await Promise.allSettled([getDocs(pubQ), getDocs(sharedQ), restrictedPromise]);
+  const [pubR, sharedR, restrictedR] = await Promise.allSettled([_readDocs(pubQ, opts), _readDocs(sharedQ, opts), restrictedPromise]);
   const toBookLike = d => recipeToBookLike({ id: d.id, ...d.data() });
-  if (pubR.status === 'rejected') console.warn('Public recipes failed to load:', pubR.reason);
-  if (sharedR.status === 'rejected') console.warn('Shared recipes failed to load:', sharedR.reason);
-  if (restrictedR.status === 'rejected') console.warn('Restricted recipes failed to load:', restrictedR.reason);
+  const issues = _readIssues([['Public recipes', pubR], ['Shared recipes', sharedR], ['Restricted recipes', restrictedR]]);
   const pub = pubR.status === 'fulfilled' ? pubR.value.docs.map(toBookLike) : [];
   const shared = sharedR.status === 'fulfilled' ? sharedR.value.docs.map(toBookLike).filter(b => b.ownerId !== currentUser.uid) : [];
   const restricted = restrictedR.status === 'fulfilled' ? restrictedR.value.docs.map(toBookLike).filter(b => b.ownerId !== currentUser.uid) : [];
-  return [...pub, ...shared, ...restricted];
+  const reliable = [pubR, sharedR, restrictedR].every(_srcOk);     // server answered, or refused for good
+  return Object.assign([...pub, ...shared, ...restricted], { reliable, issues });
 }
 
 // Re-pulls the public/shared/restricted recipes into communityLib. Saving or
@@ -19327,7 +20449,9 @@ async function loadCommunityRecipes() {
 async function _refreshCommunityRecipes() {
   try {
     const fresh = await loadCommunityRecipes();
-    communityLib = dedupe([...communityLib.filter(b => !b.isRecipe), ...fresh]);
+    communityLib = fresh.reliable === false
+      ? dedupe([...fresh, ...communityLib])                                    // partial / saved-copy answer: add, never remove
+      : dedupe([...communityLib.filter(b => !b.isRecipe), ...fresh]);
   } catch (e) { console.warn('Community recipe refresh failed:', e); }
 }
 
@@ -20471,7 +21595,6 @@ function _cmEnsureOverlay() {
     <div style="flex-shrink:0;display:flex;align-items:center;gap:.8rem;padding:.7rem 1rem;background:var(--warm-white);border-bottom:1px solid var(--border);">
       <button onclick="closeRecipeCookMode()" aria-label="Back" style="border:none;background:none;font-size:1.4rem;cursor:pointer;color:var(--navy);line-height:1;">←</button>
       <div style="flex:1;"></div>
-      <button onclick="promptRecipePrint(_cmCurrentRecipe)" title="Print recipe" aria-label="Print recipe" style="border:none;background:none;font-size:1.25rem;cursor:pointer;">🖨</button>
       <button onclick="document.getElementById('cmTimerTray').style.display=document.getElementById('cmTimerTray').style.display==='none'?'block':'none';" style="border:none;background:none;font-size:1.25rem;cursor:pointer;">⏱</button>
     </div>
     <div id="cmTimerTray" style="display:none;flex-shrink:0;max-height:35vh;overflow-y:auto;background:var(--panel);border-bottom:1px solid var(--border);">
@@ -20595,6 +21718,12 @@ function _reEnsureEditor() {
 
         <div class="re-sub">1 · I have a link</div>
         <input id="reImportUrl" class="re-input" type="url" inputmode="url" autocomplete="off" placeholder="https://…" style="margin:0;"/>
+        <div style="margin-top:.35rem;font-size:.74rem;"><a href="#" id="reTogglePaste" style="color:var(--teal-dark);">Link not working? Paste the recipe text instead</a></div>
+        <div id="reImportPasteBox" style="display:none;margin-top:.4rem;">
+          <div class="re-sub" style="margin-top:0">Paste the recipe text</div>
+          <textarea id="reImportPaste" class="re-input" rows="7" maxlength="18000" placeholder="Open the recipe page, select all of the recipe (ingredients and method), copy it and paste it here…" style="margin:0;"></textarea>
+          <div class="re-hint" style="margin-top:.2rem;line-height:1.4;">Some websites refuse to be read automatically. Pasting the text always works. Leave the link above filled in and it is credited as the source.</div>
+        </div>
 
         <div class="re-sub">2 · I have photos of the recipe <span class="re-hint">(up to 4 — book pages, a recipe card…)</span></div>
         <div id="rePhotoList" style="display:flex;flex-wrap:wrap;gap:.5rem;"></div>
@@ -20649,10 +21778,12 @@ function _reEnsureEditor() {
       <label class="re-lbl">Tip <span class="re-hint">(optional)</span></label>
       <textarea id="reTip" class="re-input" rows="2" placeholder="No buttermilk? Add 1 tbsp vinegar to 1 cup regular milk and let sit 5 minutes."></textarea>
 
-      <label class="re-lbl">Visibility</label>
-      <div style="display:flex;gap:.5rem;">
-        <button id="reVisPrivate" class="re-vis-btn" data-vis="private">🔒 Private</button>
-        <button id="reVisPublic" class="re-vis-btn" data-vis="public">🌐 Public</button>
+      <div id="reVisBox">
+        <label class="re-lbl">Visibility</label>
+        <div style="display:flex;gap:.5rem;">
+          <button id="reVisPrivate" class="re-vis-btn" data-vis="private">🔒 Private</button>
+          <button id="reVisPublic" class="re-vis-btn" data-vis="public">🌐 Public</button>
+        </div>
       </div>
     </div>`;
   document.body.appendChild(el);
@@ -20680,6 +21811,14 @@ function _reEnsureEditor() {
   ['reTitle','reIngredients','reSteps'].forEach(id => document.getElementById(id).addEventListener('input', _reUpdatePlan));
   document.getElementById('reAutoPhoto').addEventListener('change', _reUpdatePlan);
   document.getElementById('reNotes').addEventListener('input', _reUpdatePlan);
+  document.getElementById('reImportPaste').addEventListener('input', _reUpdatePlan);
+  document.getElementById('reTogglePaste').addEventListener('click', e => {
+    e.preventDefault();
+    const box = document.getElementById('reImportPasteBox');
+    const open = box.style.display === 'none';
+    box.style.display = open ? 'block' : 'none';
+    if (open) document.getElementById('reImportPaste').focus();
+  });
   document.getElementById('reCategory').addEventListener('change', e => {
     const sel = e.target;
     if (sel.value === '__new__') {
@@ -20799,18 +21938,27 @@ function _applyImportedRecipe(r, fallbackAuthor) {
 }
 
 async function importRecipeFromLink() {
-  const status = document.getElementById('reImportStatus');
-  const url = document.getElementById('reImportUrl').value.trim();
-  if (!/^https?:\/\//i.test(url)) {
+  const g = id => document.getElementById(id);
+  const status = g('reImportStatus');
+  const url = g('reImportUrl').value.trim();
+  const pasted = (g('reImportPaste')?.value || '').trim();
+  if (!pasted && !/^https?:\/\//i.test(url)) {
     status.style.color = 'var(--danger)';
     status.textContent = 'The link needs to start with http:// or https://.';
     return false;
   }
+  if (pasted && url && !/^https?:\/\//i.test(url)) {
+    status.style.color = 'var(--danger)';
+    status.textContent = 'The link needs to start with http:// or https:// — or clear it and just paste the recipe.';
+    return false;
+  }
   status.style.color = 'var(--muted)';
-  status.textContent = 'Fetching the page and reading the recipe — this can take up to a minute…';
+  status.textContent = pasted
+    ? 'Reading the pasted recipe…'
+    : 'Fetching the page and reading the recipe — this can take up to a minute…';
   try {
-    const { data: r } = await _importRecipeCallable({ url, ..._reExtra() });
-    _applyImportedRecipe(r, r.siteName || _hostnameToAuthor(url));
+    const { data: r } = await _importRecipeCallable({ ...(url ? { url } : {}), ...(pasted ? { pastedText: pasted } : {}), ..._reExtra() });
+    _applyImportedRecipe(r, r.siteName || (url ? _hostnameToAuthor(url) : ''));
     status.style.color = 'var(--teal-dark)';
     status.textContent = `Imported ${(r.ingredients || []).length} ingredients and ${(r.steps || []).length} steps — please check them before saving.`;
     return true;
@@ -20819,8 +21967,20 @@ async function importRecipeFromLink() {
     status.style.color = 'var(--danger)';
     // Callable errors carry the message set by HttpsError on the server.
     status.textContent = (e && e.message) ? e.message : 'Import failed — try another link.';
+    // The site refused (or couldn't serve) the automated read: open the paste box right there, ready to use.
+    const why = e && e.details && e.details.reason;
+    if (why === 'site-blocked' || why === 'site-error') _reOfferPaste();
     return false;
   }
+}
+
+function _reOfferPaste() {
+  const box = document.getElementById('reImportPasteBox');
+  const ta = document.getElementById('reImportPaste');
+  if (!box || !ta) return;
+  box.style.display = 'block';
+  ta.focus();
+  box.scrollIntoView?.({ block: 'center', behavior: 'smooth' });
 }
 
 // ── AI import from photos ────────────────────────────────────────────────────
@@ -20903,7 +22063,7 @@ async function importRecipeFromPhotos() {
     const { data: r } = await _importRecipeImageCallable({
       images,
       ..._reExtra(),
-      categories: (typeof getCategoryList === 'function' ? getCategoryList() : []).slice(0, 60),
+      categories: getRecipeCategoryList().slice(0, 60),
     });
     _applyImportedRecipe(r, '');
     status.style.color = 'var(--teal-dark)';
@@ -20919,13 +22079,12 @@ async function importRecipeFromPhotos() {
 }
 
 // ── Category dropdown ───────────────────────────────────────────────────────
-// The same shared, admin-managed genre list used for books/audio, plus any category
-// already used by a recipe (e.g. one that came in through the eRecipe import tool).
+// Recipe categories only (config/recipeCategories plus any already used by a recipe,
+// e.g. one that came in through the eRecipe import tool) — not the book genre list.
 let _reCatPrev = '';
 function _reBuildCategories() {
   const sel = document.getElementById('reCategory');
-  const used = _recipes.map(r => r.chapterName || r.category).filter(Boolean);
-  const cats = [...new Set([...getCategoryList(), ...used])].sort((a, b) => a.localeCompare(b));
+  const cats = getRecipeCategoryList();
   sel.innerHTML = '<option value="">Choose a category…</option>' +
     cats.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('') +
     '<option value="__new__">➕ New category…</option>';
@@ -20952,9 +22111,13 @@ function showRecipeEditor(recipe) {
   _reEnsureEditor();
   const overlay = document.getElementById('recipeEditorOverlay');
   overlay.dataset.editId = recipe?.id || '';
+  overlay.dataset.ownerId = recipe?.ownerId || '';
+  // Anyone can edit a recipe, but deleting it and choosing who can see it stay with the owner (or an admin).
+  const ownsIt = !recipe || !recipe.ownerId || recipe.ownerId === currentUser.uid || isAdmin;
 
   document.getElementById('reHeaderTitle').textContent = recipe ? 'Edit Recipe' : 'Add Recipe';
-  document.getElementById('reDeleteBtn').style.display = recipe ? 'block' : 'none';
+  document.getElementById('reDeleteBtn').style.display = (recipe && ownsIt) ? 'block' : 'none';
+  document.getElementById('reVisBox').style.display = ownsIt ? '' : 'none';
   document.getElementById('reTitle').value = recipe?.title || '';
   // Falls back to createdByName so recipes saved before the author field
   // existed show whoever added them rather than an empty box.
@@ -20978,6 +22141,8 @@ function showRecipeEditor(recipe) {
   const impUrl = document.getElementById('reImportUrl');
   const impStatus = document.getElementById('reImportStatus');
   if (impUrl) impUrl.value = '';
+  const impPaste = document.getElementById('reImportPaste'); if (impPaste) impPaste.value = '';
+  const impPasteBox = document.getElementById('reImportPasteBox'); if (impPasteBox) impPasteBox.style.display = 'none';
   if (impStatus) {
     impStatus.style.color = 'var(--muted)';
     impStatus.textContent = 'Fill in 1, 2 or 3, then press Submit.';
@@ -21002,12 +22167,14 @@ function _reAutoPlan() {
   const g = id => document.getElementById(id);
   const ov = g('recipeEditorOverlay');
   const url = g('reImportUrl').value.trim();
+  const pasted = (g('reImportPaste')?.value || '').trim();
   const n = _rePhotoQueue.length;
   const name = ov.dataset.editId ? '' : g('reFindName').value.trim();
   const title = g('reTitle').value.trim();
   const wantPhoto = g('reAutoPhoto').checked && !ov.dataset.pendingCoverUrl;
   const more = (wantPhoto ? ' Then it looks for a photo of the dish.' : '') + (_reNotes() ? ' Your extra instructions are sent along.' : '');
   const others = [n ? 'photos' : '', name ? 'name' : ''].filter(Boolean).join(' and ');
+  if (pasted.length >= 80) return { mode: 'paste', text: 'Submit will read the recipe from the text you pasted.' + (url ? ' (Your link is only used to credit the source.)' : '') + more };
   if (url) return { mode: 'link', text: 'Submit will read the recipe from your link.' + (others ? ' (Your ' + others + ' will be ignored.)' : '') + more };
   if (n) return { mode: 'photos', text: 'Submit will read the recipe from your ' + (n === 1 ? 'photo' : n + ' photos') + '.' + (name ? ' (The name will be ignored.)' : '') + more };
   if (name) return { mode: 'name', text: 'Submit will search the web for “' + name + '”' + (wantPhoto ? ' and a photo of the dish' : '') + ', then show it for you to check.' + (_reNotes() ? ' Your extra instructions are sent along.' : '') };
@@ -21034,13 +22201,13 @@ async function runAiSubmit() {
   btn.disabled = true; save.disabled = true; btn.textContent = 'Working…';
   try {
     let ok;
-    if (plan.mode === 'link') ok = await importRecipeFromLink();
+    if (plan.mode === 'link' || plan.mode === 'paste') ok = await importRecipeFromLink();
     else if (plan.mode === 'photos') ok = await importRecipeFromPhotos();
     else if (plan.mode === 'name') ok = await _findRecipeOnline(g('reFindName').value.trim(), 'name');
     else ok = await _findRecipeOnline(g('reTitle').value.trim(), 'photo');
     // After a link or photo import, also look for a dish photo if asked and there is no cover yet.
     const t = g('reTitle').value.trim();
-    if (ok && (plan.mode === 'link' || plan.mode === 'photos') && t &&
+    if (ok && (plan.mode === 'link' || plan.mode === 'paste' || plan.mode === 'photos') && t &&
         g('reAutoPhoto').checked && !g('recipeEditorOverlay').dataset.pendingCoverUrl) {
       const before = status.textContent;
       await _findRecipeOnline(t, 'photo');
@@ -21107,7 +22274,7 @@ async function saveRecipeFromEditor() {
   const ingredients = document.getElementById('reIngredients').value.split('\n').map(l => l.trim()).filter(Boolean);
   const steps = document.getElementById('reSteps').value.split('\n').map(l => l.trim()).filter(Boolean);
 
-  if (!ingredients.length && !steps.length && ['link', 'photos', 'name'].includes(_reAutoPlan().mode)) {
+  if (!ingredients.length && !steps.length && ['link', 'paste', 'photos', 'name'].includes(_reAutoPlan().mode)) {
     showToast('Press Submit in the AI box first — or clear it to type the recipe yourself');
     return;
   }
@@ -21126,21 +22293,19 @@ async function saveRecipeFromEditor() {
     coverUrl: overlay.dataset.pendingCoverUrl || null,
     updatedAt: serverTimestamp(),
   };
-
-  // A category typed in that isn't in the shared list yet (books/audio use
-  // the same list) gets registered the same way the Admin "add genre" flow
-  // does — same collection, same default-icon fallback — so it immediately
-  // becomes a first-class, icon-assignable category rather than a one-off
-  // string that only this recipe knows about. It's also registered into the
-  // dedicated recipe category registry (config/recipeCategories) so it keeps
-  // showing up in Admin's Recipe Categories manager even if this recipe is
-  // later deleted or recategorised.
-  if (payload.chapterName !== 'Uncategorised' && !_categories.includes(payload.chapterName)) {
-    _categories.push(payload.chapterName);
-    _categories.sort((a, b) => a.localeCompare(b));
-    try { await setDoc(doc(db, 'config', 'categories'), { list: _categories }); }
-    catch (e) { console.warn('Failed to register new category:', e); }
+  // Anyone may edit a recipe, but only its owner (or an admin) decides who can see it — so an edit made by
+  // someone else never sends a visibility change. Edits also record who made them.
+  const editingOthers = !!overlay.dataset.editId && !!overlay.dataset.ownerId && overlay.dataset.ownerId !== currentUser.uid;
+  if (editingOthers && !isAdmin) delete payload.visibility;
+  if (overlay.dataset.editId) {
+    payload.lastEditedBy = currentUser.uid;
+    payload.lastEditedByName = currentUser.displayName || currentUser.email || '';
   }
+
+  // A category typed in that isn't known yet is registered in the recipe category
+  // registry (config/recipeCategories) only — never in the book genre list — so it
+  // keeps showing in Admin's Recipe Categories manager and the Categories dropdown
+  // even if this recipe is later deleted or recategorised.
   if (payload.chapterName !== 'Uncategorised' && !_recipeCategories.includes(payload.chapterName)) {
     _recipeCategories.push(payload.chapterName);
     _recipeCategories.sort((a, b) => a.localeCompare(b));
@@ -21165,13 +22330,15 @@ async function saveRecipeFromEditor() {
     }
     await loadRecipes();
     mergeRecipesIntoLibrary();
-    if (editId && isAdmin) await _refreshCommunityRecipes();   // admin may have edited someone else's recipe
+    if (editId && editingOthers) await _refreshCommunityRecipes();   // edited someone else's recipe — pull the community copy so the change shows
     renderAll();
     closeRecipeEditor();
     showToast(editId ? 'Recipe updated' : 'Recipe added');
   } catch (e) {
     console.error('Failed to save recipe:', e);
-    showToast('Failed to save recipe: ' + e.message);
+    showToast(e && e.code === 'permission-denied'
+      ? (editingOthers ? "You can't edit someone else's recipe yet — the database rules still need updating." : "You don't have permission to save this recipe.")
+      : 'Failed to save recipe: ' + e.message);
   } finally {
     saveBtn.disabled = false; saveBtn.textContent = 'Save';
   }
@@ -21181,6 +22348,8 @@ async function deleteRecipeFromEditor() {
   const overlay = document.getElementById('recipeEditorOverlay');
   const editId = overlay.dataset.editId;
   if (!editId) return;
+  const ownerId = overlay.dataset.ownerId;
+  if (ownerId && ownerId !== currentUser.uid && !isAdmin) { showToast('Only the owner or an admin can delete a recipe'); return; }
   if (!confirm('Delete this recipe? This cannot be undone.')) return;
   try {
     await deleteDoc(doc(db, 'recipes', editId));
@@ -21301,14 +22470,6 @@ async function runImportFromERecipe() {
   // per recipe, so importing 30 recipes across 5 chapters only touches
   // config/categories once. Also registered into the dedicated recipe
   // category registry so they show up in Admin's Recipe Categories manager.
-  const newCats = [...new Set(chapters.map(c => c.name).filter(Boolean))]
-    .filter(name => name !== 'Uncategorised' && !_categories.includes(name));
-  if (newCats.length) {
-    _categories.push(...newCats);
-    _categories.sort((a, b) => a.localeCompare(b));
-    try { await setDoc(doc(db, 'config', 'categories'), { list: _categories }); }
-    catch (e) { console.warn('Failed to register imported categories:', e); }
-  }
   const newRecipeCats = [...new Set(chapters.map(c => c.name).filter(Boolean))]
     .filter(name => name !== 'Uncategorised' && !_recipeCategories.includes(name));
   if (newRecipeCats.length) {
@@ -21877,6 +23038,39 @@ async function adminLoadEmail(){
   q('adminEmailTest').onclick = () => run(true);
   q('adminEmailSend').onclick = () => run(false);
 }
+
+// ══ NEWSLETTER SIGNUPS (admin) ══ everyone who switched "Email me about updates" on, newest first.
+async function adminLoadSignups(){
+  const el = document.getElementById('adminSignupsBody'); if(!el) return;
+  el.innerHTML = '<div style="color:var(--muted);font-size:.85rem">Loading…</div>';
+  try{
+    const snap = await _adminFetchAllUsers();
+    const users = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    const when = u => u.emailUpdatesAt?.toMillis?.() || 0;
+    const subs = users.filter(u => u.emailUpdates === true).sort((a, b) => when(b) - when(a));
+    const optedOut = users.filter(u => u.emailUpdates === false).length;
+    const notAsked = users.length - subs.length - optedOut;
+    const fmt = ms => ms ? new Date(ms).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }) : 'date not recorded';
+    el.innerHTML = `
+      <div style="display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;margin-bottom:.6rem">
+        <button class="btn-save" id="adminSignupsRefresh" style="font-size:.72rem;padding:.4rem .8rem">↻ Refresh</button>
+        <span style="font-size:.72rem;color:var(--muted)"><b>${subs.length}</b> signed up · ${optedOut} said no or unsubscribed · ${notAsked} not asked yet</span>
+      </div>
+      ${subs.length ? subs.map(u => `
+        <div style="display:flex;align-items:center;gap:.6rem;padding:.5rem .7rem;margin-bottom:.35rem;background:var(--warm-white);border:1px solid var(--border);border-radius:4px">
+          <div style="flex:1;min-width:0">
+            <div style="font-weight:700;font-size:.82rem;color:var(--navy2)">${esc(u.displayName || 'Unknown')}</div>
+            <div style="font-size:.7rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(u.email || '')}</div>
+          </div>
+          <div style="font-size:.65rem;color:var(--muted);text-align:right;flex-shrink:0">Signed up<br>${fmt(when(u))}</div>
+        </div>`).join('') : '<div style="color:var(--muted);font-size:.85rem">Nobody has signed up yet.</div>'}`;
+    el.querySelector('#adminSignupsRefresh').onclick = adminLoadSignups;
+  }catch(e){
+    el.innerHTML = `<div style="color:var(--danger);font-size:.82rem">Failed: ${esc(e.message)}</div>`;
+    console.error(e);
+  }
+}
+// ══ end signups ══
 
 document.getElementById('audioUploadLabel')?.addEventListener('click', showAudioUploadModal);
 
