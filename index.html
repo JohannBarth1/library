@@ -929,6 +929,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .up-visibility-btn:hover{opacity:.8;}
 .up-visibility-btn.is-public{background:var(--teal-light);border-color:var(--teal);color:var(--teal-dark);}
 .up-visibility-btn.is-restricted{background:#f3e6e6;border-color:#a83232;color:#a83232;}
+.up-title-input{width:100%;margin-top:.35rem;padding:.3rem .55rem;font:inherit;font-size:.8rem;border:1px solid var(--border);border-radius:6px;background:var(--warm-white);color:var(--navy2);box-sizing:border-box;}
 .up-songbook-btn.on{background:var(--gold-light,#fdf3d8);border-color:var(--gold,#c8952a);color:var(--navy2);}
 .up-visibility-btn.is-private{background:var(--panel);border-color:var(--muted);color:var(--navy2);}
 .up-remove-btn{background:none;border:none;color:var(--muted);font-size:.95rem;cursor:pointer;padding:0 .15rem;flex-shrink:0;line-height:1;transition:color .15s;}
@@ -2067,6 +2068,18 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .sb-item .a{font-size:.7rem;color:var(--sb-muted);}
 .sb-item .s{color:var(--sb-accent);}
 .sb-none{padding:2rem 1rem;text-align:center;color:var(--sb-muted);}
+.sb-tools{display:none;align-items:center;gap:.4rem;padding:.35rem .7rem;background:var(--sb-bar);border-bottom:1px solid var(--sb-line);flex-shrink:0;font-size:.85rem;}
+.sb-tools .sb-btn{font-size:.9rem;min-width:44px;height:34px;}
+.sb-tools .sp{flex:1;}
+.sb-keylbl{min-width:4.5rem;text-align:center;color:var(--sb-accent);font-weight:700;cursor:pointer;user-select:none;}
+.sb-label{font-size:.62em;text-transform:uppercase;letter-spacing:.06em;color:var(--sb-muted);margin:1em 0 .2em;}
+.sb-chorus{border-left:3px solid var(--sb-accent);padding-left:.8em;margin-left:.2em;}
+.sb-line{display:block;}
+.sb-seg{display:inline-flex;flex-direction:column;vertical-align:bottom;}
+.sb-c{font-family:'Lato',sans-serif;font-weight:700;font-size:.72em;line-height:1.25;min-height:1.25em;color:var(--sb-accent);padding-right:.4em;white-space:pre;}
+.sb-t{white-space:pre-wrap;}
+.sb-song.nochords .sb-c{display:none;}
+.sb-song.nochords .sb-seg{display:inline;}
 </style>
 </head>
 <body>
@@ -2719,8 +2732,8 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
     <h3>Add Books to Your Library</h3>
     <div class="drop-zone" id="dropZone">
       <div class="dz-icon">📤</div>
-      <p><strong>Click to browse</strong> or drag &amp; drop EPUB files here</p>
-      <p style="font-size:.78rem;margin-top:.3rem">EPUB files only — multiple at once are fine. Looking to add audio? Use <strong>Upload Audio</strong> instead.</p>
+      <p><strong>Click to browse</strong> or drag &amp; drop EPUB or ChordPro files here</p>
+      <p style="font-size:.78rem;margin-top:.3rem">EPUB files, or ChordPro (.cho) files to make a songbook — multiple at once are fine. Looking to add audio? Use <strong>Upload Audio</strong> instead.</p>
     </div>
     <div class="upload-select-all" id="uploadSelectAll" style="display:none">
       <span>Set visibility for all</span>
@@ -3154,6 +3167,13 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
     <button class="sb-btn" id="sbSizeUp" title="Larger text">A+</button>
     <button class="sb-btn" id="sbThemeBtn" title="Theme">◐</button>
     <button class="sb-btn" id="sbIndexBtn" title="Song index">☰</button>
+  </div>
+  <div class="sb-tools" id="sbTools">
+    <button class="sb-btn" id="sbChordToggle" title="Show / hide chords">Chords</button>
+    <span class="sp"></span>
+    <button class="sb-btn" id="sbTrDown" title="Transpose down a semitone">♭</button>
+    <span class="sb-keylbl" id="sbKeyLbl" title="Tap to reset"></span>
+    <button class="sb-btn" id="sbTrUp" title="Transpose up a semitone">♯</button>
   </div>
   <div class="sb-body" id="sbBody"><article class="sb-song" id="sbSong"></article></div>
   <div class="sb-nav">
@@ -4141,6 +4161,115 @@ function _setUploadVisBtn(btn, visibility) {
   btn.classList.toggle('is-restricted', visibility === 'restricted');
 }
 
+// ── ChordPro → songbook EPUB (in the browser) ─────────────────────────────
+// Lets a .cho file (or several) be uploaded directly: it is parsed here,
+// packed into a songbook EPUB (same layout as build_songbook_epub.py) and
+// then goes through the normal upload path with bookType:'songbook'.
+const CP_EXT=['.cho','.chopro','.chordpro','.crd','.pro'];
+const CP_ALIASES={t:'title',st:'subtitle',c:'comment',ci:'comment',cb:'comment',sov:'start_of_verse',eov:'end_of_verse',soc:'start_of_chorus',eoc:'end_of_chorus',sob:'start_of_bridge',eob:'end_of_bridge',ns:'new_song'};
+const CP_NOTES={subtitle:'',artist:'',composer:'Music: ',lyricist:'Words: ',copyright:'\u00a9 '};
+const _cpHas=(o,k)=>Object.prototype.hasOwnProperty.call(o,k);
+function _cpSplitLine(line){
+  const segs=[];let pos=0,chord='';const re=/\[([^\]]*)\]/g;let m;
+  while((m=re.exec(line))!==null){const txt=line.slice(pos,m.index);if(txt||chord)segs.push([chord,txt]);chord=m[1].trim();pos=re.lastIndex;}
+  segs.push([chord,line.slice(pos)]);
+  return segs;
+}
+function _cpSetNumber(song,val){const m=/^(\d+)([A-Za-z]?)$/.exec((val||'').trim());if(m){song.num=+m[1];song.letter=m[2].toLowerCase();}}
+function _cpParse(text){
+  const songs=[];let cur=null,blk=null,sect=false;
+  const newSong=()=>{cur={num:null,letter:'',title:'',alt:false,notes:[],blocks:[],key:''};songs.push(cur);};
+  const flush=()=>{if(blk&&blk.lines.length)cur.blocks.push(blk);blk=null;};
+  newSong();
+  for(const raw of text.replace(/\r/g,'').split('\n')){
+    const line=raw.replace(/\s+$/,'');
+    if(line.trimStart().startsWith('#'))continue;
+    const m=/^\s*\{\s*([A-Za-z_]+)\s*(?::\s*(.*?))?\s*\}\s*$/.exec(line);
+    if(m){
+      const k=m[1].toLowerCase(),d=_cpHas(CP_ALIASES,k)?CP_ALIASES[k]:k,arg=(m[2]||'').trim();
+      if(d==='new_song'){flush();sect=false;if(cur.title||cur.blocks.length)newSong();}
+      else if(d==='title')cur.title=arg;
+      else if(d==='key')cur.key=arg;
+      else if(d==='number')_cpSetNumber(cur,arg);
+      else if(d==='meta'){const p=arg.split(/\s+/);const mk=(p.shift()||'').toLowerCase(),v=p.join(' ');if(mk==='number')_cpSetNumber(cur,v);else if(mk==='key')cur.key=v.trim();}
+      else if(_cpHas(CP_NOTES,d)&&arg)cur.notes.push(CP_NOTES[d]+arg);
+      else if(d==='comment'&&arg){flush();cur.blocks.push({kind:'label',lines:[arg]});}
+      else if(d==='start_of_verse'||d==='start_of_chorus'||d==='start_of_bridge'){flush();blk={kind:d.split('_')[2],label:arg,lines:[]};sect=true;}
+      else if(d==='end_of_verse'||d==='end_of_chorus'||d==='end_of_bridge'){flush();sect=false;}
+      continue;
+    }
+    if(!line.trim()){if(!sect)flush();continue;}
+    if(!blk)blk={kind:'verse',label:'',lines:[]};
+    blk.lines.push(_cpSplitLine(line.trim()));
+  }
+  flush();
+  const out=songs.filter(x=>x.title||x.blocks.length);
+  out.forEach(x=>{const mm=/^(\d+)([A-Za-z]?)\s+(\S.*)$/.exec(x.title);if(mm&&x.num==null){x.num=+mm[1];x.letter=mm[2].toLowerCase();x.title=mm[3];}x.alt=/^alternate/i.test(x.title);});
+  return out;
+}
+function _cpSongXhtml(s){
+  const label=(s.num+s.letter+' '+s.title).trim();
+  const parts=[`<section class="song" id="song-${s.num}${s.letter}${s.alt?'-alt':''}" data-song-number="${s.num}" data-song-title="${esc(s.title)}" data-alt="${s.alt}"${s.key?` data-key="${esc(s.key)}"`:''}>`,
+    `<h1><span class="num">${s.num}${s.letter}</span> ${esc(s.title)}</h1>`];
+  s.notes.forEach(n=>parts.push(`<p class="note">${esc(n)}</p>`));
+  s.blocks.forEach(b=>{
+    if(b.kind==='label'){parts.push(`<p class="label">${esc(b.lines[0])}</p>`);return;}
+    if(b.label)parts.push(`<p class="label">${esc(b.label)}</p>`);
+    const cls='verse'+(b.kind==='chorus'||b.kind==='bridge'?' '+b.kind:'');
+    const body=b.lines.map(ln=>'<span class="line">'+ln.map(([c,t])=>`<span class="seg"><span class="c">${esc(c)}</span><span class="t">${esc(t)}</span></span>`).join('')+'</span>').join('');
+    parts.push(`<p class="${cls}">${body}</p>`);
+  });
+  parts.push('</section>');
+  return '<?xml version="1.0" encoding="utf-8"?>\n<!DOCTYPE html>\n<html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops">\n'
+    +`<head><title>${esc(label)}</title><link rel="stylesheet" type="text/css" href="style.css"/></head>\n<body>\n${parts.join('\n')}\n</body></html>\n`;
+}
+const CP_CSS=`body{font-family:serif;line-height:1.5;margin:1em}
+h1{font-size:1.4em;margin:.2em 0 .6em}.num{opacity:.6;margin-right:.3em}
+.note{font-style:italic;opacity:.75;margin:.2em 0}.verse{margin:.9em 0}
+.label{font-size:.8em;text-transform:uppercase;letter-spacing:.05em;opacity:.65;margin:.9em 0 .2em}
+.chorus{margin-left:1em}
+.line{display:block}.seg{display:inline-block;vertical-align:bottom}
+.c{display:block;font-weight:bold;font-size:.8em;min-height:1.2em;padding-right:.4em}
+.t{display:block;white-space:pre-wrap}`;
+async function _cpBuildEpubFile(files,title,author){
+  const sorted=[...files].sort((a,b)=>a.name.localeCompare(b.name,undefined,{numeric:true,sensitivity:'base'}));
+  const songs=[];
+  for(const f of sorted){
+    const got=_cpParse(await f.text());
+    const stem=f.name.replace(/\.[^.]+$/,'');
+    const mm=/^(\d+)([A-Za-z]?)(?:[\s._-]+(.*))?$/.exec(stem);
+    if(got.length===1){
+      if(got[0].num==null&&mm){got[0].num=+mm[1];got[0].letter=mm[2].toLowerCase();}
+      if(!got[0].title)got[0].title=(mm&&mm[3])||stem;
+    }
+    songs.push(...got);
+  }
+  if(!songs.length)throw new Error('No songs found in the ChordPro file'+(files.length>1?'s':''));
+  let last=0;
+  songs.forEach(x=>{if(x.num==null)x.num=last+1;last=x.num;if(!x.title)x.title='Song '+x.num;});
+  const uid='urn:uuid:'+(crypto.randomUUID?crypto.randomUUID():Date.now()+'-'+Math.random().toString(16).slice(2));
+  const zip=new JSZip();
+  zip.file('mimetype','application/epub+zip',{compression:'STORE'});
+  zip.file('META-INF/container.xml','<?xml version="1.0"?><container version="1.0" xmlns="urn:oasis:names:tc:opendocument:xmlns:container"><rootfiles><rootfile full-path="OEBPS/content.opf" media-type="application/oebps-package+xml"/></rootfiles></container>');
+  zip.file('OEBPS/style.css',CP_CSS);
+  const items=[],spine=[],navLi=[],ncx=[];
+  songs.forEach((s,i)=>{
+    const fid='song'+String(i+1).padStart(3,'0'),label=(s.num+s.letter+' '+s.title).trim();
+    zip.file(`OEBPS/${fid}.xhtml`,_cpSongXhtml(s));
+    items.push(`<item id="${fid}" href="${fid}.xhtml" media-type="application/xhtml+xml"/>`);
+    spine.push(`<itemref idref="${fid}"/>`);
+    navLi.push(`<li><a href="${fid}.xhtml">${esc(label)}</a></li>`);
+    ncx.push(`<navPoint id="np${i+1}" playOrder="${i+1}"><navLabel><text>${esc(label)}</text></navLabel><content src="${fid}.xhtml"/></navPoint>`);
+  });
+  zip.file('OEBPS/nav.xhtml','<?xml version="1.0" encoding="utf-8"?><!DOCTYPE html><html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops"><head><title>Contents</title></head><body><nav epub:type="toc" id="toc"><h1>Contents</h1><ol>'+navLi.join('')+'</ol></nav></body></html>');
+  zip.file('OEBPS/toc.ncx',`<?xml version="1.0" encoding="utf-8"?><ncx xmlns="http://www.daisy.org/z3986/2005/ncx/" version="2005-1"><head><meta name="dtb:uid" content="${uid}"/></head><docTitle><text>${esc(title)}</text></docTitle><navMap>${ncx.join('')}</navMap></ncx>`);
+  zip.file('OEBPS/content.opf',`<?xml version="1.0" encoding="utf-8"?><package xmlns="http://www.idpf.org/2007/opf" version="3.0" unique-identifier="uid"><metadata xmlns:dc="http://purl.org/dc/elements/1.1/"><dc:identifier id="uid">${uid}</dc:identifier><dc:title>${esc(title)}</dc:title><dc:creator>${esc(author||'Unknown Author')}</dc:creator><dc:language>en</dc:language><dc:subject>Songbook</dc:subject><meta name="elib:type" content="songbook"/><meta property="dcterms:modified">${new Date().toISOString().replace(/\.\d+Z$/,'Z')}</meta></metadata><manifest><item id="nav" href="nav.xhtml" media-type="application/xhtml+xml" properties="nav"/><item id="ncx" href="toc.ncx" media-type="application/x-dtbncx+xml"/><item id="css" href="style.css" media-type="text/css"/>${items.join('')}</manifest><spine toc="ncx">${spine.join('')}</spine></package>`);
+  const blob=await zip.generateAsync({type:'blob',mimeType:'application/epub+zip',compression:'DEFLATE'});
+  const safe=title.replace(/[^\w\- ]+/g,'').trim().replace(/\s+/g,'_')||'Songbook';
+  return new File([blob],safe+'.epub',{type:'application/epub+zip'});
+}
+// ── end ChordPro ──────────────────────────────────────────────────────────
+
 function showUploadModal(){
   if(!currentUser){showToast('Please sign in first');return;}
   document.getElementById('uploadList').innerHTML='';
@@ -4167,6 +4296,7 @@ const AUDIO_FILE_EXTENSIONS = ['.mp3','.m4a','.m4b','.aac','.wav','.ogg','.oga',
 function detectUploadKind(file){
   const name = (file.name || '').toLowerCase();
   if (name.endsWith('.epub') || file.type === 'application/epub+zip') return 'epub';
+  if (CP_EXT.some(ext => name.endsWith(ext))) return 'chordpro';
   if ((file.type || '').startsWith('audio/') || AUDIO_FILE_EXTENSIONS.some(ext => name.endsWith(ext))) return 'audio';
   return null;
 }
@@ -4185,11 +4315,29 @@ function stageUploadFiles(files){
   const skipped = [];
   files.forEach(file => {
     const kind = detectUploadKind(file);
+    if(kind === 'chordpro'){
+      // All staged ChordPro files go into ONE songbook (one row, editable title).
+      let grp = _uploadQueue.find(q => q.kind === 'chordpro' && document.getElementById(q.rowId)?.dataset.status === 'staged');
+      if(!grp){
+        const rowId = renderUploadRow('Songbook', 'chordpro');
+        grp = {kind:'chordpro', files:[], rowId, visibility:'public', songbook:true};
+        _uploadQueue.push(grp);
+        document.querySelector('#'+rowId+' .up-name')?.insertAdjacentHTML('afterend',
+          `<input class="up-title-input" id="${rowId}_title" maxlength="120" placeholder="Songbook title">`);
+        document.getElementById(rowId+'_title')?.addEventListener('input', e => { e.target.dataset.touched = '1'; });
+      }
+      grp.files.push(file);
+      const t = document.getElementById(grp.rowId+'_title');
+      if(t && t.dataset.touched !== '1') t.value = grp.files.length === 1 ? file.name.replace(/\.[^.]+$/, '').replace(/^\d+[\s._-]+/, '') : 'Songbook';
+      const nm = document.querySelector('#'+grp.rowId+' .up-name');
+      if(nm) nm.textContent = '🎵 Songbook · ' + grp.files.length + ' ChordPro file' + (grp.files.length>1?'s':'');
+      return;
+    }
     if(kind !== 'epub'){ skipped.push(file.name); return; }
     _uploadQueue.push({kind, file, rowId: renderUploadRow(file.name, kind), visibility:'public', songbook:false});
   });
   if(skipped.length){
-    showToast(`Skipped ${skipped.length} file${skipped.length>1?'s':''} — this uploader only accepts EPUB files. Use Upload Audio for audio.`);
+    showToast(`Skipped ${skipped.length} file${skipped.length>1?'s':''} — this uploader accepts EPUB and ChordPro (.cho) files. Use Upload Audio for audio.`);
   }
   document.getElementById('uploadSelectAll').style.display = _uploadQueue.length>1 ? 'flex' : 'none';
   document.getElementById('btnStartUpload').style.display = _uploadQueue.length ? 'inline-block' : 'none';
@@ -4197,7 +4345,7 @@ function stageUploadFiles(files){
 
 function renderUploadRow(label, kind){
   const rowId='up_'+Date.now()+Math.random().toString(36).slice(2);
-  const kindIcon = kind === 'epub' ? '📖' : kind === 'audio' ? '🎧' : '▶️';
+  const kindIcon = kind === 'epub' ? '📖' : kind === 'chordpro' ? '🎵' : kind === 'audio' ? '🎧' : '▶️';
   document.getElementById('uploadList').insertAdjacentHTML('beforeend',`<div class="upload-progress" id="${rowId}" data-status="staged"><span class="up-icon" id="${rowId}_icon">⏳</span><div style="flex:1;min-width:0"><div class="up-name">${kindIcon} ${esc(label)}</div><div class="progress-bar-wrap"><div class="progress-bar" id="${rowId}_bar" style="width:0%"></div></div></div>${kind==='epub'?`<button class="up-visibility-btn up-songbook-btn" id="${rowId}_sb" title="Open this book in the songbook reader">📖 Book</button>`:''}<button class="up-visibility-btn is-public" id="${rowId}_pub" data-visibility="public">🌐 Public</button><button class="up-remove-btn" id="${rowId}_remove" title="Remove">✕</button><span class="up-status" id="${rowId}_st" style="display:none">Waiting…</span></div>`);
   document.getElementById(rowId+'_pub').addEventListener('click', () => {
     const btn = document.getElementById(rowId+'_pub');
@@ -4247,9 +4395,11 @@ async function startQueuedUploads(){
     document.getElementById(item.rowId+'_pub')?.remove();
     document.getElementById(item.rowId+'_sb')?.remove();
     document.getElementById(item.rowId+'_remove')?.remove();
+    const _tEl = document.getElementById(item.rowId+'_title'); if(_tEl) _tEl.disabled = true;
     const stEl = document.getElementById(item.rowId+'_st');
     if(stEl) stEl.style.display = 'inline';
-    await uploadOneEpub(item.file, item.rowId, item.visibility, item.songbook);
+    if(item.kind === 'chordpro') await uploadChordProSongbook(item);
+    else await uploadOneEpub(item.file, item.rowId, item.visibility, item.songbook);
   }
   _uploadQueue = [];
   await loadLibrary();
@@ -4433,6 +4583,21 @@ setUpP(rowId,70,'Saving…');
     document.getElementById(rowId)?.setAttribute('data-status','error');
     const icon=document.getElementById(rowId+'_icon'); if(icon) icon.textContent='⚠️';
     showToast('Upload failed: '+e.message);
+  }
+}
+async function uploadChordProSongbook(item){
+  const title = (document.getElementById(item.rowId+'_title')?.value || '').trim() || 'Songbook';
+  try{
+    setUpP(item.rowId,10,'Converting…');
+    const epub = await _cpBuildEpubFile(item.files, title, currentUser?.displayName || '');
+    await uploadOneEpub(epub, item.rowId, item.visibility, true);
+  }catch(e){
+    console.error(e);
+    setUpP(item.rowId,100,'✗ Failed');
+    document.getElementById(item.rowId)?.classList.add('error');
+    document.getElementById(item.rowId)?.setAttribute('data-status','error');
+    const icon=document.getElementById(item.rowId+'_icon'); if(icon) icon.textContent='⚠️';
+    showToast('Songbook failed: '+e.message);
   }
 }
 function setUpP(rowId,pct,status){const bar=document.getElementById(rowId+'_bar'),st=document.getElementById(rowId+'_st');if(bar)bar.style.width=pct+'%';if(st)st.textContent=status;}
@@ -8395,6 +8560,23 @@ async function _sbIsSongbook(zip,force=false){
 }
 function _sbLoadFavs(bookId){try{return new Set(JSON.parse(localStorage.getItem('elib_sb_fav_'+bookId)||'[]'));}catch(e){return new Set();}}
 function _sbSaveFavs(){if(!sbState)return;try{localStorage.setItem('elib_sb_fav_'+sbState.bookId,JSON.stringify([...sbState.favs]));}catch(e){}}
+const SB_SHARP=['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+const SB_FLAT=['C','Db','D','Eb','E','F','Gb','G','Ab','A','Bb','B'];
+const SB_BASE={C:0,D:2,E:4,F:5,G:7,A:9,B:11};
+function _sbRootIdx(s){const m=/^([A-G])([#b]?)/.exec(s||'');if(!m)return null;let i=SB_BASE[m[1]];if(m[2]==='#')i++;else if(m[2]==='b')i--;return(i+12)%12;}
+function _sbUseFlats(key,t){
+  const r=_sbRootIdx(key);if(r==null)return false;
+  const minor=/^[A-G][#b]?m(?!aj)/.test(key);
+  const ti=(r+t+120)%12;
+  return minor?[0,2,5,7,10].includes(ti):[1,3,5,8,10].includes(ti); // F#/D#m rather than Gb/Ebm
+}
+function _sbTranspose(ch,t,key){
+  if(!t||/^N\.?C\.?$/i.test(ch))return ch;
+  const names=_sbUseFlats(key,t)?SB_FLAT:SB_SHARP;
+  return ch.replace(/[A-G][#b]?/g,m0=>names[(_sbRootIdx(m0)+t+120)%12]);
+}
+function _sbLoadTrans(bookId){try{return JSON.parse(localStorage.getItem('elib_sb_tr_'+bookId)||'{}')||{};}catch(e){return {};}}
+function _sbSaveTrans(){if(!sbState)return;try{localStorage.setItem('elib_sb_tr_'+sbState.bookId,JSON.stringify(sbState.trans));}catch(e){}}
 async function openSongbookView(book,zip,info){
   const base=info.opfPath.includes('/')?info.opfPath.replace(/\/[^/]+$/,'/'):'';
   const manifest={};
@@ -8421,7 +8603,7 @@ async function openSongbookView(book,zip,info){
     songs.push({href:it.href,label,num:mm?+mm[1]:null,letter:mm?mm[2]:'',title,alt:/^alternate/i.test(title)});
   }
   if(!songs.length)throw new Error('No songs found in this songbook');
-  sbState={bookId:book.id,title:book.title||'Songbook',zip,base,songs,idx:0,favs:_sbLoadFavs(book.id),onlyFav:false};
+  sbState={bookId:book.id,title:book.title||'Songbook',zip,base,songs,idx:0,favs:_sbLoadFavs(book.id),onlyFav:false,trans:_sbLoadTrans(book.id),showChords:localStorage.getItem('elib_sb_chords')!=='0'};
   const last=parseInt(localStorage.getItem('elib_sb_last_'+book.id)||'0');
   const ov=document.getElementById('sbOverlay');
   _sbBind();
@@ -8434,7 +8616,7 @@ async function openSongbookView(book,zip,info){
   ov.classList.add('open');
   await sbShowSong(last>=0&&last<songs.length?last:0);
 }
-async function sbShowSong(idx){
+async function sbShowSong(idx,keepScroll=false){
   const st=sbState;if(!st)return;
   idx=Math.max(0,Math.min(st.songs.length-1,idx));st.idx=idx;
   const sg=st.songs[idx];
@@ -8447,17 +8629,45 @@ async function sbShowSong(idx){
   const n=document.createElement('span');n.className='sb-num';n.textContent=sg.num!=null?sg.num+sg.letter:'';
   h.append(n,document.createTextNode(' '+sg.title));
   art.appendChild(h);
-  let hasVerse=false;
-  doc.querySelectorAll('section.song p.note, section.song p.verse').forEach(p=>{
-    const isVerse=p.classList.contains('verse');
-    const el=document.createElement('p');el.className=isVerse?'sb-verse':'sb-note';
+  let hasVerse=false,hasChords=false;
+  const key=doc.querySelector('section.song')?.getAttribute('data-key')||'';
+  const keyRef=key||doc.querySelector('section.song .seg .c')?.textContent||'';
+  const tr=st.trans[sg.href]||0;
+  doc.querySelectorAll('section.song p.note, section.song p.verse, section.song p.label').forEach(p=>{
+    const isVerse=p.classList.contains('verse'),isLabel=p.classList.contains('label');
+    const el=document.createElement('p');
+    el.className=isVerse?'sb-verse'+(p.classList.contains('chorus')?' sb-chorus':''):isLabel?'sb-label':'sb-note';
     if(isVerse)hasVerse=true;
-    p.childNodes.forEach(c=>{el.appendChild(c.nodeName==='BR'?document.createElement('br'):document.createTextNode(c.textContent));});
+    const lines=[...p.children].filter(c=>c.classList.contains('line'));
+    if(lines.length){
+      lines.forEach(ln=>{
+        const d=document.createElement('span');d.className='sb-line';
+        [...ln.children].filter(c=>c.classList.contains('seg')).forEach(sgEl=>{
+          const ch=(sgEl.querySelector('.c')?.textContent||'').trim();
+          const tx=sgEl.querySelector('.t')?.textContent||'';
+          const seg=document.createElement('span');seg.className='sb-seg';
+          const c=document.createElement('span');c.className='sb-c';
+          if(ch){hasChords=true;c.textContent=_sbTranspose(ch,tr,keyRef);}
+          const t=document.createElement('span');t.className='sb-t';t.textContent=tx;
+          seg.append(c,t);d.appendChild(seg);
+        });
+        el.appendChild(d);
+      });
+    }else{
+      p.childNodes.forEach(c=>{el.appendChild(c.nodeName==='BR'?document.createElement('br'):document.createTextNode(c.textContent));});
+    }
     art.appendChild(el);
   });
+  art.classList.toggle('nochords',!st.showChords);
+  const tools=document.getElementById('sbTools');
+  tools.style.display=hasChords?'flex':'none';
+  if(hasChords){
+    document.getElementById('sbChordToggle').classList.toggle('on',st.showChords);
+    document.getElementById('sbKeyLbl').textContent=key?'Key '+_sbTranspose(key,tr,key):(tr?(tr>0?'+':'')+tr:'Original');
+  }
   if(!hasVerse){const e=document.createElement('p');e.className='sb-empty';e.textContent='No lyrics text is stored for this song in this book.';art.appendChild(e);}
-  document.getElementById('sbBody').scrollTop=0;
-  document.getElementById('sbPos').textContent=sg.num!=null?'Song '+sg.num+sg.letter+(sg.alt?' · alt. melody':''):(idx+1)+' / '+st.songs.length;
+  if(!keepScroll)document.getElementById('sbBody').scrollTop=0;
+  document.getElementById('sbPos').textContent=sg.num!=null?sg.num+sg.letter+(sg.alt?' · alt. melody':''):(idx+1)+' / '+st.songs.length;
   document.getElementById('sbPrev').style.visibility=idx>0?'visible':'hidden';
   document.getElementById('sbNext').style.visibility=idx<st.songs.length-1?'visible':'hidden';
   _sbRefreshFav();
@@ -8530,6 +8740,11 @@ function _sbBind(){
   $('sbSizeUp').addEventListener('click',()=>sbApplyFont(2));
   $('sbThemeBtn').addEventListener('click',()=>{const o=['day','sepia','night'];sbApplyTheme(o[(o.indexOf($('sbOverlay').dataset.theme)+1)%3]);});
   $('sbIndexBtn').addEventListener('click',sbOpenIndex);
+  $('sbChordToggle').addEventListener('click',()=>{if(!sbState)return;sbState.showChords=!sbState.showChords;localStorage.setItem('elib_sb_chords',sbState.showChords?'1':'0');sbShowSong(sbState.idx,true);});
+  const _sbStep=d=>{if(!sbState)return;const h=sbState.songs[sbState.idx].href;const v=Math.max(-11,Math.min(11,(sbState.trans[h]||0)+d));if(v)sbState.trans[h]=v;else delete sbState.trans[h];_sbSaveTrans();sbShowSong(sbState.idx,true);};
+  $('sbTrDown').addEventListener('click',()=>_sbStep(-1));
+  $('sbTrUp').addEventListener('click',()=>_sbStep(1));
+  $('sbKeyLbl').addEventListener('click',()=>{if(!sbState)return;delete sbState.trans[sbState.songs[sbState.idx].href];_sbSaveTrans();sbShowSong(sbState.idx,true);});
   $('sbIndexClose').addEventListener('click',sbCloseIndex);
   $('sbSearch').addEventListener('input',sbRenderIndex);
   $('sbFavFilter').addEventListener('click',e=>{if(!sbState)return;sbState.onlyFav=!sbState.onlyFav;e.currentTarget.classList.toggle('on',sbState.onlyFav);sbRenderIndex();});
