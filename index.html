@@ -8457,7 +8457,7 @@ async function sbShowSong(idx){
   });
   if(!hasVerse){const e=document.createElement('p');e.className='sb-empty';e.textContent='No lyrics text is stored for this song in this book.';art.appendChild(e);}
   document.getElementById('sbBody').scrollTop=0;
-  document.getElementById('sbPos').textContent=(idx+1)+' / '+st.songs.length;
+  document.getElementById('sbPos').textContent=sg.num!=null?'Song '+sg.num+sg.letter+(sg.alt?' · alt. melody':''):(idx+1)+' / '+st.songs.length;
   document.getElementById('sbPrev').style.visibility=idx>0?'visible':'hidden';
   document.getElementById('sbNext').style.visibility=idx<st.songs.length-1?'visible':'hidden';
   _sbRefreshFav();
