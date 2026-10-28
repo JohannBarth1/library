@@ -929,6 +929,7 @@ header{background:var(--navy);color:var(--cream);padding:0 1.2rem;height:var(--h
 .up-visibility-btn:hover{opacity:.8;}
 .up-visibility-btn.is-public{background:var(--teal-light);border-color:var(--teal);color:var(--teal-dark);}
 .up-visibility-btn.is-restricted{background:#f3e6e6;border-color:#a83232;color:#a83232;}
+.up-songbook-btn.on{background:var(--gold-light,#fdf3d8);border-color:var(--gold,#c8952a);color:var(--navy2);}
 .up-visibility-btn.is-private{background:var(--panel);border-color:var(--muted);color:var(--navy2);}
 .up-remove-btn{background:none;border:none;color:var(--muted);font-size:.95rem;cursor:pointer;padding:0 .15rem;flex-shrink:0;line-height:1;transition:color .15s;}
 .up-remove-btn:hover{color:var(--danger);}
@@ -4185,7 +4186,7 @@ function stageUploadFiles(files){
   files.forEach(file => {
     const kind = detectUploadKind(file);
     if(kind !== 'epub'){ skipped.push(file.name); return; }
-    _uploadQueue.push({kind, file, rowId: renderUploadRow(file.name, kind), visibility:'public'});
+    _uploadQueue.push({kind, file, rowId: renderUploadRow(file.name, kind), visibility:'public', songbook:false});
   });
   if(skipped.length){
     showToast(`Skipped ${skipped.length} file${skipped.length>1?'s':''} — this uploader only accepts EPUB files. Use Upload Audio for audio.`);
@@ -4197,10 +4198,17 @@ function stageUploadFiles(files){
 function renderUploadRow(label, kind){
   const rowId='up_'+Date.now()+Math.random().toString(36).slice(2);
   const kindIcon = kind === 'epub' ? '📖' : kind === 'audio' ? '🎧' : '▶️';
-  document.getElementById('uploadList').insertAdjacentHTML('beforeend',`<div class="upload-progress" id="${rowId}" data-status="staged"><span class="up-icon" id="${rowId}_icon">⏳</span><div style="flex:1;min-width:0"><div class="up-name">${kindIcon} ${esc(label)}</div><div class="progress-bar-wrap"><div class="progress-bar" id="${rowId}_bar" style="width:0%"></div></div></div><button class="up-visibility-btn is-public" id="${rowId}_pub" data-visibility="public">🌐 Public</button><button class="up-remove-btn" id="${rowId}_remove" title="Remove">✕</button><span class="up-status" id="${rowId}_st" style="display:none">Waiting…</span></div>`);
+  document.getElementById('uploadList').insertAdjacentHTML('beforeend',`<div class="upload-progress" id="${rowId}" data-status="staged"><span class="up-icon" id="${rowId}_icon">⏳</span><div style="flex:1;min-width:0"><div class="up-name">${kindIcon} ${esc(label)}</div><div class="progress-bar-wrap"><div class="progress-bar" id="${rowId}_bar" style="width:0%"></div></div></div>${kind==='epub'?`<button class="up-visibility-btn up-songbook-btn" id="${rowId}_sb" title="Open this book in the songbook reader">📖 Book</button>`:''}<button class="up-visibility-btn is-public" id="${rowId}_pub" data-visibility="public">🌐 Public</button><button class="up-remove-btn" id="${rowId}_remove" title="Remove">✕</button><span class="up-status" id="${rowId}_st" style="display:none">Waiting…</span></div>`);
   document.getElementById(rowId+'_pub').addEventListener('click', () => {
     const btn = document.getElementById(rowId+'_pub');
     setRowVisibility(rowId, _cycleUploadVisibility(btn.dataset.visibility));
+  });
+  document.getElementById(rowId+'_sb')?.addEventListener('click', () => {
+    const q = _uploadQueue.find(q => q.rowId === rowId); if(!q) return;
+    q.songbook = !q.songbook;
+    const b = document.getElementById(rowId+'_sb');
+    b.textContent = q.songbook ? '🎵 Songbook' : '📖 Book';
+    b.classList.toggle('on', q.songbook);
   });
   document.getElementById(rowId+'_remove').addEventListener('click', () => {
     _uploadQueue = _uploadQueue.filter(q => q.rowId !== rowId);
@@ -4237,10 +4245,11 @@ async function startQueuedUploads(){
     // there's no more DOM state left to race.
     document.getElementById(item.rowId)?.setAttribute('data-status','uploading');
     document.getElementById(item.rowId+'_pub')?.remove();
+    document.getElementById(item.rowId+'_sb')?.remove();
     document.getElementById(item.rowId+'_remove')?.remove();
     const stEl = document.getElementById(item.rowId+'_st');
     if(stEl) stEl.style.display = 'inline';
-    await uploadOneEpub(item.file, item.rowId, item.visibility);
+    await uploadOneEpub(item.file, item.rowId, item.visibility, item.songbook);
   }
   _uploadQueue = [];
   await loadLibrary();
@@ -4358,7 +4367,7 @@ async function startQueuedAudioUploads(){
   setTimeout(() => { startBtn.style.display = 'none'; }, 1500);
 }
 
-async function uploadOneEpub(file, rowId, visibility){
+async function uploadOneEpub(file, rowId, visibility, songbook=false){
   try{
     setUpP(rowId,20,'Parsing…');
     const meta=await parseEpubMeta(file);
@@ -4407,6 +4416,7 @@ setUpP(rowId,70,'Saving…');
       epubUrl,
       storagePath:snap.ref.fullPath,
       visibility,
+      ...(songbook?{bookType:'songbook'}:{}),
       createdAt:serverTimestamp(),
       updatedAt:serverTimestamp(),
       fileSizeBytes:file.size
@@ -8372,7 +8382,7 @@ document.addEventListener('visibilitychange', () => {
 // last-viewed song are kept per book in localStorage.
 let sbState=null, _sbBound=false;
 function _sbUnesc(s){const t=document.createElement('textarea');t.innerHTML=s;return t.value;}
-async function _sbIsSongbook(zip){
+async function _sbIsSongbook(zip,force=false){
   try{
     const c=await zip.file('META-INF/container.xml')?.async('string');
     const opfPath=c?.match(/full-path="([^"]+\.opf)"/i)?.[1];
@@ -8380,7 +8390,7 @@ async function _sbIsSongbook(zip){
     const opf=await zip.file(opfPath)?.async('string');
     if(!opf)return null;
     const isSb=/name="elib:type"[^>]*content="songbook"/i.test(opf)||/content="songbook"[^>]*name="elib:type"/i.test(opf);
-    return isSb?{opfPath,opf}:null;
+    return (isSb||force)?{opfPath,opf}:null;
   }catch(e){return null;}
 }
 function _sbLoadFavs(bookId){try{return new Set(JSON.parse(localStorage.getItem('elib_sb_fav_'+bookId)||'[]'));}catch(e){return new Set();}}
@@ -8395,6 +8405,12 @@ async function openSongbookView(book,zip,info){
   if(ncxId){
     const ncx=await zip.file(base+manifest[ncxId].href)?.async('string');
     if(ncx){const re=/<navPoint[^>]*>[\s\S]*?<text>([^<]*)<\/text>[\s\S]*?<content\s+src="([^"]+)"/gi;let n;while((n=re.exec(ncx))!==null)labels[n[2].split('#')[0]]=n[1].trim();}
+  }
+  if(!Object.keys(labels).length){ // EPUB 3 without an NCX: use the nav document
+    let nav=null;const im=/<item\s+[^>]*properties="[^"]*\bnav\b[^"]*"[^>]*>/i.exec(info.opf);
+    const nh=im&&im[0].match(/\bhref="([^"]+)"/)?.[1];
+    if(nh)nav=await zip.file(base+nh)?.async('string');
+    if(nav){const re=/<a[^>]*href="([^"#]+)[^"]*"[^>]*>([\s\S]*?)<\/a>/gi;let n;while((n=re.exec(nav))!==null)labels[n[1]]=n[2].replace(/<[^>]+>/g,'').trim();}
   }
   const songs=[];const sRe=/<itemref\s+idref="([^"]+)"/gi;let s;
   while((s=sRe.exec(info.opf))!==null){
@@ -8578,7 +8594,7 @@ async function readCurrentBook(){
     }
     readerZip=await JSZip.loadAsync(bytes);readerSpine=[];readerChapter=0;
     // Songbooks (OPF flag elib:type=songbook) get their own view instead of the paginated reader
-    const _sbInfo=await _sbIsSongbook(readerZip);
+    const _sbInfo=await _sbIsSongbook(readerZip,book.bookType==='songbook');
     if(_sbInfo){const _sbZip=readerZip;readerZip=null;hideLoading();await openSongbookView(book,_sbZip,_sbInfo);return;}
     _ledgerFlushSession(); // persist the previous sitting's page count (if any) before starting a new one
     readerBookId = book.id;
